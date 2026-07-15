@@ -209,10 +209,12 @@ class DownloaderTests(unittest.TestCase):
             "title": "Large",
             "type": "image",
         }
+        response = FakeResponse(body=b"x" * 1024)
+        response.headers.pop("Content-Length")
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
             download,
             "get_session",
-            return_value=FakeSession(FakeResponse(body=b"x" * 1024)),
+            return_value=FakeSession(response),
         ):
             out = Path(tmp)
             with self.assertRaisesRegex(RuntimeError, "size limit"):

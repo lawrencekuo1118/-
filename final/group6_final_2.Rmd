@@ -10,12 +10,17 @@ output: html_document
 
 ```{r}
 packages = c(
-  "data.table","dplyr","ggplot2","googleVis","devtools","magrittr","caTools","ROCR","caTools","d3heatmap","readr","manipulate","latex2exp")
-existing = as.character(installed.packages()[,1])
-for(pkg in packages[!(packages %in% existing)]) install.packages(pkg)
-
-if(!is.element("chorddiag", existing))
-  devtools::install_github("mattflor/chorddiag")
+  "data.table","dplyr","ggplot2","googleVis","magrittr","caTools",
+  "ROCR","d3heatmap","readr","manipulate","latex2exp","chorddiag"
+)
+missing_pkgs = packages[!(packages %in% rownames(installed.packages()))]
+if (length(missing_pkgs) > 0) {
+  stop(
+    "Missing required packages: ",
+    paste(missing_pkgs, collapse = ", "),
+    ". Please install them before knitting."
+  )
+}
 ```
 
 ```{r}

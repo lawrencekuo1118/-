@@ -10,7 +10,8 @@ output: html_document
 #### Loading & Preparing Data
 ```{r echo=T, message=F, cache=F, warning=F}
 pacman::p_load(dplyr,ggplot2,caTools,data.table,stringr)
-load("../final/data/tf2.rdata")
+data_dir = "data"
+load(file.path(data_dir, "tf2.rdata"))
 ```
 
 ##### Spliting for Classification 
@@ -55,7 +56,7 @@ c(r2.tr, r2.ts) #0.2909908 0.2575966
 #### Prediction
 Aggregate data 2000-12-01 ~ 2001~02-28. 
 ```{r}
-load("../final/data/tf0.rdata")
+load(file.path(data_dir, "tf0.rdata"))
 d0 = max(X0$date) + 1
 B = X0 %>% 
   filter(date >= as.Date("2000-12-01")) %>% 
@@ -95,7 +96,7 @@ hist(log(B$Rev,10))
 ####Cluster group vs buy
 ```{r}
 #write.csv(G,file="../final/G.csv")
-tf=fread("~/2019RPB/final/ta_feng_all_months_merged.csv")%>% 
+tf = fread(file.path(data_dir, "ta_feng_all_months_merged.csv")) %>% 
   setNames(c("date","cust","age","area","subclass","prod","qty","cost","price"))
 tf$date = as.Date(tf$date, format = "%m/%d/%Y")#改成date函數
 G = tf %>% 

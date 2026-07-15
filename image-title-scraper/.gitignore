@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+downloads/
+*.pyc
+manifest.json
+image-title-manifest_*.json
+.DS_Store

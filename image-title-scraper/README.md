@@ -23,7 +23,7 @@ Browser extractor:
 - **Google Images adapter** — parses `/imgres?imgurl=…` anchors for the true full-size URL plus `imgrefurl` referer.
 - **Shadow DOM + same-origin iframe traversal** and **CSS `background-image` harvesting**.
 - **Size filter** (`minImageSize`, default 80 px) to skip icons/sprites/trackers, plus `maxItems` cap and `maxScrollRounds` safety cap for infinite feeds.
-- **URL canonicalization** — strips resize params (`w`, `h`, `quality`, …) and tracker params (`utm_*`, `gclid`, `fbclid`, `msclkid`, `mc_*`) so thumbnail/tracked variants dedupe to one entry.
+- **Safe URL normalization** — strips tracker params (`utm_*`, `gclid`, `fbclid`, `msclkid`, `mc_*`) while preserving resize and quality parameters required by signed CDN URLs.
 - **Per-item `referer` + dimensions** included in the manifest (many CDNs reject referer-less requests); manifest also carries `schemaVersion` and image/video `stats`.
 - **Runtime config override** via `window.__SCRAPER_CONFIG__` and an emergency stop via `window.__SCRAPER_STOP__ = true` during in-browser downloads.
 
@@ -33,9 +33,9 @@ Python downloader:
 - **Magic-byte sniffing** (JPEG/PNG/GIF/WebP/AVIF/HEIC/BMP/SVG/MP4/WebM) so extensions match actual bytes even when servers send wrong `Content-Type`.
 - **Sends the manifest `referer`** per item — fixes 403s from hotlink-protected CDNs.
 - **Atomic writes** through `.part` temp files (no half-written files after a crash).
-- **Resume mode** (`--skip-existing`) and small-body rejection (`--min-bytes`, default 512).
+- **Verified resume mode** is enabled by default and checks URL, filename, and byte size; `--min-bytes` rejects small block pages.
 - **Honors `Retry-After`** on HTTP 429/503.
-- Writes **`report.csv`** and a re-runnable **`failed-manifest.json`** into the output directory.
+- Writes **`report.csv`** and unique, re-runnable **`failures-*.json`** manifests.
 
 ## Quick start
 
@@ -66,10 +66,10 @@ python download.py manifest.json --out downloads
 Useful flags:
 
 ```bash
-python download.py manifest.json --workers 8 --delay 0.3     # faster, still per-host polite
-python download.py manifest.json --limit 30 --offset 30      # windowed batches
-python download.py manifest.json --skip-existing             # resume an interrupted run
-python download.py downloads/failed-manifest.json            # retry only the failures
+python download.py manifest.json --workers 8 --delay 0.3
+python download.py manifest.json --limit 30 --offset 30
+python download.py manifest.json --max-mb 100 --min-bytes 512
+python download.py downloads/failures-*.json
 ```
 
 All flags:
@@ -83,8 +83,9 @@ All flags:
 | `--retries` | `2` | Retries per item |
 | `--limit` / `--offset` | `0` / `0` | Item windowing |
 | `--min-bytes` | `512` | Reject bodies smaller than this (block pages, pixels) |
-| `--skip-existing` | off | Skip items whose numbered file already exists |
-| `--no-report` | off | Don't write `report.csv` / `failed-manifest.json` |
+| `--overwrite` | off | Replace verified existing files instead of resuming |
+| `--max-mb` | `0` | Maximum size per file (`0` = unlimited) |
+| `--failures` | automatic | Override the failure-manifest path |
 
 ## Title priority (scoring)
 
@@ -119,6 +120,7 @@ CORS-blocked items open in a rescue gallery; prefer the Python path for those.
 | `browser-extractor.js` | Console extractor + title scoring + manifest export (JSON + CSV) |
 | `download.py` | Concurrent HTTP downloader with native-title filenames, sniffed extensions, reports |
 | `requirements.txt` | Python deps |
+| `tests/test_download.py` | Downloader unit tests |
 
 ## Notes
 

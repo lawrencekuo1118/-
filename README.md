@@ -36,9 +36,12 @@ contain coursework notebooks and supporting files.
 
 See [`image-title-scraper/README.md`](./image-title-scraper/README.md).
 
-Browser console extractor mines native image titles (Bing metadata, `a[title]`,
-alt/caption fallbacks) and exports a JSON manifest; Python downloads files with
-those titles as filenames (avoids Chrome `.crdownload` stalls).
+Browser console extractor mines native image titles (Bing metadata, Google
+`/imgres` params, `a[title]`, alt/caption fallbacks), resolves best-resolution
+sources (`srcset` / lazy-load attributes), collects incrementally while
+scrolling virtualized galleries, and exports JSON + CSV manifests; Python
+downloads files concurrently with those titles as filenames, sniffing real
+file types from magic bytes (avoids Chrome `.crdownload` stalls).
 
 ## Upgrade notes
 

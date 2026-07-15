@@ -1,4 +1,4 @@
-# Image Title Scraper (v4)
+# Image Title Scraper (v5)
 
 Browser + Python toolkit that finds images/videos on a page, mines their **native titles**, and downloads them with meaningful filenames.
 
@@ -8,21 +8,49 @@ Based on the optimization discussion in the Gemini share ([圖片標題抓取器
 
 Earlier console-only scrapers often failed to recover real titles because they assumed a single DOM path (e.g. `li` → `.infopt a`). Downloads also frequently stalled as Chrome `.crdownload` files when many cross-origin `a.download` clicks were fired.
 
-This upgrade:
+This toolkit:
 
-1. **Scores multiple title sources** (Bing `.iusc` metadata, parent `a[title]`, card containers, `figcaption`, `data-*`, `alt`/`title`).
-2. **Exports a JSON manifest** from the browser.
+1. **Scores multiple title sources** (Bing `.iusc` metadata, Google `/imgres` params, parent `a[title]`, card containers, `figcaption`, `data-*`, `alt`/`title`).
+2. **Exports a JSON (and CSV) manifest** from the browser.
 3. **Downloads with Python** so filenames are real image/video extensions (no `.crdownload` rename fights).
+
+## What's new in v5
+
+Browser extractor:
+
+- **Incremental collection during scrolling** — virtualized galleries (Bing/Google) unload offscreen cards; v4 scanned only after scrolling finished and silently lost those items. v5 harvests on every scroll round.
+- **Best-resolution source resolution** — picks the widest `srcset` / `<picture>` candidate and honors lazy-load attributes (`data-src`, `data-lazy-src`, `data-original`, …) instead of the rendered thumbnail.
+- **Google Images adapter** — parses `/imgres?imgurl=…` anchors for the true full-size URL plus `imgrefurl` referer.
+- **Shadow DOM + same-origin iframe traversal** and **CSS `background-image` harvesting**.
+- **Size filter** (`minImageSize`, default 80 px) to skip icons/sprites/trackers, plus `maxItems` cap and `maxScrollRounds` safety cap for infinite feeds.
+- **Per-item `referer` + dimensions** included in the manifest (many CDNs reject referer-less requests).
+- **Runtime config override** via `window.__SCRAPER_CONFIG__` and an emergency stop via `window.__SCRAPER_STOP__ = true` during in-browser downloads.
+
+Python downloader:
+
+- **Concurrent downloads** (`--workers`, default 4) with a **per-host politeness delay** so parallelism never hammers one server.
+- **Magic-byte sniffing** (JPEG/PNG/GIF/WebP/AVIF/HEIC/BMP/SVG/MP4/WebM) so extensions match actual bytes even when servers send wrong `Content-Type`.
+- **Sends the manifest `referer`** per item — fixes 403s from hotlink-protected CDNs.
+- **Atomic writes** through `.part` temp files (no half-written files after a crash).
+- **Resume mode** (`--skip-existing`) and small-body rejection (`--min-bytes`, default 512).
+- **Honors `Retry-After`** on HTTP 429/503.
+- Writes **`report.csv`** and a re-runnable **`failed-manifest.json`** into the output directory.
 
 ## Quick start
 
 ### 1) Extract titles in the browser
 
-1. Open the target page (for Bing: the **image results list**, not the detail viewer).
+1. Open the target page (for Bing/Google: the **image results list**, not the detail viewer).
 2. DevTools → **Console**.
-3. Paste [`browser-extractor.js`](./browser-extractor.js) and run it.
-4. Choose `export` when prompted (default).
-5. Save the clipboard JSON as `manifest.json`.
+3. (Optional) tweak behavior first, e.g.:
+
+```javascript
+window.__SCRAPER_CONFIG__ = { minImageSize: 150, maxItems: 200 };
+```
+
+4. Paste [`browser-extractor.js`](./browser-extractor.js) and run it.
+5. Choose `export` when prompted (default). The JSON is copied to your clipboard and a CSV manifest is downloaded.
+6. Save the clipboard JSON as `manifest.json` (also available as `window.__IMAGE_TITLE_MANIFEST__`).
 
 ### 2) Download with Python
 
@@ -37,22 +65,38 @@ python download.py manifest.json --out downloads
 Useful flags:
 
 ```bash
-python download.py manifest.json --limit 30 --delay 0.8
-python download.py manifest.json --offset 30 --limit 30
+python download.py manifest.json --workers 8 --delay 0.3     # faster, still per-host polite
+python download.py manifest.json --limit 30 --offset 30      # windowed batches
+python download.py manifest.json --skip-existing             # resume an interrupted run
+python download.py downloads/failed-manifest.json            # retry only the failures
 ```
+
+All flags:
+
+| Flag | Default | Meaning |
+|------|--------:|---------|
+| `--out` | `downloads` | Output directory |
+| `--workers` | `4` | Concurrent downloads (1 = sequential) |
+| `--delay` | `0.6` | Seconds between requests **to the same host** |
+| `--timeout` | `20` | Per-request timeout |
+| `--retries` | `2` | Retries per item |
+| `--limit` / `--offset` | `0` / `0` | Item windowing |
+| `--min-bytes` | `512` | Reject bodies smaller than this (block pages, pixels) |
+| `--skip-existing` | off | Skip items whose numbered file already exists |
+| `--no-report` | off | Don't write `report.csv` / `failed-manifest.json` |
 
 ## Title priority (scoring)
 
 | Score | Source |
 |------:|--------|
 | 100 | Bing `m` JSON field `t` / `title` |
-| 95–93 | Parent / card `a[title]`, `.infopt a` |
-| 92–88 | `img` alt / title / aria-label / data-title |
-| 96 | `figcaption` |
-| 80 | Nearby headings |
-| 55–70 | Clean URL filename (non-`OIP` noise) |
+| 96 | `figcaption`, Google result `aria-label` |
+| 95–93 | Parent / card `a[title]`, `.infopt a`, `img data-title` |
+| 92–86 | `img` alt / title / aria-label / `data-*` caption-like keys |
+| 80 | Nearby headings / `[class*=title]` / `[class*=caption]` |
+| 55–72 | Link text, clean URL filename (non-`OIP`/hash noise) |
 
-Garbage titles (`image`, `loading`, pure digits, length &lt; 3) are discarded.
+Garbage titles (`image`, `loading`, pure digits, hex ids, bare extensions, length < 3) are discarded.
 
 ## Browser-only download (optional)
 
@@ -63,6 +107,7 @@ Before running:
 - Allow **multiple automatic downloads** if Chrome blocks them.
 - Turn **OFF** “Ask where to save each file before downloading”.
 - Prefer batches of ~20–30 on slower disks.
+- Abort anytime with `window.__SCRAPER_STOP__ = true`.
 
 CORS-blocked items open in a rescue gallery; prefer the Python path for those.
 
@@ -70,11 +115,11 @@ CORS-blocked items open in a rescue gallery; prefer the Python path for those.
 
 | File | Role |
 |------|------|
-| `browser-extractor.js` | Console extractor + title scoring + manifest export |
-| `download.py` | Reliable HTTP downloader with native-title filenames |
+| `browser-extractor.js` | Console extractor + title scoring + manifest export (JSON + CSV) |
+| `download.py` | Concurrent HTTP downloader with native-title filenames, sniffed extensions, reports |
 | `requirements.txt` | Python deps |
 
 ## Notes
 
 - Respect site terms of use and copyright; this tool is for pages you are allowed to archive.
-- Bing DOM class names can change; if collection returns 0, inspect `.iusc` / `m` attributes and update selectors.
+- Bing/Google DOM class names can change; if collection returns 0, inspect `.iusc` / `m` attributes (Bing) or `/imgres` anchors (Google) and update selectors.

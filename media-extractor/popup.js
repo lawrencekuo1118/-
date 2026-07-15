@@ -3,7 +3,9 @@
 const state = {
   resources: [],
   pageTitle: "",
-  activeTabId: null
+  activeTabId: null,
+  selected: new Set(),
+  currentJobId: null
 };
 
 const elements = {
@@ -23,11 +25,6 @@ function setStatus(message, error = false) {
   elements.status.classList.toggle("error", error);
 }
 
-function visibleResources() {
-  const filter = elements.typeFilter.value;
-  return state.resources.filter((resource) => filter === "all" || resource.type === filter);
-}
-
 function renderResources() {
   elements.list.replaceChildren();
   const filter = elements.typeFilter.value;
@@ -38,22 +35,14 @@ function renderResources() {
     const item = document.createElement("li");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = true;
+    checkbox.checked = state.selected.has(index);
     checkbox.dataset.index = String(index);
     checkbox.setAttribute("aria-label", `Select ${resource.title}`);
 
-    let preview;
-    if (resource.type === "image") {
-      preview = document.createElement("img");
-      preview.src = resource.url;
-      preview.alt = "";
-      preview.referrerPolicy = "no-referrer";
-    } else {
-      preview = document.createElement("span");
-      preview.className = "media-icon";
-      preview.textContent = "🎬";
-      preview.setAttribute("aria-hidden", "true");
-    }
+    const preview = document.createElement("span");
+    preview.className = "media-icon";
+    preview.textContent = resource.type === "image" ? "🖼️" : "🎬";
+    preview.setAttribute("aria-hidden", "true");
 
     const copy = document.createElement("div");
     copy.className = "resource-copy";
@@ -68,22 +57,23 @@ function renderResources() {
     elements.list.append(item);
   });
 
-  const count = visibleResources().length;
-  elements.selectAll.checked = true;
-  elements.download.disabled = count === 0;
-  elements.download.textContent = `Download selected (${count})`;
+  const visibleIndexes = state.resources
+    .map((resource, index) => ({ resource, index }))
+    .filter(({ resource }) => filter === "all" || resource.type === filter)
+    .map(({ index }) => index);
+  const visibleSelected = visibleIndexes.filter((index) => state.selected.has(index)).length;
+  elements.selectAll.checked = visibleIndexes.length > 0 && visibleSelected === visibleIndexes.length;
+  elements.selectAll.indeterminate = visibleSelected > 0 && visibleSelected < visibleIndexes.length;
+  elements.download.disabled = state.selected.size === 0 || Boolean(state.currentJobId);
+  elements.download.textContent = `Download selected (${state.selected.size})`;
 }
 
 async function sendScan(tabId, options) {
-  try {
-    return await chrome.tabs.sendMessage(tabId, { type: "SCAN_PAGE_MEDIA", options });
-  } catch {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["extractor.js", "content.js"]
-    });
-    return chrome.tabs.sendMessage(tabId, { type: "SCAN_PAGE_MEDIA", options });
-  }
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["extractor.js", "content.js"]
+  });
+  return chrome.tabs.sendMessage(tabId, { type: "SCAN_PAGE_MEDIA", options });
 }
 
 async function scanPage() {
@@ -103,6 +93,7 @@ async function scanPage() {
     });
     if (response?.error) throw new Error(response.error);
     state.resources = response?.resources || [];
+    state.selected = new Set(state.resources.map((_resource, index) => index));
     state.pageTitle = response?.pageTitle || tab.title || "Untitled page";
     renderResources();
     elements.results.hidden = false;
@@ -117,8 +108,8 @@ async function scanPage() {
 }
 
 async function downloadSelected() {
-  const selected = [...elements.list.querySelectorAll("input[type='checkbox']:checked")]
-    .map((checkbox) => state.resources[Number(checkbox.dataset.index)])
+  const selected = [...state.selected]
+    .map((index) => state.resources[index])
     .filter(Boolean);
   if (!selected.length) {
     setStatus("Select at least one resource.", true);
@@ -132,7 +123,9 @@ async function downloadSelected() {
       resources: selected,
       pageTitle: state.pageTitle
     });
-    setStatus(`Queued 0 of ${result.total} downloads…`);
+    if (result.error) throw new Error(result.error);
+    state.currentJobId = result.jobId;
+    setStatus(`Started 0 of ${result.total} downloads…`);
   } catch (error) {
     setStatus(error.message || "Downloads could not be started.", true);
     elements.download.disabled = false;
@@ -142,30 +135,46 @@ async function downloadSelected() {
 elements.scan.addEventListener("click", scanPage);
 elements.typeFilter.addEventListener("change", renderResources);
 elements.selectAll.addEventListener("change", () => {
-  elements.list.querySelectorAll("input[type='checkbox']")
-    .forEach((checkbox) => { checkbox.checked = elements.selectAll.checked; });
+  elements.list.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+    const index = Number(checkbox.dataset.index);
+    if (elements.selectAll.checked) state.selected.add(index);
+    else state.selected.delete(index);
+  });
+  renderResources();
 });
-elements.list.addEventListener("change", () => {
-  const checkboxes = [...elements.list.querySelectorAll("input[type='checkbox']")];
-  const selected = checkboxes.filter((checkbox) => checkbox.checked).length;
-  elements.selectAll.checked = selected === checkboxes.length;
-  elements.selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
-  elements.download.textContent = `Download selected (${selected})`;
+elements.list.addEventListener("change", (event) => {
+  if (!event.target.matches("input[type='checkbox']")) return;
+  const index = Number(event.target.dataset.index);
+  if (event.target.checked) state.selected.add(index);
+  else state.selected.delete(index);
+  renderResources();
 });
 elements.download.addEventListener("click", downloadSelected);
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type !== "DOWNLOAD_PROGRESS") return;
   const job = message.job;
+  if (state.currentJobId && job.id !== state.currentJobId) return;
+  state.currentJobId = job.id;
   if (job.status === "completed" || job.status === "completed-with-errors") {
-    setStatus(`Queued ${job.queued} downloads; ${job.failed} rejected.`);
+    setStatus(`Downloaded ${job.completed} files; ${job.failed} failed.`);
+    state.currentJobId = null;
     elements.download.disabled = false;
   } else if (job.status === "failed") {
     setStatus(job.errors.at(-1)?.message || "The download job failed.", true);
+    state.currentJobId = null;
     elements.download.disabled = false;
   } else {
-    setStatus(`Queued ${job.queued} of ${job.total}; ${job.failed} rejected.`);
+    setStatus(`Downloaded ${job.completed} of ${job.total}; ${job.failed} failed.`);
   }
 });
 
-scanPage();
+async function restoreDownloadJob() {
+  const job = await chrome.runtime.sendMessage({ type: "GET_DOWNLOAD_JOB" });
+  if (!job || !["queued", "running"].includes(job.status)) return;
+  state.currentJobId = job.id;
+  elements.download.disabled = true;
+  setStatus(`Downloaded ${job.completed} of ${job.total}; ${job.failed} failed.`);
+}
+
+scanPage().then(restoreDownloadJob);

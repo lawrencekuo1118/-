@@ -1,6 +1,9 @@
 (function () {
   "use strict";
 
+  if (globalThis.__pageMediaExtractorListenerInstalled) return;
+  globalThis.__pageMediaExtractorListenerInstalled = true;
+
   const sleep = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
 

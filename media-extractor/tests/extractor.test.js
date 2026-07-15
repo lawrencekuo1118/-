@@ -69,3 +69,39 @@ test("extractMedia finds and deduplicates media URLs embedded in markup", () => 
   assert.equal(resources[0].extension, "webp");
   assert.equal(resources[1].url, "https://cdn.example.com/movie.mp4");
 });
+
+test("extractMedia prioritizes the title of an image's direct link", () => {
+  const link = {
+    getAttribute(name) {
+      return name === "title" ? "Original linked image title" : "";
+    }
+  };
+  const image = {
+    tagName: "IMG",
+    currentSrc: "https://example.com/photo.jpg",
+    src: "https://example.com/photo.jpg",
+    getAttribute(name) {
+      if (name === "alt") return "Short alt text";
+      if (name === "src") return this.src;
+      return "";
+    },
+    closest(selector) {
+      return selector === "a" ? link : null;
+    }
+  };
+  const document = {
+    baseURI: "https://example.com/",
+    querySelectorAll(selector) {
+      return selector.startsWith("img, video") ? [image] : [];
+    },
+    documentElement: { innerHTML: "" }
+  };
+
+  const [resource] = extractor.extractMedia(document, {
+    includeComputedStyles: false,
+    includePerformance: false
+  });
+
+  assert.equal(resource.title, "Original linked image title");
+  assert.equal(resource.filename, "Original_linked_image_title");
+});

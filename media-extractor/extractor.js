@@ -116,8 +116,8 @@
     const figure = element.closest && element.closest("figure");
     const container = element.closest && element.closest("article, li, [class*='card'], [class*='item']");
     candidates.push(
-      { text: link && link.getAttribute("title"), score: 86 },
-      { text: link && link.getAttribute("aria-label"), score: 84 },
+      { text: link && link.getAttribute("title"), score: 100 },
+      { text: link && link.getAttribute("aria-label"), score: 94 },
       { text: figure && figure.querySelector("figcaption")?.textContent, score: 96 },
       { text: container && container.querySelector("h1,h2,h3,h4")?.textContent, score: 78 }
     );
@@ -154,10 +154,11 @@
       }
     }
 
-    doc.querySelectorAll("img, video, audio, source, input[type='image']").forEach((element) => {
+    doc.querySelectorAll("img, video, source, input[type='image']").forEach((element) => {
       const tag = element.tagName.toLocaleLowerCase();
-      const type = ["video", "audio"].includes(tag) ||
-        String(element.getAttribute("type") || "").startsWith("video/") ? "video" : "image";
+      const mime = String(element.getAttribute("type") || "");
+      const type = tag === "video" || element.closest("video") ||
+        /^(?:video\/|application\/(?:x-)?mpegurl)/i.test(mime) ? "video" : "image";
       [
         element.currentSrc,
         element.src,

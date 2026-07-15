@@ -7,7 +7,7 @@ needed for reliable cross-origin downloads and filename handling.
 
 ## What it scans
 
-- Standard `img`, `video`, `audio`, `source`, and image-input elements
+- Standard `img`, `video`, `source`, and image-input elements
 - `srcset`, video posters, and common lazy-load attributes
 - Linked media files
 - Inline and computed CSS image URLs
@@ -39,10 +39,11 @@ When a cross-origin `fetch` fails, clicking an external URL can navigate or open
 a tab, and extending `URL.revokeObjectURL()` delays does not control when a
 browser finishes a network download. This extension instead uses:
 
-- explicit host access to inspect pages;
+- temporary `activeTab` access only after the user opens the popup;
 - the `downloads` API for cross-origin download requests;
-- the browser's own queue, conflict handling, and safety checks;
-- status reporting when a URL is rejected.
+- a persistent, one-at-a-time queue that survives service-worker restarts;
+- the browser's conflict handling and safety checks;
+- completion and interruption reporting from the download manager.
 
 An active `.crdownload` file is Chrome/Edge's normal temporary file. If it
 remains after the browser reports a failure, inspect the download manager for

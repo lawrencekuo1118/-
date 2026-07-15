@@ -57,12 +57,26 @@ class DownloaderTests(unittest.TestCase):
             download.guess_ext("https://example.test/file.jpg", "image/webp", "image"),
             ".webp",
         )
+        self.assertEqual(
+            download.guess_ext(
+                "https://example.test/file.bin",
+                "application/octet-stream",
+                "image",
+                b"\x89PNG\r\n\x1a\npayload",
+            ),
+            ".png",
+        )
 
     def test_manifest_filters_urls_and_repairs_duplicate_indices(self):
         payload = {
             "pageUrl": "https://example.test/gallery",
             "items": [
-                {"index": 1, "url": "https://cdn.test/a.jpg", "title": "A"},
+                {
+                    "index": 1,
+                    "url": "https://cdn.test/a.jpg",
+                    "title": "A",
+                    "referer": "https://source.test/a",
+                },
                 {"index": 1, "url": "https://cdn.test/b.jpg", "title": "B"},
                 {"url": "file:///etc/passwd", "title": "bad"},
             ],
@@ -73,7 +87,8 @@ class DownloaderTests(unittest.TestCase):
             items = download.load_manifest(path)
 
         self.assertEqual([item["index"] for item in items], [1, 2])
-        self.assertTrue(all(item["sourcePage"] == payload["pageUrl"] for item in items))
+        self.assertEqual(items[0]["sourcePage"], "https://source.test/a")
+        self.assertEqual(items[1]["sourcePage"], payload["pageUrl"])
 
     def test_download_is_atomic_and_resumable(self):
         item = {
@@ -185,6 +200,23 @@ class DownloaderTests(unittest.TestCase):
             out = Path(tmp)
             with self.assertRaisesRegex(RuntimeError, "HTML"):
                 download.download_one(item, out, timeout=2)
+            self.assertFalse(list(out.glob("*.part")))
+
+    def test_max_size_applies_to_first_chunk(self):
+        item = {
+            "index": 1,
+            "url": "https://cdn.test/large",
+            "title": "Large",
+            "type": "image",
+        }
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            download,
+            "get_session",
+            return_value=FakeSession(FakeResponse(body=b"x" * 1024)),
+        ):
+            out = Path(tmp)
+            with self.assertRaisesRegex(RuntimeError, "size limit"):
+                download.download_one(item, out, timeout=2, max_bytes=100)
             self.assertFalse(list(out.glob("*.part")))
 
 

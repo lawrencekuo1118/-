@@ -49,6 +49,7 @@
       batchPauseEvery: 10,
       batchPauseMs: 3000,
       revokeDelayMs: 15000,
+      fetchTimeoutMs: 30000,
       maxTitleLength: 120,
       minTitleLength: 3,
       minImageSize: 80, // skip images rendered smaller than this (px); 0 disables
@@ -183,6 +184,7 @@
     if (!url) return "";
     try {
       const u = new URL(url, location.href);
+      if (!/^https?:$/.test(u.protocol)) return "";
       // Tracking parameters are safe to remove. Preserve resize and quality
       // parameters because they can be part of signed CDN URLs.
       for (const key of [...u.searchParams.keys()]) {
@@ -469,8 +471,8 @@
         source: "bing",
         fallbackName: "bing_image",
         referer: meta.purl || location.href,
-        width: Number(meta.mw) || 0,
-        height: Number(meta.mh) || 0,
+        width: Number(meta.mw || meta.w || img?.naturalWidth) || 0,
+        height: Number(meta.mh || meta.h || img?.naturalHeight) || 0,
       });
     } catch (err) {
       log("Bing card parse error:", err);
@@ -823,8 +825,17 @@
       `${String(index).padStart(3, "0")}_` +
       (entry.suggestedName || "image").substring(0, 80);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CONFIG.fetchTimeoutMs);
+    const stopMonitor = setInterval(() => {
+      if (window.__SCRAPER_STOP__) controller.abort();
+    }, 250);
     try {
-      const resp = await fetch(entry.url, { mode: "cors", credentials: "omit" });
+      const resp = await fetch(entry.url, {
+        mode: "cors",
+        credentials: "omit",
+        signal: controller.signal,
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
       const ext = extFromMime(blob.type, entry.type === "video" ? ".mp4" : ".jpg");
@@ -844,11 +855,14 @@
     } catch (err) {
       console.warn(`⚠️ [cors] cannot rename via blob: ${entry.url}`, err.message || err);
       return false;
+    } finally {
+      clearTimeout(timeout);
+      clearInterval(stopMonitor);
     }
   }
 
   // Decide mode via prompt (default: export for Python)
-  const choice = (window.prompt(
+  const requestedChoice = (window.prompt(
     `Found ${mediaEntries.length} items.\n` +
       `Type: export | download | both\n` +
       `(export → Python download.py avoids .crdownload)`,
@@ -856,12 +870,17 @@
   ) || "export")
     .trim()
     .toLowerCase();
+  const choice = ["export", "download", "both"].includes(requestedChoice)
+    ? requestedChoice
+    : CONFIG.mode;
 
   if (choice === "export" || choice === "both") {
-    await copyManifest();
+    const copied = await copyManifest();
     console.log(
-      "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
-        "   python download.py manifest.json"
+      copied
+        ? "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
+            "   python download.py manifest.json"
+        : "➡️ Next: run download.py with the downloaded JSON manifest."
     );
     // Also expose for manual copy
     window.__IMAGE_TITLE_MANIFEST__ = manifest;

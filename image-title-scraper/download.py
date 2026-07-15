@@ -231,12 +231,6 @@ def reserve_path(
             try:
                 fd = os.open(partial, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             except FileExistsError:
-                try:
-                    if time.time() - partial.stat().st_mtime > 3600:
-                        partial.unlink()
-                        continue
-                except FileNotFoundError:
-                    continue
                 n += 1
                 continue
             os.close(fd)
@@ -412,6 +406,9 @@ def download_one(
         ext = guess_ext(url, content_type, media_type, first_chunk)
         dest, partial = reserve_path(out_dir, stem, ext, overwrite=overwrite)
         written = len(first_chunk)
+        if max_bytes and written > max_bytes:
+            partial.unlink(missing_ok=True)
+            raise RuntimeError(f"download exceeded size limit {max_bytes}")
         try:
             with partial.open("wb") as fh:
                 if first_chunk:

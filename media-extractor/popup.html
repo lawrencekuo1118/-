@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Page Media Extractor</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <header>
+      <h1>Page Media Extractor</h1>
+      <p>Find downloadable images and videos on this page.</p>
+    </header>
+
+    <section class="controls" aria-label="Scan options">
+      <label><input id="auto-scroll" type="checkbox"> Scroll to load lazy media</label>
+      <label><input id="computed-styles" type="checkbox" checked> Scan CSS backgrounds</label>
+      <button id="scan" class="primary" type="button">Scan current page</button>
+    </section>
+
+    <div id="status" role="status" aria-live="polite">Ready to scan.</div>
+
+    <section id="results" hidden>
+      <div class="result-toolbar">
+        <label><input id="select-all" type="checkbox" checked> Select all</label>
+        <select id="type-filter" aria-label="Filter media type">
+          <option value="all">Images and videos</option>
+          <option value="image">Images only</option>
+          <option value="video">Videos only</option>
+        </select>
+      </div>
+      <ol id="resource-list"></ol>
+      <button id="download" class="primary" type="button">Download selected</button>
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

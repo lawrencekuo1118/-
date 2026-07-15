@@ -1,0 +1,10 @@
+{
+  "name": "page-media-extractor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser extension for extracting and downloading page media.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node --check extractor.js && node --check content.js && node --check background.js && node --check popup.js"
+  }
+}

@@ -1,7 +1,7 @@
 # Group6 — Ta Feng Grocery Analytics (R)
 
 This repository contains a group data-mining project and course exercises built
-with R/RMarkdown, plus an upgraded **image title scraper** toolkit.
+with R/RMarkdown, plus several media-extraction tools.
 
 ## Project purpose
 
@@ -23,6 +23,8 @@ contain coursework notebooks and supporting files.
 - `midterm/` — midterm reports and visualizations
 - `unit*/` — assignment notebooks and teaching materials
 - `image-title-scraper/` — browser + Python toolkit for native image-title extraction
+- `media-extractor/` — Chrome/Edge Manifest V3 media-extractor extension
+- `tools/` — standalone browser-console media extractor
 - `Group6.Rproj` — RStudio project file
 
 ## How to run
@@ -32,16 +34,21 @@ contain coursework notebooks and supporting files.
 3. Knit the desired RMarkdown document (for example,
    `final/group6_final_1.Rmd` or `final/group6_final_2.Rmd`).
 
-## Image title scraper
+## Media extraction tools
 
-See [`image-title-scraper/README.md`](./image-title-scraper/README.md).
+The repository currently includes three implementations of the shared
+image-title/media downloader concept:
 
-Browser console extractor mines native image titles (Bing metadata, Google
-`/imgres` params, `a[title]`, alt/caption fallbacks), resolves best-resolution
-sources (`srcset` / lazy-load attributes), collects incrementally while
-scrolling virtualized galleries, and exports JSON + CSV manifests; Python
-downloads files concurrently with those titles as filenames, sniffing real
-file types from magic bytes (avoids Chrome `.crdownload` stalls).
+- [`image-title-scraper/`](image-title-scraper/) — a browser extractor that
+  exports JSON/CSV manifests plus a concurrent Python downloader. It supports
+  native title scoring, virtualized galleries, referers, and file-type
+  detection from magic bytes.
+- [`media-extractor/`](media-extractor/) — a Chrome/Edge Manifest V3 extension
+  that uses browser download APIs and runs only on the user-activated tab.
+- [`tools/media-extractor.js`](tools/media-extractor.js) — a standalone script
+  that can be pasted into a page's developer console.
+
+See each implementation's README for installation, behavior, and limitations.
 
 ## Upgrade notes
 

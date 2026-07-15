@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Page Media Extractor",
+  "version": "1.0.0",
+  "description": "Find and download images and videos from the current page without opening new tabs.",
+  "permissions": [
+    "activeTab",
+    "alarms",
+    "downloads",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Scan page media"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

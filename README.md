@@ -36,13 +36,15 @@ contain coursework notebooks and supporting files.
 
 See [`image-title-scraper/README.md`](./image-title-scraper/README.md).
 
-Browser console extractor mines native image titles (Bing metadata, `a[title]`,
-alt/caption fallbacks) and exports a JSON manifest; Python downloads files with
-those titles as filenames (avoids Chrome `.crdownload` stalls).
+Browser console extractor (v5) mines native image titles (Bing/Google metadata,
+`a[title]`, alt/caption fallbacks) with deep discovery (srcset, lazy attrs,
+Shadow DOM, HTML sweep), then exports a JSON manifest; Python downloads files
+with those titles as filenames (avoids Chrome `.crdownload` stalls).
 
 ## Upgrade notes
 
 - R Markdown reproducibility: removed a machine-specific dataset path and made
   package-loading/setup logic safer for clean environments.
-- Image title scraper: multi-source title scoring plus a Python downloader path
-  for reliable named downloads.
+- Image title scraper v5: control panel, deep media discovery, Google Images
+  path, canvas download fallback, and a Python downloader with Referer /
+  `--skip-existing` / parallel workers.

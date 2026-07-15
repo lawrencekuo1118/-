@@ -123,6 +123,7 @@
     if (!text) return "";
     return String(text)
       .replace(/[\n\r\t]+/g, " ")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width chars
       .replace(/[\\/*?:"<>|]/g, "")
       .replace(/\s+/g, " ")
       .trim();
@@ -141,21 +142,28 @@
     if (t.length > CONFIG.maxTitleLength) return true;
     if (BLACKLIST_TITLES.has(t)) return true;
     if (/^\d+$/.test(t)) return true;
+    if (/^[\W_]+$/u.test(t)) return true; // punctuation/symbols only
     if (/^[a-f0-9-]{16,}$/i.test(t)) return true; // hex ids / uuids
     if (/^(jpe?g|png|gif|webp|avif|svg|mp4|webm)$/i.test(t)) return true;
     return false;
   }
 
   function createScoringEngine() {
-    const candidates = [];
+    // Dedupe candidates by lowercase text, keeping the highest score
+    const byText = new Map();
 
     function add(text, score, source) {
       const cleaned = sanitize(text);
       if (isGarbage(cleaned)) return;
-      candidates.push({ text: cleaned, score, source });
+      const key = cleaned.toLowerCase();
+      const existing = byText.get(key);
+      if (!existing || score > existing.score) {
+        byText.set(key, { text: cleaned, score, source });
+      }
     }
 
     function best() {
+      const candidates = [...byText.values()];
       candidates.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return b.text.length - a.text.length;
@@ -163,19 +171,23 @@
       return candidates[0] || null;
     }
 
-    return { add, best, candidates };
+    return { add, best };
   }
 
   const STRIP_QUERY_PARAMS = new Set([
-    "w", "h", "width", "height", "size", "s", "resize", "fit",
+    "w", "h", "width", "height", "size", "s", "sz", "resize", "fit",
     "quality", "q", "dpr", "crop", "compress", "auto",
+    // tracking params (break dedupe, useless for fetching)
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "gclid", "fbclid", "msclkid", "mc_eid", "mc_cid",
   ]);
 
   function cleanImageUrl(url) {
     if (!url) return "";
     try {
       const u = new URL(url, location.href);
-      // Strip common resize/quality params so servers return the original
+      // Strip resize/quality/tracking params so servers return the original
+      // and thumbnail variants dedupe to one entry
       for (const key of [...u.searchParams.keys()]) {
         if (STRIP_QUERY_PARAMS.has(key.toLowerCase())) u.searchParams.delete(key);
       }
@@ -399,6 +411,8 @@
   }
 
   function buildEntry({ url, engine, thumbnail, type, source, fallbackName, referer, width, height }) {
+    // Absolute last resort before the generic fallback name
+    if (engine) engine.add(document.title, 40, "document.title");
     const best = engine ? engine.best() : null;
     return {
       url: cleanImageUrl(url),
@@ -707,11 +721,20 @@
   // =========================================================================
   const manifest = {
     version: 5,
+    schemaVersion: "image-title-scraper.manifest.v2",
     generatedAt: new Date().toISOString(),
     pageUrl: location.href,
     pageTitle: document.title,
     site,
     count: mediaEntries.length,
+    stats: mediaEntries.reduce(
+      (acc, item) => {
+        if (item.type === "video") acc.videos += 1;
+        else acc.images += 1;
+        return acc;
+      },
+      { images: 0, videos: 0 }
+    ),
     items: mediaEntries.map((e, i) => ({
       index: i + 1,
       url: e.url,
@@ -755,6 +778,9 @@
     try {
       await navigator.clipboard.writeText(jsonText);
       console.log("📋 Manifest JSON copied to clipboard");
+      console.log(
+        "💡 Tip: in console run copy(JSON.stringify(window.__IMAGE_TITLE_MANIFEST__, null, 2)) if needed."
+      );
       copied = true;
     } catch {
       downloadTextFile(jsonText, `image-title-manifest_${Date.now()}.json`, "application/json");

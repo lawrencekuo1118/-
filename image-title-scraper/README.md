@@ -23,7 +23,8 @@ Browser extractor:
 - **Google Images adapter** — parses `/imgres?imgurl=…` anchors for the true full-size URL plus `imgrefurl` referer.
 - **Shadow DOM + same-origin iframe traversal** and **CSS `background-image` harvesting**.
 - **Size filter** (`minImageSize`, default 80 px) to skip icons/sprites/trackers, plus `maxItems` cap and `maxScrollRounds` safety cap for infinite feeds.
-- **Per-item `referer` + dimensions** included in the manifest (many CDNs reject referer-less requests).
+- **URL canonicalization** — strips resize params (`w`, `h`, `quality`, …) and tracker params (`utm_*`, `gclid`, `fbclid`, `msclkid`, `mc_*`) so thumbnail/tracked variants dedupe to one entry.
+- **Per-item `referer` + dimensions** included in the manifest (many CDNs reject referer-less requests); manifest also carries `schemaVersion` and image/video `stats`.
 - **Runtime config override** via `window.__SCRAPER_CONFIG__` and an emergency stop via `window.__SCRAPER_STOP__ = true` during in-browser downloads.
 
 Python downloader:

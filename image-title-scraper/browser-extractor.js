@@ -464,21 +464,28 @@
   // =========================================================================
   // COLLECT
   // =========================================================================
-  const seen = new Set();
+  const seen = new Map();
   const mediaEntries = [];
   const isBing = /bing\.com/i.test(location.hostname);
   function addEntry(entry) {
     if (!entry?.url) return;
     entry.url = normalizeUrl(entry.url);
     const key = urlKey(entry.url);
-    if (!entry.url || isSpamUrl(entry.url) || seen.has(key)) return;
-    seen.add(key);
+    if (!entry.url || isSpamUrl(entry.url)) return;
+    const existing = seen.get(key);
+    if (existing) {
+      Object.entries(entry).forEach(([name, value]) => {
+        if (!existing[name] && value) existing[name] = value;
+      });
+      return;
+    }
+    seen.set(key, entry);
     mediaEntries.push(entry);
   }
 
   // Capture each mounted set while scrolling. This matters for virtualized
   // galleries that recycle DOM nodes and would otherwise lose earlier items.
-  function snapshotVisibleImages() {
+  function snapshotVisibleMedia() {
     if (isBing) {
       const metadataCards = deepQueryAll(".iusc");
       const cards = metadataCards.length
@@ -491,9 +498,51 @@
         addEntry(parseGenericImage(img));
       }
     });
+    deepQueryAll("video, video source").forEach((vid) => {
+      const url = mediaUrl(vid);
+      if (!url) return;
+      const owner = vid.closest("video") || vid;
+      const title =
+        owner.getAttribute("title") ||
+        owner.getAttribute("aria-label") ||
+        owner.closest("figure")?.querySelector("figcaption")?.innerText ||
+        extractFilename(url);
+      addEntry({
+        url,
+        suggestedName: normalizeFilename(title) || "video",
+        thumbnail: normalizeUrl(owner.getAttribute("poster")) || "",
+        type: "video",
+        source: isBing ? "bing" : "generic",
+        sourcePage: location.href,
+        titleSource: "video",
+      });
+    });
+    if (CONFIG.includeCssBackgrounds) {
+      deepQueryAll("[style*='background']").forEach((element) => {
+        const background = getComputedStyle(element).backgroundImage || "";
+        for (const match of background.matchAll(/url\((['"]?)(.*?)\1\)/g)) {
+          const url = normalizeUrl(match[2]);
+          if (!url || match[2].startsWith("data:")) continue;
+          const title =
+            element.getAttribute("aria-label") ||
+            element.getAttribute("title") ||
+            element.closest("figure")?.querySelector("figcaption")?.innerText ||
+            extractFilename(url);
+          addEntry({
+            url,
+            suggestedName: normalizeFilename(title) || "background_image",
+            thumbnail: url,
+            type: "image",
+            source: "css-background",
+            sourcePage: location.href,
+            titleSource: "background",
+          });
+        }
+      });
+    }
   }
 
-  await deepScroll(snapshotVisibleImages);
+  await deepScroll(snapshotVisibleMedia);
 
   if (isBing) {
     console.log("🟦 Bing Images mode");

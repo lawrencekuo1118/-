@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import mimetypes
 import os
@@ -172,14 +173,21 @@ def reserve_path(
     directory: Path, stem: str, ext: str, overwrite: bool = False
 ) -> tuple[Path, Path]:
     with _path_lock:
+        if overwrite:
+            candidate = directory / f"{stem}{ext}"
+            partial = candidate.with_suffix(
+                f"{candidate.suffix}.{os.getpid()}.{threading.get_ident()}.part"
+            )
+            fd = os.open(partial, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(fd)
+            return candidate, partial
+
         n = 1
         while True:
             suffix = "" if n == 1 else f"_{n}"
             candidate = directory / f"{stem}{suffix}{ext}"
             partial = candidate.with_suffix(f"{candidate.suffix}.part")
-            if overwrite:
-                partial.unlink(missing_ok=True)
-            elif candidate.exists():
+            if candidate.exists():
                 n += 1
                 continue
             try:
@@ -198,22 +206,28 @@ def reserve_path(
 
 
 class DownloadRegistry:
-    """Persist URL-to-file completion data for trustworthy resume checks."""
+    """Persist per-item completion data for trustworthy, process-safe resumes."""
 
     def __init__(self, directory: Path):
         self.directory = directory
-        self.path = directory / ".image-title-scraper-state.json"
+        self.state_dir = directory / ".image-title-scraper-state"
         self.lock = threading.Lock()
+
+    def _record_path(self, stem: str) -> Path:
+        digest = hashlib.sha256(stem.encode("utf-8")).hexdigest()
+        return self.state_dir / f"{digest}.json"
+
+    def _read(self, stem: str) -> dict[str, Any]:
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-            self.records = data if isinstance(data, dict) else {}
+            data = json.loads(self._record_path(stem).read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
         except (OSError, json.JSONDecodeError):
-            self.records = {}
+            return {}
 
     def find(self, stem: str, url: str) -> Path | None:
         with self.lock:
-            record = self.records.get(stem)
-            if not isinstance(record, dict) or record.get("url") != url:
+            record = self._read(stem)
+            if record.get("url") != url:
                 return None
             path = self.directory / str(record.get("filename") or "")
             expected_size = int(record.get("size") or 0)
@@ -225,33 +239,25 @@ class DownloadRegistry:
                 return path
             return None
 
-    def purge(self, stem: str) -> None:
-        with self.lock:
-            record = self.records.pop(stem, None)
-            if isinstance(record, dict):
-                (self.directory / str(record.get("filename") or "")).unlink(
-                    missing_ok=True
-                )
-            for path in self.directory.iterdir():
-                if path.is_file() and path.stem == stem:
-                    path.unlink(missing_ok=True)
-            self._write()
-
     def record(self, stem: str, url: str, path: Path) -> None:
         with self.lock:
-            self.records[stem] = {
+            previous = self._read(stem)
+            record = {
+                "stem": stem,
                 "url": url,
                 "filename": path.name,
                 "size": path.stat().st_size,
             }
-            self._write()
-
-    def _write(self) -> None:
-        temporary = self.path.with_name(
-            f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
-        )
-        temporary.write_text(json.dumps(self.records, indent=2), encoding="utf-8")
-        temporary.replace(self.path)
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            record_path = self._record_path(stem)
+            temporary = record_path.with_name(
+                f"{record_path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+            )
+            temporary.write_text(json.dumps(record, indent=2), encoding="utf-8")
+            temporary.replace(record_path)
+            old_name = str(previous.get("filename") or "")
+            if old_name and old_name != path.name:
+                (self.directory / old_name).unlink(missing_ok=True)
 
 
 def get_session() -> requests.Session:
@@ -281,8 +287,6 @@ def download_one(
         existing = registry.find(stem, url)
         if existing:
             return existing, True
-    else:
-        registry.purge(stem)
 
     headers = dict(DEFAULT_HEADERS)
     source_page = str(item.get("sourcePage") or "")
@@ -410,7 +414,7 @@ def main() -> int:
         "--failures",
         type=Path,
         default=None,
-        help="Failure report path (default: <out>/failures.json)",
+        help="Failure report path (default: unique file under <out>)",
     )
     args = parser.parse_args()
 
@@ -478,7 +482,10 @@ def main() -> int:
                 print("\nInterrupted; completed files were kept.", file=sys.stderr)
                 return 130
 
-    failures_path = args.failures or args.out / "failures.json"
+    failure_stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    failures_path = args.failures or (
+        args.out / f"failures-{failure_stamp}-{os.getpid()}.json"
+    )
     if failed:
         report = {
             "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -492,7 +499,7 @@ def main() -> int:
         temporary.write_text(json.dumps(report, indent=2), encoding="utf-8")
         temporary.replace(failures_path)
         print(f"Failure report: {failures_path}")
-    else:
+    elif args.failures:
         failures_path.unlink(missing_ok=True)
 
     print(f"\n🎉 Done. saved={ok} skipped={skipped} failed={len(failed)}")

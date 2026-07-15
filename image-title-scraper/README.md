@@ -47,8 +47,8 @@ python download.py manifest.json --overwrite
 
 Downloads are written to exclusively reserved `.part` files and renamed only
 after completion. Re-running the command skips files only when the URL, filename,
-and byte size match the local `.image-title-scraper-state.json` registry. Failures are saved to
-`downloads/failures.json`; that file is itself a valid manifest and can be passed
+and byte size match the local `.image-title-scraper-state/` metadata. Failures are saved to
+unique `downloads/failures-*.json` reports; each report is itself a valid manifest and can be passed
 back to `download.py` after fixing connectivity or access.
 
 ## Title priority (scoring)

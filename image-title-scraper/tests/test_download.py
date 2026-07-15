@@ -113,6 +113,43 @@ class DownloaderTests(unittest.TestCase):
             first_partial.unlink()
             second_partial.unlink()
 
+    def test_overwrite_keeps_old_file_until_replacement_succeeds(self):
+        item = {
+            "index": 1,
+            "url": "https://cdn.test/a",
+            "title": "A",
+            "type": "image",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            with mock.patch.object(
+                download,
+                "get_session",
+                return_value=FakeSession(FakeResponse(content_type="image/png")),
+            ):
+                original, _ = download.download_one(item, out, timeout=2)
+
+            with mock.patch.object(
+                download,
+                "get_session",
+                return_value=FakeSession(FakeResponse(status=503)),
+            ):
+                with self.assertRaises(RuntimeError):
+                    download.download_one(item, out, timeout=2, overwrite=True)
+            self.assertTrue(original.exists())
+
+            with mock.patch.object(
+                download,
+                "get_session",
+                return_value=FakeSession(FakeResponse(content_type="image/jpeg")),
+            ):
+                replacement, _ = download.download_one(
+                    item, out, timeout=2, overwrite=True
+                )
+            self.assertEqual(replacement.suffix, ".jpg")
+            self.assertTrue(replacement.exists())
+            self.assertFalse(original.exists())
+
     def test_rejects_html_without_leaving_partial_file(self):
         item = {
             "index": 1,

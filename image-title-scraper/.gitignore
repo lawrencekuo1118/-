@@ -4,5 +4,5 @@ downloads/
 *.pyc
 manifest.json
 image-title-manifest_*.json
-.image-title-scraper-state.json
+.image-title-scraper-state/
 .DS_Store

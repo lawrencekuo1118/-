@@ -1,4 +1,4 @@
-# Image Title Scraper (v4)
+# Image Title Scraper (v5)
 
 Browser + Python toolkit that finds images/videos on a page, mines their **native titles**, and downloads them with meaningful filenames.
 
@@ -11,8 +11,10 @@ Earlier console-only scrapers often failed to recover real titles because they a
 This upgrade:
 
 1. **Scores multiple title sources** (Bing `.iusc` metadata, parent `a[title]`, card containers, `figcaption`, `data-*`, `alt`/`title`).
-2. **Exports a JSON manifest** from the browser.
-3. **Downloads with Python** so filenames are real image/video extensions (no `.crdownload` rename fights).
+2. **Prefers high-resolution media URLs** from `srcset` / `<picture><source>`.
+3. **Optionally scans CSS `background-image` cards** for sites that lazy-render media in divs.
+4. **Exports a JSON manifest** from the browser.
+5. **Downloads with Python** so filenames are real image/video extensions (no `.crdownload` rename fights).
 
 ## Quick start
 
@@ -53,6 +55,13 @@ python download.py manifest.json --offset 30 --limit 30
 | 55–70 | Clean URL filename (non-`OIP` noise) |
 
 Garbage titles (`image`, `loading`, pure digits, length &lt; 3) are discarded.
+
+## URL cleanup and dedupe improvements
+
+- Strips common tracker query params (`utm_*`, `gclid`, `fbclid`, `msclkid`, etc.).
+- Removes common resize params (`w`, `h`, `width`, `height`, `q`).
+- Canonicalizes URLs before dedupe so thumbnail variants don't create duplicates.
+- Drops tiny image elements when dimensions indicate likely trackers/icons.
 
 ## Browser-only download (optional)
 

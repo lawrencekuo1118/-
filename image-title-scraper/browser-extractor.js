@@ -266,12 +266,13 @@
   // =========================================================================
   // AUTO SCROLL (lazy-load wake-up)
   // =========================================================================
-  async function deepScroll() {
+  async function deepScroll(onStep) {
     console.log("🔄 Deep-scrolling to wake lazy-loaded media...");
     let lastHeight = document.body.scrollHeight;
     let lastMediaCount = 0;
     let stableCount = 0;
     let steps = 0;
+    onStep?.();
 
     while (
       stableCount < CONFIG.stableThreshold &&
@@ -279,6 +280,7 @@
     ) {
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       await sleep(CONFIG.scrollDelay);
+      onStep?.();
       const newHeight = document.body.scrollHeight;
       const mediaCount = deepQueryAll("img, video, source").length;
       if (newHeight === lastHeight && mediaCount === lastMediaCount) {
@@ -462,8 +464,6 @@
   // =========================================================================
   // COLLECT
   // =========================================================================
-  await deepScroll();
-
   const seen = new Set();
   const mediaEntries = [];
   const isBing = /bing\.com/i.test(location.hostname);
@@ -475,6 +475,25 @@
     seen.add(key);
     mediaEntries.push(entry);
   }
+
+  // Capture each mounted set while scrolling. This matters for virtualized
+  // galleries that recycle DOM nodes and would otherwise lose earlier items.
+  function snapshotVisibleImages() {
+    if (isBing) {
+      const metadataCards = deepQueryAll(".iusc");
+      const cards = metadataCards.length
+        ? metadataCards
+        : deepQueryAll(".imgpt, .iuscp");
+      cards.forEach((card) => addEntry(parseBingCard(card)));
+    }
+    deepQueryAll("img").forEach((img) => {
+      if (!(isBing && img.closest(".iusc, .imgpt, .iuscp"))) {
+        addEntry(parseGenericImage(img));
+      }
+    });
+  }
+
+  await deepScroll(snapshotVisibleImages);
 
   if (isBing) {
     console.log("🟦 Bing Images mode");
@@ -708,10 +727,12 @@
   }
 
   if (choice === "export" || choice === "both") {
-    await copyManifest();
+    const copied = await copyManifest();
     console.log(
-      "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
-        "   python download.py manifest.json"
+      copied
+        ? "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
+            "   python download.py manifest.json"
+        : "➡️ Next: run download.py with the downloaded manifest JSON file."
     );
     // Also expose for manual copy
     window.__IMAGE_TITLE_MANIFEST__ = manifest;

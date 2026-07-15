@@ -98,6 +98,21 @@ class DownloaderTests(unittest.TestCase):
             self.assertTrue(skipped)
             self.assertEqual(resumed_path, path)
 
+            changed = {**item, "url": "https://cdn.test/different"}
+            changed_path, skipped = download.download_one(changed, out, timeout=2)
+            self.assertFalse(skipped)
+            self.assertNotEqual(changed_path, path)
+
+    def test_path_reservation_is_exclusive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            first, first_partial = download.reserve_path(out, "001_A", ".jpg")
+            second, second_partial = download.reserve_path(out, "001_A", ".jpg")
+            self.assertEqual(first.name, "001_A.jpg")
+            self.assertEqual(second.name, "001_A_2.jpg")
+            first_partial.unlink()
+            second_partial.unlink()
+
     def test_rejects_html_without_leaving_partial_file(self):
         item = {
             "index": 1,
@@ -114,6 +129,26 @@ class DownloaderTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "not media"):
                 download.download_one(item, out, timeout=2)
             self.assertEqual(list(out.iterdir()), [])
+
+    def test_rejects_disguised_html_body(self):
+        item = {
+            "index": 1,
+            "url": "https://cdn.test/challenge",
+            "title": "Challenge",
+            "type": "image",
+        }
+        body = b"<!doctype html><html>" + b"x" * 64
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            download,
+            "get_session",
+            return_value=FakeSession(
+                FakeResponse(body=body, content_type="application/octet-stream")
+            ),
+        ):
+            out = Path(tmp)
+            with self.assertRaisesRegex(RuntimeError, "HTML"):
+                download.download_one(item, out, timeout=2)
+            self.assertFalse(list(out.glob("*.part")))
 
 
 if __name__ == "__main__":

@@ -23,7 +23,8 @@ This version:
 2. DevTools → **Console**.
 3. Paste [`browser-extractor.js`](./browser-extractor.js) and run it.
 4. Choose `export` when prompted (default).
-5. Save the clipboard JSON as `manifest.json`.
+5. Save the clipboard JSON as `manifest.json`. If clipboard access is blocked,
+   the extractor downloads the JSON file instead.
 
 ### 2) Download with Python
 
@@ -44,8 +45,9 @@ python download.py manifest.json --max-mb 100 --retries 4
 python download.py manifest.json --overwrite
 ```
 
-Downloads are written to `.part` files and renamed only after completion. Re-running
-the command skips completed files by default. Failures are saved to
+Downloads are written to exclusively reserved `.part` files and renamed only
+after completion. Re-running the command skips files only when the URL, filename,
+and byte size match the local `.image-title-scraper-state.json` registry. Failures are saved to
 `downloads/failures.json`; that file is itself a valid manifest and can be passed
 back to `download.py` after fixing connectivity or access.
 
@@ -75,7 +77,8 @@ The extractor scans:
 - Inline CSS `background-image` values.
 - `og:image`, `twitter:image`, and `link[rel=image_src]` page metadata.
 
-Auto-scroll stops after 60 steps even on endless feeds. Original URLs are
+Media is captured during every scroll step, including galleries that recycle
+visible DOM nodes. Auto-scroll stops after 60 steps even on endless feeds. Original URLs are
 preserved instead of stripping resize query parameters, because those parameters
 can be required by signed CDN links.
 

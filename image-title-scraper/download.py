@@ -168,30 +168,90 @@ def load_manifest(path: Path) -> list[dict[str, Any]]:
     return normalized
 
 
-def unique_path(directory: Path, stem: str, ext: str) -> Path:
+def reserve_path(
+    directory: Path, stem: str, ext: str, overwrite: bool = False
+) -> tuple[Path, Path]:
     with _path_lock:
-        candidate = directory / f"{stem}{ext}"
-        if not candidate.exists() and not candidate.with_suffix(f"{ext}.part").exists():
-            return candidate
-        n = 2
+        n = 1
         while True:
-            candidate = directory / f"{stem}_{n}{ext}"
-            if not candidate.exists() and not candidate.with_suffix(f"{ext}.part").exists():
-                return candidate
-            n += 1
+            suffix = "" if n == 1 else f"_{n}"
+            candidate = directory / f"{stem}{suffix}{ext}"
+            partial = candidate.with_suffix(f"{candidate.suffix}.part")
+            if overwrite:
+                partial.unlink(missing_ok=True)
+            elif candidate.exists():
+                n += 1
+                continue
+            try:
+                fd = os.open(partial, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            except FileExistsError:
+                try:
+                    if time.time() - partial.stat().st_mtime > 3600:
+                        partial.unlink()
+                        continue
+                except FileNotFoundError:
+                    continue
+                n += 1
+                continue
+            os.close(fd)
+            return candidate, partial
 
 
-def existing_path(directory: Path, stem: str) -> Path | None:
-    matches = sorted(
-        path for path in directory.iterdir()
-        if (
-            path.stem == stem
-            and not path.name.endswith(".part")
-            and path.is_file()
-            and path.stat().st_size >= MIN_FILE_SIZE
+class DownloadRegistry:
+    """Persist URL-to-file completion data for trustworthy resume checks."""
+
+    def __init__(self, directory: Path):
+        self.directory = directory
+        self.path = directory / ".image-title-scraper-state.json"
+        self.lock = threading.Lock()
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            self.records = data if isinstance(data, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            self.records = {}
+
+    def find(self, stem: str, url: str) -> Path | None:
+        with self.lock:
+            record = self.records.get(stem)
+            if not isinstance(record, dict) or record.get("url") != url:
+                return None
+            path = self.directory / str(record.get("filename") or "")
+            expected_size = int(record.get("size") or 0)
+            if (
+                path.is_file()
+                and expected_size >= MIN_FILE_SIZE
+                and path.stat().st_size == expected_size
+            ):
+                return path
+            return None
+
+    def purge(self, stem: str) -> None:
+        with self.lock:
+            record = self.records.pop(stem, None)
+            if isinstance(record, dict):
+                (self.directory / str(record.get("filename") or "")).unlink(
+                    missing_ok=True
+                )
+            for path in self.directory.iterdir():
+                if path.is_file() and path.stem == stem:
+                    path.unlink(missing_ok=True)
+            self._write()
+
+    def record(self, stem: str, url: str, path: Path) -> None:
+        with self.lock:
+            self.records[stem] = {
+                "url": url,
+                "filename": path.name,
+                "size": path.stat().st_size,
+            }
+            self._write()
+
+    def _write(self) -> None:
+        temporary = self.path.with_name(
+            f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
         )
-    )
-    return matches[0] if matches else None
+        temporary.write_text(json.dumps(self.records, indent=2), encoding="utf-8")
+        temporary.replace(self.path)
 
 
 def get_session() -> requests.Session:
@@ -208,17 +268,21 @@ def download_one(
     timeout: float,
     overwrite: bool = False,
     max_bytes: int = 0,
+    registry: DownloadRegistry | None = None,
 ) -> tuple[Path, bool]:
     url = item["url"]
     index = item["index"]
     title = sanitize_filename(str(item["title"]))
     media_type = item.get("type") or "image"
     stem = f"{index:03d}_{title}"
+    registry = registry or DownloadRegistry(out_dir)
 
     if not overwrite:
-        existing = existing_path(out_dir, stem)
+        existing = registry.find(stem, url)
         if existing:
             return existing, True
+    else:
+        registry.purge(stem)
 
     headers = dict(DEFAULT_HEADERS)
     source_page = str(item.get("sourcePage") or "")
@@ -238,6 +302,12 @@ def download_one(
         normalized_type = content_type.split(";", 1)[0].strip().lower()
         if normalized_type.startswith(("text/", "application/json", "application/xml")):
             raise RuntimeError(f"server returned {normalized_type}, not media")
+        expected_prefix = "video/" if media_type == "video" else "image/"
+        if normalized_type and normalized_type != "application/octet-stream":
+            if not normalized_type.startswith(expected_prefix):
+                raise RuntimeError(
+                    f"server returned {normalized_type}, expected {expected_prefix}*"
+                )
 
         try:
             content_length = int(resp.headers.get("Content-Length") or 0)
@@ -249,14 +319,19 @@ def download_one(
             )
 
         ext = guess_ext(url, content_type, media_type)
-        dest = out_dir / f"{stem}{ext}" if overwrite else unique_path(out_dir, stem, ext)
-        partial = dest.with_suffix(f"{dest.suffix}.part")
+        dest, partial = reserve_path(out_dir, stem, ext, overwrite=overwrite)
         written = 0
         try:
             with partial.open("wb") as fh:
+                first_chunk = True
                 for chunk in resp.iter_content(chunk_size=128 * 1024):
                     if not chunk:
                         continue
+                    if first_chunk:
+                        sample = chunk[:1024].lstrip().lower()
+                        if sample.startswith((b"<!doctype html", b"<html")):
+                            raise RuntimeError("server returned an HTML page, not media")
+                        first_chunk = False
                     written += len(chunk)
                     if max_bytes and written > max_bytes:
                         raise RuntimeError(
@@ -269,6 +344,7 @@ def download_one(
             if written < MIN_FILE_SIZE:
                 raise RuntimeError("downloaded file too small (likely blocked)")
             partial.replace(dest)
+            registry.record(stem, url, dest)
         except BaseException:
             partial.unlink(missing_ok=True)
             raise
@@ -284,6 +360,7 @@ def download_with_retries(
     delay: float,
     overwrite: bool,
     max_bytes: int,
+    registry: DownloadRegistry,
 ) -> tuple[dict[str, Any], Path | None, bool, str | None]:
     last_error: Exception | None = None
     for attempt in range(retries + 1):
@@ -294,6 +371,7 @@ def download_with_retries(
                 timeout,
                 overwrite=overwrite,
                 max_bytes=max_bytes,
+                registry=registry,
             )
             if delay > 0 and not skipped:
                 time.sleep(delay)
@@ -362,6 +440,7 @@ def main() -> int:
     skipped = 0
     failed: list[dict[str, Any]] = []
     max_bytes = int(args.max_mb * 1024 * 1024) if args.max_mb else 0
+    registry = DownloadRegistry(args.out)
 
     if items:
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
@@ -375,6 +454,7 @@ def main() -> int:
                     args.delay,
                     args.overwrite,
                     max_bytes,
+                    registry,
                 )
                 for item in items
             ]
@@ -405,7 +485,12 @@ def main() -> int:
             "count": len(failed),
             "items": failed,
         }
-        failures_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        failures_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = failures_path.with_name(
+            f"{failures_path.name}.{os.getpid()}.tmp"
+        )
+        temporary.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        temporary.replace(failures_path)
         print(f"Failure report: {failures_path}")
     else:
         failures_path.unlink(missing_ok=True)

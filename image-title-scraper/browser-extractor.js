@@ -2,24 +2,34 @@
  * Image Title Scraper — Browser Extractor v5
  *
  * Purpose:
- *   Scroll a page (Bing Images or generic sites), discover media, score
- *   candidate native titles, then either download in-browser or export a
- *   JSON manifest for the companion Python downloader (recommended).
+ *   Scroll a page (Bing Images, Google Images, or generic sites), discover
+ *   media, score candidate native titles, then either download in-browser or
+ *   export a JSON/CSV manifest for the companion Python downloader
+ *   (recommended).
  *
  * How to use:
- *   1. Open the target page (Bing Images results list works best).
+ *   1. Open the target page (image results list works best).
  *   2. Open DevTools → Console.
  *   3. Paste this entire file and press Enter.
- *   4. When prompted, prefer "Export JSON" then run: python download.py manifest.json
+ *   4. When prompted, prefer "export" then run: python download.py manifest.json
  *
- * Capabilities:
- *   - Multi-source title scoring with length / blacklist filters
- *   - Bing `.iusc` metadata (`m` JSON: murl + t) as highest-confidence source
- *   - Parent <a title>, card containers, figcaption, data-*, img alt/title fallbacks
- *   - Manifest export to avoid Chrome .crdownload / CORS download failures
- *   - srcset/lazy attributes, open shadow DOM, CSS backgrounds, and page metadata
- *   - Bounded auto-scroll and non-destructive URL normalization
- *   - Batched download delays + auto-download permission reminder
+ * Optional config override (set BEFORE pasting the script):
+ *   window.__SCRAPER_CONFIG__ = { minImageSize: 120, maxItems: 200, mode: "export" };
+ *
+ * Emergency stop during in-browser downloads:
+ *   window.__SCRAPER_STOP__ = true;
+ *
+ * Upgrades vs v4:
+ *   - Incremental collection DURING scrolling (virtualized galleries such as
+ *     Bing/Google unload offscreen cards; v4 only scanned at the end and lost them)
+ *   - Best-resolution source resolution: srcset / <picture> / data-src /
+ *     data-lazy-src / data-original lazy-load attributes
+ *   - Google Images adapter (parses /imgres?imgurl=… for full-size URLs)
+ *   - Shadow DOM + same-origin iframe traversal
+ *   - CSS background-image harvesting
+ *   - Minimum-rendered-size filter to skip icons/sprites/trackers
+ *   - CSV export next to the JSON manifest, per-item referer + dimensions
+ *   - Safety cap on scroll rounds, maxItems limit, runtime config overrides
  */
 (async function () {
   "use strict";
@@ -28,24 +38,29 @@
   console.log("🚀 Image Title Scraper v5 — browser extractor");
 
   // =========================================================================
-  // CONFIG
+  // CONFIG (override any key via window.__SCRAPER_CONFIG__ before running)
   // =========================================================================
-  const CONFIG = {
-    scrollDelay: 1500,
-    stableThreshold: 3,
-    maxScrollSteps: 60,
-    downloadDelay: 1200,
-    batchPauseEvery: 10,
-    batchPauseMs: 3000,
-    revokeDelayMs: 15000,
-    fetchTimeoutMs: 30000,
-    maxTitleLength: 120,
-    minTitleLength: 3,
-    minImageDimension: 48,
-    includeCssBackgrounds: true,
-    debug: true,
-    mode: "export", // "export" | "download" | "both"
-  };
+  const CONFIG = Object.assign(
+    {
+      scrollDelay: 1500,
+      stableThreshold: 3,
+      maxScrollRounds: 60, // hard cap so infinite feeds terminate
+      downloadDelay: 1200,
+      batchPauseEvery: 10,
+      batchPauseMs: 3000,
+      revokeDelayMs: 15000,
+      maxTitleLength: 120,
+      minTitleLength: 3,
+      minImageSize: 80, // skip images rendered smaller than this (px); 0 disables
+      maxItems: 0, // stop collecting after N items; 0 = unlimited
+      includeBackgroundImages: true,
+      includeVideos: true,
+      debug: true,
+      mode: "export", // "export" | "download" | "both"
+      exportCsv: true, // also produce a CSV manifest on export
+    },
+    typeof window !== "undefined" ? window.__SCRAPER_CONFIG__ : null
+  );
 
   const SPAM_URL_KEYWORDS = [
     "analytics",
@@ -53,32 +68,44 @@
     "pixel",
     "doubleclick",
     "googleads",
+    "googlesyndication",
     "facebook.com/tr",
     "bat.bing",
     "/ads/",
     "adgeek",
-    "google-analytics",
     "adservice",
-    "beacon",
-    "scorecardresearch",
+    "/sprite",
+    "spacer.gif",
+    "blank.gif",
+    "1x1.",
   ];
 
   const BLACKLIST_TITLES = new Set([
     "image",
+    "img",
     "photo",
+    "picture",
     "thumbnail",
+    "thumb",
+    "icon",
+    "logo",
+    "avatar",
+    "banner",
     "untitled",
     "click",
+    "click here",
     "download",
     "view image",
+    "see more",
     "loading",
     "link",
-    "logo",
-    "icon",
-    "avatar",
-    "spacer",
-    "blank",
     "...",
+    "read more",
+    "open",
+    "close",
+    "next",
+    "previous",
+    "share",
   ]);
 
   // =========================================================================
@@ -89,25 +116,23 @@
     if (CONFIG.debug) console.log(...args);
   };
 
+  // innerText is undefined for detached nodes / non-browser DOMs; fall back
+  const textOf = (el) => (el ? el.innerText || el.textContent || "" : "");
+
   function sanitize(text) {
     if (!text) return "";
     return String(text)
       .replace(/[\n\r\t]+/g, " ")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width chars
       .replace(/[\\/*?:"<>|]/g, "")
-      .replace(/[\u0000-\u001f\u007f]/g, "")
       .replace(/\s+/g, " ")
       .trim();
   }
 
   function normalizeFilename(text) {
-    let name = sanitize(text)
+    return sanitize(text)
       .replace(/\s+/g, "_")
-      .replace(/[. ]+$/g, "")
       .substring(0, CONFIG.maxTitleLength);
-    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name)) {
-      name = `_${name}`;
-    }
-    return name;
   }
 
   function isGarbage(text) {
@@ -117,115 +142,59 @@
     if (t.length > CONFIG.maxTitleLength) return true;
     if (BLACKLIST_TITLES.has(t)) return true;
     if (/^\d+$/.test(t)) return true;
-    if (/^[a-f0-9]{16,}$/i.test(t)) return true;
-    if (/^(?:https?:\/\/|www\.)/i.test(t)) return true;
+    if (/^[\W_]+$/u.test(t)) return true; // punctuation/symbols only
+    if (/^[a-f0-9-]{16,}$/i.test(t)) return true; // hex ids / uuids
+    if (/^(jpe?g|png|gif|webp|avif|svg|mp4|webm)$/i.test(t)) return true;
     return false;
   }
 
   function createScoringEngine() {
-    const candidates = [];
+    // Dedupe candidates by lowercase text, keeping the highest score
+    const byText = new Map();
 
     function add(text, score, source) {
       const cleaned = sanitize(text);
       if (isGarbage(cleaned)) return;
-      const existing = candidates.find(
-        (candidate) => candidate.text.toLowerCase() === cleaned.toLowerCase()
-      );
-      if (!existing) {
-        candidates.push({ text: cleaned, score, source });
-      } else if (score > existing.score) {
-        Object.assign(existing, { text: cleaned, score, source });
+      const key = cleaned.toLowerCase();
+      const existing = byText.get(key);
+      if (!existing || score > existing.score) {
+        byText.set(key, { text: cleaned, score, source });
       }
     }
 
     function best() {
+      const candidates = [...byText.values()];
       candidates.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return b.text.length - a.text.length;
       });
-      if (CONFIG.debug && candidates.length) {
-        log("🧠 title candidates:", candidates.slice(0, 5));
-      }
       return candidates[0] || null;
     }
 
-    return { add, best, candidates };
+    return { add, best };
   }
 
-  function normalizeUrl(url) {
-    try {
-      const parsed = new URL(url, location.href);
-      if (!/^https?:$/.test(parsed.protocol)) return "";
-      parsed.hash = "";
-      return parsed.href;
-    } catch {
-      return "";
-    }
-  }
+  const TRACKING_QUERY_PARAMS = new Set([
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "gclid", "fbclid", "msclkid", "mc_eid", "mc_cid",
+  ]);
 
-  function urlKey(url) {
+  function cleanImageUrl(url) {
+    if (!url) return "";
     try {
-      const parsed = new URL(url);
-      parsed.hash = "";
-      return parsed.href;
+      const u = new URL(url, location.href);
+      // Tracking parameters are safe to remove. Preserve resize and quality
+      // parameters because they can be part of signed CDN URLs.
+      for (const key of [...u.searchParams.keys()]) {
+        if (TRACKING_QUERY_PARAMS.has(key.toLowerCase())) {
+          u.searchParams.delete(key);
+        }
+      }
+      u.hash = "";
+      return u.href;
     } catch {
       return url;
     }
-  }
-
-  function bestFromSrcset(srcset) {
-    if (!srcset) return "";
-    let best = "";
-    let bestRank = -1;
-    for (const candidate of srcset.split(",")) {
-      const [url, descriptor = ""] = candidate.trim().split(/\s+/);
-      if (!url || url.startsWith("data:")) continue;
-      const rank = descriptor.endsWith("w")
-        ? Number.parseFloat(descriptor)
-        : descriptor.endsWith("x")
-          ? Number.parseFloat(descriptor) * 10000
-          : 0;
-      if (Number.isFinite(rank) && rank >= bestRank) {
-        best = url;
-        bestRank = rank;
-      }
-    }
-    return best;
-  }
-
-  function mediaUrl(element) {
-    if (!element) return "";
-    const lazyAttributes = [
-      "data-original",
-      "data-src",
-      "data-lazy-src",
-      "data-full",
-      "data-url",
-    ];
-    const srcset =
-      element.getAttribute("data-srcset") || element.getAttribute("srcset");
-    const candidates = [
-      bestFromSrcset(srcset),
-      ...lazyAttributes.map((name) => element.getAttribute(name)),
-      element.currentSrc,
-      element.getAttribute("src"),
-    ];
-    return normalizeUrl(candidates.find(Boolean) || "");
-  }
-
-  function deepQueryAll(selector) {
-    const matches = [];
-    const visited = new Set();
-    function walk(root) {
-      if (!root || visited.has(root)) return;
-      visited.add(root);
-      matches.push(...root.querySelectorAll(selector));
-      root.querySelectorAll("*").forEach((element) => {
-        if (element.shadowRoot) walk(element.shadowRoot);
-      });
-    }
-    walk(document);
-    return [...new Set(matches)];
   }
 
   function extractFilename(url) {
@@ -235,8 +204,10 @@
       file = decodeURIComponent(file);
       file = file.replace(/\.[a-z0-9]+$/i, "");
       file = file.replace(/[-_]+/g, " ");
-      // Bing/CDN noise like OIP.xxxxx
-      if (/^(OIP|ODF|thid)\b/i.test(file) || file.length > 40) return "";
+      // Bing/CDN noise like OIP.xxxxx, pure hashes, overly long slugs
+      if (/^(OIP|ODF|OIF|thid|th\b)/i.test(file)) return "";
+      if (/^[a-f0-9]{12,}$/i.test(file.replace(/\s/g, ""))) return "";
+      if (file.length > 60) return "";
       return sanitize(file);
     } catch {
       return "";
@@ -257,6 +228,7 @@
       "image/webp": ".webp",
       "image/avif": ".avif",
       "image/svg+xml": ".svg",
+      "image/bmp": ".bmp",
       "video/mp4": ".mp4",
       "video/webm": ".webm",
     };
@@ -264,49 +236,204 @@
   }
 
   // =========================================================================
-  // AUTO SCROLL (lazy-load wake-up)
+  // DEEP DOM TRAVERSAL (shadow roots + same-origin iframes)
   // =========================================================================
-  async function deepScroll(onStep) {
-    console.log("🔄 Deep-scrolling to wake lazy-loaded media...");
-    let lastHeight = document.body.scrollHeight;
-    let lastMediaCount = 0;
-    let stableCount = 0;
-    let steps = 0;
-    onStep?.();
-
-    while (
-      stableCount < CONFIG.stableThreshold &&
-      steps < CONFIG.maxScrollSteps
-    ) {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-      await sleep(CONFIG.scrollDelay);
-      onStep?.();
-      const newHeight = document.body.scrollHeight;
-      const mediaCount = deepQueryAll("img, video, source").length;
-      if (newHeight === lastHeight && mediaCount === lastMediaCount) {
-        stableCount += 1;
-      } else {
-        stableCount = 0;
-        lastHeight = newHeight;
-        lastMediaCount = mediaCount;
+  function collectRoots() {
+    const roots = [document];
+    const walk = (root) => {
+      const iterator = root.querySelectorAll("*");
+      for (const el of iterator) {
+        if (el.shadowRoot) {
+          roots.push(el.shadowRoot);
+          walk(el.shadowRoot);
+        }
       }
-      steps += 1;
+    };
+    try {
+      walk(document);
+    } catch (err) {
+      log("shadow walk error:", err);
     }
-    window.scrollTo(0, 0);
-    console.log(`✅ Page expand complete (${steps} scroll steps)`);
+    for (const frame of document.querySelectorAll("iframe")) {
+      try {
+        const doc = frame.contentDocument;
+        if (doc) {
+          roots.push(doc);
+          walk(doc);
+        }
+      } catch {
+        // cross-origin iframe — skip silently
+      }
+    }
+    return roots;
+  }
+
+  function deepQueryAll(selector) {
+    const out = [];
+    for (const root of collectRoots()) {
+      try {
+        out.push(...root.querySelectorAll(selector));
+      } catch {
+        // invalid selector for this root type — skip
+      }
+    }
+    return out;
   }
 
   // =========================================================================
-  // BING CARD PARSER (.iusc metadata is the native title source)
+  // BEST-RESOLUTION SOURCE RESOLUTION (srcset / <picture> / lazy attributes)
   // =========================================================================
+  function parseSrcset(srcset) {
+    // Returns { url, width } of the widest candidate
+    if (!srcset) return null;
+    let best = null;
+    for (const part of srcset.split(",")) {
+      const tokens = part.trim().split(/\s+/);
+      const url = tokens[0];
+      if (!url) continue;
+      let width = 0;
+      const descriptor = tokens[1] || "";
+      if (/^\d+w$/.test(descriptor)) width = parseInt(descriptor, 10);
+      else if (/^[\d.]+x$/.test(descriptor)) width = parseFloat(descriptor) * 1000;
+      if (!best || width > best.width) best = { url, width };
+    }
+    return best;
+  }
+
+  const LAZY_SRC_ATTRS = [
+    "data-src",
+    "data-lazy-src",
+    "data-original",
+    "data-full-src",
+    "data-hi-res-src",
+    "data-large-src",
+    "data-zoom-src",
+    "data-image",
+    "data-url",
+  ];
+
+  function resolveImageSource(img) {
+    const candidates = [];
+
+    const srcsetBest = parseSrcset(img.getAttribute("srcset"));
+    if (srcsetBest) candidates.push({ ...srcsetBest, via: "srcset" });
+
+    const picture = img.closest("picture");
+    if (picture) {
+      for (const source of picture.querySelectorAll("source[srcset]")) {
+        const b = parseSrcset(source.getAttribute("srcset"));
+        if (b) candidates.push({ ...b, via: "picture.source" });
+      }
+    }
+
+    for (const attr of LAZY_SRC_ATTRS) {
+      const v = img.getAttribute(attr);
+      if (v && /^(https?:)?\/\//.test(v.trim())) {
+        // Lazy full-size attributes usually beat the rendered thumbnail
+        candidates.push({ url: v.trim(), width: 1e9, via: attr });
+      }
+    }
+
+    const rendered = img.currentSrc || img.src;
+    if (rendered) {
+      candidates.push({ url: rendered, width: img.naturalWidth || 0, via: "src" });
+    }
+
+    candidates.sort((a, b) => b.width - a.width);
+    const winner = candidates.find(
+      (c) => c.url && !c.url.startsWith("data:") && !isSpamUrl(c.url)
+    );
+    return winner ? { url: winner.url, via: winner.via } : null;
+  }
+
+  function isTooSmall(img) {
+    if (!CONFIG.minImageSize) return false;
+    const w = img.naturalWidth || img.width || 0;
+    const h = img.naturalHeight || img.height || 0;
+    // Unknown size (not loaded yet) — keep, downloader can filter by bytes
+    if (!w && !h) return false;
+    return Math.max(w, h) < CONFIG.minImageSize;
+  }
+
+  // =========================================================================
+  // SHARED TITLE MINING AROUND AN <img>
+  // =========================================================================
+  function mineImageTitles(engine, img) {
+    engine.add(img.alt, 92, "img.alt");
+    engine.add(img.title, 90, "img.title");
+    engine.add(img.getAttribute("aria-label"), 88, "img.aria-label");
+    engine.add(img.getAttribute("data-title"), 94, "img.data-title");
+    engine.add(img.getAttribute("data-original-title"), 93, "img.data-original-title");
+    Object.entries(img.dataset || {}).forEach(([k, v]) => {
+      if (/title|caption|alt|name|desc/i.test(k)) {
+        engine.add(v, 86, `dataset.${k}`);
+      }
+    });
+
+    const parentLink = img.closest("a");
+    if (parentLink) {
+      engine.add(parentLink.getAttribute("title"), 95, "parent.a.title");
+      engine.add(parentLink.getAttribute("aria-label"), 89, "parent.a.aria");
+      const linkText = sanitize(textOf(parentLink));
+      if (linkText.length > CONFIG.minTitleLength) {
+        engine.add(linkText, 72, "parent.a.text");
+      }
+    }
+
+    const figure = img.closest("figure");
+    if (figure) {
+      const caption = figure.querySelector("figcaption");
+      if (caption) engine.add(textOf(caption), 96, "figcaption");
+    }
+
+    const container = img.closest(
+      'li, article, .imgpt, .dg_u, .infopt, .item, .card, [class*="item"], [class*="card"], [class*="result"]'
+    );
+    if (container) {
+      const infopt = container.querySelector(".infopt a");
+      if (infopt) {
+        engine.add(infopt.getAttribute("title"), 94, ".infopt a.title");
+        engine.add(textOf(infopt), 78, ".infopt a.text");
+      }
+      container.querySelectorAll("a[title]").forEach((a) => {
+        engine.add(a.getAttribute("title"), 91, "container.a.title");
+      });
+      container
+        .querySelectorAll("h1, h2, h3, h4, [class*='title'], [class*='caption']")
+        .forEach((h) => {
+          engine.add(textOf(h) || h.getAttribute("title"), 80, "container.heading");
+        });
+    }
+  }
+
+  function buildEntry({ url, engine, thumbnail, type, source, fallbackName, referer, width, height }) {
+    // Absolute last resort before the generic fallback name
+    if (engine) engine.add(document.title, 40, "document.title");
+    const best = engine ? engine.best() : null;
+    return {
+      url: cleanImageUrl(url),
+      suggestedName: normalizeFilename(best?.text || "") || fallbackName,
+      thumbnail: thumbnail || url,
+      type: type || "image",
+      source,
+      titleSource: best?.source || "none",
+      referer: referer || location.href,
+      sourcePage: referer || location.href,
+      width: width || 0,
+      height: height || 0,
+    };
+  }
+
+  // =========================================================================
+  // SITE ADAPTERS
+  // =========================================================================
+
+  // ---- Bing Images: .iusc `m` JSON metadata is the native title source ----
   function parseBingCard(card) {
     try {
       const iusc = card.matches?.(".iusc")
         ? card
         : card.querySelector(".iusc") || card;
-      const scope = card.matches?.(".iusc")
-        ? card.closest(".imgpt, .iuscp") || card.parentElement || card
-        : card;
       let meta = {};
       const raw = iusc.getAttribute?.("m");
       if (raw) {
@@ -317,353 +444,295 @@
         }
       }
 
-      const img = scope.matches?.("img") ? scope : scope.querySelector("img");
-      const imageUrl =
-        normalizeUrl(meta.murl || meta.imgurl || mediaUrl(img) || "");
-      if (!imageUrl || isSpamUrl(imageUrl)) {
+      const img = card.querySelector("img");
+      const resolved = img ? resolveImageSource(img) : null;
+      const imageUrl = meta.murl || meta.imgurl || resolved?.url || "";
+      if (!imageUrl || imageUrl.startsWith("data:") || isSpamUrl(imageUrl)) {
         return null;
       }
 
       const engine = createScoringEngine();
-      // Highest confidence: Bing native metadata title
       engine.add(meta.t, 100, "bing.meta.t");
       engine.add(meta.title, 98, "bing.meta.title");
       engine.add(meta.desc, 85, "bing.meta.desc");
 
-      scope.querySelectorAll("a[title]").forEach((a) => {
+      card.querySelectorAll("a[title]").forEach((a) => {
         engine.add(a.getAttribute("title"), 95, "a.title");
       });
-
-      if (img) {
-        engine.add(img.alt, 90, "img.alt");
-        engine.add(img.title, 88, "img.title");
-        engine.add(img.getAttribute("aria-label"), 87, "img.aria-label");
-        Object.entries(img.dataset || {}).forEach(([k, v]) => {
-          engine.add(v, 82, `img.dataset.${k}`);
-        });
-      }
-
-      // Parent link wrapping the image
-      const parentLink = img?.closest("a") || scope.closest("a");
-      if (parentLink) {
-        engine.add(parentLink.getAttribute("title"), 93, "parent.a.title");
-        engine.add(parentLink.innerText, 70, "parent.a.text");
-      }
-
+      if (img) mineImageTitles(engine, img);
       engine.add(extractFilename(imageUrl), 60, "url.filename");
 
-      const best = engine.best();
-      return {
+      return buildEntry({
         url: imageUrl,
-        suggestedName: normalizeFilename(best?.text) || "bing_image",
-        thumbnail: mediaUrl(img) || imageUrl,
-        type: "image",
+        engine,
+        thumbnail: img?.src || imageUrl,
         source: "bing",
-        sourcePage: normalizeUrl(meta.purl || meta.surl || ""),
-        titleSource: best?.source || "none",
-        width: Number(meta.w || img?.naturalWidth) || null,
-        height: Number(meta.h || img?.naturalHeight) || null,
-      };
+        fallbackName: "bing_image",
+        referer: meta.purl || location.href,
+        width: Number(meta.mw) || 0,
+        height: Number(meta.mh) || 0,
+      });
     } catch (err) {
       log("Bing card parse error:", err);
       return null;
     }
   }
 
-  // =========================================================================
-  // GENERIC IMAGE PARSER (multi-fallback title mining)
-  // =========================================================================
+  function collectBing(push) {
+    const cards = deepQueryAll(".iusc, .imgpt, .iuscp");
+    const nodes = cards.length ? cards : deepQueryAll("[m]");
+    for (const card of nodes) push(parseBingCard(card));
+  }
+
+  // ---- Google Images: /imgres?imgurl=… anchors carry the full-size URL ----
+  function collectGoogle(push) {
+    // Primary: result anchors that link to the imgres viewer
+    for (const a of deepQueryAll('a[href*="/imgres"], a[href*="imgurl="]')) {
+      try {
+        const href = a.getAttribute("href") || "";
+        const params = new URL(href, location.href).searchParams;
+        const imgurl = params.get("imgurl");
+        if (!imgurl || isSpamUrl(imgurl)) continue;
+
+        const engine = createScoringEngine();
+        const img = a.querySelector("img");
+        engine.add(a.getAttribute("aria-label"), 96, "google.a.aria");
+        engine.add(a.getAttribute("title"), 95, "google.a.title");
+        if (img) mineImageTitles(engine, img);
+        const card = a.closest("[data-lpage], [data-ri], div[jsdata]") || a.parentElement;
+        if (card) {
+          card.querySelectorAll("h3, [role='heading']").forEach((h) => {
+            engine.add(textOf(h), 90, "google.heading");
+          });
+        }
+        engine.add(extractFilename(imgurl), 60, "url.filename");
+
+        push(
+          buildEntry({
+            url: imgurl,
+            engine,
+            thumbnail: img?.src || imgurl,
+            source: "google",
+            fallbackName: "google_image",
+            referer: params.get("imgrefurl") || location.href,
+          })
+        );
+      } catch {
+        // malformed href — skip
+      }
+    }
+    // Fallback: any rendered result thumbnails (lower quality but better than nothing)
+    for (const img of deepQueryAll("img")) {
+      push(parseGenericImage(img));
+    }
+  }
+
+  // ---- Generic sites: multi-fallback title mining ----
   function parseGenericImage(img) {
     try {
-      const src = mediaUrl(img);
-      if (!src || isSpamUrl(src)) return null;
-      if (
-        img.complete &&
-        img.naturalWidth &&
-        img.naturalHeight &&
-        Math.max(img.naturalWidth, img.naturalHeight) < CONFIG.minImageDimension
-      ) {
-        return null;
-      }
+      if (isTooSmall(img)) return null;
+      const resolved = resolveImageSource(img);
+      if (!resolved) return null;
 
       const engine = createScoringEngine();
+      mineImageTitles(engine, img);
+      engine.add(extractFilename(resolved.url), 55, "url.filename");
 
-      // 1) Image self attributes (often SEO-native)
-      engine.add(img.alt, 92, "img.alt");
-      engine.add(img.title, 90, "img.title");
-      engine.add(img.getAttribute("aria-label"), 88, "img.aria-label");
-      engine.add(img.getAttribute("data-title"), 94, "img.data-title");
-      engine.add(
-        img.getAttribute("data-original-title"),
-        93,
-        "img.data-original-title"
-      );
-      Object.entries(img.dataset || {}).forEach(([k, v]) => {
-        if (/title|caption|alt|name|desc/i.test(k)) {
-          engine.add(v, 86, `dataset.${k}`);
-        }
-      });
-
-      // 2) Direct parent <a> (common search-engine / gallery wrap)
-      const parentLink = img.closest("a");
-      if (parentLink) {
-        engine.add(parentLink.getAttribute("title"), 95, "parent.a.title");
-        engine.add(parentLink.getAttribute("aria-label"), 89, "parent.a.aria");
-        const linkText = sanitize(parentLink.innerText);
-        if (linkText.length > CONFIG.minTitleLength) {
-          engine.add(linkText, 72, "parent.a.text");
-        }
-      }
-
-      // 3) Card / figure container siblings
-      const figure = img.closest("figure");
-      if (figure) {
-        const caption = figure.querySelector("figcaption");
-        if (caption) engine.add(caption.innerText, 96, "figcaption");
-      }
-
-      const container = img.closest(
-        'li, article, .imgpt, .dg_u, .infopt, .item, .card, [class*="item"], [class*="card"], [class*="result"]'
-      );
-      if (container) {
-        // Prefer historical .infopt a path, then any a[title]
-        const infopt = container.querySelector(".infopt a");
-        if (infopt) {
-          engine.add(infopt.getAttribute("title"), 94, ".infopt a.title");
-          engine.add(infopt.innerText, 78, ".infopt a.text");
-        }
-        container.querySelectorAll("a[title]").forEach((a) => {
-          engine.add(a.getAttribute("title"), 91, "container.a.title");
-        });
-        container.querySelectorAll("h1, h2, h3, h4, [class*='title']").forEach((h) => {
-          engine.add(h.innerText || h.getAttribute("title"), 80, "container.heading");
-        });
-      }
-
-      // 4) URL filename last resort
-      engine.add(extractFilename(src), 55, "url.filename");
-
-      const best = engine.best();
-      return {
-        url: src,
-        suggestedName: normalizeFilename(best?.text) || "image",
-        thumbnail: src,
-        type: "image",
+      return buildEntry({
+        url: resolved.url,
+        engine,
+        thumbnail: img.currentSrc || img.src || resolved.url,
         source: "generic",
-        sourcePage: parentLink?.href || location.href,
-        titleSource: best?.source || "none",
-        width: img.naturalWidth || null,
-        height: img.naturalHeight || null,
-      };
+        fallbackName: "image",
+        width: img.naturalWidth || 0,
+        height: img.naturalHeight || 0,
+      });
     } catch (err) {
       log("Generic parse error:", err);
       return null;
     }
   }
 
-  // =========================================================================
-  // COLLECT
-  // =========================================================================
-  const seen = new Map();
-  const mediaEntries = [];
-  const isBing = /bing\.com/i.test(location.hostname);
-  function addEntry(entry) {
-    if (!entry?.url) return;
-    entry.url = normalizeUrl(entry.url);
-    const key = urlKey(entry.url);
-    if (!entry.url || isSpamUrl(entry.url)) return;
-    const existing = seen.get(key);
-    if (existing) {
-      Object.entries(entry).forEach(([name, value]) => {
-        if (!existing[name] && value) existing[name] = value;
-      });
-      return;
-    }
-    seen.set(key, entry);
-    mediaEntries.push(entry);
-  }
+  function collectGeneric(push) {
+    for (const img of deepQueryAll("img")) push(parseGenericImage(img));
 
-  // Capture each mounted set while scrolling. This matters for virtualized
-  // galleries that recycle DOM nodes and would otherwise lose earlier items.
-  function snapshotVisibleMedia() {
-    if (isBing) {
-      const metadataCards = deepQueryAll(".iusc");
-      const cards = metadataCards.length
-        ? metadataCards
-        : deepQueryAll(".imgpt, .iuscp");
-      cards.forEach((card) => addEntry(parseBingCard(card)));
-    }
-    deepQueryAll("img").forEach((img) => {
-      if (!(isBing && img.closest(".iusc, .imgpt, .iuscp"))) {
-        addEntry(parseGenericImage(img));
-      }
-    });
-    deepQueryAll("video, video source").forEach((vid) => {
-      const url = mediaUrl(vid);
-      if (!url) return;
-      const owner = vid.closest("video") || vid;
-      const title =
-        owner.getAttribute("title") ||
-        owner.getAttribute("aria-label") ||
-        owner.closest("figure")?.querySelector("figcaption")?.innerText ||
-        extractFilename(url);
-      addEntry({
-        url,
-        suggestedName: normalizeFilename(title) || "video",
-        thumbnail: normalizeUrl(owner.getAttribute("poster")) || "",
-        type: "video",
-        source: isBing ? "bing" : "generic",
-        sourcePage: location.href,
-        titleSource: "video",
-      });
-    });
-    if (CONFIG.includeCssBackgrounds) {
-      deepQueryAll("[style*='background']").forEach((element) => {
-        const background = getComputedStyle(element).backgroundImage || "";
-        for (const match of background.matchAll(/url\((['"]?)(.*?)\1\)/g)) {
-          const url = normalizeUrl(match[2]);
-          if (!url || match[2].startsWith("data:")) continue;
-          const title =
-            element.getAttribute("aria-label") ||
-            element.getAttribute("title") ||
-            element.closest("figure")?.querySelector("figcaption")?.innerText ||
-            extractFilename(url);
-          addEntry({
-            url,
-            suggestedName: normalizeFilename(title) || "background_image",
-            thumbnail: url,
-            type: "image",
-            source: "css-background",
-            sourcePage: location.href,
-            titleSource: "background",
-          });
-        }
-      });
-    }
-  }
-
-  await deepScroll(snapshotVisibleMedia);
-
-  if (isBing) {
-    console.log("🟦 Bing Images mode");
-    const metadataCards = deepQueryAll(".iusc");
-    const cards = metadataCards.length
-      ? metadataCards
-      : deepQueryAll(".imgpt, .iuscp");
-    // Prefer unique .iusc nodes (metadata carriers)
-    const nodes = cards.length
-      ? cards
-      : deepQueryAll("[m]");
-    console.log(`🔎 Scanning ${nodes.length} Bing cards`);
-    for (const card of nodes) {
-      const parsed = parseBingCard(card);
-      addEntry(parsed);
-    }
-  }
-
-  // Always scan regular images too: search engines and mixed pages contain
-  // useful media outside their result-card markup.
-  const images = deepQueryAll(
-    "img, [data-src], [data-original], [data-lazy-src], [data-srcset]"
-  ).filter(
-    (element) =>
-      element.matches("img") && !(isBing && element.closest(".iusc, .imgpt, .iuscp"))
-  );
-  console.log(`🔎 Scanning ${images.length} DOM images`);
-  for (const img of images) addEntry(parseGenericImage(img));
-
-  // Videos, including nested <source> candidates.
-  deepQueryAll("video, video source").forEach((vid) => {
-    const url = mediaUrl(vid);
-    if (!url) return;
-    const owner = vid.closest("video") || vid;
-    const title =
-      owner.getAttribute("title") ||
-      owner.getAttribute("aria-label") ||
-      owner.closest("a")?.getAttribute("title") ||
-      owner.closest("figure")?.querySelector("figcaption")?.innerText ||
-      extractFilename(url) ||
-      "";
-    addEntry({
-      url,
-      suggestedName: normalizeFilename(sanitize(title)) || "video",
-      thumbnail: normalizeUrl(owner.getAttribute("poster")) || "",
-      type: "video",
-      source: isBing ? "bing" : "generic",
-      sourcePage: location.href,
-      titleSource: "video",
-    });
-  });
-
-  // CSS backgrounds are common in galleries and product cards.
-  if (CONFIG.includeCssBackgrounds) {
-    deepQueryAll("[style*='background']").forEach((element) => {
-      const background = getComputedStyle(element).backgroundImage || "";
-      for (const match of background.matchAll(/url\((['"]?)(.*?)\1\)/g)) {
-        const url = normalizeUrl(match[2]);
-        if (!url || match[2].startsWith("data:")) continue;
-        const engine = createScoringEngine();
-        engine.add(element.getAttribute("aria-label"), 90, "background.aria");
-        engine.add(element.getAttribute("title"), 88, "background.title");
-        engine.add(
-          element.closest("figure")?.querySelector("figcaption")?.innerText,
-          94,
-          "background.figcaption"
-        );
-        engine.add(extractFilename(url), 55, "url.filename");
-        const best = engine.best();
-        addEntry({
-          url,
-          suggestedName: normalizeFilename(best?.text) || "background_image",
-          thumbnail: url,
-          type: "image",
-          source: "css-background",
-          sourcePage: location.href,
-          titleSource: best?.source || "none",
-          width: element.clientWidth || null,
-          height: element.clientHeight || null,
-        });
-      }
-    });
-  }
-
-  // Page-level originals can exist even when no corresponding <img> is rendered.
-  document
-    .querySelectorAll(
+    for (const meta of document.querySelectorAll(
       'meta[property="og:image"], meta[name="twitter:image"], link[rel="image_src"]'
-    )
-    .forEach((element) => {
-      const url = normalizeUrl(
-        element.getAttribute("content") || element.getAttribute("href")
+    )) {
+      const url = meta.getAttribute("content") || meta.getAttribute("href");
+      if (!url || isSpamUrl(url)) continue;
+      const engine = createScoringEngine();
+      engine.add(
+        document.querySelector('meta[property="og:title"]')?.content,
+        95,
+        "page.og-title"
       );
-      if (!url) return;
-      addEntry({
-        url,
-        suggestedName:
-          normalizeFilename(
-            document.querySelector('meta[property="og:title"]')?.content ||
-              document.title
-          ) || "page_image",
-        thumbnail: url,
-        type: "image",
-        source: "page-metadata",
-        sourcePage: location.href,
-        titleSource: "page.title",
-      });
-    });
+      engine.add(document.title, 80, "document.title");
+      push(
+        buildEntry({
+          url,
+          engine,
+          thumbnail: url,
+          source: "page-metadata",
+          fallbackName: "page_image",
+        })
+      );
+    }
+
+    if (CONFIG.includeBackgroundImages) {
+      for (const el of deepQueryAll("div, section, span, a, li, figure, header")) {
+        let bg;
+        try {
+          bg = getComputedStyle(el).backgroundImage;
+        } catch {
+          continue;
+        }
+        if (!bg || bg === "none") continue;
+        const match = bg.match(/url\(["']?(.*?)["']?\)/i);
+        const url = match?.[1];
+        if (!url || url.startsWith("data:") || isSpamUrl(url)) continue;
+        const rect = el.getBoundingClientRect();
+        if (CONFIG.minImageSize && Math.max(rect.width, rect.height) < CONFIG.minImageSize) {
+          continue;
+        }
+        const engine = createScoringEngine();
+        engine.add(el.getAttribute("aria-label"), 90, "bg.aria-label");
+        engine.add(el.getAttribute("title"), 89, "bg.title");
+        engine.add(el.closest("a")?.getAttribute("title"), 88, "bg.parent.a.title");
+        engine.add(extractFilename(url), 55, "url.filename");
+        push(
+          buildEntry({
+            url,
+            engine,
+            thumbnail: url,
+            source: "css-background",
+            fallbackName: "background_image",
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          })
+        );
+      }
+    }
+  }
+
+  function collectVideos(push, sourceLabel) {
+    if (!CONFIG.includeVideos) return;
+    for (const vid of deepQueryAll("video, video source")) {
+      const url = vid.currentSrc || vid.src;
+      if (!url || url.startsWith("blob:")) continue;
+      const holder = vid.closest("video") || vid;
+      const engine = createScoringEngine();
+      engine.add(holder.getAttribute("title"), 95, "video.title");
+      engine.add(holder.getAttribute("aria-label"), 90, "video.aria-label");
+      engine.add(holder.closest("a")?.getAttribute("title"), 88, "video.parent.a.title");
+      engine.add(
+        textOf(holder.closest("figure")?.querySelector("figcaption")),
+        96,
+        "video.figcaption"
+      );
+      engine.add(extractFilename(url), 55, "url.filename");
+      push(
+        buildEntry({
+          url,
+          engine,
+          thumbnail: holder.poster || url,
+          type: "video",
+          source: sourceLabel,
+          fallbackName: "video",
+        })
+      );
+    }
+  }
+
+  // =========================================================================
+  // COLLECTION DRIVER (incremental — runs during scrolling so virtualized
+  // galleries that unload offscreen cards do not lose entries)
+  // =========================================================================
+  const seen = new Set();
+  const mediaEntries = [];
+  const host = location.hostname;
+  const site = /(^|\.)bing\./i.test(host)
+    ? "bing"
+    : /(^|\.)google\./i.test(host)
+      ? "google"
+      : "generic";
+
+  function urlKey(url) {
+    try {
+      const u = new URL(url, location.href);
+      u.hash = "";
+      return u.href;
+    } catch {
+      return url;
+    }
+  }
+
+  function push(parsed) {
+    if (!parsed || !parsed.url) return;
+    if (CONFIG.maxItems && mediaEntries.length >= CONFIG.maxItems) return;
+    const key = urlKey(parsed.url);
+    if (seen.has(key)) return;
+    seen.add(key);
+    mediaEntries.push(parsed);
+  }
+
+  function collectNow() {
+    const before = mediaEntries.length;
+    if (site === "bing") collectBing(push);
+    else if (site === "google") collectGoogle(push);
+    else collectGeneric(push);
+    collectVideos(push, site);
+    return mediaEntries.length - before;
+  }
+
+  console.log(
+    site === "bing" ? "🟦 Bing Images mode" : site === "google" ? "🟨 Google Images mode" : "🌐 Generic site mode"
+  );
+  console.log("🔄 Deep-scrolling and collecting incrementally...");
+
+  let lastHeight = document.body.scrollHeight;
+  let stableCount = 0;
+  let rounds = 0;
+  collectNow();
+
+  while (stableCount < CONFIG.stableThreshold && rounds < CONFIG.maxScrollRounds) {
+    if (CONFIG.maxItems && mediaEntries.length >= CONFIG.maxItems) {
+      console.log(`🛑 maxItems (${CONFIG.maxItems}) reached — stopping scroll`);
+      break;
+    }
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    await sleep(CONFIG.scrollDelay);
+    rounds += 1;
+
+    const added = collectNow();
+    const newHeight = document.body.scrollHeight;
+    if (newHeight === lastHeight && added === 0) {
+      stableCount += 1;
+    } else {
+      stableCount = 0;
+      lastHeight = newHeight;
+    }
+    if (rounds % 5 === 0) {
+      log(`   …round ${rounds}: ${mediaEntries.length} items so far`);
+    }
+  }
+  window.scrollTo(0, 0);
+  await sleep(400);
+  collectNow(); // final sweep back at the top
 
   console.table(
-    mediaEntries.map((x) => ({
+    mediaEntries.slice(0, 200).map((x) => ({
       title: x.suggestedName,
       via: x.titleSource,
       type: x.type,
+      src: x.source,
       url: x.url.substring(0, 72),
     }))
   );
-  console.log(`✅ Collected ${mediaEntries.length} media items`);
+  console.log(`✅ Collected ${mediaEntries.length} media items (${rounds} scroll rounds)`);
 
   if (mediaEntries.length === 0) {
-    alert("⚠️ No media found. Try the Bing results list page (not the viewer).");
+    alert("⚠️ No media found. Try the image results list page (not the viewer).");
     return;
   }
 
@@ -671,12 +740,21 @@
   // EXPORT MANIFEST (recommended — avoids .crdownload / CORS issues)
   // =========================================================================
   const manifest = {
-    schemaVersion: 2,
-    generator: "image-title-scraper/browser-extractor-v5",
+    version: 5,
+    schemaVersion: "image-title-scraper.manifest.v2",
     generatedAt: new Date().toISOString(),
     pageUrl: location.href,
     pageTitle: document.title,
+    site,
     count: mediaEntries.length,
+    stats: mediaEntries.reduce(
+      (acc, item) => {
+        if (item.type === "video") acc.videos += 1;
+        else acc.images += 1;
+        return acc;
+      },
+      { images: 0, videos: 0 }
+    ),
     items: mediaEntries.map((e, i) => ({
       index: i + 1,
       url: e.url,
@@ -684,36 +762,57 @@
       type: e.type,
       titleSource: e.titleSource,
       source: e.source,
-      sourcePage: e.sourcePage || location.href,
+      referer: e.referer,
+      sourcePage: e.sourcePage || e.referer || location.href,
       thumbnail: e.thumbnail || "",
-      width: e.width || null,
-      height: e.height || null,
+      width: e.width || undefined,
+      height: e.height || undefined,
     })),
   };
 
   const jsonText = JSON.stringify(manifest, null, 2);
 
+  function toCsv() {
+    const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["index", "title", "type", "source", "titleSource", "url", "referer"]];
+    for (const item of manifest.items) {
+      rows.push([item.index, item.title, item.type, item.source, item.titleSource, item.url, item.referer]);
+    }
+    return rows.map((r) => r.map(escape).join(",")).join("\n");
+  }
+
+  function downloadTextFile(text, filename, mime) {
+    const blob = new Blob([text], { type: mime });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    }, 2000);
+  }
+
   async function copyManifest() {
+    let copied = false;
     try {
       await navigator.clipboard.writeText(jsonText);
-      console.log("📋 Manifest copied to clipboard");
-      return true;
+      console.log("📋 Manifest JSON copied to clipboard");
+      console.log(
+        "💡 Tip: in console run copy(JSON.stringify(window.__IMAGE_TITLE_MANIFEST__, null, 2)) if needed."
+      );
+      copied = true;
     } catch {
-      // Fallback download of JSON file
-      const blob = new Blob([jsonText], { type: "application/json" });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `image-title-manifest_${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        a.remove();
-        URL.revokeObjectURL(blobUrl);
-      }, 2000);
-      console.log("💾 Manifest JSON file download triggered");
-      return false;
+      downloadTextFile(jsonText, `image-title-manifest_${Date.now()}.json`, "application/json");
+      console.log("💾 Manifest JSON file download triggered (clipboard unavailable)");
     }
+    if (CONFIG.exportCsv) {
+      downloadTextFile(toCsv(), `image-title-manifest_${Date.now()}.csv`, "text/csv");
+      console.log("💾 CSV manifest download triggered");
+    }
+    return copied;
   }
 
   // =========================================================================
@@ -724,19 +823,10 @@
       `${String(index).padStart(3, "0")}_` +
       (entry.suggestedName || "image").substring(0, 80);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CONFIG.fetchTimeoutMs);
     try {
-      const resp = await fetch(entry.url, {
-        mode: "cors",
-        credentials: "omit",
-        signal: controller.signal,
-      });
+      const resp = await fetch(entry.url, { mode: "cors", credentials: "omit" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
-      if (!/^(image|video)\//i.test(blob.type) && blob.type) {
-        throw new Error(`unexpected content type ${blob.type}`);
-      }
       const ext = extFromMime(blob.type, entry.type === "video" ? ".mp4" : ".jpg");
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -754,13 +844,11 @@
     } catch (err) {
       console.warn(`⚠️ [cors] cannot rename via blob: ${entry.url}`, err.message || err);
       return false;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
   // Decide mode via prompt (default: export for Python)
-  const requestedChoice = (window.prompt(
+  const choice = (window.prompt(
     `Found ${mediaEntries.length} items.\n` +
       `Type: export | download | both\n` +
       `(export → Python download.py avoids .crdownload)`,
@@ -768,20 +856,12 @@
   ) || "export")
     .trim()
     .toLowerCase();
-  const choice = ["export", "download", "both"].includes(requestedChoice)
-    ? requestedChoice
-    : CONFIG.mode;
-  if (choice !== requestedChoice) {
-    console.warn(`Unknown mode "${requestedChoice}"; using "${choice}".`);
-  }
 
   if (choice === "export" || choice === "both") {
-    const copied = await copyManifest();
+    await copyManifest();
     console.log(
-      copied
-        ? "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
-            "   python download.py manifest.json"
-        : "➡️ Next: run download.py with the downloaded manifest JSON file."
+      "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
+        "   python download.py manifest.json"
     );
     // Also expose for manual copy
     window.__IMAGE_TITLE_MANIFEST__ = manifest;
@@ -795,12 +875,18 @@
     console.warn(
       "🔔 Turn OFF “Ask where to save each file” in Chrome download settings."
     );
+    console.warn("🛑 To abort mid-run: window.__SCRAPER_STOP__ = true");
+    window.__SCRAPER_STOP__ = false;
 
     let ok = 0;
     let fail = 0;
     const failed = [];
 
     for (let i = 0; i < mediaEntries.length; i++) {
+      if (window.__SCRAPER_STOP__) {
+        console.warn(`🛑 Stopped by user at item ${i + 1}/${mediaEntries.length}`);
+        break;
+      }
       const success = await forceDownload(mediaEntries[i], i + 1);
       if (success) ok += 1;
       else {

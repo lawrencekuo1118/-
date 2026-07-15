@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import csv
 import hashlib
 import json
 import mimetypes
@@ -33,6 +34,7 @@ import re
 import sys
 import threading
 import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -63,6 +65,7 @@ MIME_EXT = {
     "image/gif": ".gif",
     "image/webp": ".webp",
     "image/avif": ".avif",
+    "image/heic": ".heic",
     "image/svg+xml": ".svg",
     "video/mp4": ".mp4",
     "video/webm": ".webm",
@@ -78,6 +81,32 @@ _thread_local = threading.local()
 _path_lock = threading.Lock()
 
 
+def sniff_ext(head: bytes) -> str | None:
+    """Identify media from magic bytes when servers omit or misstate MIME."""
+    if head.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if head.startswith((b"GIF87a", b"GIF89a")):
+        return ".gif"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return ".webp"
+    if head.startswith(b"BM"):
+        return ".bmp"
+    if head[4:8] == b"ftyp":
+        brand = head[8:12]
+        if brand in (b"avif", b"avis"):
+            return ".avif"
+        if brand in (b"heic", b"heix", b"mif1"):
+            return ".heic"
+        return ".mp4"
+    if head.startswith(b"\x1a\x45\xdf\xa3"):
+        return ".webm"
+    if head.lstrip().startswith((b"<?xml", b"<svg")):
+        return ".svg"
+    return None
+
+
 def sanitize_filename(text: str, max_len: int = 100) -> str:
     text = INVALID_FS_CHARS.sub("", text or "").strip()
     text = re.sub(r"\s+", "_", text)
@@ -89,7 +118,12 @@ def sanitize_filename(text: str, max_len: int = 100) -> str:
     return text[:max_len]
 
 
-def guess_ext(url: str, content_type: str | None, media_type: str) -> str:
+def guess_ext(
+    url: str, content_type: str | None, media_type: str, head: bytes = b""
+) -> str:
+    sniffed = sniff_ext(head)
+    if sniffed:
+        return sniffed
     if content_type:
         ct = content_type.split(";")[0].strip().lower()
         if ct in MIME_EXT:
@@ -101,7 +135,7 @@ def guess_ext(url: str, content_type: str | None, media_type: str) -> str:
     path = unquote(urlparse(url).path)
     suffix = Path(path).suffix.lower()
     if suffix in {
-        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".svg",
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic", ".svg",
         ".bmp", ".mp4", ".webm", ".mov", ".ogv",
     }:
         return ".jpg" if suffix == ".jpeg" else suffix
@@ -136,6 +170,7 @@ def load_manifest(path: Path) -> list[dict[str, Any]]:
                     "title": f"image_{i}",
                     "type": "image",
                     "sourcePage": "",
+                    "referer": "",
                 }
             )
             continue
@@ -160,10 +195,13 @@ def load_manifest(path: Path) -> list[dict[str, Any]]:
                 "title": item.get("title") or item.get("suggestedName") or f"image_{i}",
                 "type": item.get("type") or "image",
                 "sourcePage": (
-                    item.get("sourcePage") or data.get("pageUrl", "")
+                    item.get("sourcePage")
+                    or item.get("referer")
+                    or data.get("pageUrl", "")
                     if isinstance(data, dict)
-                    else item.get("sourcePage") or ""
+                    else item.get("sourcePage") or item.get("referer") or ""
                 ),
+                "referer": item.get("referer") or item.get("sourcePage") or "",
             }
         )
     return normalized
@@ -268,12 +306,41 @@ def get_session() -> requests.Session:
     return session
 
 
+class HostThrottle:
+    """Apply a politeness delay per host while allowing cross-host concurrency."""
+
+    def __init__(self, delay: float):
+        self.delay = delay
+        self.lock = threading.Lock()
+        self.next_allowed: dict[str, float] = defaultdict(float)
+
+    def wait(self, url: str) -> None:
+        if self.delay <= 0:
+            return
+        host = urlparse(url).netloc.lower()
+        while True:
+            with self.lock:
+                now = time.monotonic()
+                wait_for = self.next_allowed[host] - now
+                if wait_for <= 0:
+                    self.next_allowed[host] = now + self.delay
+                    return
+            time.sleep(min(wait_for, self.delay))
+
+
+class RetryableError(RuntimeError):
+    def __init__(self, message: str, pause: float):
+        super().__init__(message)
+        self.pause = pause
+
+
 def download_one(
     item: dict[str, Any],
     out_dir: Path,
     timeout: float,
     overwrite: bool = False,
     max_bytes: int = 0,
+    min_bytes: int = MIN_FILE_SIZE,
     registry: DownloadRegistry | None = None,
 ) -> tuple[Path, bool]:
     url = item["url"]
@@ -289,7 +356,7 @@ def download_one(
             return existing, True
 
     headers = dict(DEFAULT_HEADERS)
-    source_page = str(item.get("sourcePage") or "")
+    source_page = str(item.get("sourcePage") or item.get("referer") or "")
     if urlparse(source_page).scheme.lower() in ALLOWED_SCHEMES:
         headers["Referer"] = source_page
 
@@ -301,17 +368,16 @@ def download_one(
         stream=True,
         allow_redirects=True,
     ) as resp:
+        if getattr(resp, "status_code", 0) in (429, 503):
+            retry_after = resp.headers.get("Retry-After")
+            try:
+                pause = min(float(retry_after), 30.0) if retry_after else 5.0
+            except ValueError:
+                pause = 5.0
+            raise RetryableError(f"HTTP {resp.status_code} (rate limited)", pause)
         resp.raise_for_status()
         content_type = resp.headers.get("Content-Type", "")
         normalized_type = content_type.split(";", 1)[0].strip().lower()
-        if normalized_type.startswith(("text/", "application/json", "application/xml")):
-            raise RuntimeError(f"server returned {normalized_type}, not media")
-        expected_prefix = "video/" if media_type == "video" else "image/"
-        if normalized_type and normalized_type != "application/octet-stream":
-            if not normalized_type.startswith(expected_prefix):
-                raise RuntimeError(
-                    f"server returned {normalized_type}, expected {expected_prefix}*"
-                )
 
         try:
             content_length = int(resp.headers.get("Content-Length") or 0)
@@ -322,20 +388,37 @@ def download_one(
                 f"content length {content_length} exceeds limit {max_bytes}"
             )
 
-        ext = guess_ext(url, content_type, media_type)
+        chunks = resp.iter_content(chunk_size=128 * 1024)
+        first_chunk = next((chunk for chunk in chunks if chunk), b"")
+        sample = first_chunk[:1024].lstrip().lower()
+        if sample.startswith((b"<!doctype html", b"<html")):
+            raise RuntimeError("server returned an HTML page, not media")
+        sniffed = sniff_ext(first_chunk)
+        expected_prefix = "video/" if media_type == "video" else "image/"
+        if not sniffed and normalized_type.startswith(
+            ("text/", "application/json", "application/xml")
+        ):
+            raise RuntimeError(f"server returned {normalized_type}, not media")
+        if (
+            not sniffed
+            and normalized_type
+            and normalized_type != "application/octet-stream"
+            and not normalized_type.startswith(expected_prefix)
+        ):
+            raise RuntimeError(
+                f"server returned {normalized_type}, expected {expected_prefix}*"
+            )
+
+        ext = guess_ext(url, content_type, media_type, first_chunk)
         dest, partial = reserve_path(out_dir, stem, ext, overwrite=overwrite)
-        written = 0
+        written = len(first_chunk)
         try:
             with partial.open("wb") as fh:
-                first_chunk = True
-                for chunk in resp.iter_content(chunk_size=128 * 1024):
+                if first_chunk:
+                    fh.write(first_chunk)
+                for chunk in chunks:
                     if not chunk:
                         continue
-                    if first_chunk:
-                        sample = chunk[:1024].lstrip().lower()
-                        if sample.startswith((b"<!doctype html", b"<html")):
-                            raise RuntimeError("server returned an HTML page, not media")
-                        first_chunk = False
                     written += len(chunk)
                     if max_bytes and written > max_bytes:
                         raise RuntimeError(
@@ -345,8 +428,10 @@ def download_one(
                 fh.flush()
                 os.fsync(fh.fileno())
 
-            if written < MIN_FILE_SIZE:
-                raise RuntimeError("downloaded file too small (likely blocked)")
+            if written < min_bytes:
+                raise RuntimeError(
+                    f"downloaded file too small ({written} B < {min_bytes} B)"
+                )
             partial.replace(dest)
             registry.record(stem, url, dest)
         except BaseException:
@@ -361,29 +446,30 @@ def download_with_retries(
     out_dir: Path,
     timeout: float,
     retries: int,
-    delay: float,
     overwrite: bool,
     max_bytes: int,
+    min_bytes: int,
     registry: DownloadRegistry,
+    throttle: HostThrottle,
 ) -> tuple[dict[str, Any], Path | None, bool, str | None]:
     last_error: Exception | None = None
     for attempt in range(retries + 1):
         try:
+            throttle.wait(item["url"])
             path, skipped = download_one(
                 item,
                 out_dir,
                 timeout,
                 overwrite=overwrite,
                 max_bytes=max_bytes,
+                min_bytes=min_bytes,
                 registry=registry,
             )
-            if delay > 0 and not skipped:
-                time.sleep(delay)
             return item, path, skipped, None
         except Exception as exc:  # noqa: BLE001 - returned in the failure report
             last_error = exc
             if attempt < retries:
-                time.sleep(min(2 ** attempt, 8))
+                time.sleep(getattr(exc, "pause", min(2 ** attempt, 8)))
     return item, None, False, str(last_error)
 
 
@@ -393,11 +479,22 @@ def main() -> int:
     )
     parser.add_argument("manifest", type=Path, help="Path to manifest.json from browser-extractor.js")
     parser.add_argument("--out", type=Path, default=Path("downloads"), help="Output directory")
-    parser.add_argument("--delay", type=float, default=0.2, help="Worker cooldown after a download")
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.6,
+        help="Seconds between requests to the same host",
+    )
     parser.add_argument("--timeout", type=float, default=20.0, help="Per-request timeout seconds")
     parser.add_argument("--limit", type=int, default=0, help="Optional max items (0 = all)")
     parser.add_argument("--offset", type=int, default=0, help="Skip the first N items")
     parser.add_argument("--retries", type=int, default=2, help="Retries per item")
+    parser.add_argument(
+        "--min-bytes",
+        type=int,
+        default=512,
+        help="Reject files smaller than this (default: 512)",
+    )
     parser.add_argument("--workers", type=int, default=4, help="Concurrent downloads (default: 4)")
     parser.add_argument(
         "--overwrite",
@@ -425,6 +522,8 @@ def main() -> int:
         parser.error("--workers must be >= 1; retries/delay >= 0; timeout > 0")
     if args.max_mb < 0:
         parser.error("--max-mb must be >= 0")
+    if args.min_bytes < 1:
+        parser.error("--min-bytes must be >= 1")
 
     try:
         items = load_manifest(args.manifest)
@@ -443,8 +542,10 @@ def main() -> int:
     ok = 0
     skipped = 0
     failed: list[dict[str, Any]] = []
+    results: list[tuple[dict[str, Any], str, str]] = []
     max_bytes = int(args.max_mb * 1024 * 1024) if args.max_mb else 0
     registry = DownloadRegistry(args.out)
+    throttle = HostThrottle(args.delay)
 
     if items:
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
@@ -455,10 +556,11 @@ def main() -> int:
                     args.out,
                     args.timeout,
                     args.retries,
-                    args.delay,
                     args.overwrite,
                     max_bytes,
+                    args.min_bytes,
                     registry,
+                    throttle,
                 )
                 for item in items
             ]
@@ -469,12 +571,15 @@ def main() -> int:
                     if dest:
                         if was_skipped:
                             skipped += 1
+                            results.append((item, "skipped", dest.name))
                             print(f"⏭️  {label} already exists")
                         else:
                             ok += 1
+                            results.append((item, "saved", dest.name))
                             print(f"✅ {label} → {dest.name}")
                     else:
                         failed.append({**item, "error": error})
+                        results.append((item, "failed", error or "unknown error"))
                         print(f"⚠️  {label} failed: {error}")
             except KeyboardInterrupt:
                 for future in futures:
@@ -501,6 +606,18 @@ def main() -> int:
         print(f"Failure report: {failures_path}")
     elif args.failures:
         failures_path.unlink(missing_ok=True)
+
+    report_path = args.out / "report.csv"
+    with report_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["index", "status", "title", "url", "detail"])
+        for item, status, detail in sorted(
+            results, key=lambda result: result[0]["index"]
+        ):
+            writer.writerow(
+                [item["index"], status, item["title"], item["url"], detail]
+            )
+    print(f"Report: {report_path}")
 
     print(f"\n🎉 Done. saved={ok} skipped={skipped} failed={len(failed)}")
     if failed:

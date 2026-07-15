@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Image Title Scraper — Python downloader (v4)
+Image Title Scraper — Python downloader (v5)
 
 Purpose:
   Reliably download media listed in a JSON manifest produced by
@@ -11,7 +11,7 @@ Purpose:
 
 Usage:
   python download.py manifest.json
-  python download.py manifest.json --out downloads --delay 0.8 --limit 50
+  python download.py manifest.json --out downloads --workers 4 --limit 50
 
 Manifest format (from browser-extractor.js):
   {
@@ -24,10 +24,13 @@ Manifest format (from browser-extractor.js):
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import mimetypes
+import os
 import re
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -48,6 +51,8 @@ DEFAULT_HEADERS = {
     ),
     "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
 }
+MIN_FILE_SIZE = 32
+ALLOWED_SCHEMES = {"http", "https"}
 
 INVALID_FS_CHARS = re.compile(r'[\\/*?:"<>|\n\r\t]+')
 MIME_EXT = {
@@ -60,7 +65,16 @@ MIME_EXT = {
     "image/svg+xml": ".svg",
     "video/mp4": ".mp4",
     "video/webm": ".webm",
+    "video/quicktime": ".mov",
+    "video/ogg": ".ogv",
 }
+WINDOWS_RESERVED_NAMES = {
+    "con", "prn", "aux", "nul",
+    *(f"com{i}" for i in range(1, 10)),
+    *(f"lpt{i}" for i in range(1, 10)),
+}
+_thread_local = threading.local()
+_path_lock = threading.Lock()
 
 
 def sanitize_filename(text: str, max_len: int = 100) -> str:
@@ -69,6 +83,8 @@ def sanitize_filename(text: str, max_len: int = 100) -> str:
     text = text.strip("._")
     if not text:
         text = "image"
+    if text.casefold() in WINDOWS_RESERVED_NAMES:
+        text = f"_{text}"
     return text[:max_len]
 
 
@@ -83,7 +99,10 @@ def guess_ext(url: str, content_type: str | None, media_type: str) -> str:
 
     path = unquote(urlparse(url).path)
     suffix = Path(path).suffix.lower()
-    if suffix in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".svg", ".mp4", ".webm"}:
+    if suffix in {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".svg",
+        ".bmp", ".mp4", ".webm", ".mov", ".ogv",
+    }:
         return ".jpg" if suffix == ".jpeg" else suffix
 
     return ".mp4" if media_type == "video" else ".jpg"
@@ -98,66 +117,192 @@ def load_manifest(path: Path) -> list[dict[str, Any]]:
     else:
         raise ValueError("Manifest must be a list or an object with an 'items' array")
 
+    if not isinstance(items, list):
+        raise ValueError("Manifest 'items' must be an array")
+
     normalized = []
+    used_indices: set[int] = set()
     for i, item in enumerate(items, start=1):
         if isinstance(item, str):
-            normalized.append({"index": i, "url": item, "title": f"image_{i}", "type": "image"})
+            url = item.strip()
+            if urlparse(url).scheme.lower() not in ALLOWED_SCHEMES:
+                continue
+            used_indices.add(i)
+            normalized.append(
+                {
+                    "index": i,
+                    "url": url,
+                    "title": f"image_{i}",
+                    "type": "image",
+                    "sourcePage": "",
+                }
+            )
             continue
-        url = item.get("url") or item.get("murl") or item.get("src")
-        if not url:
+        if not isinstance(item, dict):
             continue
+        url = str(item.get("url") or item.get("murl") or item.get("src") or "").strip()
+        if not url or urlparse(url).scheme.lower() not in ALLOWED_SCHEMES:
+            continue
+        try:
+            index = int(item.get("index") or i)
+        except (TypeError, ValueError):
+            index = i
+        if index < 1 or index in used_indices:
+            index = i
+            while index in used_indices:
+                index += 1
+        used_indices.add(index)
         normalized.append(
             {
-                "index": int(item.get("index") or i),
+                "index": index,
                 "url": url,
                 "title": item.get("title") or item.get("suggestedName") or f"image_{i}",
                 "type": item.get("type") or "image",
+                "sourcePage": (
+                    item.get("sourcePage") or data.get("pageUrl", "")
+                    if isinstance(data, dict)
+                    else item.get("sourcePage") or ""
+                ),
             }
         )
     return normalized
 
 
 def unique_path(directory: Path, stem: str, ext: str) -> Path:
-    candidate = directory / f"{stem}{ext}"
-    if not candidate.exists():
-        return candidate
-    n = 2
-    while True:
-        candidate = directory / f"{stem}_{n}{ext}"
-        if not candidate.exists():
+    with _path_lock:
+        candidate = directory / f"{stem}{ext}"
+        if not candidate.exists() and not candidate.with_suffix(f"{ext}.part").exists():
             return candidate
-        n += 1
+        n = 2
+        while True:
+            candidate = directory / f"{stem}_{n}{ext}"
+            if not candidate.exists() and not candidate.with_suffix(f"{ext}.part").exists():
+                return candidate
+            n += 1
+
+
+def existing_path(directory: Path, stem: str) -> Path | None:
+    matches = sorted(
+        path for path in directory.iterdir()
+        if (
+            path.stem == stem
+            and not path.name.endswith(".part")
+            and path.is_file()
+            and path.stat().st_size >= MIN_FILE_SIZE
+        )
+    )
+    return matches[0] if matches else None
+
+
+def get_session() -> requests.Session:
+    session = getattr(_thread_local, "session", None)
+    if session is None:
+        session = requests.Session()
+        _thread_local.session = session
+    return session
 
 
 def download_one(
-    session: requests.Session,
     item: dict[str, Any],
     out_dir: Path,
     timeout: float,
-) -> Path | None:
+    overwrite: bool = False,
+    max_bytes: int = 0,
+) -> tuple[Path, bool]:
     url = item["url"]
     index = item["index"]
     title = sanitize_filename(str(item["title"]))
     media_type = item.get("type") or "image"
-
-    resp = session.get(url, headers=DEFAULT_HEADERS, timeout=timeout, stream=True)
-    resp.raise_for_status()
-
-    ext = guess_ext(url, resp.headers.get("Content-Type"), media_type)
     stem = f"{index:03d}_{title}"
-    dest = unique_path(out_dir, stem, ext)
 
-    with dest.open("wb") as fh:
-        for chunk in resp.iter_content(chunk_size=64 * 1024):
-            if chunk:
-                fh.write(chunk)
+    if not overwrite:
+        existing = existing_path(out_dir, stem)
+        if existing:
+            return existing, True
 
-    # Reject empty / tiny failure bodies
-    if dest.stat().st_size < 32:
-        dest.unlink(missing_ok=True)
-        raise RuntimeError("downloaded file too small (likely blocked)")
+    headers = dict(DEFAULT_HEADERS)
+    source_page = str(item.get("sourcePage") or "")
+    if urlparse(source_page).scheme.lower() in ALLOWED_SCHEMES:
+        headers["Referer"] = source_page
 
-    return dest
+    session = get_session()
+    with session.get(
+        url,
+        headers=headers,
+        timeout=(min(timeout, 10.0), timeout),
+        stream=True,
+        allow_redirects=True,
+    ) as resp:
+        resp.raise_for_status()
+        content_type = resp.headers.get("Content-Type", "")
+        normalized_type = content_type.split(";", 1)[0].strip().lower()
+        if normalized_type.startswith(("text/", "application/json", "application/xml")):
+            raise RuntimeError(f"server returned {normalized_type}, not media")
+
+        try:
+            content_length = int(resp.headers.get("Content-Length") or 0)
+        except ValueError:
+            content_length = 0
+        if max_bytes and content_length > max_bytes:
+            raise RuntimeError(
+                f"content length {content_length} exceeds limit {max_bytes}"
+            )
+
+        ext = guess_ext(url, content_type, media_type)
+        dest = out_dir / f"{stem}{ext}" if overwrite else unique_path(out_dir, stem, ext)
+        partial = dest.with_suffix(f"{dest.suffix}.part")
+        written = 0
+        try:
+            with partial.open("wb") as fh:
+                for chunk in resp.iter_content(chunk_size=128 * 1024):
+                    if not chunk:
+                        continue
+                    written += len(chunk)
+                    if max_bytes and written > max_bytes:
+                        raise RuntimeError(
+                            f"download exceeded size limit {max_bytes}"
+                        )
+                    fh.write(chunk)
+                fh.flush()
+                os.fsync(fh.fileno())
+
+            if written < MIN_FILE_SIZE:
+                raise RuntimeError("downloaded file too small (likely blocked)")
+            partial.replace(dest)
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+
+    return dest, False
+
+
+def download_with_retries(
+    item: dict[str, Any],
+    out_dir: Path,
+    timeout: float,
+    retries: int,
+    delay: float,
+    overwrite: bool,
+    max_bytes: int,
+) -> tuple[dict[str, Any], Path | None, bool, str | None]:
+    last_error: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            path, skipped = download_one(
+                item,
+                out_dir,
+                timeout,
+                overwrite=overwrite,
+                max_bytes=max_bytes,
+            )
+            if delay > 0 and not skipped:
+                time.sleep(delay)
+            return item, path, skipped, None
+        except Exception as exc:  # noqa: BLE001 - returned in the failure report
+            last_error = exc
+            if attempt < retries:
+                time.sleep(min(2 ** attempt, 8))
+    return item, None, False, str(last_error)
 
 
 def main() -> int:
@@ -166,54 +311,107 @@ def main() -> int:
     )
     parser.add_argument("manifest", type=Path, help="Path to manifest.json from browser-extractor.js")
     parser.add_argument("--out", type=Path, default=Path("downloads"), help="Output directory")
-    parser.add_argument("--delay", type=float, default=0.6, help="Seconds between requests")
+    parser.add_argument("--delay", type=float, default=0.2, help="Worker cooldown after a download")
     parser.add_argument("--timeout", type=float, default=20.0, help="Per-request timeout seconds")
     parser.add_argument("--limit", type=int, default=0, help="Optional max items (0 = all)")
     parser.add_argument("--offset", type=int, default=0, help="Skip the first N items")
     parser.add_argument("--retries", type=int, default=2, help="Retries per item")
+    parser.add_argument("--workers", type=int, default=4, help="Concurrent downloads (default: 4)")
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Download again instead of resuming from existing files",
+    )
+    parser.add_argument(
+        "--max-mb",
+        type=float,
+        default=0,
+        help="Reject individual files larger than this many MiB (0 = unlimited)",
+    )
+    parser.add_argument(
+        "--failures",
+        type=Path,
+        default=None,
+        help="Failure report path (default: <out>/failures.json)",
+    )
     args = parser.parse_args()
 
     if not args.manifest.exists():
         print(f"Manifest not found: {args.manifest}", file=sys.stderr)
         return 1
+    if args.workers < 1 or args.retries < 0 or args.timeout <= 0 or args.delay < 0:
+        parser.error("--workers must be >= 1; retries/delay >= 0; timeout > 0")
+    if args.max_mb < 0:
+        parser.error("--max-mb must be >= 0")
 
-    items = load_manifest(args.manifest)
+    try:
+        items = load_manifest(args.manifest)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f"Invalid manifest: {exc}", file=sys.stderr)
+        return 1
     if args.offset:
         items = items[args.offset :]
     if args.limit and args.limit > 0:
         items = items[: args.limit]
 
     args.out.mkdir(parents=True, exist_ok=True)
-    print(f"📦 {len(items)} items → {args.out.resolve()}")
+    workers = min(args.workers, len(items)) if items else 0
+    print(f"📦 {len(items)} items → {args.out.resolve()} ({workers} workers)")
 
     ok = 0
-    failed: list[str] = []
+    skipped = 0
+    failed: list[dict[str, Any]] = []
+    max_bytes = int(args.max_mb * 1024 * 1024) if args.max_mb else 0
 
-    with requests.Session() as session:
-        for item in items:
-            label = f"[{item['index']}] {item['title'][:60]}"
-            success = False
-            last_err: Exception | None = None
-            for attempt in range(1, args.retries + 2):
-                try:
-                    dest = download_one(session, item, args.out, args.timeout)
-                    print(f"✅ {label} → {dest.name}")
-                    ok += 1
-                    success = True
-                    break
-                except Exception as exc:  # noqa: BLE001 - report any download failure
-                    last_err = exc
-                    print(f"⚠️  {label} attempt {attempt} failed: {exc}")
-                    time.sleep(min(2.0 * attempt, 5.0))
-            if not success:
-                failed.append(f"{label}: {last_err}")
-            time.sleep(args.delay)
+    if items:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [
+                executor.submit(
+                    download_with_retries,
+                    item,
+                    args.out,
+                    args.timeout,
+                    args.retries,
+                    args.delay,
+                    args.overwrite,
+                    max_bytes,
+                )
+                for item in items
+            ]
+            try:
+                for future in concurrent.futures.as_completed(futures):
+                    item, dest, was_skipped, error = future.result()
+                    label = f"[{item['index']}] {str(item['title'])[:60]}"
+                    if dest:
+                        if was_skipped:
+                            skipped += 1
+                            print(f"⏭️  {label} already exists")
+                        else:
+                            ok += 1
+                            print(f"✅ {label} → {dest.name}")
+                    else:
+                        failed.append({**item, "error": error})
+                        print(f"⚠️  {label} failed: {error}")
+            except KeyboardInterrupt:
+                for future in futures:
+                    future.cancel()
+                print("\nInterrupted; completed files were kept.", file=sys.stderr)
+                return 130
 
-    print(f"\n🎉 Done. saved={ok} failed={len(failed)}")
+    failures_path = args.failures or args.out / "failures.json"
     if failed:
-        print("Failures:")
-        for line in failed:
-            print(f"  - {line}")
+        report = {
+            "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "count": len(failed),
+            "items": failed,
+        }
+        failures_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"Failure report: {failures_path}")
+    else:
+        failures_path.unlink(missing_ok=True)
+
+    print(f"\n🎉 Done. saved={ok} skipped={skipped} failed={len(failed)}")
+    if failed:
         return 2
     return 0
 

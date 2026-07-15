@@ -1,5 +1,5 @@
 /**
- * Image Title Scraper — Browser Extractor v4
+ * Image Title Scraper — Browser Extractor v5
  *
  * Purpose:
  *   Scroll a page (Bing Images or generic sites), discover media, score
@@ -12,18 +12,20 @@
  *   3. Paste this entire file and press Enter.
  *   4. When prompted, prefer "Export JSON" then run: python download.py manifest.json
  *
- * Upgrades vs earlier versions (Gemini share guidance):
+ * Capabilities:
  *   - Multi-source title scoring with length / blacklist filters
  *   - Bing `.iusc` metadata (`m` JSON: murl + t) as highest-confidence source
  *   - Parent <a title>, card containers, figcaption, data-*, img alt/title fallbacks
  *   - Manifest export to avoid Chrome .crdownload / CORS download failures
+ *   - srcset/lazy attributes, open shadow DOM, CSS backgrounds, and page metadata
+ *   - Bounded auto-scroll and non-destructive URL normalization
  *   - Batched download delays + auto-download permission reminder
  */
 (async function () {
   "use strict";
 
   console.clear();
-  console.log("🚀 Image Title Scraper v4 — browser extractor");
+  console.log("🚀 Image Title Scraper v5 — browser extractor");
 
   // =========================================================================
   // CONFIG
@@ -31,12 +33,16 @@
   const CONFIG = {
     scrollDelay: 1500,
     stableThreshold: 3,
+    maxScrollSteps: 60,
     downloadDelay: 1200,
     batchPauseEvery: 10,
     batchPauseMs: 3000,
     revokeDelayMs: 15000,
+    fetchTimeoutMs: 30000,
     maxTitleLength: 120,
     minTitleLength: 3,
+    minImageDimension: 48,
+    includeCssBackgrounds: true,
     debug: true,
     mode: "export", // "export" | "download" | "both"
   };
@@ -51,6 +57,10 @@
     "bat.bing",
     "/ads/",
     "adgeek",
+    "google-analytics",
+    "adservice",
+    "beacon",
+    "scorecardresearch",
   ];
 
   const BLACKLIST_TITLES = new Set([
@@ -63,6 +73,11 @@
     "view image",
     "loading",
     "link",
+    "logo",
+    "icon",
+    "avatar",
+    "spacer",
+    "blank",
     "...",
   ]);
 
@@ -79,14 +94,20 @@
     return String(text)
       .replace(/[\n\r\t]+/g, " ")
       .replace(/[\\/*?:"<>|]/g, "")
+      .replace(/[\u0000-\u001f\u007f]/g, "")
       .replace(/\s+/g, " ")
       .trim();
   }
 
   function normalizeFilename(text) {
-    return sanitize(text)
+    let name = sanitize(text)
       .replace(/\s+/g, "_")
+      .replace(/[. ]+$/g, "")
       .substring(0, CONFIG.maxTitleLength);
+    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name)) {
+      name = `_${name}`;
+    }
+    return name;
   }
 
   function isGarbage(text) {
@@ -96,6 +117,8 @@
     if (t.length > CONFIG.maxTitleLength) return true;
     if (BLACKLIST_TITLES.has(t)) return true;
     if (/^\d+$/.test(t)) return true;
+    if (/^[a-f0-9]{16,}$/i.test(t)) return true;
+    if (/^(?:https?:\/\/|www\.)/i.test(t)) return true;
     return false;
   }
 
@@ -105,7 +128,14 @@
     function add(text, score, source) {
       const cleaned = sanitize(text);
       if (isGarbage(cleaned)) return;
-      candidates.push({ text: cleaned, score, source });
+      const existing = candidates.find(
+        (candidate) => candidate.text.toLowerCase() === cleaned.toLowerCase()
+      );
+      if (!existing) {
+        candidates.push({ text: cleaned, score, source });
+      } else if (score > existing.score) {
+        Object.assign(existing, { text: cleaned, score, source });
+      }
     }
 
     function best() {
@@ -116,21 +146,86 @@
       if (CONFIG.debug && candidates.length) {
         log("🧠 title candidates:", candidates.slice(0, 5));
       }
-      return candidates[0]?.text || "";
+      return candidates[0] || null;
     }
 
     return { add, best, candidates };
   }
 
-  function cleanImageUrl(url) {
-    if (!url) return "";
-    let cleaned = url;
-    cleaned = cleaned.replace(/([?&])w=\d+/gi, "$1");
-    cleaned = cleaned.replace(/([?&])h=\d+/gi, "$1");
-    cleaned = cleaned.replace(/\/small\//gi, "/large/");
-    cleaned = cleaned.replace(/\/thumb\//gi, "/large/");
-    cleaned = cleaned.replace(/\?&/, "?").replace(/[?&]$/, "");
-    return cleaned;
+  function normalizeUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      if (!/^https?:$/.test(parsed.protocol)) return "";
+      parsed.hash = "";
+      return parsed.href;
+    } catch {
+      return "";
+    }
+  }
+
+  function urlKey(url) {
+    try {
+      const parsed = new URL(url);
+      parsed.hash = "";
+      return parsed.href;
+    } catch {
+      return url;
+    }
+  }
+
+  function bestFromSrcset(srcset) {
+    if (!srcset) return "";
+    let best = "";
+    let bestRank = -1;
+    for (const candidate of srcset.split(",")) {
+      const [url, descriptor = ""] = candidate.trim().split(/\s+/);
+      if (!url || url.startsWith("data:")) continue;
+      const rank = descriptor.endsWith("w")
+        ? Number.parseFloat(descriptor)
+        : descriptor.endsWith("x")
+          ? Number.parseFloat(descriptor) * 10000
+          : 0;
+      if (Number.isFinite(rank) && rank >= bestRank) {
+        best = url;
+        bestRank = rank;
+      }
+    }
+    return best;
+  }
+
+  function mediaUrl(element) {
+    if (!element) return "";
+    const lazyAttributes = [
+      "data-original",
+      "data-src",
+      "data-lazy-src",
+      "data-full",
+      "data-url",
+    ];
+    const srcset =
+      element.getAttribute("data-srcset") || element.getAttribute("srcset");
+    const candidates = [
+      bestFromSrcset(srcset),
+      ...lazyAttributes.map((name) => element.getAttribute(name)),
+      element.currentSrc,
+      element.getAttribute("src"),
+    ];
+    return normalizeUrl(candidates.find(Boolean) || "");
+  }
+
+  function deepQueryAll(selector) {
+    const matches = [];
+    const visited = new Set();
+    function walk(root) {
+      if (!root || visited.has(root)) return;
+      visited.add(root);
+      matches.push(...root.querySelectorAll(selector));
+      root.querySelectorAll("*").forEach((element) => {
+        if (element.shadowRoot) walk(element.shadowRoot);
+      });
+    }
+    walk(document);
+    return [...new Set(matches)];
   }
 
   function extractFilename(url) {
@@ -174,21 +269,29 @@
   async function deepScroll() {
     console.log("🔄 Deep-scrolling to wake lazy-loaded media...");
     let lastHeight = document.body.scrollHeight;
+    let lastMediaCount = 0;
     let stableCount = 0;
+    let steps = 0;
 
-    while (stableCount < CONFIG.stableThreshold) {
+    while (
+      stableCount < CONFIG.stableThreshold &&
+      steps < CONFIG.maxScrollSteps
+    ) {
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       await sleep(CONFIG.scrollDelay);
       const newHeight = document.body.scrollHeight;
-      if (newHeight === lastHeight) {
+      const mediaCount = deepQueryAll("img, video, source").length;
+      if (newHeight === lastHeight && mediaCount === lastMediaCount) {
         stableCount += 1;
       } else {
         stableCount = 0;
         lastHeight = newHeight;
+        lastMediaCount = mediaCount;
       }
+      steps += 1;
     }
     window.scrollTo(0, 0);
-    console.log("✅ Page expand complete");
+    console.log(`✅ Page expand complete (${steps} scroll steps)`);
   }
 
   // =========================================================================
@@ -199,6 +302,9 @@
       const iusc = card.matches?.(".iusc")
         ? card
         : card.querySelector(".iusc") || card;
+      const scope = card.matches?.(".iusc")
+        ? card.closest(".imgpt, .iuscp") || card.parentElement || card
+        : card;
       let meta = {};
       const raw = iusc.getAttribute?.("m");
       if (raw) {
@@ -209,10 +315,10 @@
         }
       }
 
-      const img = card.querySelector("img");
+      const img = scope.matches?.("img") ? scope : scope.querySelector("img");
       const imageUrl =
-        meta.murl || meta.imgurl || img?.currentSrc || img?.src || "";
-      if (!imageUrl || imageUrl.startsWith("data:") || isSpamUrl(imageUrl)) {
+        normalizeUrl(meta.murl || meta.imgurl || mediaUrl(img) || "");
+      if (!imageUrl || isSpamUrl(imageUrl)) {
         return null;
       }
 
@@ -222,7 +328,7 @@
       engine.add(meta.title, 98, "bing.meta.title");
       engine.add(meta.desc, 85, "bing.meta.desc");
 
-      card.querySelectorAll("a[title]").forEach((a) => {
+      scope.querySelectorAll("a[title]").forEach((a) => {
         engine.add(a.getAttribute("title"), 95, "a.title");
       });
 
@@ -236,7 +342,7 @@
       }
 
       // Parent link wrapping the image
-      const parentLink = img?.closest("a") || card.closest("a");
+      const parentLink = img?.closest("a") || scope.closest("a");
       if (parentLink) {
         engine.add(parentLink.getAttribute("title"), 93, "parent.a.title");
         engine.add(parentLink.innerText, 70, "parent.a.text");
@@ -246,12 +352,15 @@
 
       const best = engine.best();
       return {
-        url: cleanImageUrl(imageUrl),
-        suggestedName: normalizeFilename(best) || "bing_image",
-        thumbnail: img?.src || imageUrl,
+        url: imageUrl,
+        suggestedName: normalizeFilename(best?.text) || "bing_image",
+        thumbnail: mediaUrl(img) || imageUrl,
         type: "image",
         source: "bing",
-        titleSource: engine.candidates[0]?.source || "none",
+        sourcePage: normalizeUrl(meta.purl || meta.surl || ""),
+        titleSource: best?.source || "none",
+        width: Number(meta.w || img?.naturalWidth) || null,
+        height: Number(meta.h || img?.naturalHeight) || null,
       };
     } catch (err) {
       log("Bing card parse error:", err);
@@ -264,8 +373,16 @@
   // =========================================================================
   function parseGenericImage(img) {
     try {
-      const src = img.currentSrc || img.src;
-      if (!src || src.startsWith("data:") || isSpamUrl(src)) return null;
+      const src = mediaUrl(img);
+      if (!src || isSpamUrl(src)) return null;
+      if (
+        img.complete &&
+        img.naturalWidth &&
+        img.naturalHeight &&
+        Math.max(img.naturalWidth, img.naturalHeight) < CONFIG.minImageDimension
+      ) {
+        return null;
+      }
 
       const engine = createScoringEngine();
 
@@ -326,12 +443,15 @@
 
       const best = engine.best();
       return {
-        url: cleanImageUrl(src),
-        suggestedName: normalizeFilename(best) || "image",
+        url: src,
+        suggestedName: normalizeFilename(best?.text) || "image",
         thumbnail: src,
         type: "image",
         source: "generic",
-        titleSource: engine.candidates[0]?.source || "none",
+        sourcePage: parentLink?.href || location.href,
+        titleSource: best?.source || "none",
+        width: img.naturalWidth || null,
+        height: img.naturalHeight || null,
       };
     } catch (err) {
       log("Generic parse error:", err);
@@ -347,54 +467,122 @@
   const seen = new Set();
   const mediaEntries = [];
   const isBing = /bing\.com/i.test(location.hostname);
+  function addEntry(entry) {
+    if (!entry?.url) return;
+    entry.url = normalizeUrl(entry.url);
+    const key = urlKey(entry.url);
+    if (!entry.url || isSpamUrl(entry.url) || seen.has(key)) return;
+    seen.add(key);
+    mediaEntries.push(entry);
+  }
 
   if (isBing) {
     console.log("🟦 Bing Images mode");
-    const cards = [
-      ...document.querySelectorAll(".iusc, .imgpt, .iuscp"),
-    ];
+    const metadataCards = deepQueryAll(".iusc");
+    const cards = metadataCards.length
+      ? metadataCards
+      : deepQueryAll(".imgpt, .iuscp");
     // Prefer unique .iusc nodes (metadata carriers)
     const nodes = cards.length
       ? cards
-      : [...document.querySelectorAll("[m]")];
+      : deepQueryAll("[m]");
     console.log(`🔎 Scanning ${nodes.length} Bing cards`);
     for (const card of nodes) {
       const parsed = parseBingCard(card);
-      if (!parsed || seen.has(parsed.url)) continue;
-      seen.add(parsed.url);
-      mediaEntries.push(parsed);
-    }
-  } else {
-    console.log("🌐 Generic site mode");
-    const images = [...document.querySelectorAll("img")];
-    console.log(`🔎 Scanning ${images.length} images`);
-    for (const img of images) {
-      const parsed = parseGenericImage(img);
-      if (!parsed || seen.has(parsed.url)) continue;
-      seen.add(parsed.url);
-      mediaEntries.push(parsed);
+      addEntry(parsed);
     }
   }
 
-  // Videos (generic)
-  document.querySelectorAll("video, video source").forEach((vid) => {
-    const url = vid.currentSrc || vid.src;
-    if (!url || url.startsWith("blob:") || seen.has(url)) return;
-    seen.add(url);
+  // Always scan regular images too: search engines and mixed pages contain
+  // useful media outside their result-card markup.
+  const images = deepQueryAll(
+    "img, [data-src], [data-original], [data-lazy-src], [data-srcset]"
+  ).filter(
+    (element) =>
+      element.matches("img") && !(isBing && element.closest(".iusc, .imgpt, .iuscp"))
+  );
+  console.log(`🔎 Scanning ${images.length} DOM images`);
+  for (const img of images) addEntry(parseGenericImage(img));
+
+  // Videos, including nested <source> candidates.
+  deepQueryAll("video, video source").forEach((vid) => {
+    const url = mediaUrl(vid);
+    if (!url) return;
+    const owner = vid.closest("video") || vid;
     const title =
-      vid.getAttribute("title") ||
-      vid.closest("a")?.getAttribute("title") ||
-      vid.closest("figure")?.querySelector("figcaption")?.innerText ||
+      owner.getAttribute("title") ||
+      owner.getAttribute("aria-label") ||
+      owner.closest("a")?.getAttribute("title") ||
+      owner.closest("figure")?.querySelector("figcaption")?.innerText ||
+      extractFilename(url) ||
       "";
-    mediaEntries.push({
+    addEntry({
       url,
       suggestedName: normalizeFilename(sanitize(title)) || "video",
-      thumbnail: url,
+      thumbnail: normalizeUrl(owner.getAttribute("poster")) || "",
       type: "video",
       source: isBing ? "bing" : "generic",
+      sourcePage: location.href,
       titleSource: "video",
     });
   });
+
+  // CSS backgrounds are common in galleries and product cards.
+  if (CONFIG.includeCssBackgrounds) {
+    deepQueryAll("[style*='background']").forEach((element) => {
+      const background = getComputedStyle(element).backgroundImage || "";
+      for (const match of background.matchAll(/url\((['"]?)(.*?)\1\)/g)) {
+        const url = normalizeUrl(match[2]);
+        if (!url || match[2].startsWith("data:")) continue;
+        const engine = createScoringEngine();
+        engine.add(element.getAttribute("aria-label"), 90, "background.aria");
+        engine.add(element.getAttribute("title"), 88, "background.title");
+        engine.add(
+          element.closest("figure")?.querySelector("figcaption")?.innerText,
+          94,
+          "background.figcaption"
+        );
+        engine.add(extractFilename(url), 55, "url.filename");
+        const best = engine.best();
+        addEntry({
+          url,
+          suggestedName: normalizeFilename(best?.text) || "background_image",
+          thumbnail: url,
+          type: "image",
+          source: "css-background",
+          sourcePage: location.href,
+          titleSource: best?.source || "none",
+          width: element.clientWidth || null,
+          height: element.clientHeight || null,
+        });
+      }
+    });
+  }
+
+  // Page-level originals can exist even when no corresponding <img> is rendered.
+  document
+    .querySelectorAll(
+      'meta[property="og:image"], meta[name="twitter:image"], link[rel="image_src"]'
+    )
+    .forEach((element) => {
+      const url = normalizeUrl(
+        element.getAttribute("content") || element.getAttribute("href")
+      );
+      if (!url) return;
+      addEntry({
+        url,
+        suggestedName:
+          normalizeFilename(
+            document.querySelector('meta[property="og:title"]')?.content ||
+              document.title
+          ) || "page_image",
+        thumbnail: url,
+        type: "image",
+        source: "page-metadata",
+        sourcePage: location.href,
+        titleSource: "page.title",
+      });
+    });
 
   console.table(
     mediaEntries.map((x) => ({
@@ -415,6 +603,8 @@
   // EXPORT MANIFEST (recommended — avoids .crdownload / CORS issues)
   // =========================================================================
   const manifest = {
+    schemaVersion: 2,
+    generator: "image-title-scraper/browser-extractor-v5",
     generatedAt: new Date().toISOString(),
     pageUrl: location.href,
     pageTitle: document.title,
@@ -426,6 +616,10 @@
       type: e.type,
       titleSource: e.titleSource,
       source: e.source,
+      sourcePage: e.sourcePage || location.href,
+      thumbnail: e.thumbnail || "",
+      width: e.width || null,
+      height: e.height || null,
     })),
   };
 
@@ -462,10 +656,19 @@
       `${String(index).padStart(3, "0")}_` +
       (entry.suggestedName || "image").substring(0, 80);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CONFIG.fetchTimeoutMs);
     try {
-      const resp = await fetch(entry.url, { mode: "cors", credentials: "omit" });
+      const resp = await fetch(entry.url, {
+        mode: "cors",
+        credentials: "omit",
+        signal: controller.signal,
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
+      if (!/^(image|video)\//i.test(blob.type) && blob.type) {
+        throw new Error(`unexpected content type ${blob.type}`);
+      }
       const ext = extFromMime(blob.type, entry.type === "video" ? ".mp4" : ".jpg");
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -483,11 +686,13 @@
     } catch (err) {
       console.warn(`⚠️ [cors] cannot rename via blob: ${entry.url}`, err.message || err);
       return false;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
   // Decide mode via prompt (default: export for Python)
-  const choice = (window.prompt(
+  const requestedChoice = (window.prompt(
     `Found ${mediaEntries.length} items.\n` +
       `Type: export | download | both\n` +
       `(export → Python download.py avoids .crdownload)`,
@@ -495,6 +700,12 @@
   ) || "export")
     .trim()
     .toLowerCase();
+  const choice = ["export", "download", "both"].includes(requestedChoice)
+    ? requestedChoice
+    : CONFIG.mode;
+  if (choice !== requestedChoice) {
+    console.warn(`Unknown mode "${requestedChoice}"; using "${choice}".`);
+  }
 
   if (choice === "export" || choice === "both") {
     await copyManifest();

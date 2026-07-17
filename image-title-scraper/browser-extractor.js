@@ -2,65 +2,54 @@
  * Image Title Scraper — Browser Extractor v5
  *
  * Purpose:
- *   Scroll a page (Bing Images, Google Images, or generic sites), discover
- *   media, score candidate native titles, then either download in-browser or
- *   export a JSON/CSV manifest for the companion Python downloader
- *   (recommended).
+ *   Discover media on a page (Bing / Google Images / generic sites), score
+ *   candidate native titles, then export a JSON manifest for the companion
+ *   Python downloader (recommended) or download in-browser.
  *
  * How to use:
- *   1. Open the target page (image results list works best).
+ *   1. Open the target page (Bing/Google image results list works best).
  *   2. Open DevTools → Console.
  *   3. Paste this entire file and press Enter.
- *   4. When prompted, prefer "export" then run: python download.py manifest.json
+ *   4. Use the panel: Scan → Export JSON → run: python download.py manifest.json
  *
- * Optional config override (set BEFORE pasting the script):
- *   window.__SCRAPER_CONFIG__ = { minImageSize: 120, maxItems: 200, mode: "export" };
- *
- * Emergency stop during in-browser downloads:
- *   window.__SCRAPER_STOP__ = true;
- *
- * Upgrades vs v4:
- *   - Incremental collection DURING scrolling (virtualized galleries such as
- *     Bing/Google unload offscreen cards; v4 only scanned at the end and lost them)
- *   - Best-resolution source resolution: srcset / <picture> / data-src /
- *     data-lazy-src / data-original lazy-load attributes
- *   - Google Images adapter (parses /imgres?imgurl=… for full-size URLs)
- *   - Shadow DOM + same-origin iframe traversal
- *   - CSS background-image harvesting
- *   - Minimum-rendered-size filter to skip icons/sprites/trackers
- *   - CSV export next to the JSON manifest, per-item referer + dimensions
- *   - Safety cap on scroll rounds, maxItems limit, runtime config overrides
+ * v5 capability upgrades:
+ *   - On-page control panel (scan / export / download / rescue gallery)
+ *   - Deep discovery: srcset (highest res), lazy data-* attrs, CSS
+ *     background-image, open Shadow DOM, HTML/JSON URL regex sweep
+ *   - Google Images + Bing `.iusc` metadata fast-paths
+ *   - Stronger garbage/hash title filters + min rendered size filter
+ *   - Resize-param stripping via URLSearchParams; prefer /large/ variants
+ *   - Canvas re-encode fallback when fetch CORS fails
+ *   - Bounded-concurrency downloads + delayed blob revoke (.crdownload safe)
+ *   - Idempotent: re-running reopens the existing panel
  */
-(async function () {
+(function () {
   "use strict";
 
-  console.clear();
+  if (window.__imageTitleScraper && window.__imageTitleScraper.open) {
+    window.__imageTitleScraper.open();
+    return;
+  }
+
   console.log("🚀 Image Title Scraper v5 — browser extractor");
 
   // =========================================================================
-  // CONFIG (override any key via window.__SCRAPER_CONFIG__ before running)
+  // CONFIG
   // =========================================================================
-  const CONFIG = Object.assign(
-    {
-      scrollDelay: 1500,
-      stableThreshold: 3,
-      maxScrollRounds: 60, // hard cap so infinite feeds terminate
-      downloadDelay: 1200,
-      batchPauseEvery: 10,
-      batchPauseMs: 3000,
-      revokeDelayMs: 15000,
-      maxTitleLength: 120,
-      minTitleLength: 3,
-      minImageSize: 80, // skip images rendered smaller than this (px); 0 disables
-      maxItems: 0, // stop collecting after N items; 0 = unlimited
-      includeBackgroundImages: true,
-      includeVideos: true,
-      debug: true,
-      mode: "export", // "export" | "download" | "both"
-      exportCsv: true, // also produce a CSV manifest on export
-    },
-    typeof window !== "undefined" ? window.__SCRAPER_CONFIG__ : null
-  );
+  const CONFIG = {
+    scrollDelay: 1200,
+    stableThreshold: 3,
+    maxScrollSteps: 60,
+    downloadDelay: 300,
+    batchPauseEvery: 20,
+    batchPauseMs: 1500,
+    concurrency: 4,
+    revokeDelayMs: 90000,
+    maxTitleLength: 120,
+    minTitleLength: 3,
+    minImageSize: 64,
+    debug: true,
+  };
 
   const SPAM_URL_KEYWORDS = [
     "analytics",
@@ -68,45 +57,39 @@
     "pixel",
     "doubleclick",
     "googleads",
-    "googlesyndication",
+    "google-analytics",
     "facebook.com/tr",
     "bat.bing",
     "/ads/",
-    "adgeek",
     "adservice",
-    "/sprite",
-    "spacer.gif",
-    "blank.gif",
-    "1x1.",
+    "adgeek",
+    "beacon",
+    "sb.scorecardresearch",
   ];
 
   const BLACKLIST_TITLES = new Set([
     "image",
-    "img",
     "photo",
-    "picture",
+    "img",
     "thumbnail",
     "thumb",
-    "icon",
-    "logo",
-    "avatar",
-    "banner",
     "untitled",
     "click",
-    "click here",
     "download",
     "view image",
-    "see more",
     "loading",
     "link",
+    "logo",
+    "icon",
+    "avatar",
+    "banner",
+    "spacer",
+    "blank",
     "...",
-    "read more",
-    "open",
-    "close",
-    "next",
-    "previous",
-    "share",
   ]);
+
+  const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|svg|bmp|ico)(?:[?#]|$)/i;
+  const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogv|m3u8|mpd|ts)(?:[?#]|$)/i;
 
   // =========================================================================
   // UTILS
@@ -116,14 +99,10 @@
     if (CONFIG.debug) console.log(...args);
   };
 
-  // innerText is undefined for detached nodes / non-browser DOMs; fall back
-  const textOf = (el) => (el ? el.innerText || el.textContent || "" : "");
-
   function sanitize(text) {
     if (!text) return "";
     return String(text)
       .replace(/[\n\r\t]+/g, " ")
-      .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width chars
       .replace(/[\\/*?:"<>|]/g, "")
       .replace(/\s+/g, " ")
       .trim();
@@ -139,63 +118,60 @@
     if (!text) return true;
     const t = text.toLowerCase().trim();
     if (t.length < CONFIG.minTitleLength) return true;
-    if (t.length > CONFIG.maxTitleLength) return true;
+    if (t.length > CONFIG.maxTitleLength * 2) return true;
     if (BLACKLIST_TITLES.has(t)) return true;
     if (/^\d+$/.test(t)) return true;
-    if (/^[\W_]+$/u.test(t)) return true; // punctuation/symbols only
-    if (/^[a-f0-9-]{16,}$/i.test(t)) return true; // hex ids / uuids
-    if (/^(jpe?g|png|gif|webp|avif|svg|mp4|webm)$/i.test(t)) return true;
+    if (/^[a-f0-9]{16,}$/i.test(t)) return true;
+    if (/^(OIP|ODF|thid)\b/i.test(t)) return true;
     return false;
   }
 
   function createScoringEngine() {
-    // Dedupe candidates by lowercase text, keeping the highest score
-    const byText = new Map();
+    const candidates = [];
 
     function add(text, score, source) {
       const cleaned = sanitize(text);
       if (isGarbage(cleaned)) return;
-      const key = cleaned.toLowerCase();
-      const existing = byText.get(key);
-      if (!existing || score > existing.score) {
-        byText.set(key, { text: cleaned, score, source });
-      }
+      candidates.push({ text: cleaned, score, source });
     }
 
     function best() {
-      const candidates = [...byText.values()];
       candidates.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return b.text.length - a.text.length;
       });
-      return candidates[0] || null;
+      if (CONFIG.debug && candidates.length) {
+        log("🧠 title candidates:", candidates.slice(0, 5));
+      }
+      return candidates[0]?.text || "";
     }
 
-    return { add, best };
+    return { add, best, candidates };
   }
 
-  const STRIP_QUERY_PARAMS = new Set([
-    "w", "h", "width", "height", "size", "s", "sz", "resize", "fit",
-    "quality", "q", "dpr", "crop", "compress", "auto",
-    // tracking params (break dedupe, useless for fetching)
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "gclid", "fbclid", "msclkid", "mc_eid", "mc_cid",
-  ]);
+  function absolutize(url) {
+    try {
+      if (!url) return "";
+      if (url.startsWith("//")) url = location.protocol + url;
+      return new URL(url, location.href).href;
+    } catch {
+      return "";
+    }
+  }
 
   function cleanImageUrl(url) {
     if (!url) return "";
     try {
       const u = new URL(url, location.href);
-      // Strip resize/quality/tracking params so servers return the original
-      // and thumbnail variants dedupe to one entry
-      for (const key of [...u.searchParams.keys()]) {
-        if (STRIP_QUERY_PARAMS.has(key.toLowerCase())) u.searchParams.delete(key);
-      }
-      // Upgrade well-known thumbnail path segments
-      u.pathname = u.pathname
-        .replace(/\/(small|thumb|thumbs|thumbnail|mini|150x150|300x300)\//gi, "/large/")
-        .replace(/[-_]\d{2,4}x\d{2,4}(?=\.[a-z0-9]+$)/i, ""); // WP style -300x200.jpg
-      return u.href;
+      ["w", "h", "width", "height", "crop", "scale", "resize", "quality", "q"].forEach(
+        (p) => u.searchParams.delete(p)
+      );
+      let cleaned = u.toString();
+      cleaned = cleaned.replace(
+        /\/(small|thumb|thumbs|th|mini|square)\//gi,
+        "/large/"
+      );
+      return cleaned;
     } catch {
       return url;
     }
@@ -208,14 +184,38 @@
       file = decodeURIComponent(file);
       file = file.replace(/\.[a-z0-9]+$/i, "");
       file = file.replace(/[-_]+/g, " ");
-      // Bing/CDN noise like OIP.xxxxx, pure hashes, overly long slugs
-      if (/^(OIP|ODF|OIF|thid|th\b)/i.test(file)) return "";
-      if (/^[a-f0-9]{12,}$/i.test(file.replace(/\s/g, ""))) return "";
-      if (file.length > 60) return "";
+      if (/^(OIP|ODF|thid)\b/i.test(file) || file.length > 40) return "";
       return sanitize(file);
     } catch {
       return "";
     }
+  }
+
+  function bestFromSrcset(srcset) {
+    if (!srcset) return "";
+    let best = "";
+    let bestWidth = -1;
+    srcset.split(",").forEach((part) => {
+      const [u, d] = part.trim().split(/\s+/);
+      if (!u) return;
+      const w =
+        d && d.endsWith("w")
+          ? parseInt(d, 10)
+          : d && d.endsWith("x")
+            ? parseFloat(d) * 1000
+            : 0;
+      if (w >= bestWidth) {
+        bestWidth = w;
+        best = u;
+      }
+    });
+    return best;
+  }
+
+  function classifyType(url) {
+    if (VIDEO_EXT.test(url)) return "video";
+    if (IMAGE_EXT.test(url)) return "image";
+    return "image";
   }
 
   function isSpamUrl(url) {
@@ -235,203 +235,83 @@
       "image/bmp": ".bmp",
       "video/mp4": ".mp4",
       "video/webm": ".webm",
+      "video/quicktime": ".mov",
     };
     return map[mime] || fallback;
   }
 
-  // =========================================================================
-  // DEEP DOM TRAVERSAL (shadow roots + same-origin iframes)
-  // =========================================================================
-  function collectRoots() {
-    const roots = [document];
-    const walk = (root) => {
-      const iterator = root.querySelectorAll("*");
-      for (const el of iterator) {
-        if (el.shadowRoot) {
-          roots.push(el.shadowRoot);
-          walk(el.shadowRoot);
-        }
-      }
-    };
-    try {
-      walk(document);
-    } catch (err) {
-      log("shadow walk error:", err);
+  function pickExtension(url, blob, mediaType) {
+    if (blob && blob.type) {
+      const fromMime = extFromMime(blob.type, "");
+      if (fromMime) return fromMime;
     }
-    for (const frame of document.querySelectorAll("iframe")) {
-      try {
-        const doc = frame.contentDocument;
-        if (doc) {
-          roots.push(doc);
-          walk(doc);
-        }
-      } catch {
-        // cross-origin iframe — skip silently
-      }
+    const m = String(url).match(/\.([a-z0-9]{2,4})(?:[?#]|$)/i);
+    if (m) {
+      const ext = "." + m[1].toLowerCase();
+      return ext === ".jpeg" ? ".jpg" : ext;
     }
-    return roots;
+    return mediaType === "video" ? ".mp4" : ".jpg";
   }
 
-  function deepQueryAll(selector) {
+  // Shadow-DOM-aware querySelectorAll
+  function deepQueryAll(selector, root = document) {
     const out = [];
-    for (const root of collectRoots()) {
+    const walk = (node) => {
       try {
-        out.push(...root.querySelectorAll(selector));
+        out.push(...node.querySelectorAll(selector));
       } catch {
-        // invalid selector for this root type — skip
+        /* invalid selector in some roots */
       }
-    }
+      node.querySelectorAll("*").forEach((el) => {
+        if (el.shadowRoot) walk(el.shadowRoot);
+      });
+    };
+    walk(root);
     return out;
   }
 
   // =========================================================================
-  // BEST-RESOLUTION SOURCE RESOLUTION (srcset / <picture> / lazy attributes)
+  // AUTO SCROLL (lazy-load wake-up)
   // =========================================================================
-  function parseSrcset(srcset) {
-    // Returns { url, width } of the widest candidate
-    if (!srcset) return null;
-    let best = null;
-    for (const part of srcset.split(",")) {
-      const tokens = part.trim().split(/\s+/);
-      const url = tokens[0];
-      if (!url) continue;
-      let width = 0;
-      const descriptor = tokens[1] || "";
-      if (/^\d+w$/.test(descriptor)) width = parseInt(descriptor, 10);
-      else if (/^[\d.]+x$/.test(descriptor)) width = parseFloat(descriptor) * 1000;
-      if (!best || width > best.width) best = { url, width };
-    }
-    return best;
-  }
+  async function deepScroll(onProgress) {
+    console.log("🔄 Deep-scrolling to wake lazy-loaded media...");
+    let lastHeight = document.body.scrollHeight;
+    let stableCount = 0;
+    let steps = 0;
 
-  const LAZY_SRC_ATTRS = [
-    "data-src",
-    "data-lazy-src",
-    "data-original",
-    "data-full-src",
-    "data-hi-res-src",
-    "data-large-src",
-    "data-zoom-src",
-    "data-image",
-    "data-url",
-  ];
-
-  function resolveImageSource(img) {
-    const candidates = [];
-
-    const srcsetBest = parseSrcset(img.getAttribute("srcset"));
-    if (srcsetBest) candidates.push({ ...srcsetBest, via: "srcset" });
-
-    const picture = img.closest("picture");
-    if (picture) {
-      for (const source of picture.querySelectorAll("source[srcset]")) {
-        const b = parseSrcset(source.getAttribute("srcset"));
-        if (b) candidates.push({ ...b, via: "picture.source" });
+    while (stableCount < CONFIG.stableThreshold && steps < CONFIG.maxScrollSteps) {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      await sleep(CONFIG.scrollDelay);
+      steps += 1;
+      const newHeight = document.body.scrollHeight;
+      if (newHeight === lastHeight) {
+        stableCount += 1;
+      } else {
+        stableCount = 0;
+        lastHeight = newHeight;
       }
+      if (onProgress) onProgress(steps);
     }
-
-    for (const attr of LAZY_SRC_ATTRS) {
-      const v = img.getAttribute(attr);
-      if (v && /^(https?:)?\/\//.test(v.trim())) {
-        // Lazy full-size attributes usually beat the rendered thumbnail
-        candidates.push({ url: v.trim(), width: 1e9, via: attr });
-      }
-    }
-
-    const rendered = img.currentSrc || img.src;
-    if (rendered) {
-      candidates.push({ url: rendered, width: img.naturalWidth || 0, via: "src" });
-    }
-
-    candidates.sort((a, b) => b.width - a.width);
-    const winner = candidates.find(
-      (c) => c.url && !c.url.startsWith("data:") && !isSpamUrl(c.url)
-    );
-    return winner ? { url: winner.url, via: winner.via } : null;
-  }
-
-  function isTooSmall(img) {
-    if (!CONFIG.minImageSize) return false;
-    const w = img.naturalWidth || img.width || 0;
-    const h = img.naturalHeight || img.height || 0;
-    // Unknown size (not loaded yet) — keep, downloader can filter by bytes
-    if (!w && !h) return false;
-    return Math.max(w, h) < CONFIG.minImageSize;
+    window.scrollTo(0, 0);
+    console.log("✅ Page expand complete");
   }
 
   // =========================================================================
-  // SHARED TITLE MINING AROUND AN <img>
+  // SITE DETECTORS
   // =========================================================================
-  function mineImageTitles(engine, img) {
-    engine.add(img.alt, 92, "img.alt");
-    engine.add(img.title, 90, "img.title");
-    engine.add(img.getAttribute("aria-label"), 88, "img.aria-label");
-    engine.add(img.getAttribute("data-title"), 94, "img.data-title");
-    engine.add(img.getAttribute("data-original-title"), 93, "img.data-original-title");
-    Object.entries(img.dataset || {}).forEach(([k, v]) => {
-      if (/title|caption|alt|name|desc/i.test(k)) {
-        engine.add(v, 86, `dataset.${k}`);
-      }
-    });
-
-    const parentLink = img.closest("a");
-    if (parentLink) {
-      engine.add(parentLink.getAttribute("title"), 95, "parent.a.title");
-      engine.add(parentLink.getAttribute("aria-label"), 89, "parent.a.aria");
-      const linkText = sanitize(textOf(parentLink));
-      if (linkText.length > CONFIG.minTitleLength) {
-        engine.add(linkText, 72, "parent.a.text");
-      }
+  function detectSite() {
+    const host = location.hostname.toLowerCase();
+    if (/bing\.com/i.test(host)) return "bing";
+    if (/google\./i.test(host) && /\/(search|imghp)/i.test(location.pathname + location.search + location.href)) {
+      return "google";
     }
-
-    const figure = img.closest("figure");
-    if (figure) {
-      const caption = figure.querySelector("figcaption");
-      if (caption) engine.add(textOf(caption), 96, "figcaption");
-    }
-
-    const container = img.closest(
-      'li, article, .imgpt, .dg_u, .infopt, .item, .card, [class*="item"], [class*="card"], [class*="result"]'
-    );
-    if (container) {
-      const infopt = container.querySelector(".infopt a");
-      if (infopt) {
-        engine.add(infopt.getAttribute("title"), 94, ".infopt a.title");
-        engine.add(textOf(infopt), 78, ".infopt a.text");
-      }
-      container.querySelectorAll("a[title]").forEach((a) => {
-        engine.add(a.getAttribute("title"), 91, "container.a.title");
-      });
-      container
-        .querySelectorAll("h1, h2, h3, h4, [class*='title'], [class*='caption']")
-        .forEach((h) => {
-          engine.add(textOf(h) || h.getAttribute("title"), 80, "container.heading");
-        });
-    }
-  }
-
-  function buildEntry({ url, engine, thumbnail, type, source, fallbackName, referer, width, height }) {
-    // Absolute last resort before the generic fallback name
-    if (engine) engine.add(document.title, 40, "document.title");
-    const best = engine ? engine.best() : null;
-    return {
-      url: cleanImageUrl(url),
-      suggestedName: normalizeFilename(best?.text || "") || fallbackName,
-      thumbnail: thumbnail || url,
-      type: type || "image",
-      source,
-      titleSource: best?.source || "none",
-      referer: referer || location.href,
-      width: width || 0,
-      height: height || 0,
-    };
+    if (/google\./i.test(host) && /tbm=isch/i.test(location.search)) return "google";
+    return "generic";
   }
 
   // =========================================================================
-  // SITE ADAPTERS
+  // BING CARD PARSER (.iusc metadata is the native title source)
   // =========================================================================
-
-  // ---- Bing Images: .iusc `m` JSON metadata is the native title source ----
   function parseBingCard(card) {
     try {
       const iusc = card.matches?.(".iusc")
@@ -448,8 +328,8 @@
       }
 
       const img = card.querySelector("img");
-      const resolved = img ? resolveImageSource(img) : null;
-      const imageUrl = meta.murl || meta.imgurl || resolved?.url || "";
+      const imageUrl =
+        meta.murl || meta.imgurl || img?.currentSrc || img?.src || "";
       if (!imageUrl || imageUrl.startsWith("data:") || isSpamUrl(imageUrl)) {
         return null;
       }
@@ -462,309 +342,329 @@
       card.querySelectorAll("a[title]").forEach((a) => {
         engine.add(a.getAttribute("title"), 95, "a.title");
       });
-      if (img) mineImageTitles(engine, img);
-      engine.add(extractFilename(imageUrl), 60, "url.filename");
 
-      return buildEntry({
-        url: imageUrl,
-        engine,
+      if (img) {
+        engine.add(img.alt, 90, "img.alt");
+        engine.add(img.title, 88, "img.title");
+        engine.add(img.getAttribute("aria-label"), 87, "img.aria-label");
+        Object.entries(img.dataset || {}).forEach(([k, v]) => {
+          if (/title|caption|alt|name|desc/i.test(k)) {
+            engine.add(v, 82, `img.dataset.${k}`);
+          }
+        });
+      }
+
+      const parentLink = img?.closest("a") || card.closest("a");
+      if (parentLink) {
+        engine.add(parentLink.getAttribute("title"), 93, "parent.a.title");
+        engine.add(parentLink.innerText, 70, "parent.a.text");
+      }
+
+      engine.add(extractFilename(imageUrl), 60, "url.filename");
+      if (meta.purl) engine.add(extractFilename(meta.purl), 40, "bing.purl");
+
+      const best = engine.best();
+      return {
+        url: cleanImageUrl(imageUrl),
+        suggestedName: normalizeFilename(best) || "bing_image",
         thumbnail: img?.src || imageUrl,
+        type: "image",
         source: "bing",
-        fallbackName: "bing_image",
-        referer: meta.purl || location.href,
-        width: Number(meta.mw) || 0,
-        height: Number(meta.mh) || 0,
-      });
+        siteName: meta.sitename || "",
+        titleSource: engine.candidates[0]?.source || "none",
+      };
     } catch (err) {
       log("Bing card parse error:", err);
       return null;
     }
   }
 
-  function collectBing(push) {
-    const cards = deepQueryAll(".iusc, .imgpt, .iuscp");
-    const nodes = cards.length ? cards : deepQueryAll("[m]");
-    for (const card of nodes) push(parseBingCard(card));
-  }
-
-  // ---- Google Images: /imgres?imgurl=… anchors carry the full-size URL ----
-  function collectGoogle(push) {
-    // Primary: result anchors that link to the imgres viewer
-    for (const a of deepQueryAll('a[href*="/imgres"], a[href*="imgurl="]')) {
-      try {
-        const href = a.getAttribute("href") || "";
-        const params = new URL(href, location.href).searchParams;
-        const imgurl = params.get("imgurl");
-        if (!imgurl || isSpamUrl(imgurl)) continue;
-
-        const engine = createScoringEngine();
-        const img = a.querySelector("img");
-        engine.add(a.getAttribute("aria-label"), 96, "google.a.aria");
-        engine.add(a.getAttribute("title"), 95, "google.a.title");
-        if (img) mineImageTitles(engine, img);
-        const card = a.closest("[data-lpage], [data-ri], div[jsdata]") || a.parentElement;
-        if (card) {
-          card.querySelectorAll("h3, [role='heading']").forEach((h) => {
-            engine.add(textOf(h), 90, "google.heading");
-          });
-        }
-        engine.add(extractFilename(imgurl), 60, "url.filename");
-
-        push(
-          buildEntry({
-            url: imgurl,
-            engine,
-            thumbnail: img?.src || imgurl,
-            source: "google",
-            fallbackName: "google_image",
-            referer: params.get("imgrefurl") || location.href,
-          })
-        );
-      } catch {
-        // malformed href — skip
-      }
-    }
-    // Fallback: any rendered result thumbnails (lower quality but better than nothing)
-    for (const img of deepQueryAll("img")) {
-      push(parseGenericImage(img));
-    }
-  }
-
-  // ---- Generic sites: multi-fallback title mining ----
-  function parseGenericImage(img) {
+  // =========================================================================
+  // GOOGLE IMAGES PARSER
+  // =========================================================================
+  function parseGoogleCard(node) {
     try {
-      if (isTooSmall(img)) return null;
-      const resolved = resolveImageSource(img);
-      if (!resolved) return null;
+      // Google often embeds JSON-ish blobs with "ou" (original url) + "pt"/"s" titles
+      const html = node.outerHTML || "";
+      let imageUrl = "";
+      let title = "";
+
+      const ou = html.match(/"ou":"(https?:[^"]+)"/);
+      if (ou) imageUrl = ou[1].replace(/\\u003d/g, "=").replace(/\\u0026/g, "&");
+
+      const pt = html.match(/"pt":"([^"]+)"/);
+      const s = html.match(/"s":"([^"]+)"/);
+      title = (pt && pt[1]) || (s && s[1]) || "";
+
+      const img = node.querySelector?.("img") || (node.tagName === "IMG" ? node : null);
+      if (!imageUrl && img) {
+        imageUrl =
+          img.currentSrc ||
+          img.src ||
+          bestFromSrcset(img.getAttribute("srcset")) ||
+          img.getAttribute("data-src") ||
+          "";
+      }
+      if (!imageUrl || imageUrl.startsWith("data:") || isSpamUrl(imageUrl)) {
+        return null;
+      }
 
       const engine = createScoringEngine();
-      mineImageTitles(engine, img);
-      engine.add(extractFilename(resolved.url), 55, "url.filename");
+      engine.add(title, 100, "google.meta.pt");
+      if (img) {
+        engine.add(img.alt, 92, "img.alt");
+        engine.add(img.title, 90, "img.title");
+        engine.add(img.getAttribute("aria-label"), 88, "img.aria-label");
+      }
+      const parentLink = img?.closest("a") || node.closest?.("a");
+      if (parentLink) {
+        engine.add(parentLink.getAttribute("title"), 94, "parent.a.title");
+        engine.add(parentLink.getAttribute("aria-label"), 89, "parent.a.aria");
+      }
+      engine.add(extractFilename(imageUrl), 55, "url.filename");
 
-      return buildEntry({
-        url: resolved.url,
-        engine,
-        thumbnail: img.currentSrc || img.src || resolved.url,
-        source: "generic",
-        fallbackName: "image",
-        width: img.naturalWidth || 0,
-        height: img.naturalHeight || 0,
+      const best = engine.best();
+      return {
+        url: cleanImageUrl(imageUrl),
+        suggestedName: normalizeFilename(best) || "google_image",
+        thumbnail: img?.src || imageUrl,
+        type: "image",
+        source: "google",
+        siteName: "",
+        titleSource: engine.candidates[0]?.source || "none",
+      };
+    } catch (err) {
+      log("Google card parse error:", err);
+      return null;
+    }
+  }
+
+  // =========================================================================
+  // GENERIC MEDIA PARSER (multi-fallback title mining)
+  // =========================================================================
+  function resolveMediaUrl(el) {
+    return (
+      el.currentSrc ||
+      el.src ||
+      bestFromSrcset(el.getAttribute("srcset")) ||
+      el.getAttribute("data-src") ||
+      el.getAttribute("data-original") ||
+      el.getAttribute("data-lazy-src") ||
+      el.getAttribute("data-url") ||
+      el.getAttribute("data-image") ||
+      el.getAttribute("data-full") ||
+      el.getAttribute("data-large") ||
+      ""
+    );
+  }
+
+  function parseGenericMedia(el) {
+    try {
+      const tag = el.tagName.toLowerCase();
+      const src = resolveMediaUrl(el);
+      if (!src || src.startsWith("data:") || src.startsWith("blob:") || isSpamUrl(src)) {
+        return null;
+      }
+
+      if (
+        tag === "img" &&
+        el.naturalWidth &&
+        el.naturalWidth > 0 &&
+        el.naturalWidth < CONFIG.minImageSize
+      ) {
+        return null;
+      }
+
+      const type =
+        tag === "video" || tag === "source" ? classifyType(src) : "image";
+
+      const engine = createScoringEngine();
+
+      engine.add(el.alt, 92, "img.alt");
+      engine.add(el.title, 90, "img.title");
+      engine.add(el.getAttribute("aria-label"), 88, "img.aria-label");
+      engine.add(el.getAttribute("data-title"), 94, "img.data-title");
+      engine.add(
+        el.getAttribute("data-original-title"),
+        93,
+        "img.data-original-title"
+      );
+      Object.entries(el.dataset || {}).forEach(([k, v]) => {
+        if (/title|caption|alt|name|desc/i.test(k)) {
+          engine.add(v, 86, `dataset.${k}`);
+        }
       });
+
+      const parentLink = el.closest("a");
+      if (parentLink) {
+        engine.add(parentLink.getAttribute("title"), 95, "parent.a.title");
+        engine.add(parentLink.getAttribute("aria-label"), 89, "parent.a.aria");
+        const linkText = sanitize(parentLink.innerText);
+        if (linkText.length > CONFIG.minTitleLength) {
+          engine.add(linkText, 72, "parent.a.text");
+        }
+      }
+
+      const figure = el.closest("figure");
+      if (figure) {
+        const caption = figure.querySelector("figcaption");
+        if (caption) engine.add(caption.innerText, 96, "figcaption");
+      }
+
+      const container = el.closest(
+        'li, article, .imgpt, .dg_u, .infopt, .item, .card, [class*="item"], [class*="card"], [class*="result"]'
+      );
+      if (container) {
+        const infopt = container.querySelector(".infopt a");
+        if (infopt) {
+          engine.add(infopt.getAttribute("title"), 94, ".infopt a.title");
+          engine.add(infopt.innerText, 78, ".infopt a.text");
+        }
+        container.querySelectorAll("a[title]").forEach((a) => {
+          engine.add(a.getAttribute("title"), 91, "container.a.title");
+        });
+        container
+          .querySelectorAll("h1, h2, h3, h4, [class*='title']")
+          .forEach((h) => {
+            engine.add(h.innerText || h.getAttribute("title"), 80, "container.heading");
+          });
+      }
+
+      engine.add(extractFilename(src), 55, "url.filename");
+
+      const best = engine.best();
+      return {
+        url: cleanImageUrl(src),
+        suggestedName:
+          normalizeFilename(best) || (type === "video" ? "video" : "image"),
+        thumbnail: el.currentSrc || el.src || src,
+        type,
+        source: "generic",
+        siteName: "",
+        titleSource: engine.candidates[0]?.source || "none",
+      };
     } catch (err) {
       log("Generic parse error:", err);
       return null;
     }
   }
 
-  function collectGeneric(push) {
-    for (const img of deepQueryAll("img")) push(parseGenericImage(img));
+  // =========================================================================
+  // COLLECT
+  // =========================================================================
+  function collectResources() {
+    const seen = new Set();
+    const mediaEntries = [];
+    const site = detectSite();
 
-    if (CONFIG.includeBackgroundImages) {
-      for (const el of deepQueryAll("div, section, span, a, li, figure, header")) {
-        let bg;
-        try {
-          bg = getComputedStyle(el).backgroundImage;
-        } catch {
-          continue;
-        }
-        if (!bg || bg === "none") continue;
-        const match = bg.match(/url\(["']?(.*?)["']?\)/i);
-        const url = match?.[1];
-        if (!url || url.startsWith("data:") || isSpamUrl(url)) continue;
-        const rect = el.getBoundingClientRect();
-        if (CONFIG.minImageSize && Math.max(rect.width, rect.height) < CONFIG.minImageSize) {
-          continue;
-        }
-        const engine = createScoringEngine();
-        engine.add(el.getAttribute("aria-label"), 90, "bg.aria-label");
-        engine.add(el.getAttribute("title"), 89, "bg.title");
-        engine.add(el.closest("a")?.getAttribute("title"), 88, "bg.parent.a.title");
-        engine.add(extractFilename(url), 55, "url.filename");
-        push(
-          buildEntry({
-            url,
-            engine,
-            thumbnail: url,
-            source: "css-background",
-            fallbackName: "background_image",
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-          })
-        );
+    const push = (parsed) => {
+      if (!parsed || !parsed.url) return;
+      const abs = absolutize(parsed.url);
+      if (!abs || seen.has(abs) || isSpamUrl(abs)) return;
+      seen.add(abs);
+      parsed.url = abs;
+      if (!parsed.suggestedName) {
+        parsed.suggestedName =
+          parsed.type === "video" ? "video" : "image";
       }
-    }
-  }
+      mediaEntries.push(parsed);
+    };
 
-  function collectVideos(push, sourceLabel) {
-    if (!CONFIG.includeVideos) return;
-    for (const vid of deepQueryAll("video, video source")) {
-      const url = vid.currentSrc || vid.src;
-      if (!url || url.startsWith("blob:")) continue;
-      const holder = vid.closest("video") || vid;
-      const engine = createScoringEngine();
-      engine.add(holder.getAttribute("title"), 95, "video.title");
-      engine.add(holder.getAttribute("aria-label"), 90, "video.aria-label");
-      engine.add(holder.closest("a")?.getAttribute("title"), 88, "video.parent.a.title");
-      engine.add(
-        textOf(holder.closest("figure")?.querySelector("figcaption")),
-        96,
-        "video.figcaption"
+    if (site === "bing") {
+      console.log("🟦 Bing Images mode");
+      const cards = deepQueryAll(".iusc, .imgpt, .iuscp, .dgControl");
+      const nodes = cards.length ? cards : deepQueryAll("[m]");
+      console.log(`🔎 Scanning ${nodes.length} Bing cards`);
+      for (const card of nodes) push(parseBingCard(card));
+    } else if (site === "google") {
+      console.log("🟥 Google Images mode");
+      // Result tiles + any script/JSON-bearing containers
+      const tiles = deepQueryAll(
+        "div[data-id], div[jsname], a[href*='/imgres'], img[data-src], img[src]"
       );
-      engine.add(extractFilename(url), 55, "url.filename");
-      push(
-        buildEntry({
-          url,
-          engine,
-          thumbnail: holder.poster || url,
-          type: "video",
-          source: sourceLabel,
-          fallbackName: "video",
-        })
-      );
+      console.log(`🔎 Scanning ${tiles.length} Google nodes`);
+      for (const node of tiles) push(parseGoogleCard(node));
     }
+
+    console.log("🌐 Generic / deep discovery pass");
+    const mediaEls = deepQueryAll(
+      "img, video, source, [data-src], [data-original], [data-lazy-src], [data-url], [data-image]"
+    );
+    console.log(`🔎 Scanning ${mediaEls.length} media / lazy nodes`);
+    for (const el of mediaEls) push(parseGenericMedia(el));
+
+    // CSS background-image
+    deepQueryAll("*").forEach((el) => {
+      const bg = el.style && el.style.backgroundImage;
+      if (!bg || bg === "none") return;
+      const m = bg.match(/url\(['"]?(.*?)['"]?\)/i);
+      if (!m || !m[1] || m[1].startsWith("data:")) return;
+      const url = cleanImageUrl(m[1]);
+      if (!url || isSpamUrl(url)) return;
+      const title = extractFilename(url);
+      push({
+        url,
+        suggestedName: normalizeFilename(title) || "bg_image",
+        thumbnail: url,
+        type: classifyType(url),
+        source: "css-bg",
+        siteName: "",
+        titleSource: title ? "url.filename" : "none",
+      });
+    });
+
+    // Brute-force regex sweep of raw HTML for hidden media URLs
+    const html = document.documentElement.innerHTML;
+    const rx =
+      /(?:https?:)?\/\/[^\s"'<>()\[\]{}]+?\.(?:jpe?g|png|gif|webp|avif|svg|mp4|webm|mov|m3u8|ts)(?:\?[^\s"'<>()\[\]{}]*)?/gi;
+    (html.match(rx) || []).forEach((u) => {
+      u = u.replace(/[\\'",;]+$/, "");
+      if (isSpamUrl(u)) return;
+      const title = extractFilename(u);
+      push({
+        url: cleanImageUrl(u),
+        suggestedName: normalizeFilename(title) || "media",
+        thumbnail: u,
+        type: classifyType(u),
+        source: "html-sweep",
+        siteName: "",
+        titleSource: title ? "url.filename" : "none",
+      });
+    });
+
+    return mediaEntries;
   }
 
   // =========================================================================
-  // COLLECTION DRIVER (incremental — runs during scrolling so virtualized
-  // galleries that unload offscreen cards do not lose entries)
+  // MANIFEST
   // =========================================================================
-  const seen = new Set();
-  const mediaEntries = [];
-  const host = location.hostname;
-  const site = /(^|\.)bing\./i.test(host)
-    ? "bing"
-    : /(^|\.)google\./i.test(host)
-      ? "google"
-      : "generic";
-
-  function urlKey(url) {
-    try {
-      const u = new URL(url, location.href);
-      u.hash = "";
-      return u.href;
-    } catch {
-      return url;
-    }
-  }
-
-  function push(parsed) {
-    if (!parsed || !parsed.url) return;
-    if (CONFIG.maxItems && mediaEntries.length >= CONFIG.maxItems) return;
-    const key = urlKey(parsed.url);
-    if (seen.has(key)) return;
-    seen.add(key);
-    mediaEntries.push(parsed);
-  }
-
-  function collectNow() {
-    const before = mediaEntries.length;
-    if (site === "bing") collectBing(push);
-    else if (site === "google") collectGoogle(push);
-    else collectGeneric(push);
-    collectVideos(push, site);
-    return mediaEntries.length - before;
-  }
-
-  console.log(
-    site === "bing" ? "🟦 Bing Images mode" : site === "google" ? "🟨 Google Images mode" : "🌐 Generic site mode"
-  );
-  console.log("🔄 Deep-scrolling and collecting incrementally...");
-
-  let lastHeight = document.body.scrollHeight;
-  let stableCount = 0;
-  let rounds = 0;
-  collectNow();
-
-  while (stableCount < CONFIG.stableThreshold && rounds < CONFIG.maxScrollRounds) {
-    if (CONFIG.maxItems && mediaEntries.length >= CONFIG.maxItems) {
-      console.log(`🛑 maxItems (${CONFIG.maxItems}) reached — stopping scroll`);
-      break;
-    }
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    await sleep(CONFIG.scrollDelay);
-    rounds += 1;
-
-    const added = collectNow();
-    const newHeight = document.body.scrollHeight;
-    if (newHeight === lastHeight && added === 0) {
-      stableCount += 1;
-    } else {
-      stableCount = 0;
-      lastHeight = newHeight;
-    }
-    if (rounds % 5 === 0) {
-      log(`   …round ${rounds}: ${mediaEntries.length} items so far`);
-    }
-  }
-  window.scrollTo(0, 0);
-  await sleep(400);
-  collectNow(); // final sweep back at the top
-
-  console.table(
-    mediaEntries.slice(0, 200).map((x) => ({
-      title: x.suggestedName,
-      via: x.titleSource,
-      type: x.type,
-      src: x.source,
-      url: x.url.substring(0, 72),
-    }))
-  );
-  console.log(`✅ Collected ${mediaEntries.length} media items (${rounds} scroll rounds)`);
-
-  if (mediaEntries.length === 0) {
-    alert("⚠️ No media found. Try the image results list page (not the viewer).");
-    return;
-  }
-
-  // =========================================================================
-  // EXPORT MANIFEST (recommended — avoids .crdownload / CORS issues)
-  // =========================================================================
-  const manifest = {
-    version: 5,
-    schemaVersion: "image-title-scraper.manifest.v2",
-    generatedAt: new Date().toISOString(),
-    pageUrl: location.href,
-    pageTitle: document.title,
-    site,
-    count: mediaEntries.length,
-    stats: mediaEntries.reduce(
-      (acc, item) => {
-        if (item.type === "video") acc.videos += 1;
-        else acc.images += 1;
-        return acc;
-      },
-      { images: 0, videos: 0 }
-    ),
-    items: mediaEntries.map((e, i) => ({
-      index: i + 1,
-      url: e.url,
-      title: e.suggestedName,
-      type: e.type,
-      titleSource: e.titleSource,
-      source: e.source,
-      referer: e.referer,
-      width: e.width || undefined,
-      height: e.height || undefined,
-    })),
-  };
-
-  const jsonText = JSON.stringify(manifest, null, 2);
-
-  function toCsv() {
-    const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["index", "title", "type", "source", "titleSource", "url", "referer"]];
-    for (const item of manifest.items) {
-      rows.push([item.index, item.title, item.type, item.source, item.titleSource, item.url, item.referer]);
-    }
-    return rows.map((r) => r.map(escape).join(",")).join("\n");
+  function buildManifest(mediaEntries) {
+    return {
+      version: 5,
+      generatedAt: new Date().toISOString(),
+      pageUrl: location.href,
+      pageTitle: document.title,
+      count: mediaEntries.length,
+      items: mediaEntries.map((e, i) => ({
+        index: i + 1,
+        url: e.url,
+        title: e.suggestedName,
+        type: e.type,
+        titleSource: e.titleSource,
+        source: e.source,
+        siteName: e.siteName || "",
+        thumbnail: e.thumbnail || "",
+      })),
+    };
   }
 
   function downloadTextFile(text, filename, mime) {
-    const blob = new Blob([text], { type: mime });
+    const blob = new Blob([text], { type: mime || "text/plain" });
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
     a.download = filename;
+    a.style.display = "none";
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -773,29 +673,73 @@
     }, 2000);
   }
 
-  async function copyManifest() {
+  async function exportManifest(mediaEntries) {
+    const manifest = buildManifest(mediaEntries);
+    const jsonText = JSON.stringify(manifest, null, 2);
+    window.__IMAGE_TITLE_MANIFEST__ = manifest;
+
     let copied = false;
     try {
       await navigator.clipboard.writeText(jsonText);
-      console.log("📋 Manifest JSON copied to clipboard");
-      console.log(
-        "💡 Tip: in console run copy(JSON.stringify(window.__IMAGE_TITLE_MANIFEST__, null, 2)) if needed."
-      );
       copied = true;
+      console.log("📋 Manifest copied to clipboard");
     } catch {
-      downloadTextFile(jsonText, `image-title-manifest_${Date.now()}.json`, "application/json");
-      console.log("💾 Manifest JSON file download triggered (clipboard unavailable)");
+      /* fall through to file download */
     }
-    if (CONFIG.exportCsv) {
-      downloadTextFile(toCsv(), `image-title-manifest_${Date.now()}.csv`, "text/csv");
-      console.log("💾 CSV manifest download triggered");
-    }
-    return copied;
+
+    downloadTextFile(
+      jsonText,
+      `image-title-manifest_${Date.now()}.json`,
+      "application/json"
+    );
+    console.log("💾 Manifest JSON file download triggered");
+    console.log(
+      "➡️ Next: save as manifest.json, then run:\n" +
+        "   python download.py manifest.json"
+    );
+    console.log("📦 Also available as window.__IMAGE_TITLE_MANIFEST__");
+    return { copied, manifest };
   }
 
   // =========================================================================
-  // OPTIONAL IN-BROWSER DOWNLOAD
+  // IN-BROWSER DOWNLOAD
   // =========================================================================
+  function triggerBlobDownload(blob, filename) {
+    if (!blob || blob.size === 0) return false;
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    requestAnimationFrame(() => a.click());
+    setTimeout(() => {
+      if (document.body.contains(a)) a.remove();
+      URL.revokeObjectURL(blobUrl);
+    }, CONFIG.revokeDelayMs);
+    return true;
+  }
+
+  function drawToCanvas(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          canvas.toBlob((b) => resolve(b), "image/png");
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  }
+
   async function forceDownload(entry, index) {
     const base =
       `${String(index).padStart(3, "0")}_` +
@@ -803,122 +747,247 @@
 
     try {
       const resp = await fetch(entry.url, { mode: "cors", credentials: "omit" });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.blob();
-      const ext = extFromMime(blob.type, entry.type === "video" ? ".mp4" : ".jpg");
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `${base}${ext}`;
-      a.style.display = "none";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        a.remove();
-        URL.revokeObjectURL(blobUrl);
-      }, CONFIG.revokeDelayMs);
-      console.log(`✅ [blob] ${base}${ext}`);
-      return true;
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const ext = pickExtension(entry.url, blob, entry.type);
+        if (triggerBlobDownload(blob, `${base}${ext}`)) {
+          console.log(`✅ [blob] ${base}${ext}`);
+          return "ok";
+        }
+      }
     } catch (err) {
-      console.warn(`⚠️ [cors] cannot rename via blob: ${entry.url}`, err.message || err);
-      return false;
+      log(`fetch failed for ${entry.url}:`, err.message || err);
     }
+
+    if (entry.type === "image") {
+      const blob = await drawToCanvas(entry.url);
+      if (blob && triggerBlobDownload(blob, `${base}.png`)) {
+        console.log(`✅ [canvas] ${base}.png`);
+        return "ok";
+      }
+    }
+
+    console.warn(`⚠️ [cors] cannot download: ${entry.url}`);
+    return "rescue";
   }
 
-  // Decide mode via prompt (default: export for Python)
-  const choice = (window.prompt(
-    `Found ${mediaEntries.length} items.\n` +
-      `Type: export | download | both\n` +
-      `(export → Python download.py avoids .crdownload)`,
-    CONFIG.mode
-  ) || "export")
-    .trim()
-    .toLowerCase();
-
-  if (choice === "export" || choice === "both") {
-    await copyManifest();
-    console.log(
-      "➡️ Next: save clipboard JSON as manifest.json, then run:\n" +
-        "   python download.py manifest.json"
-    );
-    // Also expose for manual copy
-    window.__IMAGE_TITLE_MANIFEST__ = manifest;
-    console.log("📦 Also available as window.__IMAGE_TITLE_MANIFEST__");
-  }
-
-  if (choice === "download" || choice === "both") {
-    console.warn(
-      "🔔 Allow multiple automatic downloads in the address-bar prompt if Chrome blocks them."
-    );
-    console.warn(
-      "🔔 Turn OFF “Ask where to save each file” in Chrome download settings."
-    );
-    console.warn("🛑 To abort mid-run: window.__SCRAPER_STOP__ = true");
-    window.__SCRAPER_STOP__ = false;
-
-    let ok = 0;
-    let fail = 0;
+  async function downloadAll(mediaEntries, onProgress) {
+    const total = mediaEntries.length;
     const failed = [];
+    let ok = 0;
+    let done = 0;
+    let cursor = 0;
 
-    for (let i = 0; i < mediaEntries.length; i++) {
-      if (window.__SCRAPER_STOP__) {
-        console.warn(`🛑 Stopped by user at item ${i + 1}/${mediaEntries.length}`);
-        break;
+    const worker = async () => {
+      while (cursor < total) {
+        const i = cursor++;
+        const result = await forceDownload(mediaEntries[i], i + 1);
+        if (result === "ok") ok += 1;
+        else failed.push(mediaEntries[i]);
+        done += 1;
+        if (onProgress) onProgress(done, total, ok, failed.length);
+        if (done % CONFIG.batchPauseEvery === 0) await sleep(CONFIG.batchPauseMs);
+        else await sleep(CONFIG.downloadDelay);
       }
-      const success = await forceDownload(mediaEntries[i], i + 1);
-      if (success) ok += 1;
-      else {
-        fail += 1;
-        failed.push(mediaEntries[i]);
-      }
-      const delay =
-        i > 0 && (i + 1) % CONFIG.batchPauseEvery === 0
-          ? CONFIG.batchPauseMs
-          : CONFIG.downloadDelay;
-      await sleep(delay);
-    }
+    };
 
-    console.log(`🎉 Browser download done. ok=${ok} failed=${fail}`);
+    await Promise.all(
+      Array.from({ length: Math.min(CONFIG.concurrency, total) }, () => worker())
+    );
 
-    // Rescue gallery for CORS failures
-    if (failed.length) {
-      const overlay = document.createElement("div");
-      overlay.style.cssText =
-        "position:fixed;inset:5%;background:#f8f9fa;border:3px solid #333;z-index:999999;overflow:auto;padding:20px;font-family:sans-serif;";
-      const close = document.createElement("button");
-      close.textContent = "Close gallery";
-      close.onclick = () => overlay.remove();
-      const h = document.createElement("h2");
-      h.textContent = `CORS-blocked items (${failed.length}) — open manually or use Python downloader`;
-      const grid = document.createElement("div");
-      grid.style.cssText =
-        "display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:16px;";
-      failed.forEach((entry) => {
-        const box = document.createElement("div");
-        box.style.cssText =
-          "background:#fff;padding:10px;border:1px solid #ddd;border-radius:8px;text-align:center;";
-        const media =
-          entry.type === "video"
-            ? document.createElement("video")
-            : document.createElement("img");
-        media.src = entry.thumbnail || entry.url;
-        media.style.cssText =
-          "max-width:100%;height:140px;object-fit:contain;background:#eee;";
-        const label = document.createElement("p");
-        label.textContent = entry.suggestedName || "(no title)";
-        label.style.cssText = "font-size:12px;word-break:break-all;";
-        const link = document.createElement("a");
-        link.href = entry.url;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = "Open original";
-        box.append(media, label, link);
-        grid.appendChild(box);
-      });
-      overlay.append(close, h, grid);
-      document.body.appendChild(overlay);
-    }
+    console.log(`🎉 Browser download done. ok=${ok} failed=${failed.length}`);
+    return { ok, failed };
   }
 
-  console.log("Done.");
+  function renderRescueGallery(failed, container) {
+    container.innerHTML = "";
+    if (!failed.length) {
+      container.style.display = "none";
+      return;
+    }
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.gap = "8px";
+
+    const header = document.createElement("div");
+    header.style.cssText = "font-weight:600;font-size:12px;";
+    header.textContent = `CORS-blocked (${failed.length}) — open manually or use Python downloader`;
+    container.appendChild(header);
+
+    failed.forEach((entry) => {
+      const row = document.createElement("a");
+      row.href = entry.url;
+      row.target = "_blank";
+      row.rel = "noopener";
+      row.title = entry.url;
+      row.style.cssText =
+        "display:flex;align-items:center;gap:8px;text-decoration:none;color:#1a5fb4;background:#f1f3f5;padding:6px;border-radius:6px;";
+      const thumb =
+        entry.type === "video"
+          ? document.createElement("video")
+          : document.createElement("img");
+      thumb.src = entry.thumbnail || entry.url;
+      thumb.style.cssText =
+        "width:44px;height:44px;object-fit:cover;border-radius:4px;background:#ddd;flex:0 0 auto;";
+      const label = document.createElement("span");
+      label.style.cssText =
+        "font-size:11px;word-break:break-all;overflow:hidden;max-height:44px;color:#222;";
+      label.textContent = entry.suggestedName || entry.url.split("/").pop();
+      row.append(thumb, label);
+      container.appendChild(row);
+    });
+  }
+
+  // =========================================================================
+  // UI CONTROL PANEL
+  // =========================================================================
+  const ui = (() => {
+    const panel = document.createElement("div");
+    panel.id = "image-title-scraper-panel";
+    panel.style.cssText =
+      "position:fixed;top:16px;right:16px;width:360px;max-height:88vh;z-index:2147483647;" +
+      "background:#f8f9fa;color:#1e1e1e;font:13px/1.5 Georgia, 'Times New Roman', serif;" +
+      "border:1px solid #c5c9ce;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);" +
+      "overflow:hidden;display:flex;flex-direction:column;";
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#e9ecef;border-bottom:1px solid #ced4da;">
+        <strong style="font-size:14px;font-family:system-ui,sans-serif;">Image Title Scraper v5</strong>
+        <span data-close style="cursor:pointer;font-size:18px;line-height:1;opacity:.7;font-family:system-ui,sans-serif;">&times;</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;font-family:system-ui,Segoe UI,sans-serif;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;">
+          <input type="checkbox" data-autoscroll checked> Auto-scroll first (lazy media)
+        </label>
+        <button data-scan style="padding:9px;border:0;border-radius:8px;background:#0b57d0;color:#fff;font-weight:600;cursor:pointer;">Scan page</button>
+        <div data-summary style="font-size:12px;opacity:.9;min-height:18px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button data-export disabled style="flex:1;padding:9px;border:0;border-radius:8px;background:#0f7b4c;color:#fff;font-weight:600;cursor:pointer;">Export JSON</button>
+          <button data-download disabled style="flex:1;padding:9px;border:0;border-radius:8px;background:#5f6368;color:#fff;font-weight:600;cursor:pointer;">Download</button>
+        </div>
+        <div data-progress style="height:8px;border-radius:4px;background:#dee2e6;overflow:hidden;display:none;">
+          <div data-bar style="height:100%;width:0;background:#0f7b4c;transition:width .2s;"></div>
+        </div>
+        <div data-status style="font-size:12px;opacity:.85;"></div>
+        <div data-gallery style="display:none;"></div>
+        <div style="font-size:11px;opacity:.7;line-height:1.4;">
+          Tip: Export JSON → <code>python download.py manifest.json</code> avoids CORS / .crdownload issues.
+        </div>
+      </div>`;
+
+    document.body.appendChild(panel);
+
+    const $ = (sel) => panel.querySelector(sel);
+    const state = { entries: [] };
+
+    const setSummary = (t) => ($("[data-summary]").textContent = t);
+    const setStatus = (t) => ($("[data-status]").textContent = t);
+    const setProgress = (done, total) => {
+      $("[data-progress]").style.display = "block";
+      $("[data-bar]").style.width = total ? `${(done / total) * 100}%` : "0";
+    };
+    const setBusy = (busy) => {
+      $("[data-scan]").disabled = busy;
+      $("[data-export]").disabled = busy || state.entries.length === 0;
+      $("[data-download]").disabled = busy || state.entries.length === 0;
+    };
+
+    $("[data-close]").onclick = () => {
+      panel.style.display = "none";
+    };
+
+    $("[data-scan]").onclick = async () => {
+      setBusy(true);
+      $("[data-gallery]").style.display = "none";
+      $("[data-gallery]").innerHTML = "";
+      $("[data-progress]").style.display = "none";
+      setStatus("");
+      try {
+        if ($("[data-autoscroll]").checked) {
+          setSummary("Scrolling to load lazy content...");
+          await deepScroll((s) => setSummary(`Scrolling… step ${s}`));
+        }
+        setSummary("Scanning DOM, shadow roots & HTML…");
+        state.entries = collectResources();
+        const imgs = state.entries.filter((e) => e.type === "image").length;
+        const vids = state.entries.filter((e) => e.type === "video").length;
+        setSummary(
+          `Found ${state.entries.length} items — ${imgs} images, ${vids} videos (${detectSite()}).`
+        );
+        console.table(
+          state.entries.map((x) => ({
+            title: x.suggestedName,
+            via: x.titleSource,
+            type: x.type,
+            source: x.source,
+            url: x.url.substring(0, 72),
+          }))
+        );
+        console.log(`✅ Collected ${state.entries.length} media items`);
+        if (!state.entries.length) {
+          setStatus("No media found. Try the results list page (not the detail viewer).");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus(`Scan failed: ${err.message || err}`);
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    $("[data-export]").onclick = async () => {
+      if (!state.entries.length) return;
+      setBusy(true);
+      try {
+        const { copied } = await exportManifest(state.entries);
+        setStatus(
+          copied
+            ? "Manifest copied + JSON file downloaded. Run download.py next."
+            : "Manifest JSON file downloaded. Run download.py next."
+        );
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    $("[data-download]").onclick = async () => {
+      if (!state.entries.length) return;
+      console.warn(
+        "🔔 Allow multiple automatic downloads if Chrome blocks them."
+      );
+      console.warn(
+        '🔔 Turn OFF “Ask where to save each file” in Chrome download settings.'
+      );
+      setBusy(true);
+      try {
+        const { ok, failed } = await downloadAll(
+          state.entries,
+          (done, total, okCount, failCount) => {
+            setProgress(done, total);
+            setStatus(
+              `Downloaded ${okCount} / ${total} (${failCount} need manual / Python)`
+            );
+          }
+        );
+        setStatus(`Done. ${ok} downloaded, ${failed.length} blocked by CORS.`);
+        renderRescueGallery(failed, $("[data-gallery]"));
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    return {
+      open() {
+        panel.style.display = "flex";
+      },
+      panel,
+      getEntries: () => state.entries,
+    };
+  })();
+
+  window.__imageTitleScraper = ui;
+  console.log(
+    "%c🖼️ Image Title Scraper v5 ready — use the panel (top-right).",
+    "color:#0b57d0;font-weight:bold;"
+  );
 })();

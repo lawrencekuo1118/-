@@ -50,3 +50,8 @@ Chrome `.crdownload` stalls).
 - Image title scraper v5: control panel, deep media discovery, Google Images
   path, canvas download fallback, and a Python downloader with Referer /
   `--skip-existing` / parallel workers.
+
+## Law articles (searchable export)
+
+See [`law-articles/README.md`](./law-articles/README.md) for CSV/JSON exports of
+`藍絲法律_法條分群(260719更).xlsm` and a small CLI search tool.

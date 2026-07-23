@@ -1,0 +1,490 @@
+{
+  "source": "藍絲法律_法條分群(260719更).xlsm",
+  "sheet_count": 36,
+  "record_count": 966,
+  "sheets": [
+    {
+      "sheet": "Index",
+      "csv": "csv/Index.csv",
+      "rows": 15,
+      "columns": [
+        "Table of Contents"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "訴訟合併化",
+      "csv": "csv/訴訟合併化.csv",
+      "rows": 35,
+      "columns": [
+        "col",
+        "民事訴訟(Civil)",
+        "刑事訴訟(Criminal)"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "上訴程式與限制",
+      "csv": "csv/上訴程式與限制.csv",
+      "rows": 36,
+      "columns": [
+        "col",
+        "col_2",
+        "民事訴訟 (Civil)",
+        "刑事訴訟 (Criminal)"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "特殊上訴",
+      "csv": "csv/特殊上訴.csv",
+      "rows": 11,
+      "columns": [
+        "訴訟階段",
+        "附帶上訴 (Incidental Appeal)",
+        "反訴 (Counterclaim)",
+        "另案起訴 (Separate Lawsuit)"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "非訟事件",
+      "csv": "csv/非訟事件.csv",
+      "rows": 12,
+      "columns": [
+        "民事",
+        "家事【丁戊】",
+        "商事"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "領域 >>",
+      "csv": "csv/領域 _.csv",
+      "rows": 0,
+      "columns": [],
+      "has_header": false
+    },
+    {
+      "sheet": "憲法與判決",
+      "csv": "csv/憲法與判決.csv",
+      "rows": 17,
+      "columns": [
+        "年份",
+        "體系",
+        "條號/字號",
+        "定性",
+        "主題",
+        "重點說明",
+        "情境要件",
+        "法律效果"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "民事",
+      "csv": "csv/民事.csv",
+      "rows": 91,
+      "columns": [
+        "體系",
+        "篇章節",
+        "年份",
+        "條號/字號",
+        "項次",
+        "定性",
+        "主題",
+        "法條/判決重點",
+        "構成要件/前提",
+        "法律效果",
+        "救濟手段",
+        "col_12"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "借名＆代理",
+      "csv": "csv/借名＆代理.csv",
+      "rows": 6,
+      "columns": [
+        "類型",
+        "定義",
+        "法源依據",
+        "兩造之法律關係",
+        "與本人關係",
+        "與第三人關係",
+        "法律效果",
+        "違反之法律效果"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "民事程序上契約",
+      "csv": "csv/民事程序上契約.csv",
+      "rows": 15,
+      "columns": [
+        "項次",
+        "訴訟契約",
+        "性質／功能",
+        "典型法理",
+        "col_5",
+        "col_6",
+        "col_7"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "【民427,行229】簡易程序",
+      "csv": "csv/【民427,行229】簡易程序.csv",
+      "rows": 28,
+      "columns": [
+        "第 427 條（簡易程序）"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "【403】強制調解事件",
+      "csv": "csv/【403】強制調解事件.csv",
+      "rows": 11,
+      "columns": [
+        "一、強制調解事件：（民事訴訟法第403條參照）",
+        "col_2"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "\"依職權\"系列",
+      "csv": "csv/_依職權_系列.csv",
+      "rows": 53,
+      "columns": [
+        "條號/字號",
+        "項次",
+        "款次",
+        "完整前後文"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "\"酌定\"系列",
+      "csv": "csv/_酌定_系列.csv",
+      "rows": 11,
+      "columns": [
+        "條號/字號",
+        "項次",
+        "款次",
+        "完整前後文"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "家事事件法第3條",
+      "csv": "csv/家事事件法第3條.csv",
+      "rows": 13,
+      "columns": [
+        "甲類事件",
+        "乙類事件",
+        "丙類事件",
+        "丁類事件",
+        "戊類事件",
+        "col",
+        "適用條文",
+        "適用事件"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "準正認領收養",
+      "csv": "csv/準正認領收養.csv",
+      "rows": 5,
+      "columns": [
+        "定性",
+        "準正",
+        "認領",
+        "col",
+        "col_2",
+        "col_3",
+        "收養",
+        "col_8",
+        "col_9",
+        "col_10"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "家事程序轉換",
+      "csv": "csv/家事程序轉換.csv",
+      "rows": 9,
+      "columns": [
+        "col",
+        "訴之追加 (Addition)",
+        "訴之變更 (Change)",
+        "反請求 (Counter-claim)"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "家事順位",
+      "csv": "csv/家事順位.csv",
+      "rows": 8,
+      "columns": [
+        "col",
+        "民法1124條",
+        "民法1094第1項",
+        "col_2",
+        "col_3",
+        "民法1138條",
+        "col_4",
+        "家事法第143條第1項"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "強制執行-拍賣",
+      "csv": "csv/強制執行-拍賣.csv",
+      "rows": 9,
+      "columns": [
+        "比較項目",
+        "動產拍賣公告應記載事項",
+        "不動產拍賣公告應記載事項",
+        "重點差異"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "刑事",
+      "csv": "csv/刑事.csv",
+      "rows": 32,
+      "columns": [
+        "體系",
+        "條號/字號",
+        "項次",
+        "定性",
+        "主題",
+        "法條重點",
+        "構成要件",
+        "法律效果"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "侵害財產法益行為",
+      "csv": "csv/侵害財產法益行為.csv",
+      "rows": 11,
+      "columns": [
+        "罪名",
+        "條號",
+        "取得／侵害方式",
+        "核心特徵",
+        "被害人是否自願交付",
+        "行為人原本持有",
+        "是否使用暴力／脅迫",
+        "未遂",
+        "過失"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "行政",
+      "csv": "csv/行政.csv",
+      "rows": 8,
+      "columns": [
+        "體系",
+        "子體系",
+        "條號",
+        "項次",
+        "主題",
+        "法條重點",
+        "構成要件",
+        "法律效果"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "行政救濟",
+      "csv": "csv/行政救濟.csv",
+      "rows": 29,
+      "columns": [
+        "名詞",
+        "性質",
+        "是否須先訴願",
+        "主要功能",
+        "後續救濟"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "獨立機關",
+      "csv": "csv/獨立機關.csv",
+      "rows": 11,
+      "columns": [
+        "特殊機構",
+        "行政位階",
+        "備註"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "商事",
+      "csv": "csv/商事.csv",
+      "rows": 11,
+      "columns": [
+        "體系",
+        "篇章節",
+        "條號",
+        "項次",
+        "定性",
+        "主題",
+        "法條重點",
+        "構成要件",
+        "法律效果"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "ENG",
+      "csv": "csv/ENG.csv",
+      "rows": 227,
+      "columns": [
+        "名詞",
+        "中文",
+        "重點"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "證交法申報義務",
+      "csv": "csv/證交法申報義務.csv",
+      "rows": 17,
+      "columns": [
+        "一、 公司定期財務報告與營運申報",
+        "上市、上櫃及興櫃公司需依以下時限於「公開資訊觀測站」申報",
+        "col_3",
+        "col_4"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "準據法",
+      "csv": "csv/準據法.csv",
+      "rows": 86,
+      "columns": [
+        "定性",
+        "構成要件",
+        "準據法原則",
+        "涉外民事法律適用法",
+        "涉外民法細項",
+        "立法例/型態",
+        "重要性"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "準據法(特)",
+      "csv": "csv/準據法(特).csv",
+      "rows": 18,
+      "columns": [
+        "定性區分",
+        "準據法原則",
+        "補充／例外規定",
+        "常見適用情境說明",
+        "涉外民事法律適用法"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "股東臨時會召集程序",
+      "csv": "csv/股東臨時會召集程序.csv",
+      "rows": 5,
+      "columns": [
+        "召集人",
+        "少數股東",
+        "少數股東_2",
+        "過半大股東",
+        "監察人",
+        "監察人_2"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "公司決議事項",
+      "csv": "csv/公司決議事項.csv",
+      "rows": 38,
+      "columns": [
+        "體系",
+        "條號",
+        "條項",
+        "決議事項",
+        "公司類型限制",
+        "董事會得不列為股東會議案",
+        "董事會＋臨時動議禁止",
+        "董事會＋特別決議",
+        "股東會＋臨時動議禁止",
+        "股東會＋特別決議",
+        "補充說明"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "30日監察人",
+      "csv": "csv/30日監察人.csv",
+      "rows": 10,
+      "columns": [
+        "事項",
+        "是否須30日前送監察人查核",
+        "col",
+        "公司型態",
+        "超過實收資本額40%如何處理"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "【157】短線交易",
+      "csv": "csv/【157】短線交易.csv",
+      "rows": 29,
+      "columns": [
+        "col_1"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "保險法絕對強制規定",
+      "csv": "csv/保險法絕對強制規定.csv",
+      "rows": 11,
+      "columns": [
+        "條文",
+        "條項",
+        "主題",
+        "規定內容"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "抗告對照表",
+      "csv": "csv/抗告對照表.csv",
+      "rows": 26,
+      "columns": [
+        "主題",
+        "說明",
+        "比較項目",
+        "民事訴訟法 (條文/內容)",
+        "刑事訴訟法 (條文/內容)",
+        "對照解析"
+      ],
+      "has_header": true
+    },
+    {
+      "sheet": "KYC & CTF",
+      "csv": "csv/KYC & CTF.csv",
+      "rows": 12,
+      "columns": [
+        "類別",
+        "門檻",
+        "申報/通報時效",
+        "觸發作業",
+        "申報/通報對象",
+        "法源依據",
+        "母法"
+      ],
+      "has_header": true
+    }
+  ]
+}

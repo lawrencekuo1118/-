@@ -1,4 +1,8 @@
 ﻿名詞,中文,重點
+A claimant,原告 / 聲請人,在侵權或民事訴訟中提起訴訟、主張受有損害之人（即原告，而非被告）
+A tortfeasor,侵權行為人,實施侵權行為（Tort）致他人受損之人，在訴訟中通常為被告
+A trespasser,侵入者 / 違法侵害人,未經許可侵入他人土地、物業或侵害他人權利之人，在侵權訴訟中可作為被告
+A wrongdoer,違法者 / 不法行為人,泛指實施不法或侵權行為之人，在侵權訴訟中常用以指稱被告
 Acceptance,承諾,同意要約，使契約成立
 Accessory after the fact,犯罪後協助者,藏匿犯人、協助逃避追訴
 Accessory before the fact,犯罪前協助者,提供工具、策劃等
@@ -11,27 +15,42 @@ Administration,行政管理,行政事務，非審判權
 Affirm,維持原判,上級法院支持下級法院
 Against public policy,違反公共政策,契約目的非法，無法強制執行
 Agency agreement,代理契約,本人與代理人間建立代理關係的契約，約定代理範圍、權利義務等
+Amendment,修正案,對現行法規或憲法條文所進行之修改或增補條文
 amicus brief,法院之友意見書,法院之友所提出的法律意見書
 amicus curiae,法院之友,非當事人，提供法律意見供法院參考
+Annoying,騷擾的 / 令人煩躁的,形容詞，指造成他人不快或滋擾之狀態
 appellate,上訴的、上訴審的,與上訴程序有關
 Appraisal rights,股份收買請求權,異議股東要求公司依公平價格收買股份
+Appraisal rights,股份收買請求權,異議股東於公司進行合併等重大變更時，得請求公司以公平價格收買其股份
 Arraign,提訊、正式訊問,告知罪名並要求答辯
 Arrest,逮捕,國家拘束犯罪嫌疑人
 Arson,放火,不是 arrest
 Article,條文、文章,非犯罪
 Artificial person,法人、擬制人,法律創設之權利主體
 Assault,攻擊威脅,不一定有碰觸
+Assault,攻擊威脅,故意使他人產生即將受非法侵害之合理恐懼
+Assent,同意 / 承諾,意思表示之同意或合意
 Assignment,權利讓與,將契約權利移轉給第三人
+Attaint,褫奪權利,因重罪判決確定而剝奪公民權利或財產權
 Attempt,未遂,犯罪未完成
+Attempt,未遂罪,已著手於犯罪實行而未成立犯罪結果
 Attorney General,司法部長,司法部首長
 Authorizing statement,授權聲明,一般性的授權表示，不代表正式代理權文件
 Battery,實際傷害,必須有接觸
+Bill,法律草案,提交立法機關審議但尚未正式通過生效之法案
+Bill of attainder,褫奪公權法案,立法機關未經司法審判，直接以法律宣告特定人有罪並施以懲罰
 Bill of Rights,權利法案,前十條修正案
+Board of directors,董事會,負責公司業務執行及重大經營決策之合議制機關
+Capacity to Contract,締約行為能力,《契約法重述（第二版）》§ 12：自然人原則上有完整能力，例外有四大法定分類
+Capital contribution in services,勞務出資,以個人勞務或服務抵充股份股款之彈性出資方式
 Certiorari,調卷令,上級法院受理案件程序
+Character evidence,品格證據,用以證明特定人具有某種性格特質或品行紀錄之證據
+Circumstantial evidence,間接證據 / 情況證據,非直接證明主事實，而是透過推論其他相關事實以間接證明主事實之證據
 Civil commitment,民事收容,法院命令接受治療或安置
 Civil disability,民事權利限制,法律限制某些民事權利
 Civil disobedience,公民不服從,基於理念而和平違法的行為
 Civil wrong,民事不法行為,侵害他人權利而產生民事賠償責任
+Civil wrong,民事不法,違反民事法律規範之不法行為總稱（涵蓋侵權與違約）
 Claim preclusion,請求權排除／既判力,同一訴因經終局判決後不得再次起訴
 Class action,集團訴訟,多數受害人因共同法律問題一起起訴
 Clear and present danger,明顯且立即的危險,限制言論、集會自由的理由
@@ -39,7 +58,12 @@ compel,強迫、要求,compel the court = 要求法院
 Compelling interest,迫切重要利益,嚴格審查標準
 Concurring opinion,協同意見,✅ 同意結果，但理由不同
 Confiscation / Forfeiture,沒收,剝奪犯罪所得或違禁物所有權
+Consequential,間接損害 / 衍生損害,由主要侵害行為後續衍生或間接引發之損害結果
 Conspiracy,共謀,二人以上犯罪協議
+Constitutional appeal,憲法上訴,當事人針對普通法院確定裁判違憲向憲法法院提出之上訴救濟
+Constitutional complaint,憲法訴願,人民於司法救濟用盡後，向憲法法院主張權利受違憲侵害之救濟程序
+Constitutional determination,憲法裁決,司法機關就憲法爭議或合憲性問題所為之裁定或決定
+Constitutional interpretation,憲法解釋,司法機關對憲法條文意涵與適用範圍所作之權威闡釋
 Contingent liability,或有責任,未確定發生的責任
 Contra proferentem,不利條款提供者解釋原則,模糊條款作不利於起草者解釋
 Contract for deed,契據買賣契約,常見於不動產分期買賣
@@ -47,6 +71,7 @@ Contract of adhesion,附合契約、定型化契約,一方預先制定條款，�
 Contract of beneficence,恩惠契約,無償給予利益的契約
 Contract of empowerment,授權契約,非英美法律固定用語，僅為「授予權限之契約」的直譯，不是正式法律術語
 Contract under seal,加蓋印章契約,以形式（seal）成立的契約
+Contradict wrong,非法律用語,無法律定義，語法與法律上皆不成立
 Control person,控制人,非本題法律概念
 Conviction,有罪判決,被認定犯罪
 Counter-claim,反訴,被告向原告提出請求
@@ -55,28 +80,39 @@ Criterion,標準,一般判斷準則
 Cross-claim,交叉請求,共同行訴當事人彼此間的請求
 Cumulative voting,累積投票制,股份數 × 董事名額，可集中票數給單一候選人
 Custom,習俗、習慣,社會長期形成的規範
+Decent,正派的 / 合宜的,符合一般社會公德與合宜標準者
 declare,宣告,❌ 宣告違憲或法律狀態
 Decree,法院命令／裁定,法院作成之正式命令
 deduce,推論、推導,依據事實、證據推導出結論；常用搭配 deduce a conclusion from evidence（由證據推論結論）
+Defamation,誹謗,發表不實言論致損害他人名譽或聲譽之侵權行為
 Defective product,瑕疵產品,設計、製造或警告缺陷
 Delegation,義務委託,將履行義務交由第三人，但原債務人通常仍負責
+Delirious,譫妄的,非 § 12 明文列出之四大法定分類
 departure from,偏離,departure from precedent = 偏離先例
 Derivative action,代表訴訟,股東代表公司追究經營者責任
+Direct evidence,直接證據,無需經由推論即可直接證明待證事實（主事實）存在之證據
 Directed verdict,指示裁決,審判中法官認定無合理陪審團可作不同判斷
 Dismiss,駁回、不受理,案件因程序或實體理由終結
+Disoriented,迷失方向的 / 精神混亂的,非 § 12 明文列出之四大法定分類
 Dissenting opinion,不同意見,❌ 反對結果
 Dissenting shareholder,異議股東,反對重大公司行為的股東
 Domicile,住所,法律上的永久居住地
 Double Jeopardy Clause,禁止雙重危險條款,第五修正案保障
 Due Process Clause,正當法律程序條款,第十四修正案核心依據
+Durational conditions,存續條件,規範權利、法律關係或狀態持續期間之限制條件
 Duress,脅迫,因威脅而締約
 Election,選舉,選任公職人員
 Embezzlement,侵占,合法持有後，非法據為己有
+Embezzlement,侵占罪,易持有為所有（須以「事先持有」為前提）
 Enforceable contract,可執行契約,法院願意強制履行
 enumerate,列舉,❌ 列出權限或權利
 Evidentiary basis,證據基礎,判斷是否足以支持裁判
+Ex post facto law,溯及既往之法律,追溯適用於法條制定生效前已發生行為之法律
+Ex post facto law,溯及既往之法律,追溯將行為時不違法者定罪，或追溯加重行為人處罰之法律
 Exclusionary rule,證據排除法則,排除違法取得證據
+Exculpatory evidence,無罪證據 / 開釋證據,證明被告無罪或得以減輕罪責之有利證據
 excuse,原諒、免除,一般用語；表示原諒某人或免除責任、義務；如 excuse someone from duty（免除某人義務）
+Executory covenant,待履行契約條款,當事人承諾於未來特定時間履行之契約義務或約款
 Exercise jurisdiction,行使管轄權,法院受理案件
 Expectation damages,期待利益損害賠償,使受害人取得履約利益
 Failure to warn,未警告義務,製造商未告知產品危險
@@ -84,12 +120,19 @@ Fair value,公平價格,收買股份的評價標準
 False imprisonment,非法拘禁／非法限制人身自由,故意限制他人自由
 False light,使他人陷於虛假形象,誤導大眾對當事人的印象
 False pretenses,詐欺取財,被害人因受騙而自願交付財物
-Fraud,詐欺,欺騙造成損害
+Fiduciary duty,忠實義務,負責人處理公司事務應維護公司利益，不得有利益衝突或損害公司之行為
+Force majeure,不可抗力條款,因天災、戰爭等不可預見且無法控制之重大事件致無法履約時之免責條款
+Foreseeable damages,可預見之損害,契約成立時所得合理預見之違約損害範圍
+Fraud,詐欺罪,施用詐術使人陷於錯誤，獲取不法財物或利益
 Freedom of speech,言論自由,憲法第11條保障
 General damages,一般損害賠償,違約通常造成的損害
+Give,交付 / 給予,移轉物、權利或利益之行為
 Gross negligence,重大過失,極嚴重疏忽
+Guardianship,受監護,欠缺締約能力之法定例外（受監護宣告者）
+Gun-jumping,搶跑 / 違規預售,於公開發行法定禁止期間（如申報生效前）違法進行證券推銷或宣傳之行為
 Habit,個人習慣,個人的固定行為
 Habitual offender,累犯、慣犯,多次犯罪者
+Heretical,異端的 / 違背教義的,違背宗教傳統或主流教義者，受憲法宗教與言論自由保障
 Illegal contract,非法契約,契約標的或目的違法
 Incest,近親性交／亂倫,特定親屬間性行為
 incorporate,納入適用,✅ 權利適用於各州
@@ -97,6 +140,7 @@ Incorporation,權利吸收,第十四修正案使聯邦基本權適用於各州
 Indecent exposure,公然猥褻／猥露,公開暴露性器官
 Indictment,起訴書、公訴,大陪審團提出控訴
 Individual liability,個別責任,個人負擔自身責任
+Infant,未成年人,欠缺締約能力之法定例外（未滿法定年齡者）
 Information,起訴書,檢察官提出犯罪指控
 Information rights,資訊權,查閱公司資訊的權利
 Initiative,創制,人民提出法律案或政策案
@@ -104,6 +148,9 @@ Injunction,假處分／禁制令,暫時禁止或命令特定行為
 insert,插入文字,❌ 非法律效果
 Insolvent,無清償能力,無法支付債務的狀態
 Inspector General,監察長／督察長,稽核、調查及監督政府機關
+Intentional tort,故意侵權行為,行為人出於故意（希望結果發生，或知悉結果實質上確定會發生）所為之侵權行為
+Intentional torts,故意侵權行為,行為人出於故意（希望或預見結果）侵害他人權利之行為
+Intoxicated,醉酒 / 藥物影響,§ 12(2) 明定之四大例外之一（詳細要件規範於 § 16）
 Intrusion upon seclusion,侵擾私人生活,偷偷拍攝、竊聽
 Invalid,無效／不具效力,泛稱
 Issue preclusion,爭點排除／爭點效,已確定判斷的特定爭點不得重新爭執
@@ -117,22 +164,37 @@ Larceny,竊盜,一開始就非法取走他人占有的財物
 Legal person,法律人格者、法人,具有法律人格之主體
 Lineal relative,直系血親,父母、子女等
 Liquidated damages,約定損害賠償、預定損害賠償,契約事先約定違約金額
+Liquidated damages,預定損害賠償額 / 違約金,當事人事前於契約中約定違約時應支付之定額賠償金
+Loitering law,徘徊法 / 遊蕩禁止法,規範或禁止於公共場所無正當理由停留或遊蕩之法律
 Majority opinion,多數意見,支持法院判決結果
 Medical malpractice,醫療過失,醫療提供者執行醫療行為的過失
 Meeting of the minds,意思合致,雙方對契約內容有共同理解
 Mens rea,犯罪主觀要件,犯罪故意或過失
 Mental distress,精神痛苦,✘ 損害結果
+Mentally ill or defective,精神疾病或缺陷,欠缺締約能力之法定例外
 Misappropriation,盜用姓名或肖像,未經同意作商業利用 ✔
 Mistake,錯誤,對事實或法律認知錯誤
 Mutual liability,相互責任,非侵權責任常用語
+Negligence,過失侵權行為,違反合理注意義務致他人權益受損之不法行為
+Negligence ab initio,自始過失,因違法行為導致該行為或權利自始不合法之過失
+Negligence bona fide,善意過失,出於善意但仍欠缺合理注意義務之過失
 Negligence liability,過失責任,自己有過失，所以負責
+Negligence non liquet,案情不明過失,因事實不清楚或舉證不足而無法認定之過失
+Negligence per se,擬制過失 / 當然過失,違反保護他人之法律即直接推定構成過失
+Negligent tort,過失侵權行為,行為人未盡合理注意義務（疏忽），致他人權益受有損害之侵權行為
+Non-pecuniary,非財產上的（精神慰撫金）,民法第 194 條規定，被害人致死時，其父母子女配偶雖非財產上損害，亦得請求相當之金額（慰撫金）
 Novation,契約更新／債務更新,新當事人取代舊當事人，舊當事人退出且免責
 Nuisance,妨害（妨害安寧）,✔ 一種侵權行為
+Nuisance,妨害行為,不當干擾或侵害他人對不動產之使用、收益或享受之行為
+Nuisance,妨害行為,不當干擾他人使用土地（Private Nuisance）或侵害公眾共同權利/公共安全（Public Nuisance）
 Objective standard,客觀標準,以一般社會觀念判斷
 Obscene,猥褻的,不受言論自由保障的色情表現
+Obscene,猥褻的 / 淫穢的,符合 Miller 測試三要件（訴諸淫慾、顯著令人反感且欠缺嚴肅價值）之言論，不受憲法言論自由保障
 Offer,要約,一方提出成立契約之意思表示
+Offer,要約,以成立契約為目的所為之意思表示
 Offeree,受要約人,接受要約的一方
 Offeror,要約人,提出要約的一方
+Overhauled,全面修訂 / 重組,對法律或制度進行整體性且大幅度的修正
 Overinclusiveness,過度涵蓋,審查限制是否過廣
 overrule,推翻先例,高法院推翻過去判決
 Pain and suffering,疼痛及精神痛苦,✘ 損害賠償項目
@@ -146,77 +208,114 @@ petitioner,聲請人（依程序亦可能譯為請願人）,提出聲請的一�
 Plurality voting,相對多數決,得票最多者當選
 Power of attorney,授權書／委任授權,正式授予代理權的法律文件；本人（principal）授權代理人（attorney-in-fact）代表自己行事
 Practice,實務做法,一般行為方式
+Pre-calculated damages,事先計算之損害,非標準法律用語，指事前算定之賠償金額
 Precedent,判例、先例,對後案具有參考或拘束效果
 Prescription,時效,大陸法系常用語，包括取得時效、消滅時效
 Principal offender,正犯,親自實施犯罪
 principle,原則,First Amendment principles = 第一修正案原則
 Principle of clarity and definiteness,法律明確性原則,要求法律可理解、可預見
+Prior consent,事先同意,於法律行為或特定處分實施前，預先取得權利人或主管機關之同意
+Prior conviction,前科 / 先前犯罪紀錄,被告於本次犯罪前，經法院判決有罪確定之紀錄
+Prior notification,事先通知,於採取特定法律或行政行為前，依法預先告知相關當事人之程序
+Prior restraint,事前審查 / 事前限制,政府於言論或出版品公開前所施加之官方預先限制或禁止
+Private placement,私募,非經公開募集程序，僅向特定專業投資機構或特定人募集發行證券
 Private prosecution,自訴,被害人自行向法院提起刑事訴訟
+Private wrong,私法侵害,侵害特定個人權益之不法行為（與侵害社會整體權益對照）
 Probable cause,相當理由（或：相當可能原因）,核發搜索票所需的標準
 Probation,緩刑／保護管束,不入監但受監督
+Probation,緩刑,暫緩執行刑罰；法院得命被告履行特定附條件事項（如支付賠償、義務勞務）
 Product liability,產品責任,製造商因瑕疵產品造成損害負責
 Proposal rights,提案權,股東提出議案的權利
 Prosecutor,檢察官,提起公訴之主體
+Provide,提供,履行義務或提供服務之行為
 Proxy solicitation,委託書徵求,爭取股東表決授權
 Proxy voting,委託投票,股東委託他人代為表決
 Prurient interest,淫穢慾望／性慾刺激,判斷猥褻的重要標準
 Public disclosure of private facts,公開私人事實,公布他人隱私
+Public issuance,公募 / 公開發行,向不特定多數大眾招募或出售證券之程序
+Public offering,公開募集,向不特定大眾招募股款或證券；法律得明定特定例外管道（如核准之股權群眾募資平台）
 Public offering / issuing,公開發行,向大眾募集資金
 Public policy,公共政策,法院拒絕執行違反社會基本價值的契約
 Public prosecution,公訴,檢察官代表國家起訴
+Public wrong,公法侵害,侵害社會公共利益或秩序之不法行為（即犯罪）
+Quorum,法定人數,會議要達到有效開會或作成決議所必需之最低出席人數
 Rape,強制性交罪,未經同意性交
 Reasonable person,合理人、理性人,判斷過失的客觀標準
 Reasonable suspicion,合理懷疑,臨檢、短暫攔查的較低門檻
 Recall,罷免,人民依法解除公職人員職務
-recuse,迴避,法律用語；指法官因利益衝突、偏頗可能或其他事由，自案件中退出；常用搭配 recuse oneself from a case
+Recidivist,累犯,徒刑執行完畢後5年內再犯有期徒刑以上之罪；加重其刑非強制性，賦予法院裁量權
+Recuse,迴避,法律用語；指法官因利益衝突、偏頗可能或其他事由，自案件中退出；常用搭配 recuse oneself from a case
 Reelection,連任,再次當選公職
 Referendum,複決,人民對法律或重大政策進行表決
 Remand,發回更審,上級法院退回下級法院
+Remunerated,報酬 / 給付報酬,針對提供之勞務或服務給付相應之對價
+Repugnant,令人反感的 / 抵觸的,形容詞，指極度令人厭惡或與法律原則相抵觸者
 Res judicata,既判力,廣義包含 claim preclusion
 Residence,居所,實際居住地
 Respondeat Superior,僱主責任原則,雇主對員工職務侵權負責
 respondent,相對人、被聲請人、被上訴人（依程序而定）,對應聲請或上訴的一方
 Restitution damages,返還性損害賠償,恢復已給付利益
+Restriction on share transfer,股份轉讓限制,載明於公司章程，用以限制股東自由轉讓股份之條款
+Retribution and deterrence,應報與嚇阻,刑罰目的理論；兼具懲罰犯罪責任（應報）與預防犯罪（一般與特別嚇阻）
 Reverse,廢棄、撤銷原判決,上級法院推翻下級法院
 Revocation,撤回,使意思表示失效
 Revocation,撤銷,撤銷權利、許可或行政處分
+Robbery,強盜罪,施加強暴脅迫等手段，致使被害人「不能抗拒」而強取
+Rule of law,法治原則,國家權力之行使皆須遵循法律且人人平等的法治基礎
 Scrutiny,審查,判斷政府限制基本權是否合憲
 Search,搜索,搜查人、處所或物
 Search warrant,搜索票,法官核發之搜索令
 Seizure,扣押,扣留物品作為證據或供沒收
 Selective incorporation,選擇性吸收,逐一判斷哪些權利適用於各州
 Sentence,科刑、判刑,法院決定刑罰
+Sentencing factors,量刑審酌事項,刑法第57條規定科刑時應審酌之一切情狀（含犯罪後態度、品行、生活狀況等）
 Separately liable,分別負責,各自獨立責任
+Severability,可分性條款 / 可分割條款,約定合約部分條款若因違法而無效，不影響其餘條款繼續有效之約定
 Sexual offender,性犯罪者,犯下性犯罪者
 Sexually explicit material,性露骨資料,不當然等於猥褻
 Shareholder,股東,持有公司股份者
+Shareholder threshold,股東人數上限,法律針對特定公司型態所設之股東人數最高限制
 Short-form merger,簡易合併,母公司與持股90%以上子公司之合併
 Solicitation,教唆,鼓動他人犯罪
 Solicitor General,訟務次長,代表聯邦政府於最高法院進行訴訟與辯論
 Standard of review,審查標準,憲法訴訟用語
 Stare decisis,遵循先例,法院受過去判決法律原則拘束
 stare decisis,遵循先例原則,法院通常遵守過去判決
+Statute of countdowns,非法律用語,無法律定義，非標準法律術語
 Statute of limitations,消滅時效,請求權逾一定期間不得再主張（可抗辯）
+Statute of limitations,消滅時效,法律規定請求權人得提起訴訟或行使權利之法定最高期限
 Statute of repose,除斥期間（英美法）,自特定事件起算，期間屆滿後請求權絕對消滅，不受發現時點影響
 Statutory agent,法定代理人,依法代理無行為能力人
 Straight voting,普通投票制,每股對每名董事候選人一票，不可集中
+Strict liability,嚴格責任 / 無過失責任,不論行為人有無故意或過失，只要發生法定期定之危險或損害即須負責
+Strict liability,嚴格責任,不論有無故意或過失，依法皆須承擔之賠償責任
+Struck down,違憲宣告 / 宣告無效,法院判定法律違反憲法而宣告其失效
 Subject matter jurisdiction,事物管轄,法院對案件類型的權限
 Subpoena duces tecum,文書提出命令／命提出文書令,命令提出文件、紀錄等證據
 Subrogation,代位,代替他人行使請求權
 Subsidiary,子公司,受母公司控制之公司
 Summary judgment,即決判決,審前無重大事實爭議時判決
+Sustained,採納 / 准許,法院就異議或聲請予以採納或維持
 Takeover,企業併購／接管,取得公司控制權的行為
+Temporal conditions,時間條件,法律行為或契約中限定效力發生或消滅之時間要件
+Tender,要求履行義務,債務人依債之本旨實際提出履行或付款之行為
 Tender offer,公開收購,直接向股東收購股份，不經交易市場
+Termination,終止條款,規範當事人得於特定條件、違約或期限屆滿時提前結束合約效力之約定
 Territorial jurisdiction,土地／地域管轄,依地區決定管轄
 Territoriality,屬地主義,法律適用原則之一
+Theft,竊盜罪,破壞原持有關係並建立新持有（含無權占用土地）
 Third-party beneficiary contract,第三人受益契約,契約使第三人取得利益
 Tort law,侵權行為法,規範民事不法行為的法律
 Treasury stock,庫藏股,公司買回自己股份
 Trespass,侵入（侵害占有）,✔ 一種侵權行為
+Unconscious,無意識的,非 § 12 明文列出之四大法定分類
+Unethical,不道德的,違反社會倫理規範者，非美國憲法第一修正案限制言論之法定例外要件
 United States Attorney,聯邦檢察官,負責聯邦地方法院案件
+Upheld,維持（原判/合憲）,法院確認法律或原判決合法合憲而予以維持
 Usage,交易習慣、商業慣例,解釋契約文字
 Vacate,撤銷、使失效,取消既有判決或命令
 Vagueness,模糊性,法律明確性要求
+Vagueness law,法律不明確原則,法律內容若過於模糊致使人民無從預見，即屬違憲
 Valid,有效,具有法律拘束力
 Venue,審判地／管轄法院所在地,哪個地方法院審理較適當
 Verdict,陪審團裁決,陪審團對事實問題的決定
@@ -225,4 +324,5 @@ Victim / injured party,被害人,犯罪受害者
 Void,無效,自始無法律效力
 Voidable,得撤銷,原則有效，但受害方可撤銷
 Voting rights,表決權,股東參與決議的權利
+Warranty,擔保條款 / 保證條款,立約人對標的物之品質、權利瑕疵或特定事實所為之承諾與保證
 Young offender,少年犯,未成年犯罪人

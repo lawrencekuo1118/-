@@ -1,17 +1,16 @@
 # 藍絲法律 · 法條分群 (searchable export)
 
-Structured CSV/JSON export of the law-article workbook, plus a
-**red-font corrected** workbook checked against the latest ROC statutes
-（全國法規資料庫，UpdateDate 2026/7/24）.
+Structured CSV/JSON export of the law-article workbook. Statute
+corrections are applied **in place** on the original `.xlsm` with red font
+（全國法規資料庫，UpdateDate 2026/7/24；VBA retained）.
 
 ## Contents
 
 | Path | Description |
 |---|---|
-| `藍絲法律_法條分群(260719更).xlsm` | Original source workbook |
-| `藍絲法律_法條分群_校正版.xlsx` | Corrected workbook（紅字＝本次校正；含`診斷報告`） |
-| `diagnosis/` | Diagnosis notes and correction log |
-| `csv/` | One CSV per sheet (UTF-8 BOM, from corrected workbook) |
+| `藍絲法律_法條分群(260719更).xlsm` | Workbook（就地紅字校正；含`診斷報告`；保留 VBA） |
+| `diagnosis/` | Diagnosis notes, correction log, pre-edit backup |
+| `csv/` | One CSV per sheet (UTF-8 BOM, from edited workbook) |
 | `json/manifest.json` | Sheet index: names, columns, row counts, CSV paths |
 | `json/sheets.json` | Full sheet matrices (`sheet -> rows[][]`) |
 | `json/records.json` | Flat searchable records |

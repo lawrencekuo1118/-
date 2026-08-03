@@ -1,13 +1,14 @@
 {
-  "source": "藍絲法律_法條分群_校正版.xlsx",
+  "source": "藍絲法律_法條分群(260719更).xlsm",
   "source_law_update": "2026/7/24",
+  "edit_mode": "in_place_xlsm_red_font",
   "sheet_count": 37,
-  "record_count": 1006,
+  "record_count": 1053,
   "sheets": [
     {
       "sheet": "診斷報告",
       "csv": "csv/診斷報告.csv",
-      "rows": 38,
+      "rows": 85,
       "columns": [
         "序號",
         "頁籤",
@@ -44,6 +45,7 @@
       "columns": [
         "col",
         "col_2",
+        "col_3",
         "民事訴訟 (Civil)",
         "刑事訴訟 (Criminal)"
       ]
@@ -114,6 +116,7 @@
       "csv": "csv/借名＆代理.csv",
       "rows": 6,
       "columns": [
+        "col",
         "類型",
         "定義",
         "法源依據",
@@ -182,12 +185,13 @@
       "csv": "csv/家事事件法第3條.csv",
       "rows": 13,
       "columns": [
+        "col",
         "甲類事件",
         "乙類事件",
         "丙類事件",
         "丁類事件",
         "戊類事件",
-        "col",
+        "col_2",
         "適用條文",
         "適用事件"
       ]
@@ -215,6 +219,7 @@
       "rows": 9,
       "columns": [
         "col",
+        "col_2",
         "訴之追加 (Addition)",
         "訴之變更 (Change)",
         "反請求 (Counter-claim)"
@@ -345,10 +350,11 @@
       "csv": "csv/證交法申報義務.csv",
       "rows": 17,
       "columns": [
+        "col",
         "一、 公司定期財務報告與營運申報",
         "上市、上櫃及興櫃公司需依以下時限於「公開資訊觀測站」申報",
-        "col_3",
-        "col_4"
+        "col_4",
+        "col_5"
       ]
     },
     {

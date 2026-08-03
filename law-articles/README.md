@@ -49,6 +49,8 @@ python3 law-articles/export_from_xlsm.py
 
 ## Notes
 
-- Source has 36 sheets; empty sheet `領域 >>` exports as an empty CSV.
+- Corrections are written **directly** into the `.xlsm` (red font + `診斷報告` sheet).
+- Pre-edit backup: `diagnosis/source_before_edit.xlsm`.
+- Empty sheet `領域 >>` may export as an empty CSV.
 - Numeric Excel values like `249.0` are normalized to `249` in exports.
-- VBA in the workbook only builds an Index sheet; it is not needed for search.
+- VBA (`CreateSheetIndex`) is retained after in-place edits.

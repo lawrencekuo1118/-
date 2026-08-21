@@ -131,11 +131,18 @@ seed_control_library <- function() {
   )
 }
 
-library_item_from_control <- function(ctrl, tags = character()) {
+library_item_from_control <- function(ctrl, tags = character(), source = "manual") {
   ctrl <- as.list(ctrl)
+  # Stable accumulative ID: prefer real RCM 控制編號 so re-save updates same template
   if (is.null(ctrl$library_id) || !nzchar(as.character(ctrl$library_id %||% ""))) {
-    raw <- paste(c(ctrl$cycle, ctrl$risk_name, ctrl$control_objective, ctrl$iuc_or_system), collapse = "|")
-    ctrl$library_id <- sprintf("LIB-%08x", sum(utf8ToInt(enc2utf8(raw))) %% as.integer(1e8))
+    cid <- trimws(as.character(ctrl$control_id %||% ""))
+    if (nzchar(cid) && !grepl("^CD-", cid)) {
+      ctrl$library_id <- if (grepl("^JL-", cid)) cid else paste0("LIB-", cid)
+    } else {
+      raw <- paste(c(ctrl$cycle, ctrl$sub_process_id, ctrl$risk_factor %||% ctrl$risk_name,
+                     ctrl$control_objective, ctrl$iuc_or_system), collapse = "|")
+      ctrl$library_id <- sprintf("LIB-%08x", sum(utf8ToInt(enc2utf8(raw))) %% as.integer(1e8))
+    }
   }
   if (is.null(ctrl$title) || !nzchar(as.character(ctrl$title %||% ""))) {
     ctrl$title <- sprintf(
@@ -143,7 +150,9 @@ library_item_from_control <- function(ctrl, tags = character()) {
       ctrl$cycle %||% "",
       {
         obj <- ctrl$control_objective %||% ""
-        if (nzchar(obj)) obj else (ctrl$control_activity %||% "控制")
+        if (nzchar(obj)) {
+          if (nchar(obj) > 40) paste0(substr(obj, 1, 40), "…") else obj
+        } else (ctrl$control_activity %||% "控制")
       }
     )
   }
@@ -157,15 +166,72 @@ library_item_from_control <- function(ctrl, tags = character()) {
       ctrl$detailed_description <- tryCatch(assemble_control_paragraph(ctrl), error = function(e) "")
     }
   }
-  tags <- unique(c(as.character(tags), as.character(ctrl$tags %||% character())))
+  tags <- unique(c(as.character(tags), as.character(ctrl$tags %||% character()), "累積範本"))
   tags <- tags[nzchar(tags)]
   list(
     library_id = as.character(ctrl$library_id),
     title = as.character(ctrl$title),
     tags = tags,
     cycle = as.character(ctrl$cycle %||% ""),
+    source = as.character(source %||% "manual"),
     updated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     control = ctrl
+  )
+}
+
+# Collect one or many designed controls into accumulative library.
+# quality_gate: only accept OA-clean + six-rules-ready when TRUE
+collect_controls_to_library <- function(library, controls, overwrite = TRUE,
+                                        tags = character(), source = "collect",
+                                        quality_gate = TRUE) {
+  if (!length(controls)) {
+    return(list(library = library, added = 0L, updated = 0L, skipped = 0L, items = list()))
+  }
+  added <- 0L
+  updated <- 0L
+  skipped <- 0L
+  items <- list()
+  out <- library
+  for (ctrl in controls) {
+    if (isTRUE(quality_gate)) {
+      oa_ok <- TRUE
+      if (exists("rcm_objective_activity_check", mode = "function")) {
+        oa_ok <- isTRUE(rcm_objective_activity_check(
+          ctrl$control_objective, ctrl$control_activity
+        )$ok)
+      }
+      six_ok <- TRUE
+      if (exists("six_status_rules_check", mode = "function")) {
+        six_ok <- isTRUE(six_status_rules_check(ctrl)$ok)
+      }
+      if (!oa_ok || !six_ok) {
+        skipped <- skipped + 1L
+        next
+      }
+    }
+    item <- library_item_from_control(ctrl, tags = tags, source = source)
+    existed <- !is.null(get_library_item(out, item$library_id))
+    if (existed && !overwrite) {
+      skipped <- skipped + 1L
+      next
+    }
+    out <- upsert_library_item(out, item)
+    items[[length(items) + 1]] <- item
+    if (existed) updated <- updated + 1L else added <- added + 1L
+  }
+  list(library = out, added = added, updated = updated, skipped = skipped, items = items)
+}
+
+library_stats <- function(library) {
+  n <- length(library)
+  cycles <- unique(vapply(library, function(x) x$cycle %||% x$control$cycle %||% "", character(1)))
+  cycles <- cycles[nzchar(cycles)]
+  sources <- table(vapply(library, function(x) x$source %||% "unknown", character(1)))
+  list(
+    n = n,
+    n_cycles = length(cycles),
+    cycles = cycles,
+    sources = as.list(sources)
   )
 }
 
@@ -271,6 +337,7 @@ save_control_library <- function(library, path_json, path_csv = NULL) {
       title = item$title,
       tags = item$tags,
       cycle = item$cycle %||% item$control$cycle %||% "",
+      source = item$source %||% "manual",
       updated_at = item$updated_at %||% "",
       control = item$control
     )
@@ -291,7 +358,10 @@ load_control_library <- function(path_json, fallback_seed = TRUE) {
     ctrl <- x$control %||% x
     if (is.null(ctrl$library_id)) ctrl$library_id <- x$library_id
     if (is.null(ctrl$title)) ctrl$title <- x$title
-    library_item_from_control(ctrl, tags = unlist(x$tags %||% list()))
+    item <- library_item_from_control(ctrl, tags = unlist(x$tags %||% list()),
+                                      source = x$source %||% "persisted")
+    item$updated_at <- x$updated_at %||% item$updated_at
+    item
   })
   if (!length(items) && fallback_seed) return(seed_control_library())
   items
@@ -504,17 +574,19 @@ library_summary_df <- function(library) {
     return(data.frame(
       library_id = character(), cycle = character(), title = character(),
       risk = character(), objective = character(), activity = character(),
-      iuc = character(), tags = character(), stringsAsFactors = FALSE
+      iuc = character(), source = character(), tags = character(),
+      stringsAsFactors = FALSE
     ))
   }
   data.frame(
     library_id = vapply(library, function(x) x$library_id, ""),
     cycle = vapply(library, function(x) x$cycle %||% x$control$cycle %||% "", ""),
     title = vapply(library, function(x) x$title, ""),
-    risk = vapply(library, function(x) x$control$risk_name %||% "", ""),
+    risk = vapply(library, function(x) x$control$risk_name %||% x$control$risk_factor %||% "", ""),
     objective = vapply(library, function(x) x$control$control_objective %||% "", ""),
     activity = vapply(library, function(x) x$control$control_activity %||% "", ""),
     iuc = vapply(library, function(x) x$control$iuc_or_system %||% "", ""),
+    source = vapply(library, function(x) x$source %||% "", ""),
     tags = vapply(library, function(x) paste(x$tags %||% character(), collapse = ";"), ""),
     stringsAsFactors = FALSE
   )

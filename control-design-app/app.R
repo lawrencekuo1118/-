@@ -109,6 +109,8 @@ ui <- page_navbar(
       actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
       actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
     ),
+    checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
+    uiOutput("lib_count_badge"),
     tags$hr(class = "my-2"),
     textInput("company", NULL, placeholder = "公司名稱"),
     tags$hr(class = "my-2"),
@@ -311,7 +313,8 @@ ui <- page_navbar(
           actionButton("add_draft", "加入佇列＝預備 RCM 列", class = "btn-primary btn-sm"),
           actionButton("update_draft", "更新", class = "btn-sm"),
           actionButton("remove_draft", "刪除列", class = "btn-sm btn-outline-danger"),
-          actionButton("generate_controls", "產生控制點＝RCM列", class = "btn-success btn-sm")
+          actionButton("generate_controls", "產生控制點＝RCM列", class = "btn-success btn-sm"),
+          actionButton("collect_ready_to_lib", "就緒→累積範本庫", class = "btn-outline-success btn-sm")
         )
       ),
       card(
@@ -329,23 +332,36 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(4, 8),
       card(
-        p(class = "text-muted small mb-1",
-          "大量完美控制點可 CSV／JSON 匯入；設計時優先從此庫套用。亦可將目前表單或已產生控制點存入（累積制）。"),
+        card_header("累積制通用範本庫"),
+        p(
+          class = "text-muted small mb-1",
+          "管道：", strong("設計／RCM 就緒列 → 入庫"), "｜",
+          strong("CSV／JSON／RCM xlsx 匯入"), "｜",
+          strong("自訂引導項"), "。入庫後設計時", strong("優先套用"), "，完善後可覆寫同 ID（累積）。"
+        ),
+        verbatimTextOutput("lib_stats_text"),
         fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
                   accept = c(".csv", ".json", ".xlsx", ".xls")),
-        checkboxInput("lib_overwrite", "同 ID 則覆蓋", TRUE),
+        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
         actionButton("import_jinglian_seed", "載入鯨鏈資訊循環 RCM（首批）",
                      class = "btn-sm btn-outline-primary w-100 mb-2"),
+        tags$hr(class = "my-2"),
+        tags$strong(class = "small", "收集入庫"),
+        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
+        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
         div(
           class = "d-flex gap-1 flex-wrap",
           actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-          actionButton("lib_add_selected_control", "控制點→庫", class = "btn-sm"),
+          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
+          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success"),
+          actionButton("lib_add_all_drafts", "佇列→庫", class = "btn-sm btn-outline-success")
+        ),
+        div(
+          class = "d-flex gap-1 flex-wrap mt-2",
           actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
           downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
           downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
-        ),
-        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
-        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）")
+        )
       ),
       card(
         DTOutput("lib_table"),
@@ -541,53 +557,132 @@ server <- function(input, output, session) {
     if (!length(lines)) "（命名庫尚無資料）" else paste(lines, collapse = "\n")
   })
 
+  output$lib_count_badge <- renderUI({
+    st <- library_stats(lib())
+    tags$small(class = "text-muted", sprintf("範本庫累積 %d 筆／%d 循環", st$n, st$n_cycles))
+  })
+  output$lib_stats_text <- renderText({
+    st <- library_stats(lib())
+    src <- if (length(st$sources)) {
+      paste(sprintf("%s=%s", names(st$sources), unlist(st$sources)), collapse = "；")
+    } else "—"
+    paste(
+      sprintf("累積筆數：%d", st$n),
+      sprintf("涵蓋循環：%d（%s）", st$n_cycles, paste(st$cycles, collapse = "、")),
+      sprintf("來源：%s", src),
+      sep = "\n"
+    )
+  })
+
+  add_ctrl_to_library <- function(ctrl, title = NULL, tags = character(), source = "manual") {
+    if (!is.null(title) && nzchar(trimws(title))) ctrl$title <- trimws(title)
+    tag_vec <- unlist(strsplit(as.character(tags %||% ""), "[;；,，|/]+"))
+    tag_vec <- trimws(tag_vec)
+    tag_vec <- tag_vec[nzchar(tag_vec)]
+    res <- collect_controls_to_library(
+      lib(), list(ctrl),
+      overwrite = TRUE,
+      tags = tag_vec,
+      source = source,
+      quality_gate = FALSE
+    )
+    lib(persist_lib(res$library))
+    refresh_lib_choices()
+    if (length(res$items)) res$items[[1]] else NULL
+  }
+
+  collect_many_to_lib <- function(ctrls, source = "collect", quality_gate = TRUE) {
+    tag_vec <- unlist(strsplit(as.character(input$lib_tags %||% ""), "[;；,，|/]+"))
+    tag_vec <- trimws(tag_vec)
+    tag_vec <- tag_vec[nzchar(tag_vec)]
+    res <- collect_controls_to_library(
+      lib(), ctrls,
+      overwrite = isTRUE(input$lib_overwrite),
+      tags = c(tag_vec, "累積收集"),
+      source = source,
+      quality_gate = quality_gate
+    )
+    lib(persist_lib(res$library))
+    refresh_lib_choices()
+    res
+  }
+
   observeEvent(input$apply_lib, {
     id <- input$lib_pick
     if (!nzchar(id %||% "")) return(showNotification("請先從範本庫選擇", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
     fill_inputs_from_ctrl(session, item$control)
-    # Prefer library detailed description into preview path via fields already filled
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
 
-  add_ctrl_to_library <- function(ctrl, title = NULL, tags = character()) {
-    if (!is.null(title) && nzchar(trimws(title))) ctrl$title <- trimws(title)
-    tag_vec <- unlist(strsplit(as.character(tags %||% ""), "[;；,，|/]+"))
-    tag_vec <- trimws(tag_vec)
-    tag_vec <- tag_vec[nzchar(tag_vec)]
-    item <- library_item_from_control(ctrl, tags = tag_vec)
-    new_lib <- upsert_library_item(lib(), item)
-    lib(persist_lib(new_lib))
-    refresh_lib_choices()
-    item
-  }
-
   observeEvent(input$save_to_lib, {
     d <- current_draft_from_inputs()
-    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags)
+    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入範本庫", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_current, {
     d <- current_draft_from_inputs()
-    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags)
+    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_selected_control, {
     s <- input$control_table_rows_selected
     cs <- controls()
     if (is.null(s) || !length(cs)) return(showNotification("請先在設計頁選取控制點", type = "warning"))
-    item <- add_ctrl_to_library(cs[[s]], title = input$lib_title_override, tags = input$lib_tags)
+    item <- add_ctrl_to_library(cs[[s]], title = input$lib_title_override, tags = input$lib_tags, source = "control")
     showNotification(paste("控制點已存入", item$library_id), type = "message")
+  })
+  observeEvent(input$lib_add_all_ready, {
+    cs <- controls()
+    if (!length(cs)) return(showNotification("尚無已產生控制點", type = "warning"))
+    ready <- Filter(function(c) isTRUE((c$rcm_ready$ready %||% is_rcm_row_ready(c)$ready)), cs)
+    if (!length(ready)) return(showNotification("無 RCM 就緒控制點可入庫", type = "warning"))
+    res <- collect_many_to_lib(ready, source = "rcm_ready", quality_gate = TRUE)
+    showNotification(
+      sprintf("就緒入庫：新增 %d／更新 %d／略過 %d；庫共 %d 筆",
+              res$added, res$updated, res$skipped, length(res$library)),
+      type = "message", duration = 8
+    )
+  })
+  observeEvent(input$lib_add_all_drafts, {
+    ds <- drafts()
+    if (!length(ds)) return(showNotification("佇列為空", type = "warning"))
+    res <- collect_many_to_lib(ds, source = "draft_queue", quality_gate = TRUE)
+    showNotification(
+      sprintf("佇列入庫：新增 %d／更新 %d／略過 %d", res$added, res$updated, res$skipped),
+      type = "message", duration = 8
+    )
+  })
+  observeEvent(input$collect_ready_to_lib, {
+    cs <- controls()
+    if (!length(cs)) {
+      d <- current_draft_from_inputs()
+      res <- collect_many_to_lib(list(d), source = "design_collect", quality_gate = TRUE)
+    } else {
+      ready <- Filter(function(c) isTRUE((c$rcm_ready$ready %||% is_rcm_row_ready(c)$ready)), cs)
+      if (!length(ready)) ready <- cs
+      res <- collect_many_to_lib(ready, source = "design_collect", quality_gate = TRUE)
+    }
+    showNotification(
+      sprintf("已收集入累積庫：+%d／覆寫 %d／略過 %d", res$added, res$updated, res$skipped),
+      type = "message"
+    )
   })
   observeEvent(input$upload_lib, {
     f <- input$upload_lib
     if (is.null(f)) return()
     tryCatch({
       new_lib <- import_control_library_file(f$datapath, lib(), overwrite = isTRUE(input$lib_overwrite))
+      new_lib <- lapply(new_lib, function(it) {
+        if (is.null(it$source) || identical(it$source, "manual") || identical(it$source, "persisted")) {
+          it$source <- "import"
+        }
+        it
+      })
       lib(persist_lib(new_lib))
       refresh_lib_choices()
-      showNotification(sprintf("範本庫共 %d 筆", length(new_lib)), type = "message")
+      showNotification(sprintf("範本庫累積共 %d 筆", length(new_lib)), type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
   observeEvent(input$lib_delete, {
@@ -613,6 +708,7 @@ server <- function(input, output, session) {
     paste(
       c(
         paste0("【", item$library_id, "】", item$title),
+        paste0("來源：", item$source %||% "—", "｜標籤：", paste(item$tags, collapse = ";")),
         item$control$summary_description %||% "",
         "----",
         item$control$detailed_description %||% assemble_control_paragraph(item$control)
@@ -1328,6 +1424,14 @@ server <- function(input, output, session) {
               length(result), length(result), n_ready),
       type = "message"
     )
+    if (isTRUE(input$auto_collect_lib) && n_ready > 0) {
+      ready <- Filter(function(x) isTRUE(x$rcm_ready$ready), result)
+      res <- collect_many_to_lib(ready, source = "auto_rcm", quality_gate = TRUE)
+      showNotification(
+        sprintf("自動累積入庫：+%d／覆寫 %d／略過 %d", res$added, res$updated, res$skipped),
+        type = "message"
+      )
+    }
     if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 

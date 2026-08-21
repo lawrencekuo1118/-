@@ -121,6 +121,24 @@ utils::write.csv(library_to_flat_df(lib), tmp_csv, row.names = FALSE, fileEncodi
 imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = TRUE)
 check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
 
+# Accumulative collect pipeline
+ctrl_a <- modifyList(base, list(control_id = "EC-101-99", sub_process_id = "EC-101"))
+res1 <- collect_controls_to_library(list(), list(ctrl_a), source = "test", quality_gate = TRUE)
+check(res1$added == 1L, "品質通過的控制點可收集入庫")
+check(!is.null(get_library_item(res1$library, "LIB-EC-101-99")), "穩定 ID 依控制編號累積")
+# second save updates same id
+ctrl_a2 <- modifyList(ctrl_a, list(company_status = "完善後現況描述"))
+res2 <- collect_controls_to_library(res1$library, list(ctrl_a2), source = "test", quality_gate = TRUE)
+check(res2$updated == 1L && res2$added == 0L, "同 ID 覆寫為累積更新")
+check(length(res2$library) == 1L, "累積不產生重複筆")
+bad_collect <- collect_controls_to_library(
+  list(), list(modifyList(ctrl_a, list(control_activity = ctrl_a$control_objective))),
+  quality_gate = TRUE
+)
+check(bad_collect$skipped == 1L && bad_collect$added == 0L, "品質門檻略過不合格控制點")
+st <- library_stats(res2$library)
+check(st$n == 1L, "library_stats 筆數")
+
 # Jinglian RCM xlsx → library batch
 xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
 jl <- list()

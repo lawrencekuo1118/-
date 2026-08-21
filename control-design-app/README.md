@@ -1,34 +1,32 @@
-# Control Design Assistant (Shiny)
+# Control Design Assistant (Shiny) — Form 4120SR / RCM / CSA
 
-輔助設計**標準內部控制點**，對齊 Form 4120SR（Significant Risk）控制設計敘述元素。
+輔助**快速且精準**設計標準內部控制點，並產出 RCM、訪談問題與 CSA 底稿。
 
-## 功能
+## 能力
 
-- 依**九大循環**區辨風險，並可自訂風險名稱／完整 RoMM 文字
-- **風險三大屬性**預設為財務報導／營運／法令遵循，標籤與內容皆可自訂
-- 可編輯：控制目標、控制活動、頻率、負責單位、IUC／制度、Nature／Approach／Type、Inputs／Steps／Outputs
-- **自動拼湊**成符合公司現況的一段控制描述（Summary + Detailed）
-- 同一風險下若 **IUC／制度不同，自動分拆為不同控制點**；相同 IUC 則合併
+| 面向 | 說明 |
+|------|------|
+| 九大循環／風險三大屬性 | 可自訂標籤與內容 |
+| Form 4120SR 元素 | Nature／Approach／Type、Inputs／Steps／Outputs、Owner、頻率、IUC |
+| 自動拼湊 | 公司現況一段控制描述 |
+| IUC 分拆 | 同風險不同 IUC → 不同控制點 |
+| IUC／PBC 命名庫 | 客戶原名 ↔ 檢視後命名，設計時可套用 |
+| 範本庫 | 精選控制點可一鍵套用（可再擴充） |
+| RCM | **控制目標**與**控制活動**分欄，禁止混用 |
+| 訪談／CSA | 依元素拆出訪談題與自我評估步驟 |
+| 缺漏偵測 | 缺資訊／文件／目標活動混淆等 |
+| 草稿 | 本機 `data/session_draft.json` 儲存／載入 |
 
 ## 執行
 
 ```r
-# 建議先安裝：shiny, bslib, DT, jsonlite, shinyjs
 shiny::runApp("control-design-app")
 ```
 
-或於專案根目錄：
-
-```bash
-Rscript -e 'shiny::runApp("control-design-app", host="0.0.0.0", port=3838)'
-```
+依賴：`shiny`, `bslib`, `DT`, `jsonlite`
 
 ## 測試
 
 ```bash
 cd control-design-app && Rscript tests/test_assemble.R
 ```
-
-## 範本
-
-`templates/` 內含 Form 4120SR Word／Excel 參考檔。

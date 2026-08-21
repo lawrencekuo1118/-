@@ -16,6 +16,7 @@ source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
+source(file.path(root, "R", "cascade.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -122,6 +123,7 @@ check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
 
 # Jinglian RCM xlsx → library batch
 xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+jl <- list()
 if (file.exists(xlsx)) {
   jl <- import_rcm_xlsx_as_library(xlsx)
   check(length(jl) >= 20, sprintf("鯨鏈 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
@@ -136,6 +138,69 @@ if (file.exists(xlsx)) {
         "鯨鏈列目標/活動分欄或設計檢核標示")
 } else {
   message("SKIP: 鯨鏈 xlsx 不在 templates/")
+}
+
+# Cascade engine: cycle → sub → risk → objective → activity(single PD) → IUC
+check(identical(normalize_single_activity_type("預防性控制"), "預防性控制"), "單一預防屬性")
+check(identical(normalize_single_activity_type("偵測性 (Detective)"), "偵測性控制"), "單一偵測屬性")
+check(!activity_type_ok("預防＋偵測"), "混合屬性不允許")
+check(identical(next_rcm_control_id("EC-101", c("EC-101-01", "EC-101-03")), "EC-101-04"),
+      "控制編號自動順編")
+check(identical(next_rcm_control_id("EC-102", character()), "EC-102-01"), "空庫從 01 起編")
+
+if (length(jl)) {
+  rows <- library_controls_flat(jl, cycle = "電腦化資訊系統循環")
+  check(length(rows) >= 20, "cascade flat 列來自鯨鏈庫")
+  subs <- cascade_sub_process_choices(rows)
+  check(length(subs) >= 1, "循環下有候選子作業")
+  sub1 <- unname(subs)[[1]]
+  rows2 <- filter_cascade_rows(rows, sub_key = sub1)
+  risks <- cascade_risk_choices(rows2)
+  check(length(risks) >= 1, "子作業下有風險候選")
+  rk <- unname(risks)[[1]]
+  det <- cascade_risk_detail(rows2, rk)
+  check(nzchar(det$risk_description) || nzchar(det$risk_category) || length(det$attrs),
+        "選風險後可查屬性／描述")
+  rows3 <- filter_cascade_rows(rows2, risk_factor = rk)
+  objs <- cascade_objective_choices(rows3)
+  check(length(objs) >= 1, "風險對應控制目標候選")
+  obj1 <- unname(objs)[[1]]
+  rows4 <- filter_cascade_rows(rows3, objective = obj1)
+  acts <- cascade_activity_choices(rows4)
+  check(length(acts) >= 1, "目標對應控制活動候選")
+  # every activity choice encodes a single PD attribute
+  all_single <- all(vapply(unname(acts), function(k) {
+    activity_type_ok(parse_activity_key(k)$approach)
+  }, logical(1)))
+  check(all_single, "每個活動候選僅一種預防/偵測")
+  ak <- unname(acts)[[1]]
+  rows5 <- filter_cascade_rows(rows4, activity_key_sel = ak)
+  # IUC may be blank in Jinglian; custom path still allowed
+  iucs <- cascade_iuc_choices(rows5)
+  sel_incomplete <- list(cycle = "電腦化資訊系統循環")
+  check(!cascade_selection_ready(sel_incomplete)$ready, "未完成引導不可就緒")
+  akp <- parse_activity_key(ak)
+  sp <- parse_sub_process_key(sub1)
+  sel_full <- list(
+    cycle = "電腦化資訊系統循環",
+    sub_process_id = sp$id, sub_process = sp$name,
+    risk_factor = rk, control_objective = obj1,
+    control_activity = akp$activity, approach = akp$approach,
+    iuc_or_system = if (length(iucs)) unname(iucs)[[1]] else "自訂IUC-測試"
+  )
+  check(cascade_selection_ready(sel_full)$ready, "引導完成則就緒")
+  six_bad <- six_status_rules_check(list())
+  check(!six_bad$ok, "空控制六大未齊")
+  six_ok <- six_status_rules_check(list(
+    nature = "人工", approach = "預防性控制", frequency = "持續",
+    responsible_unit = "資訊部", iuc_or_system = "AD",
+    control_activity = "劃分職責"
+  ))
+  check(six_ok$ok, "六大控制項目就緒")
+  scaffold <- assemble_status_scaffold(modifyList(sel_full, list(
+    nature = "人工", frequency = "持續", responsible_unit = "資訊部"
+  )))
+  check(grepl("六大控制項目", scaffold), "現況草稿含六大規則")
 }
 
 if (fail > 0) quit(status = 1)

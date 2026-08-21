@@ -28,6 +28,7 @@ source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
+source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "draft_store.R"), local = TRUE)
 
 fill_inputs_from_ctrl <- function(session, ctrl) {
@@ -109,14 +110,6 @@ ui <- page_navbar(
       actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
     ),
     tags$hr(class = "my-2"),
-    tags$strong(class = "small", "引導選取（候選來自範本庫）"),
-    selectInput("cascade_sub", NULL, choices = c("② 子作業…" = "")),
-    selectInput("cascade_risk", NULL, choices = c("③ 風險因素…" = "")),
-    selectInput("cascade_objective", NULL, choices = c("④ 控制目標…" = "")),
-    selectInput("cascade_activity", NULL, choices = c("⑤ 控制活動…" = "")),
-    selectInput("cascade_iuc", NULL, choices = c("⑥ IUC／相關系統…" = "")),
-    actionButton("apply_cascade", "套用引導選取", class = "btn-sm btn-primary w-100"),
-    tags$hr(class = "my-2"),
     textInput("company", NULL, placeholder = "公司名稱"),
     tags$hr(class = "my-2"),
     tags$strong("草稿"),
@@ -138,22 +131,82 @@ ui <- page_navbar(
       col_widths = c(7, 5),
       card(
         full_screen = TRUE,
-        # ---- 依鯨鏈 RCM 標題列分組防呆 ----
+        card_header("引導設計（依序選取）"),
         p(
           class = "small text-muted mb-2",
-          "欄位依鯨鏈 RCM 標題列分組：",
-          strong("流程｜風險｜控制｜分析"),
-          "。", strong("控制目標 ≠ 控制活動"),
-          "；", strong("控制類型（人工/自動）≠ 控制活動類型（預防/偵測）"), "。"
+          "流程：", strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防/偵測）→ IUC"),
+          "；全部選定且六大控制項目就緒後，才可書寫", strong("公司現況"),
+          "。控制編號自動順編（如 EC-101-01）。"
+        ),
+        uiOutput("cascade_step_status"),
+        # Step 2: 子作業
+        selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
+        conditionalPanel(
+          "input.cascade_sub == '__custom__'",
+          layout_columns(
+            col_widths = c(4, 8),
+            textInput("custom_sub_id", NULL, placeholder = "子作業編號"),
+            textInput("custom_sub_name", NULL, placeholder = "子作業名稱")
+          )
+        ),
+        # Step 3: 風險
+        selectInput("cascade_risk", NULL, choices = c("③ 選擇風險因素…" = "")),
+        uiOutput("cascade_risk_detail"),
+        conditionalPanel(
+          "input.cascade_risk == '__custom__'",
+          textInput("custom_risk_factor", NULL, placeholder = "自訂風險因素"),
+          textAreaInput("custom_risk_desc", NULL, rows = 2, placeholder = "自訂風險描述"),
+          selectInput("custom_risk_category", NULL,
+                      choices = c("風險類別…" = "", RISK_CATEGORY_CHOICES))
+        ),
+        # Step 4: 目標
+        selectInput("cascade_objective", NULL, choices = c("④ 選擇控制目標…" = "")),
+        conditionalPanel(
+          "input.cascade_objective == '__custom__'",
+          textAreaInput("custom_objective", NULL, rows = 2, placeholder = "自訂控制目標（Why）")
+        ),
+        # Step 5: 活動（標示單一 PD）
+        selectInput("cascade_activity", NULL, choices = c("⑤ 選擇控制活動…" = "")),
+        conditionalPanel(
+          "input.cascade_activity == '__custom__'",
+          textAreaInput("custom_activity", NULL, rows = 2, placeholder = "自訂控制活動（How）"),
+          selectInput("custom_approach", NULL,
+                      choices = c("此活動之控制屬性（僅一種）…" = "", CONTROL_ACTIVITY_TYPE_PD)),
+          selectInput("custom_nature", NULL,
+                      choices = c("控制類型（人工/自動）…" = "", CONTROL_TYPE_MANUAL_AUTO)),
+          selectInput("custom_frequency", NULL, choices = c("頻率…" = "", FREQUENCY_CHOICES)),
+          textInput("custom_owner", NULL, placeholder = "流程負責單位")
+        ),
+        # Step 6: IUC
+        selectInput("cascade_iuc", NULL, choices = c("⑥ 選擇 IUC／相關系統…" = "")),
+        conditionalPanel(
+          "input.cascade_iuc == '__custom__'",
+          textInput("custom_iuc", NULL, placeholder = "自訂 IUC／相關系統名稱"),
+          checkboxInput("custom_iuc_save", "一併新增至 APP 範本庫／PBC", TRUE)
+        ),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("apply_cascade", "套用引導選取至表單", class = "btn-primary btn-sm"),
+          actionButton("save_custom_cascade", "將自訂項存入範本庫", class = "btn-outline-success btn-sm"),
+          actionButton("reset_cascade", "重設引導", class = "btn-outline-secondary btn-sm")
+        ),
+        uiOutput("auto_control_id_box"),
+        tags$hr(),
+        # ---- 依鯨鏈 RCM 標題列分組（由引導填入；現況欄受鎖）----
+        p(
+          class = "small text-muted mb-2",
+          "下方為 RCM 欄位（引導填入後可微調）。",
+          strong("控制目標 ≠ 控制活動"), "；",
+          strong("控制類型 ≠ 控制活動類型"), "。"
         ),
         accordion(
           id = "rcm_design_groups",
-          open = c("① 流程資訊", "② 風險資訊", "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）"),
+          open = c("① 流程資訊", "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）"),
           accordion_panel(
             "① 流程資訊",
             textInput("sub_process_id", NULL, placeholder = "子作業編號（例：EC-101）"),
             textInput("sub_process", NULL, placeholder = "子作業名稱"),
-            textInput("control_id", NULL, value = "", placeholder = "控制編號（空則自動 EC-101-01）")
+            textInput("control_id", NULL, value = "", placeholder = "控制編號（自動順編，可覆寫）")
           ),
           accordion_panel(
             "② 風險資訊",
@@ -168,7 +221,7 @@ ui <- page_navbar(
             textAreaInput("control_objective", NULL, rows = 2,
                           placeholder = "控制目標 Why：確保／防止…（結果，勿寫步驟）"),
             textAreaInput("control_activity", NULL, rows = 2,
-                          placeholder = "控制活動 How：誰＋動作＋表單／系統（勿重述目標；單一活動僅對應一種預防/偵測）"),
+                          placeholder = "控制活動 How：誰＋動作＋表單／系統（單一活動僅對應一種預防/偵測）"),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
@@ -185,16 +238,28 @@ ui <- page_navbar(
               col_widths = c(6, 6),
               selectInput("frequency", NULL,
                           choices = unique(c(FREQUENCY_CHOICES, "持續")),
-                          selected = FREQUENCY_CHOICES[[4]]),
+                          selected = "每季"),
               textInput("responsible_unit", NULL, placeholder = "流程負責單位")
             ),
             selectizeInput(
               "pbc_apply", NULL, choices = NULL, multiple = TRUE,
-              options = list(placeholder = "套用 IUC／PBC（原名→新名）→相關系統／文件")
+              options = list(placeholder = "套用 IUC／PBC（原名→新名）")
             ),
-            textAreaInput("iuc_or_system", NULL, rows = 1, placeholder = "相關系統／IUC（不同則分拆；無則可自訂並存庫）"),
-            textAreaInput("company_status", NULL, rows = 3,
-                          placeholder = "控制現況描述（選定目標／活動／IUC 後再書寫）"),
+            textAreaInput("iuc_or_system", NULL, rows = 1, placeholder = "相關系統／IUC（須由引導選擇或自訂入庫）"),
+            uiOutput("six_rules_box"),
+            uiOutput("company_status_lock_msg"),
+            # Hidden unlock flag driven by server
+            div(style = "display:none;", checkboxInput("status_unlocked", NULL, FALSE)),
+            conditionalPanel(
+              condition = "input.status_unlocked == true",
+              textAreaInput("company_status", NULL, rows = 5,
+                            placeholder = "控制現況描述（依六大控制項目書寫公司實際作法）"),
+              actionButton("fill_status_scaffold", "帶入六大規則草稿", class = "btn-sm btn-outline-primary mb-2")
+            ),
+            conditionalPanel(
+              condition = "input.status_unlocked != true",
+              helpText(class = "text-muted small", "（公司現況欄位將於引導＋六大就緒後顯示）")
+            ),
             textAreaInput("design_gap_note", NULL, rows = 2, placeholder = "控制設計差異說明"),
             layout_columns(
               col_widths = c(6, 6),
@@ -243,7 +308,7 @@ ui <- page_navbar(
         ),
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
-          actionButton("add_draft", "加入", class = "btn-primary btn-sm"),
+          actionButton("add_draft", "加入佇列＝預備 RCM 列", class = "btn-primary btn-sm"),
           actionButton("update_draft", "更新", class = "btn-sm"),
           actionButton("remove_draft", "刪除列", class = "btn-sm btn-outline-danger"),
           actionButton("generate_controls", "產生控制點＝RCM列", class = "btn-success btn-sm")
@@ -722,158 +787,378 @@ server <- function(input, output, session) {
     div(class = cls, tags$small(tags$strong("類型欄防呆："), tchk$msg))
   })
 
-  # ---- Cascade candidates from library (cycle → 子作業 → 風險 → 目標 → 活動 → IUC) ----
-  cascade_pool <- reactive({
-    items <- filter_library(lib(), cycle_filter = input$cycle, query = NULL)
-    lapply(items, function(it) it$control)
+  # ---- Forced cascade: cycle → 子作業 → 風險 → 目標 → 活動(單一PD) → IUC ----
+  cascade_rows <- reactive({
+    library_controls_flat(lib(), cycle = input$cycle)
   })
 
-  observe({
-    pool <- cascade_pool()
-    subs <- unique(vapply(pool, function(c) {
-      paste(c$sub_process_id %||% "", c$sub_process %||% "", sep = "||")
-    }, character(1)))
-    subs <- subs[nzchar(gsub("\\|", "", subs))]
-    labels <- vapply(subs, function(k) {
-      parts <- strsplit(k, "\\|\\|", perl = TRUE)[[1]]
-      sprintf("%s｜%s", parts[[1]], if (length(parts) > 1) parts[[2]] else "")
-    }, character(1))
-    ch <- c("② 子作業…" = "", stats::setNames(subs, labels))
-    updateSelectInput(session, "cascade_sub", choices = ch,
-                      selected = if ((input$cascade_sub %||% "") %in% subs) input$cascade_sub else "")
-  })
-
-  observe({
-    pool <- cascade_pool()
+  resolve_cascade_selection <- function() {
     sub_key <- input$cascade_sub %||% ""
-    if (nzchar(sub_key)) {
-      parts <- strsplit(sub_key, "\\|\\|", perl = TRUE)[[1]]
-      spid <- parts[[1]]
-      spn <- if (length(parts) > 1) parts[[2]] else ""
-      pool <- Filter(function(c) {
-        identical(c$sub_process_id %||% "", spid) ||
-          (nzchar(spn) && identical(c$sub_process %||% "", spn))
-      }, pool)
+    sp_id <- ""; sp_name <- ""
+    if (identical(sub_key, "__custom__")) {
+      sp_id <- trimws(input$custom_sub_id %||% "")
+      sp_name <- trimws(input$custom_sub_name %||% "")
+    } else if (nzchar(sub_key)) {
+      sp <- parse_sub_process_key(sub_key)
+      sp_id <- sp$id; sp_name <- sp$name
     }
-    risks <- unique(vapply(pool, function(c) c$risk_factor %||% c$risk_name %||% "", character(1)))
-    risks <- risks[nzchar(risks)]
-    ch <- c("③ 風險因素…" = "", stats::setNames(risks, risks), "＋自訂新增" = "__custom__")
-    updateSelectInput(session, "cascade_risk", choices = ch,
-                      selected = if ((input$cascade_risk %||% "") %in% c(risks, "__custom__")) input$cascade_risk else "")
-  })
 
-  observe({
-    pool <- cascade_pool()
     rk <- input$cascade_risk %||% ""
-    if (nzchar(rk) && !identical(rk, "__custom__")) {
-      pool <- Filter(function(c) {
-        identical(c$risk_factor %||% "", rk) || identical(c$risk_name %||% "", rk)
-      }, pool)
+    risk_factor <- ""; risk_desc <- ""; risk_cat <- ""
+    if (identical(rk, "__custom__")) {
+      risk_factor <- trimws(input$custom_risk_factor %||% "")
+      risk_desc <- trimws(input$custom_risk_desc %||% "")
+      risk_cat <- input$custom_risk_category %||% ""
+    } else if (nzchar(rk)) {
+      risk_factor <- rk
+      det <- cascade_risk_detail(filter_cascade_rows(cascade_rows(), sub_key = if (!identical(sub_key, "__custom__")) sub_key else NULL), rk)
+      risk_desc <- det$risk_description
+      risk_cat <- det$risk_category
     }
-    objs <- unique(vapply(pool, function(c) c$control_objective %||% "", character(1)))
-    objs <- objs[nzchar(objs)]
-    labels <- vapply(objs, function(o) {
-      if (nchar(o) > 48) paste0(substr(o, 1, 48), "…") else o
-    }, character(1))
-    ch <- c("④ 控制目標…" = "", stats::setNames(objs, labels), "＋自訂新增" = "__custom__")
+
+    obj_sel <- input$cascade_objective %||% ""
+    objective <- if (identical(obj_sel, "__custom__")) {
+      trimws(input$custom_objective %||% "")
+    } else obj_sel
+
+    act_sel <- input$cascade_activity %||% ""
+    activity <- ""; approach <- ""; nature <- ""; frequency <- ""; owner <- ""
+    if (identical(act_sel, "__custom__")) {
+      activity <- trimws(input$custom_activity %||% "")
+      approach <- normalize_single_activity_type(input$custom_approach)
+      nature <- normalize_control_type_manual_auto(input$custom_nature)
+      frequency <- input$custom_frequency %||% ""
+      owner <- trimws(input$custom_owner %||% "")
+    } else if (nzchar(act_sel)) {
+      ak <- parse_activity_key(act_sel)
+      activity <- ak$activity
+      approach <- ak$approach
+    }
+
+    iuc_sel <- input$cascade_iuc %||% ""
+    iuc <- if (identical(iuc_sel, "__custom__")) {
+      trimws(input$custom_iuc %||% "")
+    } else iuc_sel
+
+    # Enrich from matched library row when not custom
+    rows <- filter_cascade_rows(
+      cascade_rows(),
+      sub_key = if (!identical(sub_key, "__custom__") && nzchar(sub_key)) sub_key else NULL,
+      risk_factor = if (!identical(rk, "__custom__") && nzchar(rk)) rk else NULL,
+      objective = if (!identical(obj_sel, "__custom__") && nzchar(obj_sel)) obj_sel else NULL,
+      activity_key_sel = if (!identical(act_sel, "__custom__") && nzchar(act_sel)) act_sel else NULL
+    )
+    matched <- if (length(rows)) rows[[1]] else NULL
+    if (!is.null(matched)) {
+      if (!nzchar(nature)) nature <- matched$nature
+      if (!nzchar(frequency)) frequency <- matched$frequency
+      if (!nzchar(owner)) owner <- matched$responsible_unit
+      if (!nzchar(approach)) approach <- matched$approach
+    }
+
+    list(
+      cycle = input$cycle %||% "",
+      sub_process_id = sp_id,
+      sub_process = sp_name,
+      risk_factor = risk_factor,
+      risk_name = risk_factor,
+      risk_description = risk_desc,
+      risk_category = risk_cat,
+      control_objective = objective,
+      control_activity = activity,
+      approach = approach,
+      nature = nature,
+      frequency = frequency,
+      responsible_unit = owner,
+      iuc_or_system = iuc,
+      related_system = iuc
+    )
+  }
+
+  observe({
+    rows <- cascade_rows()
+    ch_sub <- cascade_sub_process_choices(rows)
+    ch <- c("② 選擇子作業…" = "", ch_sub, "＋自訂新增子作業" = "__custom__")
+    cur <- input$cascade_sub %||% ""
+    updateSelectInput(session, "cascade_sub", choices = ch,
+                      selected = if (cur %in% unname(ch)) cur else "")
+  })
+
+  observe({
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    } else if (!nzchar(sub_key)) {
+      rows <- list()
+    }
+    ch_risk <- cascade_risk_choices(rows)
+    ch <- c("③ 選擇風險因素…" = "", ch_risk, "＋自訂新增風險" = "__custom__")
+    cur <- input$cascade_risk %||% ""
+    updateSelectInput(session, "cascade_risk", choices = ch,
+                      selected = if (cur %in% unname(ch)) cur else "")
+  })
+
+  output$cascade_risk_detail <- renderUI({
+    rk <- input$cascade_risk %||% ""
+    if (!nzchar(rk) || identical(rk, "__custom__")) return(NULL)
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    det <- cascade_risk_detail(rows, rk)
+    div(
+      class = "alert alert-info py-2 mb-2 small",
+      tags$strong("風險屬性／描述："),
+      if (length(det$attrs)) tags$ul(lapply(det$attrs, tags$li)) else tags$span("（無屬性細節）"),
+      tags$div(tags$em(det$risk_description %||% ""))
+    )
+  })
+
+  observe({
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    rk <- input$cascade_risk %||% ""
+    if (!nzchar(rk)) {
+      updateSelectInput(session, "cascade_objective",
+                        choices = c("④ 選擇控制目標…" = ""), selected = "")
+      return()
+    }
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    if (!identical(rk, "__custom__")) {
+      rows <- filter_cascade_rows(rows, risk_factor = rk)
+    }
+    ch_obj <- cascade_objective_choices(rows)
+    ch <- c("④ 選擇控制目標…" = "", ch_obj, "＋自訂新增目標" = "__custom__")
+    cur <- input$cascade_objective %||% ""
     updateSelectInput(session, "cascade_objective", choices = ch,
-                      selected = if ((input$cascade_objective %||% "") %in% c(objs, "__custom__")) input$cascade_objective else "")
+                      selected = if (cur %in% unname(ch)) cur else "")
   })
 
   observe({
-    pool <- cascade_pool()
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    rk <- input$cascade_risk %||% ""
     obj <- input$cascade_objective %||% ""
-    if (nzchar(obj) && !identical(obj, "__custom__")) {
-      pool <- Filter(function(c) identical(c$control_objective %||% "", obj), pool)
+    if (!nzchar(obj)) {
+      updateSelectInput(session, "cascade_activity",
+                        choices = c("⑤ 選擇控制活動…" = ""), selected = "")
+      return()
     }
-    acts <- unique(vapply(pool, function(c) {
-      paste(c$control_activity %||% "", normalize_control_activity_type_pd(c$approach %||% c$control_activity_type), sep = "||")
-    }, character(1)))
-    acts <- acts[nzchar(gsub("\\|", "", acts))]
-    labels <- vapply(acts, function(k) {
-      parts <- strsplit(k, "\\|\\|", perl = TRUE)[[1]]
-      act <- parts[[1]]
-      pd <- if (length(parts) > 1) parts[[2]] else ""
-      short <- if (nchar(act) > 40) paste0(substr(act, 1, 40), "…") else act
-      sprintf("[%s] %s", if (nzchar(pd)) pd else "屬性未定", short)
-    }, character(1))
-    ch <- c("⑤ 控制活動…" = "", stats::setNames(acts, labels), "＋自訂新增" = "__custom__")
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    if (nzchar(rk) && !identical(rk, "__custom__")) {
+      rows <- filter_cascade_rows(rows, risk_factor = rk)
+    }
+    if (!identical(obj, "__custom__")) {
+      rows <- filter_cascade_rows(rows, objective = obj)
+    }
+    ch_act <- cascade_activity_choices(rows)
+    ch <- c("⑤ 選擇控制活動（標示單一預防/偵測）…" = "", ch_act,
+            "＋自訂新增活動" = "__custom__")
+    cur <- input$cascade_activity %||% ""
     updateSelectInput(session, "cascade_activity", choices = ch,
-                      selected = if ((input$cascade_activity %||% "") %in% c(acts, "__custom__")) input$cascade_activity else "")
+                      selected = if (cur %in% unname(ch)) cur else "")
   })
 
   observe({
-    pool <- cascade_pool()
-    iucs <- unique(vapply(pool, function(c) c$related_system %||% c$iuc_or_system %||% "", character(1)))
-    iucs <- iucs[nzchar(iucs)]
-    # also from PBC registry
-    pbc_names <- unique(c(pbc_reg()$reviewed_name, pbc_reg()$client_pbc_name))
-    pbc_names <- pbc_names[nzchar(as.character(pbc_names))]
-    all_iuc <- unique(c(iucs, as.character(pbc_names)))
-    ch <- c("⑥ IUC／相關系統…" = "", stats::setNames(all_iuc, all_iuc), "＋自訂新增" = "__custom__")
+    rows <- cascade_rows()
+    act <- input$cascade_activity %||% ""
+    # IUC choices: filter by prior selection when possible
+    sub_key <- input$cascade_sub %||% ""
+    rk <- input$cascade_risk %||% ""
+    obj <- input$cascade_objective %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    if (nzchar(rk) && !identical(rk, "__custom__")) {
+      rows <- filter_cascade_rows(rows, risk_factor = rk)
+    }
+    if (nzchar(obj) && !identical(obj, "__custom__")) {
+      rows <- filter_cascade_rows(rows, objective = obj)
+    }
+    if (nzchar(act) && !identical(act, "__custom__")) {
+      rows <- filter_cascade_rows(rows, activity_key_sel = act)
+    }
+    ch_iuc <- cascade_iuc_choices(rows, pbc_df = pbc_reg())
+    ch <- c("⑥ 選擇 IUC／相關系統…" = "", ch_iuc, "＋自訂新增 IUC" = "__custom__")
+    cur <- input$cascade_iuc %||% ""
     updateSelectInput(session, "cascade_iuc", choices = ch,
-                      selected = if ((input$cascade_iuc %||% "") %in% c(all_iuc, "__custom__")) input$cascade_iuc else "")
+                      selected = if (cur %in% unname(ch)) cur else "")
+  })
+
+  output$cascade_step_status <- renderUI({
+    sel <- resolve_cascade_selection()
+    ready <- cascade_selection_ready(sel)
+    steps <- c(
+      sprintf("①循環：%s", if (nzchar(sel$cycle)) "✓" else "○"),
+      sprintf("②子作業：%s", if (nzchar(sel$sub_process_id) || nzchar(sel$sub_process)) "✓" else "○"),
+      sprintf("③風險：%s", if (nzchar(sel$risk_factor)) "✓" else "○"),
+      sprintf("④目標：%s", if (nzchar(sel$control_objective)) "✓" else "○"),
+      sprintf("⑤活動：%s", if (nzchar(sel$control_activity) && activity_type_ok(sel$approach)) "✓" else "○"),
+      sprintf("⑥IUC：%s", if (nzchar(sel$iuc_or_system)) "✓" else "○")
+    )
+    cls <- if (isTRUE(ready$ready)) "alert alert-success py-1 mb-2 small" else "alert alert-secondary py-1 mb-2 small"
+    div(class = cls, paste(steps, collapse = " ｜ "),
+        if (!ready$ready) tags$span(class = "text-muted", " — 完成後才可書寫公司現況"))
+  })
+
+  output$auto_control_id_box <- renderUI({
+    sel <- resolve_cascade_selection()
+    spid <- sel$sub_process_id
+    if (!nzchar(spid)) return(NULL)
+    ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    nid <- next_rcm_control_id(spid, ids)
+    div(class = "small text-muted mb-2",
+        "自動控制編號預覽：", tags$code(nid),
+        "（套用引導或加入佇列時寫入）")
+  })
+
+  output$six_rules_box <- renderUI({
+    d <- current_draft_from_inputs()
+    chk <- six_status_rules_check(d)
+    if (isTRUE(chk$ok)) {
+      div(class = "alert alert-success py-1 mb-2 small", "六大控制項目就緒，可書寫公司現況。")
+    } else {
+      div(class = "alert alert-warning py-1 mb-2 small",
+          "六大控制項目未齊：", paste(chk$missing, collapse = "、"))
+    }
+  })
+
+  output$company_status_lock_msg <- renderUI({
+    sel <- resolve_cascade_selection()
+    d <- current_draft_from_inputs()
+    cas <- cascade_selection_ready(sel)
+    six <- six_status_rules_check(d)
+    unlocked <- isTRUE(cas$ready) && isTRUE(six$ok)
+    updateCheckboxInput(session, "status_unlocked", value = unlocked)
+    if (unlocked) {
+      div(class = "alert alert-success py-1 mb-2 small", "公司現況欄已解鎖，請依六大控制項目書寫。")
+    } else {
+      div(
+        class = "alert alert-secondary py-2 mb-2 small",
+        tags$strong("公司現況欄位尚未顯示"),
+        tags$br(),
+        "請先完成引導選取（含 IUC）並補齊六大控制項目。",
+        if (!cas$ready) tags$div(sprintf("引導缺：%s", paste(cas$missing, collapse = ", "))),
+        if (!six$ok) tags$div(sprintf("六大缺：%s", paste(six$missing, collapse = "、")))
+      )
+    }
+  })
+
+  observeEvent(input$fill_status_scaffold, {
+    sel <- resolve_cascade_selection()
+    d <- current_draft_from_inputs()
+    cas <- cascade_selection_ready(sel)
+    six <- six_status_rules_check(d)
+    if (!isTRUE(cas$ready) || !isTRUE(six$ok)) {
+      return(showNotification("請先完成引導與六大控制項目", type = "warning"))
+    }
+    updateTextAreaInput(session, "company_status", value = assemble_status_scaffold(d))
+  })
+
+  # Block empty status add when cascade not ready — soft gate on typing not needed;
+  # hard gate on add_draft already requires six rules.
+
+  observeEvent(input$reset_cascade, {
+    updateSelectInput(session, "cascade_sub", selected = "")
+    updateSelectInput(session, "cascade_risk", selected = "")
+    updateSelectInput(session, "cascade_objective", selected = "")
+    updateSelectInput(session, "cascade_activity", selected = "")
+    updateSelectInput(session, "cascade_iuc", selected = "")
   })
 
   observeEvent(input$apply_cascade, {
-    pool <- cascade_pool()
-    sub_key <- input$cascade_sub %||% ""
-    if (nzchar(sub_key)) {
-      parts <- strsplit(sub_key, "\\|\\|", perl = TRUE)[[1]]
-      updateTextInput(session, "sub_process_id", value = parts[[1]])
-      if (length(parts) > 1) updateTextInput(session, "sub_process", value = parts[[2]])
-      pool <- Filter(function(c) {
-        identical(c$sub_process_id %||% "", parts[[1]]) ||
-          (length(parts) > 1 && identical(c$sub_process %||% "", parts[[2]]))
-      }, pool)
+    sel <- resolve_cascade_selection()
+    ready <- cascade_selection_ready(sel)
+    if (!isTRUE(ready$ready)) {
+      return(showNotification(
+        paste0("引導尚未完成：", paste(ready$missing, collapse = ", ")),
+        type = "warning", duration = 6
+      ))
     }
-    rk <- input$cascade_risk %||% ""
-    if (nzchar(rk) && !identical(rk, "__custom__")) {
-      updateTextInput(session, "risk_factor", value = rk)
-      updateTextInput(session, "risk_name", value = rk)
-      hit <- Filter(function(c) identical(c$risk_factor %||% "", rk) || identical(c$risk_name %||% "", rk), pool)
-      if (length(hit)) {
-        fill_inputs_from_ctrl(session, hit[[1]])
-        pool <- hit
+    if (!activity_type_ok(sel$approach)) {
+      return(showNotification("控制活動必須只對應一種屬性（預防性或偵測性）", type = "error"))
+    }
+
+    # Match full library control when possible
+    matched <- match_cascade_control(cascade_rows(), sel)
+    if (!is.null(matched) && is.list(matched)) {
+      # matched may be flat row or raw control
+      ctrl <- if (!is.null(matched$raw)) matched$raw else matched
+      if (!is.null(ctrl$control_objective) || !is.null(ctrl$risk_name) || !is.null(ctrl$cycle)) {
+        fill_inputs_from_ctrl(session, ctrl)
       }
     }
-    obj <- input$cascade_objective %||% ""
-    if (nzchar(obj) && !identical(obj, "__custom__")) {
-      updateTextAreaInput(session, "control_objective", value = obj)
-      pool <- Filter(function(c) identical(c$control_objective %||% "", obj), pool)
-      if (length(pool) == 1L) fill_inputs_from_ctrl(session, pool[[1]])
+
+    updateTextInput(session, "sub_process_id", value = sel$sub_process_id)
+    updateTextInput(session, "sub_process", value = sel$sub_process)
+    updateTextInput(session, "risk_factor", value = sel$risk_factor)
+    updateTextInput(session, "risk_name", value = sel$risk_name)
+    if (nzchar(sel$risk_description)) {
+      updateTextAreaInput(session, "risk_description", value = sel$risk_description)
     }
-    act_key <- input$cascade_activity %||% ""
-    if (nzchar(act_key) && !identical(act_key, "__custom__")) {
-      parts <- strsplit(act_key, "\\|\\|", perl = TRUE)[[1]]
-      updateTextAreaInput(session, "control_activity", value = parts[[1]])
-      if (length(parts) > 1 && nzchar(parts[[2]])) {
-        updateSelectInput(session, "approach", selected = parts[[2]])
-      }
-      hit <- Filter(function(c) identical(c$control_activity %||% "", parts[[1]]), pool)
-      if (length(hit)) {
-        # preserve OA already set; fill remaining Jinglian fields
-        fill_inputs_from_ctrl(session, hit[[1]])
-        updateTextAreaInput(session, "control_objective", value = obj)
-        updateTextAreaInput(session, "control_activity", value = parts[[1]])
-        if (length(parts) > 1 && nzchar(parts[[2]])) {
-          updateSelectInput(session, "approach", selected = parts[[2]])
-        }
-      }
+    if (nzchar(sel$risk_category)) {
+      updateSelectInput(session, "risk_category", selected = sel$risk_category)
     }
-    iuc <- input$cascade_iuc %||% ""
-    if (nzchar(iuc) && !identical(iuc, "__custom__")) {
-      updateTextAreaInput(session, "iuc_or_system", value = iuc)
+    updateTextAreaInput(session, "control_objective", value = sel$control_objective)
+    updateTextAreaInput(session, "control_activity", value = sel$control_activity)
+    if (nzchar(sel$approach)) updateSelectInput(session, "approach", selected = sel$approach)
+    if (nzchar(sel$nature)) updateSelectInput(session, "nature", selected = sel$nature)
+    if (nzchar(sel$frequency)) {
+      updateSelectInput(session, "frequency",
+                        choices = unique(c(FREQUENCY_CHOICES, sel$frequency)),
+                        selected = sel$frequency)
     }
-    # auto control id from sub_process_id
-    spid <- input$sub_process_id %||% {
-      if (nzchar(sub_key)) strsplit(sub_key, "\\|\\|", perl = TRUE)[[1]][[1]] else ""
+    if (nzchar(sel$responsible_unit)) {
+      updateTextInput(session, "responsible_unit", value = sel$responsible_unit)
     }
-    if (nzchar(spid) && !nzchar(trimws(input$control_id %||% ""))) {
-      n <- length(controls()) + length(drafts()) + 1L
-      updateTextInput(session, "control_id", value = sprintf("%s-%02d", spid, n))
+    updateTextAreaInput(session, "iuc_or_system", value = sel$iuc_or_system)
+
+    # Auto RCM control id
+    ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    nid <- next_rcm_control_id(sel$sub_process_id, ids)
+    updateTextInput(session, "control_id", value = nid)
+
+    # Custom IUC → optional save to PBC / library
+    if (identical(input$cascade_iuc, "__custom__") && isTRUE(input$custom_iuc_save) &&
+        nzchar(sel$iuc_or_system)) {
+      tryCatch({
+        reg <- upsert_pbc(pbc_reg(), list(
+          client_pbc_name = sel$iuc_or_system,
+          reviewed_name = sel$iuc_or_system,
+          iuc_or_system = sel$iuc_or_system,
+          cycle = sel$cycle,
+          notes = "引導自訂 IUC"
+        ))
+        pbc_reg(reg)
+        persist_pbc(reg)
+        refresh_pbc_choices()
+      }, error = function(e) NULL)
     }
-    showNotification("已套用引導選取；請補寫控制現況描述", type = "message")
+
+    showNotification(
+      sprintf("已套用引導；控制編號 %s。六大就緒後可書寫公司現況。", nid),
+      type = "message"
+    )
+  })
+
+  observeEvent(input$save_custom_cascade, {
+    sel <- resolve_cascade_selection()
+    if (!nzchar(sel$control_objective) || !nzchar(sel$control_activity)) {
+      return(showNotification("請至少具備控制目標與控制活動再存庫", type = "warning"))
+    }
+    if (!activity_type_ok(sel$approach)) {
+      return(showNotification("自訂活動須指定單一預防/偵測屬性", type = "error"))
+    }
+    item <- custom_cascade_to_library_item(sel, tags = c("自訂新增", "引導"))
+    lib(persist_lib(upsert_library_item(lib(), item)))
+    refresh_lib_choices()
+    showNotification(paste("已存入範本庫", item$library_id), type = "message")
   })
 
   observeEvent(input$import_jinglian_seed, {
@@ -913,12 +1198,14 @@ server <- function(input, output, session) {
     gaps <- detect_design_gaps(d)
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
     ready <- is_rcm_row_ready(d)
-    if (isTRUE(ready$ready) && isTRUE(chk$ok)) {
+    six <- six_status_rules_check(d)
+    if (isTRUE(ready$ready) && isTRUE(chk$ok) && isTRUE(six$ok)) {
       div(class = "alert alert-success py-1 mb-2",
           "可寫入 RCM 一列｜", format_oa_check_html(chk))
     } else {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
       summary <- if (!isTRUE(chk$ok)) chk$msg
+      else if (!isTRUE(six$ok)) paste0("六大未齊：", paste(six$missing, collapse = "、"))
       else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
       else paste(gaps$gap_item, collapse = "；")
       div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM：", summary))
@@ -938,13 +1225,27 @@ server <- function(input, output, session) {
     if (!isTRUE(tchk$ok)) {
       return(showNotification(paste0("類型欄位防呆：", tchk$msg), type = "error", duration = 8))
     }
+    if (!activity_type_ok(d$approach)) {
+      return(showNotification("每個控制活動只能對應一種屬性（預防性或偵測性）", type = "error"))
+    }
+    six <- six_status_rules_check(d)
+    if (!isTRUE(six$ok)) {
+      return(showNotification(
+        paste0("六大控制項目未齊，無法加入：", paste(six$missing, collapse = "、")),
+        type = "error", duration = 8
+      ))
+    }
     d$draft_id <- next_id()
     if (!nzchar(trimws(d$control_id))) {
-      d$control_id <- derive_control_id(d, length(drafts()) + 1L)
+      ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+      d$control_id <- next_rcm_control_id(d$sub_process_id %||% derive_sub_process_id(d, 1L), ids)
     }
     drafts(c(drafts(), list(d)))
     next_id(next_id() + 1L)
-    updateTextInput(session, "control_id", value = "")
+    # preview next id
+    ids2 <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    updateTextInput(session, "control_id",
+                    value = next_rcm_control_id(d$sub_process_id, ids2))
     if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
@@ -1000,11 +1301,16 @@ server <- function(input, output, session) {
     risk_keys <- vapply(ds, function(d) paste(d$cycle, d$risk_name, sep = "||"), "")
     groups <- split(seq_along(ds), risk_keys)
     result <- list()
-    seq_no <- 1L
+    used_ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
     for (gk in names(groups)) {
       for (pt in split_controls_by_iuc(ds[groups[[gk]]])) {
-        pt$control_id <- derive_control_id(pt, seq_no)
-        pt$risk_id <- derive_risk_id(pt, seq_no)
+        spid <- pt$sub_process_id %||% derive_sub_process_id(pt, length(result) + 1L)
+        pt$sub_process_id <- spid
+        if (!nzchar(trimws(pt$control_id %||% "")) || grepl("^CD-", pt$control_id)) {
+          pt$control_id <- next_rcm_control_id(spid, used_ids)
+        }
+        used_ids <- c(used_ids, pt$control_id)
+        pt$risk_id <- derive_risk_id(pt, length(result) + 1L)
         if (is_blank(pt$company_status) || !nzchar(trimws(pt$company_status %||% ""))) {
           pt$company_status <- assemble_control_paragraph(pt)
         }
@@ -1013,7 +1319,6 @@ server <- function(input, output, session) {
         pt$validation <- validate_control_design(pt)
         pt$rcm_ready <- is_rcm_row_ready(pt)
         result[[length(result) + 1]] <- pt
-        seq_no <- seq_no + 1L
       }
     }
     controls(result)

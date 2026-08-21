@@ -409,33 +409,42 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "訪談／CSA",
+    "① 訪談",
     layout_columns(
       col_widths = c(3, 9),
       card(
+        p(class = "small text-muted",
+          strong("優先：訪談問題"), "（對齊已定稿 RCM 列）。勾選元素後下載題綱。"),
         selectizeInput(
           "worksheet_controls", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "控制點（空＝全部）")
+          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
         ),
         checkboxGroupInput("interview_elements", "訪談元素",
                            choices = DESIGN_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS),
+        actionButton("ws_select_core_iv", "訪談核心元素", class = "btn-sm btn-primary"),
+        uiOutput("interview_status")
+      ),
+      card(
+        DTOutput("interview_table"),
+        downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-sm")
+      )
+    )
+  ),
+  nav_panel(
+    "② CSA",
+    layout_columns(
+      col_widths = c(3, 9),
+      card(
+        p(class = "small text-muted",
+          "在訪談＋RCM 定稿後設計 CSA 測試步驟（測試程序／PBC／預期結果）。"),
         checkboxGroupInput("csa_elements", "CSA 元素",
                            choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
-        div(
-          class = "d-flex gap-1 flex-wrap",
-          actionButton("ws_select_core_iv", "訪談核心", class = "btn-sm"),
-          actionButton("ws_select_core_csa", "CSA 核心", class = "btn-sm")
-        )
+        actionButton("ws_select_core_csa", "CSA 核心元素", class = "btn-sm"),
+        uiOutput("csa_status")
       ),
-      navset_card_underline(
-        nav_panel(
-          "訪談", DTOutput("interview_table"),
-          downloadButton("download_interview", "下載", class = "btn-sm")
-        ),
-        nav_panel(
-          "CSA", DTOutput("csa_table"),
-          downloadButton("download_csa", "下載", class = "btn-sm")
-        )
+      card(
+        DTOutput("csa_table"),
+        downloadButton("download_csa", "下載 CSA 測試步驟 CSV", class = "btn-sm")
       )
     )
   )
@@ -1593,13 +1602,28 @@ server <- function(input, output, session) {
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
   })
+  output$interview_status <- renderUI({
+    cs <- selected_worksheet_controls()
+    n <- length(Filter(function(c) isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready), cs))
+    iv <- controls_to_interview(cs, input$interview_elements, finalized_only = TRUE)
+    tags$small(class = "text-muted",
+               sprintf("已定稿 RCM %d 列 → 訪談題 %d 則", n, nrow(iv)))
+  })
+  output$csa_status <- renderUI({
+    cs <- selected_worksheet_controls()
+    csa <- controls_to_csa(cs, input$csa_elements, finalized_only = TRUE)
+    tags$small(class = "text-muted",
+               sprintf("CSA 測試步驟 %d 列（僅已定稿 RCM）", nrow(csa)))
+  })
   output$interview_table <- renderDT({
-    datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements),
-              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+    datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
+                                    finalized_only = TRUE),
+              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$csa_table <- renderDT({
-    datatable(controls_to_csa(selected_worksheet_controls(), input$csa_elements),
-              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+    datatable(controls_to_csa(selected_worksheet_controls(), input$csa_elements,
+                              finalized_only = TRUE),
+              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$gap_table <- renderDT({
     datatable(detect_gaps_many(controls()), rownames = FALSE,
@@ -1646,16 +1670,18 @@ server <- function(input, output, session) {
     content = function(file) write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")
   )
   output$download_interview <- downloadHandler(
-    filename = function() "interview.csv",
+    filename = function() sprintf("interview-%s.csv", format(Sys.time(), "%Y%m%d")),
     content = function(file) {
-      write.csv(controls_to_interview(selected_worksheet_controls(), input$interview_elements),
+      write.csv(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
+                                      finalized_only = TRUE),
                 file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )
   output$download_csa <- downloadHandler(
-    filename = function() "csa.csv",
+    filename = function() sprintf("csa-teststeps-%s.csv", format(Sys.time(), "%Y%m%d")),
     content = function(file) {
-      write.csv(controls_to_csa(selected_worksheet_controls(), input$csa_elements),
+      write.csv(controls_to_csa(selected_worksheet_controls(), input$csa_elements,
+                                finalized_only = TRUE),
                 file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )

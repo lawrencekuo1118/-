@@ -127,11 +127,27 @@ check(!isTRUE(fin_bad$ok), "未完成設計不可定稿為 RCM 列")
 
 iv <- control_to_interview(d1, elements = c("control_objective", "iuc"))
 check(nrow(iv) == 2L, "訪談可依元素過濾")
+check(all(c("控制編號", "訪談問題", "預期佐證_PBC", "受訪者回答") %in% names(iv)),
+      "訪談工作底稿含標準欄位")
+check(identical(as.character(iv[["控制編號"]][1]), derive_control_id(d1, 1L)),
+      "訪談對齊控制編號")
+
+# finalized-only: unsigned control excluded from multi helper when not ready
+not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))
+fin_ok <- finalize_control_as_rcm_row(d1, existing_ids = character())$control
+iv_multi <- controls_to_interview(list(fin_ok, not_ready), finalized_only = TRUE)
+check(all(iv_multi[["控制編號"]] == fin_ok$control_id), "訪談僅取已定稿 RCM 列")
 
 csa <- control_to_csa(d1, elements = c("steps", "iuc", "outputs"))
-check(all(c("測試程序", "所需文件_PBC", "預期結果") %in% names(csa)), "CSA 含測試步驟設計欄位")
+check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號") %in% names(csa)),
+      "CSA 含測試步驟設計欄位")
 check(nrow(csa) >= 3, "CSA 依元素產製多個測試步驟")
-check(any(csa[["元素"]] == "IUC／制度"), "CSA 含 IUC 測試步驟")
+check(any(csa[["元素"]] == "IUC／相關系統"), "CSA 含 IUC 測試步驟")
+csa_multi <- controls_to_csa(list(fin_ok, not_ready), finalized_only = TRUE)
+check(all(csa_multi[["控制編號"]] == fin_ok$control_id), "CSA 僅取已定稿 RCM 列")
+# Phase order evidence: interview columns ready independently of CSA
+check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) >= 5,
+      "訪談核心元素可產出完整題綱")
 
 # PBC
 reg <- empty_pbc_registry()

@@ -3,26 +3,32 @@
 # 完成一筆控制點設計 = 完成 RCM 一列
 
 # ---- Selectable design elements ----
+# Priority: 訪談問題 + RCM 控制點設計 first; CSA second
 DESIGN_ELEMENTS <- c(
   risk = "循環／風險",
-  risk_attributes = "風險三大屬性",
+  risk_attributes = "風險三大屬性／類別",
   control_objective = "控制目標",
   control_activity = "控制活動",
+  control_types = "控制類型／活動類型",
   frequency_owner = "頻率／負責單位",
-  iuc = "IUC／制度",
-  nature_approach_type = "Nature／Approach／Type",
+  iuc = "IUC／相關系統",
+  company_status = "控制現況描述",
+  design_gap = "控制設計差異",
+  nature_approach_type = "Nature／Approach／Type（4120SR）",
   inputs = "Inputs（投入）",
   steps = "Steps（執行步驟）",
-  outputs = "Outputs（產出／軌跡）",
+  outputs = "Outputs／相關文件",
   exception = "例外／調查門檻",
   assertion_account = "科目／聲明"
 )
 
+# Phase-1 interview core (對齊 RCM 定稿列)
 DEFAULT_INTERVIEW_ELEMENTS <- c(
-  "risk", "control_objective", "control_activity",
-  "frequency_owner", "iuc", "inputs", "steps", "outputs", "exception"
+  "risk", "risk_attributes", "control_objective", "control_activity",
+  "control_types", "frequency_owner", "iuc", "company_status", "outputs"
 )
 
+# Phase-2 CSA (after interview + RCM)
 DEFAULT_CSA_ELEMENTS <- c(
   "control_objective", "control_activity", "steps",
   "iuc", "outputs", "exception", "frequency_owner"
@@ -236,80 +242,126 @@ rcm_group_for_column <- function(col) {
   "其他"
 }
 
-# ---- Interview ----
+# ---- Interview (Phase-1: prioritize with RCM) ----
 interview_element_bank <- function(ctrl) {
+  risk_label <- nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")
+  risk_desc <- nzchar_or(ctrl$risk_description, "（設計尚未填風險描述）")
+  risk_cat <- nzchar_or(normalize_risk_category(ctrl), "（未填類別）")
+  obj <- nzchar_or(ctrl$control_objective, "（待補控制目標）")
+  act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
+  ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
+  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC／相關系統）")
+  status <- nzchar_or(ctrl$company_status, "（尚未書寫現況）")
+  gap <- nzchar_or(ctrl$design_gap_note, "（無設計差異說明）")
+  outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡文件")
   list(
     risk = list(
       element = "循環／風險",
       question = sprintf(
-        "請說明「%s」下「%s」風險如何發生？近期是否有實例？%s",
+        "請說明「%s」下子作業「%s」中，風險因素「%s」如何發生？近期實例？設計描述：%s",
         nzchar_or(ctrl$cycle, "本循環"),
-        nzchar_or(ctrl$risk_name, "該"),
-        if (!is_blank(ctrl$risk_description)) paste0("（設計描述：", ctrl$risk_description, "）") else ""
-      )
+        nzchar_or(ctrl$sub_process, "（子作業）"),
+        risk_label, risk_desc
+      ),
+      evidence = "流程說明／系統架構／前一年度缺失或事件"
     ),
     risk_attributes = list(
-      element = "風險三大屬性",
+      element = "風險三大屬性／類別",
       question = sprintf(
-        "此風險在財務報導／營運／法令遵循屬性分別為何？設計記載：%s｜%s｜%s",
+        "此風險類別是否為「%s」？財務報導／營運／法令遵循屬性分別為何？設計：%s｜%s｜%s",
+        risk_cat,
         nzchar_or(ctrl$risk_attr_financial, "（未填）"),
         nzchar_or(ctrl$risk_attr_operations, "（未填）"),
         nzchar_or(ctrl$risk_attr_compliance, "（未填）")
-      )
+      ),
+      evidence = "風險評估底稿／RCM 風險資訊欄"
     ),
     control_objective = list(
       element = "控制目標",
       question = sprintf(
-        "貴單位如何確保達成控制目標「%s」？該目標對應哪些風險與聲明？（勿與活動混淆）",
-        nzchar_or(ctrl$control_objective, "（待補目標）")
-      )
+        "如何確保達成控制目標「%s」？該目標對應哪些風險與聲明？（請勿用活動步驟回答）",
+        obj
+      ),
+      evidence = "制度／政策／前一年度 RCM 控制目標欄"
     ),
     control_activity = list(
       element = "控制活動",
       question = sprintf(
-        "請示範控制活動「%s」；誰執行、誰覆核？實際步驟為何？",
-        nzchar_or(ctrl$control_activity, "（待補活動）")
-      )
+        "請示範控制活動「%s」：誰執行、誰覆核、用什麼表單／系統？實際步驟為何？",
+        act
+      ),
+      evidence = "操作示範／螢幕錄影或逐步說明"
+    ),
+    control_types = list(
+      element = "控制類型／活動類型",
+      question = sprintf(
+        "實務上此控制類型是否為「%s」（人工/自動），活動類型是否為「%s」（預防/偵測，僅一種）？",
+        nzchar_or(ct, "（未填）"), nzchar_or(at, "（未填）")
+      ),
+      evidence = "系統設定截圖／職責說明"
     ),
     frequency_owner = list(
       element = "頻率／負責單位",
       question = sprintf(
-        "實際執行頻率是否為「%s」？負責單位「%s」是否具備權限與能力？",
+        "實際執行頻率是否為「%s」？流程負責單位「%s」是否具備權限與能力？有無代理機制？",
         nzchar_or(ctrl$frequency, "所訂頻率"),
         nzchar_or(ctrl$responsible_unit, "負責單位")
-      )
+      ),
+      evidence = "權責表／簽核紀錄／出勤或系統 log"
     ),
     iuc = list(
-      element = "IUC／制度",
+      element = "IUC／相關系統",
       question = sprintf(
-        "執行時使用哪些報表／系統／辦法（設計：%s）？如何確保完整性與正確性？可否提供 PBC？",
-        nzchar_or(ctrl$iuc_or_system, "未指定 IUC")
-      )
+        "執行時使用哪些相關系統／IUC（設計：%s）？如何確保完整性與正確性？可否提供 PBC？",
+        iuc
+      ),
+      evidence = paste(iuc, "PBC 命名對照", sep = "；")
+    ),
+    company_status = list(
+      element = "控制現況描述",
+      question = sprintf(
+        "請對照設計之控制現況「%s」，說明公司目前實際怎麼做？與設計差異為何？",
+        status
+      ),
+      evidence = "訪談紀錄／現場觀察／現況文件"
+    ),
+    design_gap = list(
+      element = "控制設計差異",
+      question = sprintf(
+        "設計差異說明記載「%s」。管理階層是否同意？改善時程與負責人？",
+        gap
+      ),
+      evidence = "改善計畫／會議紀錄"
     ),
     nature_approach_type = list(
-      element = "Nature／Approach／Type",
+      element = "Nature／Approach／Type（4120SR）",
       question = sprintf(
-        "此控制性質／取向／類型是否為「%s／%s／%s」？實務是否一致？",
+        "Form 4120SR 記載性質／取向／類型為「%s／%s／%s」，實務是否一致？",
         nzchar_or(ctrl$nature, "—"), nzchar_or(ctrl$approach, "—"), nzchar_or(ctrl$type, "—")
-      )
+      ),
+      evidence = "控制說明／系統設定"
     ),
     inputs = list(
       element = "Inputs（投入）",
-      question = sprintf("執行控制的投入資訊為何（設計：%s）？由誰提供？",
-                        nzchar_or(ctrl$inputs, "待補 Inputs"))
+      question = sprintf("執行控制的投入資訊為何（設計：%s）？由誰提供、如何確保完整？",
+                        nzchar_or(ctrl$inputs, "待補 Inputs")),
+      evidence = nzchar_or(ctrl$inputs, iuc)
     ),
     steps = list(
       element = "Steps（執行步驟）",
       question = sprintf("請依序說明執行步驟：%s", {
         st <- trimws(unlist(strsplit(as.character(ctrl$review_steps %||% ""), "\n")))
         st <- st[nzchar(st)]
-        if (!length(st)) "（尚未拆分步驟）" else paste(paste0(seq_along(st), ".", st), collapse = "；")
-      })
+        if (!length(st)) "（尚未拆分步驟，請依控制活動說明）"
+        else paste(paste0(seq_along(st), ".", st), collapse = "；")
+      }),
+      evidence = "逐步操作軌跡"
     ),
     outputs = list(
-      element = "Outputs（產出／軌跡）",
-      question = sprintf("控制產出／留存軌跡為何（預期：%s）？何處可取得？",
-                        nzchar_or(ctrl$outputs, "簽核或調節紀錄"))
+      element = "Outputs／相關文件",
+      question = sprintf("控制產出／相關文件為何（預期：%s）？何處可取得？留存多久？", outp),
+      evidence = outp
     ),
     exception = list(
       element = "例外／調查門檻",
@@ -317,61 +369,112 @@ interview_element_bank <- function(ctrl) {
         "若發現差異，調查門檻與追蹤方式為何%s？",
         if (!is_blank(ctrl$investigation_threshold)) paste0("（設計：", ctrl$investigation_threshold, "）")
         else "（設計尚未訂門檻）"
-      )
+      ),
+      evidence = "例外追蹤清單／結案紀錄"
     ),
     assertion_account = list(
       element = "科目／聲明",
       question = sprintf(
-        "此控制涵蓋重大科目「%s」與聲明「%s」是否完整？",
-        nzchar_or(ctrl$significant_account, "（未填）"),
+        "此控制涵蓋會計科目「%s」與聲明「%s」是否完整？",
+        nzchar_or(ctrl$significant_account, "（未填／NA）"),
         nzchar_or(ctrl$assertions, "（未填）")
-      )
+      ),
+      evidence = "科目映射／前一年度 RCM"
     )
+  )
+}
+
+empty_interview_df <- function() {
+  data.frame(
+    `控制編號` = character(), `循環` = character(), `子作業` = character(),
+    `控制目標` = character(), `題號` = integer(), `元素` = character(),
+    element_key = character(), `訪談問題` = character(),
+    `設計摘要` = character(), `預期佐證_PBC` = character(),
+    `受訪者回答` = character(), `佐證取得` = character(), `結論` = character(),
+    check.names = FALSE, stringsAsFactors = FALSE
   )
 }
 
 control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS) {
   bank <- interview_element_bank(ctrl)
   elements <- intersect(as.character(elements %||% character()), names(bank))
-  if (!length(elements)) {
-    return(data.frame(
-      control_id = character(), question_no = integer(),
-      element_key = character(), element = character(),
-      interview_question = character(), stringsAsFactors = FALSE
-    ))
-  }
+  if (!length(elements)) return(empty_interview_df())
+  cid <- derive_control_id(ctrl, 1L)
   do.call(rbind, lapply(seq_along(elements), function(i) {
     key <- elements[[i]]
     item <- bank[[key]]
     data.frame(
-      control_id = derive_control_id(ctrl, 1L),
-      question_no = i,
+      `控制編號` = cid,
+      `循環` = ctrl$cycle %||% "",
+      `子作業` = paste(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "", sep = " "),
+      `控制目標` = trimws(ctrl$control_objective %||% ""),
+      `題號` = i,
+      `元素` = item$element,
       element_key = key,
-      element = item$element,
-      interview_question = item$question,
+      `訪談問題` = item$question,
+      `設計摘要` = {
+        # short design cue for interviewer
+        switch(key,
+          risk = nzchar_or(ctrl$risk_description, ctrl$risk_factor %||% ""),
+          control_objective = ctrl$control_objective %||% "",
+          control_activity = ctrl$control_activity %||% "",
+          company_status = ctrl$company_status %||% "",
+          iuc = ctrl$iuc_or_system %||% "",
+          nzchar_or(item$evidence, "")
+        )
+      },
+      `預期佐證_PBC` = item$evidence %||% "",
+      `受訪者回答` = "",
+      `佐證取得` = "",
+      `結論` = "",
+      check.names = FALSE,
       stringsAsFactors = FALSE
     )
   }))
 }
 
-# ---- CSA test-step worksheet (測試步驟設計) ----
+# Only finalized RCM rows (設計完成＝RCM一列) feed interview by default
+controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENTS,
+                                  finalized_only = TRUE) {
+  if (!length(controls)) return(empty_interview_df())
+  if (isTRUE(finalized_only)) {
+    controls <- Filter(function(c) {
+      isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready)
+    }, controls)
+  }
+  if (!length(controls)) return(empty_interview_df())
+  do.call(rbind, lapply(controls, control_to_interview, elements = elements))
+}
+
+# ---- CSA test-step worksheet (Phase-2: after interview + RCM) ----
 # Not only self-check slogans: concrete test procedures, evidence, expected result
 control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
   cid <- derive_control_id(ctrl, 1L)
   obj <- nzchar_or(ctrl$control_objective, "（待補控制目標）")
   act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
-  iuc <- nzchar_or(ctrl$iuc_or_system, "（待補 IUC／PBC）")
-  outp <- nzchar_or(ctrl$outputs, "執行軌跡／簽核")
+  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC／PBC）")
+  outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "執行軌跡／簽核")
   steps <- trimws(unlist(strsplit(as.character(ctrl$review_steps %||% ""), "\n")))
   steps <- steps[nzchar(steps)]
-  if (!length(steps)) steps <- act
+  if (!length(steps)) {
+    # derive crude steps from activity for CSA when Steps blank
+    steps <- act
+  }
 
   rows <- list()
-  add_row <- function(element_key, element, purpose, procedure, evidence, expected, sample = "依風險與頻率訂定樣本") {
+  add_row <- function(element_key, element, purpose, procedure, evidence, expected,
+                      sample = NULL) {
+    if (is.null(sample)) {
+      sample <- sprintf("依頻率「%s」與風險「%s」訂定樣本",
+                        nzchar_or(ctrl$frequency, "—"),
+                        nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "—"))
+    }
     rows[[length(rows) + 1]] <<- data.frame(
-      `控制點編號` = cid,
+      `控制編號` = cid,
       `循環` = ctrl$cycle %||% "",
+      `子作業` = paste(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "", sep = " "),
       `控制目標` = obj,
+      `控制活動` = act,
       `元素` = element,
       `element_key` = element_key,
       `測試步驟序號` = length(rows) + 1L,
@@ -391,7 +494,8 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
   elements <- intersect(as.character(elements %||% character()), names(DESIGN_ELEMENTS))
   if (!length(elements)) {
     return(data.frame(
-      `控制點編號` = character(), `循環` = character(), `控制目標` = character(),
+      `控制編號` = character(), `循環` = character(), `子作業` = character(),
+      `控制目標` = character(), `控制活動` = character(),
       `元素` = character(), element_key = character(), `測試步驟序號` = integer(),
       `測試目的` = character(), `測試程序` = character(), `抽樣或範圍` = character(),
       `所需文件_PBC` = character(), `預期結果` = character(), `實際結果` = character(),
@@ -403,13 +507,14 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
   for (key in elements) {
     if (identical(key, "control_objective")) {
       add_row(key, "控制目標",
-              "確認控制目標與風險／聲明對應且可衡量",
-              sprintf("訪談／檢視制度，確認目標「%s」未被改寫成活動步驟，並對應風險「%s」", obj, nzchar_or(ctrl$risk_name, "—")),
-              "風險矩陣／制度文件／前一年度 RCM",
+              "確認控制目標與風險／聲明對應且可衡量（對照 RCM 列）",
+              sprintf("訪談／檢視制度，確認目標「%s」未被改寫成活動步驟，並對應風險「%s」",
+                      obj, nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "—")),
+              "風險矩陣／制度文件／RCM",
               "目標清楚、可對應風險與聲明，且與活動文字不同")
     } else if (identical(key, "control_activity")) {
       add_row(key, "控制活動",
-              "驗證控制活動實際執行方式與設計一致",
+              "驗證控制活動實際執行方式與 RCM 設計一致",
               sprintf("取得執行軌跡，觀察或重行執行活動「%s」之關鍵動作", act),
               paste(iuc, outp, sep = "；"),
               "活動依設計執行，執行人／覆核人角色清楚")
@@ -422,13 +527,13 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
                 "該步驟有完整執行軌跡且無未結例外")
       }
     } else if (identical(key, "iuc")) {
-      add_row(key, "IUC／制度",
+      add_row(key, "IUC／相關系統",
               "確認 IUC／PBC 完整正確且與控制依賴一致",
               sprintf("取得「%s」，核對來源、參數、邏輯或產生流程；比對客戶原名與檢視後命名", iuc),
               iuc,
               "IUC 完整正確，足以支撐控制結論")
     } else if (identical(key, "outputs")) {
-      add_row(key, "Outputs（產出／軌跡）",
+      add_row(key, "Outputs／相關文件",
               "確認產出證據足以證明控制已發生",
               sprintf("抽查產出「%s」之完整性、簽核及時性與內容妥適性", outp),
               outp,
@@ -448,27 +553,29 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
     } else if (identical(key, "risk")) {
       add_row(key, "循環／風險",
               "確認風險仍適用",
-              sprintf("與管理階層確認「%s」風險情境與現行流程", nzchar_or(ctrl$risk_name, "該風險")),
+              sprintf("與管理階層確認「%s」風險情境與現行流程", nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")),
               "流程說明／系統架構／前一年度缺失",
               "風險描述與現況一致")
     } else if (identical(key, "risk_attributes")) {
-      add_row(key, "風險三大屬性",
-              "確認三大屬性評估仍妥適",
-              "覆核財務報導／營運／法令遵循屬性記載是否需更新",
-              "風險評估底稿",
-              "三大屬性完整且與控制對應")
+      add_row(key, "風險三大屬性／類別",
+              "確認風險類別與三大屬性評估仍妥適",
+              sprintf("覆核風險類別「%s」及財務報導／營運／法令遵循屬性是否需更新",
+                      nzchar_or(normalize_risk_category(ctrl), "—")),
+              "風險評估底稿／RCM",
+              "類別與屬性完整且與控制對應")
     } else if (identical(key, "inputs")) {
       add_row(key, "Inputs（投入）",
               "確認投入資訊來源可靠",
               sprintf("追蹤投入「%s」之取得與完整性", nzchar_or(ctrl$inputs, "—")),
               nzchar_or(ctrl$inputs, iuc),
               "投入完整且與母體一致")
-    } else if (identical(key, "nature_approach_type")) {
-      add_row(key, "Nature／Approach／Type",
+    } else if (identical(key, "nature_approach_type") || identical(key, "control_types")) {
+      add_row(key, DESIGN_ELEMENTS[[key]] %||% "控制類型",
               "確認控制屬性分類正確（影響測試策略）",
-              sprintf("評估實務是否為 %s／%s／%s", nzchar_or(ctrl$nature, "—"),
-                      nzchar_or(ctrl$approach, "—"), nzchar_or(ctrl$type, "—")),
-              "控制說明／系統設定截圖",
+              sprintf("評估實務是否為控制類型「%s」／活動類型「%s」",
+                      nzchar_or(normalize_control_type_manual_auto(ctrl$nature), "—"),
+                      nzchar_or(normalize_control_activity_type_pd(ctrl$approach), "—")),
+              "控制說明／系統設定截圖／RCM",
               "分類正確，測試性質與範圍與之匹配")
     } else if (identical(key, "assertion_account")) {
       add_row(key, "科目／聲明",
@@ -478,17 +585,31 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
                       nzchar_or(ctrl$assertions, "—")),
               "財務報表科目映射／前一年度 RCM",
               "科目與聲明無遺漏")
+    } else if (identical(key, "company_status")) {
+      add_row(key, "控制現況描述",
+              "確認現況與設計一致或差異已記錄",
+              sprintf("比對現況描述與實地觀察：%s", nzchar_or(ctrl$company_status, "（未填）")),
+              "訪談紀錄／現場觀察",
+              "現況可驗證；差異已於 RCM 設計差異欄揭露")
+    } else if (identical(key, "design_gap")) {
+      add_row(key, "控制設計差異",
+              "確認設計差異改善追蹤",
+              sprintf("追蹤差異「%s」之改善狀態", nzchar_or(ctrl$design_gap_note, "（無）")),
+              "改善計畫",
+              "差異有負責人與時程，或已關閉")
     }
   }
   do.call(rbind, rows)
 }
 
-controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENTS) {
-  if (!length(controls)) return(control_to_interview(list(), elements))
-  do.call(rbind, lapply(controls, control_to_interview, elements = elements))
-}
-
-controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS) {
+controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
+                            finalized_only = TRUE) {
+  if (!length(controls)) return(control_to_csa(list(), elements))
+  if (isTRUE(finalized_only)) {
+    controls <- Filter(function(c) {
+      isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready)
+    }, controls)
+  }
   if (!length(controls)) return(control_to_csa(list(), elements))
   do.call(rbind, lapply(controls, control_to_csa, elements = elements))
 }

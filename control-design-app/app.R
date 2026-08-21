@@ -96,9 +96,14 @@ ui <- page_navbar(
         textInput("responsible_unit", "負責單位", placeholder = "Owner"),
         textAreaInput("control_objective", "控制目標（Why／對應風險與聲明）", rows = 2),
         textAreaInput("control_activity", "控制活動（How／執行作為，勿重述目標）", rows = 2),
-        selectizeInput("pbc_apply", "套用已登錄 IUC／PBC", choices = NULL, multiple = TRUE,
-                       options = list(placeholder = "從命名庫多選")),
-        textAreaInput("iuc_or_system", "IUC／制度（不同則分拆控制點）", rows = 2),
+        selectizeInput(
+          "pbc_apply", "套用 IUC／PBC 命名庫（顯示：客戶原名 → 檢視後命名）",
+          choices = NULL, multiple = TRUE,
+          options = list(placeholder = "多選後寫入 IUC 與 Inputs 對照")
+        ),
+        checkboxInput("pbc_also_inputs", "套用時一併寫入 Inputs 命名對照（原名／新名）", TRUE),
+        textAreaInput("iuc_or_system", "IUC／制度（採用檢視後命名；不同則分拆控制點）", rows = 2),
+        verbatimTextOutput("pbc_status_preview"),
         layout_columns(
           col_widths = c(4, 4, 4),
           selectizeInput("nature", "Nature", choices = NATURE_CHOICES, options = list(create = TRUE)),
@@ -132,17 +137,31 @@ ui <- page_navbar(
   nav_panel(
     "IUC／PBC",
     card(
-      card_header("客戶 PBC 原名 ↔ 檢視後命名（可重複套用）"),
+      card_header("IUC／PBC 命名管理（客戶原名 ↔ 檢視後命名，設計時可套用）"),
+      p(class = "text-muted small",
+        "登錄客戶提供的 PBC 原始名稱，並記錄檢視後標準化命名。",
+        "撰寫控制現況／設計控制點時，於「設計」頁從命名庫選擇即可重複套用。"),
       layout_columns(
-        col_widths = c(3, 3, 3, 3),
-        textInput("pbc_id", "ID", placeholder = "自動"),
-        textInput("pbc_client", "客戶原名", placeholder = "PBC 原始檔名／標題"),
-        textInput("pbc_reviewed", "檢視後命名", placeholder = "標準化 IUC 名稱"),
-        textInput("pbc_notes", "備註", placeholder = "來源／版本")
+        col_widths = c(2, 3, 3, 2, 2),
+        textInput("pbc_id", "ID", placeholder = "自動／選列帶入"),
+        textInput("pbc_client", "客戶取得原名", placeholder = "原始檔名或 PBC 標題"),
+        textInput("pbc_reviewed", "檢視後新命名", placeholder = "標準 IUC／制度名"),
+        selectInput("pbc_cycle", "所屬循環", choices = c("（共用）" = "", CYCLES_NINE)),
+        textInput("pbc_notes", "備註", placeholder = "版本／來源")
       ),
-      actionButton("pbc_add", "登錄／更新", class = "btn-primary btn-sm"),
-      actionButton("pbc_delete", "刪除選取", class = "btn-outline-danger btn-sm"),
-      DTOutput("pbc_table")
+      div(
+        actionButton("pbc_add", "登錄／更新", class = "btn-primary btn-sm"),
+        actionButton("pbc_delete", "刪除選取", class = "btn-outline-danger btn-sm"),
+        actionButton("pbc_clear", "清空表單", class = "btn-sm"),
+        actionButton("pbc_save", "儲存命名庫", class = "btn-secondary btn-sm"),
+        actionButton("pbc_reload", "重新載入", class = "btn-outline-secondary btn-sm"),
+        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm"),
+        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = c(".csv"),
+                  width = "180px")
+      ),
+      DTOutput("pbc_table"),
+      h6("控制現況用命名對照預覽"),
+      verbatimTextOutput("pbc_all_status")
     )
   ),
   nav_panel(
@@ -183,9 +202,21 @@ ui <- page_navbar(
 server <- function(input, output, session) {
   drafts <- reactiveVal(list())
   controls <- reactiveVal(list())
-  pbc_reg <- reactiveVal(empty_pbc_registry())
+  pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
+  pbc_path_json <- file.path(data_dir, "pbc_registry.json")
+  pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
   lib <- reactiveVal(seed_control_library())
   next_id <- reactiveVal(1L)
+
+  persist_pbc <- function(reg) {
+    save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
+  }
+
+  refresh_pbc_choices <- function() {
+    ch <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
+    updateSelectizeInput(session, "pbc_apply", choices = ch, server = TRUE,
+                         selected = intersect(input$pbc_apply %||% character(), ch))
+  }
 
   observe({
     updateSelectInput(session, "lib_pick",
@@ -193,15 +224,38 @@ server <- function(input, output, session) {
   })
 
   observe({
-    ch <- pbc_choices(pbc_reg())
-    updateSelectizeInput(session, "pbc_apply", choices = ch, server = TRUE)
+    input$cycle
+    refresh_pbc_choices()
   })
 
   observeEvent(input$pbc_apply, {
-    if (!length(input$pbc_apply)) return()
+    ids <- input$pbc_apply
+    if (!length(ids)) return()
     updateTextAreaInput(session, "iuc_or_system",
-                        value = apply_pbc_to_iuc(pbc_reg(), input$pbc_apply))
+                        value = apply_pbc_to_iuc(pbc_reg(), ids))
+    if (isTRUE(input$pbc_also_inputs)) {
+      mapped <- format_pbc_for_inputs(pbc_reg(), ids)
+      cur <- trimws(input$inputs %||% "")
+      # Replace prior mapping block if present; else append
+      if (grepl("【IUC／PBC 命名對照】", cur, fixed = TRUE)) {
+        cur <- trimws(sub("【IUC／PBC 命名對照】[\\s\\S]*$", "", cur))
+      }
+      new_inputs <- if (nzchar(cur)) paste(cur, mapped, sep = "\n") else mapped
+      updateTextAreaInput(session, "inputs", value = new_inputs)
+    }
   }, ignoreInit = TRUE)
+
+  output$pbc_status_preview <- renderText({
+    ids <- input$pbc_apply
+    if (!length(ids)) return("（選取命名庫項目後，此處顯示原名→新名對照，供控制現況重複引用）")
+    paste(format_pbc_status_lines(pbc_reg(), ids), collapse = "\n")
+  })
+
+  output$pbc_all_status <- renderText({
+    lines <- format_pbc_status_lines(pbc_reg())
+    if (!length(lines)) return("（命名庫尚無資料）")
+    paste(lines, collapse = "\n")
+  })
 
   observeEvent(input$apply_lib, {
     id <- input$lib_pick
@@ -359,28 +413,93 @@ server <- function(input, output, session) {
   # PBC registry
   observeEvent(input$pbc_add, {
     tryCatch({
-      pbc_reg(upsert_pbc(pbc_reg(), list(
+      reg <- upsert_pbc(pbc_reg(), list(
         pbc_id = input$pbc_id,
         client_pbc_name = input$pbc_client,
         reviewed_name = input$pbc_reviewed,
         iuc_or_system = input$pbc_reviewed,
-        cycle = input$cycle,
+        cycle = input$pbc_cycle,
         notes = input$pbc_notes
-      )))
+      ))
+      pbc_reg(reg)
+      persist_pbc(reg)
+      refresh_pbc_choices()
       updateTextInput(session, "pbc_id", value = "")
       updateTextInput(session, "pbc_client", value = "")
       updateTextInput(session, "pbc_reviewed", value = "")
       updateTextInput(session, "pbc_notes", value = "")
+      showNotification("已登錄並儲存命名庫", type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
-  output$pbc_table <- renderDT(datatable(pbc_reg(), selection = "single", rownames = FALSE,
-                                         options = list(pageLength = 8, scrollX = TRUE)))
-  observeEvent(input$pbc_delete, {
+
+  observeEvent(input$pbc_clear, {
+    updateTextInput(session, "pbc_id", value = "")
+    updateTextInput(session, "pbc_client", value = "")
+    updateTextInput(session, "pbc_reviewed", value = "")
+    updateTextInput(session, "pbc_notes", value = "")
+    updateSelectInput(session, "pbc_cycle", selected = "")
+  })
+
+  output$pbc_table <- renderDT({
+    df <- pbc_reg()
+    show <- df[, c("pbc_id", "client_pbc_name", "reviewed_name", "cycle", "notes", "updated_at"), drop = FALSE]
+    names(show) <- c("ID", "客戶取得原名", "檢視後新命名", "循環", "備註", "更新時間")
+    datatable(show, selection = "single", rownames = FALSE,
+              options = list(pageLength = 10, scrollX = TRUE))
+  })
+
+  observeEvent(input$pbc_table_rows_selected, {
     s <- input$pbc_table_rows_selected
     if (is.null(s)) return()
+    row <- pbc_reg()[s, , drop = FALSE]
+    updateTextInput(session, "pbc_id", value = row$pbc_id[[1]])
+    updateTextInput(session, "pbc_client", value = row$client_pbc_name[[1]])
+    updateTextInput(session, "pbc_reviewed", value = row$reviewed_name[[1]])
+    updateTextInput(session, "pbc_notes", value = row$notes[[1]])
+    updateSelectInput(session, "pbc_cycle",
+                      selected = if (nzchar(row$cycle[[1]])) row$cycle[[1]] else "")
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$pbc_delete, {
+    s <- input$pbc_table_rows_selected
+    if (is.null(s)) return(showNotification("請先選取列", type = "warning"))
     reg <- pbc_reg()
-    pbc_reg(reg[-s, , drop = FALSE])
+    rid <- reg$pbc_id[s]
+    reg <- delete_pbc(reg, rid)
+    pbc_reg(reg)
+    persist_pbc(reg)
+    refresh_pbc_choices()
   })
+
+  observeEvent(input$pbc_save, {
+    persist_pbc(pbc_reg())
+    showNotification(paste("已寫入", pbc_path_csv), type = "message")
+  })
+
+  observeEvent(input$pbc_reload, {
+    pbc_reg(load_pbc_registry(pbc_path_csv, pbc_path_json))
+    refresh_pbc_choices()
+    showNotification("命名庫已重新載入", type = "message")
+  })
+
+  observeEvent(input$upload_pbc, {
+    f <- input$upload_pbc
+    if (is.null(f)) return()
+    tryCatch({
+      reg <- import_pbc_csv(f$datapath, pbc_reg())
+      pbc_reg(reg)
+      persist_pbc(reg)
+      refresh_pbc_choices()
+      showNotification(sprintf("已匯入，目前共 %d 筆", nrow(reg)), type = "message")
+    }, error = function(e) showNotification(conditionMessage(e), type = "error"))
+  })
+
+  output$download_pbc <- downloadHandler(
+    filename = function() sprintf("pbc_registry-%s.csv", format(Sys.time(), "%Y%m%d")),
+    content = function(file) {
+      utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
+    }
+  )
 
   # RCM / interview / CSA / gaps
   output$rcm_table <- renderDT({
@@ -420,8 +539,9 @@ server <- function(input, output, session) {
     if (!is.null(payload$drafts)) drafts(payload$drafts)
     if (!is.null(payload$controls)) controls(payload$controls)
     if (!is.null(payload$pbc) && length(payload$pbc)) {
-      # rebuild data.frame from json list-of-lists or columnar list
-      pbc_reg(as.data.frame(payload$pbc, stringsAsFactors = FALSE))
+      pbc_reg(normalize_pbc_df(as.data.frame(payload$pbc, stringsAsFactors = FALSE)))
+      persist_pbc(pbc_reg())
+      refresh_pbc_choices()
     }
     showNotification("草稿已載入", type = "message")
   })

@@ -46,7 +46,20 @@ reg <- upsert_pbc(reg, list(client_pbc_name = "Sales Daily raw.xlsx", reviewed_n
 reg <- upsert_pbc(reg, list(pbc_id = reg$pbc_id[1], client_pbc_name = "Sales Daily raw.xlsx", reviewed_name = "銷貨日報表_v2"))
 check(nrow(reg) == 1L && identical(reg$reviewed_name[1], "銷貨日報表_v2"), "PBC upsert by id")
 ch <- pbc_choices(reg)
-check(length(ch) == 1L && grepl("客戶原名", names(ch)[1]), "PBC choices show client vs reviewed")
+check(length(ch) == 1L && grepl("原名", names(ch)[1]) && identical(unname(ch[[1]]), reg$pbc_id[1]),
+      "PBC choices: label 含原名、value 為 pbc_id")
+check(identical(apply_pbc_to_iuc(reg, reg$pbc_id[1]), "銷貨日報表_v2"), "套用後 IUC 用檢視後命名")
+lines <- format_pbc_status_lines(reg, reg$pbc_id[1])
+check(grepl("Sales Daily raw.xlsx", lines) && grepl("銷貨日報表_v2", lines), "現況對照含原名與新名")
+
+# upsert by same client name without id
+reg2 <- upsert_pbc(reg, list(client_pbc_name = "Sales Daily raw.xlsx", reviewed_name = "銷貨日報表_v3"))
+check(nrow(reg2) == 1L && identical(reg2$reviewed_name[1], "銷貨日報表_v3"), "同客戶原名可更新對照")
+
+tmp_csv <- tempfile(fileext = ".csv")
+save_pbc_registry(reg2, tmp_csv)
+loaded <- load_pbc_registry(tmp_csv)
+check(nrow(loaded) == 1L && identical(loaded$client_pbc_name, "Sales Daily raw.xlsx"), "CSV 持久化往返")
 
 rcm <- controls_to_rcm(list(modifyList(d1, list(control_id = "CP-1"))))
 check(identical(rcm$control_objective, "確保收入於適當期間認列"), "RCM 目標欄位獨立")

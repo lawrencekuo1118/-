@@ -45,6 +45,8 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
   updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
   updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
+  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
+  updateTextAreaInput(session, "company_status", value = ctrl$company_status %||% "")
   updateTextAreaInput(session, "iuc_or_system", value = ctrl$iuc_or_system %||% "")
   updateSelectizeInput(session, "nature", selected = ctrl$nature %||% NATURE_CHOICES[[1]])
   updateSelectizeInput(session, "approach", selected = ctrl$approach %||% APPROACH_CHOICES[[1]])
@@ -102,6 +104,8 @@ ui <- page_navbar(
         textInput("control_id", NULL, value = "CD-001", placeholder = "控制點 ID"),
         textAreaInput("control_objective", NULL, rows = 2, placeholder = "控制目標（Why）"),
         textAreaInput("control_activity", NULL, rows = 2, placeholder = "控制活動（How，勿重述目標）"),
+        textInput("sub_process", NULL, placeholder = "子作業（例：存取管理／變更管理）"),
+        textAreaInput("company_status", NULL, rows = 2, placeholder = "公司現況描述（選定元素後再寫；可空則自動拼湊）"),
         layout_columns(
           col_widths = c(6, 6),
           selectInput("frequency", NULL, choices = FREQUENCY_CHOICES, selected = FREQUENCY_CHOICES[[4]]),
@@ -223,11 +227,13 @@ ui <- page_navbar(
   nav_panel(
     "RCM",
     card(
-      p(class = "text-muted small mb-1", "目標＝Why；活動＝How。兩欄不得相同。"),
+      p(class = "text-muted small mb-1",
+        "完成控制點設計＝完成 RCM 一列。",
+        strong("控制目標≠控制活動"), "；兩欄防呆見「設計檢核」。缺漏見下方。"),
       DTOutput("rcm_table"),
       downloadButton("download_rcm", "下載 RCM", class = "btn-sm"),
       tags$hr(),
-      tags$strong("缺漏"),
+      tags$strong("缺漏／缺文件／控制缺失"),
       DTOutput("gap_table")
     )
   ),
@@ -472,6 +478,8 @@ server <- function(input, output, session) {
       assertions = paste(input$assertions %||% character(), collapse = "；"),
       control_objective = input$control_objective %||% "",
       control_activity = input$control_activity %||% "",
+      sub_process = input$sub_process %||% "",
+      company_status = input$company_status %||% "",
       frequency = input$frequency %||% "",
       responsible_unit = input$responsible_unit %||% "",
       iuc_or_system = input$iuc_or_system %||% "",
@@ -482,7 +490,8 @@ server <- function(input, output, session) {
       review_steps = input$review_steps %||% "",
       outputs = input$outputs %||% "",
       investigation_threshold = input$investigation_threshold %||% "",
-      dependent_controls = ""
+      dependent_controls = "",
+      key_control = "Y"
     )
   }
 
@@ -570,14 +579,18 @@ server <- function(input, output, session) {
 
   output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
   output$live_validation <- renderUI({
-    v <- validate_control_design(current_draft_from_inputs())
-    gaps <- detect_design_gaps(current_draft_from_inputs())
-    if (v$ok && !nrow(gaps)) {
-      div(class = "alert alert-success py-1 mb-2", "元素齊備")
+    d <- current_draft_from_inputs()
+    gaps <- detect_design_gaps(d)
+    chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
+    ready <- is_rcm_row_ready(d)
+    if (isTRUE(ready$ready)) {
+      div(class = "alert alert-success py-1 mb-2", "可寫入 RCM 一列（設計檢核通過）")
     } else {
-      miss <- if (!v$ok) paste("缺：", paste(v$missing, collapse = "、")) else NULL
-      extra <- if (nrow(gaps)) paste(gaps$gap_item, collapse = "；") else NULL
-      div(class = "alert alert-warning py-1 mb-2", paste(na.omit(c(miss, extra)), collapse = "｜"))
+      high <- gaps[gaps$severity == "高", , drop = FALSE]
+      summary <- if (nrow(high)) {
+        paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
+      } else if (!chk$ok) chk$msg else paste(gaps$gap_item, collapse = "；")
+      div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM：", summary))
     }
   })
 
@@ -642,28 +655,39 @@ server <- function(input, output, session) {
     seq_no <- 1L
     for (gk in names(groups)) {
       for (pt in split_controls_by_iuc(ds[groups[[gk]]])) {
-        pt$control_id <- sprintf("CP-%03d", seq_no)
+        pt$control_id <- derive_control_id(pt, seq_no)
+        pt$risk_id <- derive_risk_id(pt, seq_no)
+        if (is_blank(pt$company_status) || !nzchar(trimws(pt$company_status %||% ""))) {
+          pt$company_status <- assemble_control_paragraph(pt)
+        }
         pt$summary_description <- assemble_summary_description(pt)
-        pt$detailed_description <- assemble_control_paragraph(pt)
+        pt$detailed_description <- pt$company_status
         pt$validation <- validate_control_design(pt)
+        pt$rcm_ready <- is_rcm_row_ready(pt)
         result[[length(result) + 1]] <- pt
         seq_no <- seq_no + 1L
       }
     }
     controls(result)
-    showNotification(sprintf("已產生 %d 控制點", length(result)), type = "message")
+    n_ready <- sum(vapply(result, function(x) isTRUE(x$rcm_ready$ready), logical(1)))
+    showNotification(
+      sprintf("已產生 %d 控制點＝%d 列 RCM（其中 %d 列設計檢核通過）",
+              length(result), length(result), n_ready),
+      type = "message"
+    )
     if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
   controls_df <- reactive({
     cs <- controls()
     if (!length(cs)) {
-      return(data.frame(ControlID = character(), IUC = character(), 摘要 = character(),
-                        stringsAsFactors = FALSE))
+      return(data.frame(控制點編號 = character(), IUC = character(), RCM = character(),
+                        摘要 = character(), stringsAsFactors = FALSE))
     }
     data.frame(
-      ControlID = vapply(cs, function(x) x$control_id, ""),
+      控制點編號 = vapply(cs, function(x) x$control_id, ""),
       IUC = vapply(cs, function(x) x$iuc_or_system, ""),
+      RCM = vapply(cs, function(x) if (isTRUE(x$rcm_ready$ready)) "可入列" else "待補", ""),
       摘要 = vapply(cs, function(x) x$summary_description, ""),
       stringsAsFactors = FALSE
     )

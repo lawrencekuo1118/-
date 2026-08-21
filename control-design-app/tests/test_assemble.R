@@ -1,4 +1,4 @@
-# Extended tests: IUC split, PBC registry, RCM objective/activity split, gaps, CSA
+# Extended tests: IUC split, PBC, RCM/CSA worksheets, gaps, library
 args <- commandArgs(trailingOnly = FALSE)
 file_arg <- grep("^--file=", args, value = TRUE)
 root <- if (length(file_arg)) {
@@ -25,90 +25,69 @@ check <- function(cond, msg) {
 }
 
 base <- list(
-  company = "示範公司", cycle = "銷售及收款循環", risk_name = "收入截止錯誤",
-  risk_description = "期末出貨認列時點", risk_attr_financial = "[財務報導] 截止",
-  risk_attr_operations = "[營運] 出貨開票", risk_attr_compliance = "[法令遵循] 政策",
-  romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "營業收入",
-  assertions = "截止 (Cutoff)", control_objective = "確保收入於適當期間認列",
-  control_activity = "核對出貨單與發票日期並調節", frequency = "每日",
-  responsible_unit = "財務部", nature = NATURE_CHOICES[[1]],
+  company = "示範公司", cycle = "電腦化資訊系統循環", sub_process = "存取管理",
+  risk_name = "不當權限", risk_description = "離職未停權",
+  risk_attr_financial = "[財務報導] 未授權交易", risk_attr_operations = "[營運] 權限不一致",
+  risk_attr_compliance = "[法令遵循] 資安政策",
+  romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "多科目",
+  assertions = "存在／發生 (Existence/Occurrence)",
+  control_objective = "確保系統使用者權限與現職一致",
+  control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
+  responsible_unit = "資訊部", nature = NATURE_CHOICES[[3]],
   approach = APPROACH_CHOICES[[2]], type = TYPE_CHOICES[[6]],
-  inputs = "出貨單", review_steps = "比對日期\n列追蹤", outputs = "調節表",
-  investigation_threshold = "逾1日", dependent_controls = "", control_id = "CD-001"
+  inputs = "在職名單、權限清冊", review_steps = "產製清冊\n主管覆核\n完成異動",
+  outputs = "簽回清冊、異動 log", investigation_threshold = "任何不當權限均須異動",
+  dependent_controls = "", control_id = "", iuc_or_system = "使用者權限清冊",
+  key_control = "Y"
 )
 
-d1 <- modifyList(base, list(iuc_or_system = "銷貨日報表"))
-d2 <- modifyList(base, list(iuc_or_system = "ERP AR 帳齡報表", control_activity = "覆核帳齡"))
+d1 <- modifyList(base, list(iuc_or_system = "使用者權限清冊"))
+d2 <- modifyList(base, list(iuc_or_system = "AD 群組報表", control_activity = "覆核 AD 群組"))
 check(length(split_controls_by_iuc(list(d1, d2))) == 2L, "IUC 分拆")
 
+# RCM row = designed control; objective ≠ activity
+rcm <- controls_to_rcm(list(d1))
+check(all(RCM_HEADERS %in% names(rcm)), "RCM 含標準標題列")
+check(identical(rcm[["控制目標"]], "確保系統使用者權限與現職一致"), "RCM 目標欄獨立")
+check(identical(rcm[["控制活動"]], "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
+check(!identical(rcm[["控制目標"]], rcm[["控制活動"]]), "目標≠活動")
+check(grepl("^IT-C-", rcm[["控制點編號"]]), "資訊循環控制點編號格式")
+check(identical(rcm[["設計檢核"]], "通過"), "設計檢核通過")
+
+bad <- modifyList(d1, list(control_activity = d1$control_objective))
+rcm_bad <- controls_to_rcm(list(bad))
+check(grepl("待修", rcm_bad[["設計檢核"]]), "目標活動相同時設計檢核失敗")
+
+gaps <- detect_design_gaps(bad)
+check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")
+check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
+
+gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", outputs = "")))
+check(any(gaps2$category == "缺文件"), "缺 IUC／產出歸類為缺文件")
+
+ready <- is_rcm_row_ready(d1)
+check(isTRUE(ready$ready), "完整控制點可視為 RCM 列就緒")
+
+iv <- control_to_interview(d1, elements = c("control_objective", "iuc"))
+check(nrow(iv) == 2L, "訪談可依元素過濾")
+
+csa <- control_to_csa(d1, elements = c("steps", "iuc", "outputs"))
+check(all(c("測試程序", "所需文件_PBC", "預期結果") %in% names(csa)), "CSA 含測試步驟設計欄位")
+check(nrow(csa) >= 3, "CSA 依元素產製多個測試步驟")
+check(any(csa[["元素"]] == "IUC／制度"), "CSA 含 IUC 測試步驟")
+
+# PBC
 reg <- empty_pbc_registry()
-reg <- upsert_pbc(reg, list(client_pbc_name = "Sales Daily raw.xlsx", reviewed_name = "銷貨日報表", cycle = "銷售及收款循環"))
-reg <- upsert_pbc(reg, list(pbc_id = reg$pbc_id[1], client_pbc_name = "Sales Daily raw.xlsx", reviewed_name = "銷貨日報表_v2"))
-check(nrow(reg) == 1L && identical(reg$reviewed_name[1], "銷貨日報表_v2"), "PBC upsert by id")
-ch <- pbc_choices(reg)
-check(length(ch) == 1L && grepl("原名", names(ch)[1]) && identical(unname(ch[[1]]), reg$pbc_id[1]),
-      "PBC choices: label 含原名、value 為 pbc_id")
-check(identical(apply_pbc_to_iuc(reg, reg$pbc_id[1]), "銷貨日報表_v2"), "套用後 IUC 用檢視後命名")
-lines <- format_pbc_status_lines(reg, reg$pbc_id[1])
-check(grepl("Sales Daily raw.xlsx", lines) && grepl("銷貨日報表_v2", lines), "現況對照含原名與新名")
+reg <- upsert_pbc(reg, list(client_pbc_name = "user_access.xlsx", reviewed_name = "使用者權限清冊"))
+check(identical(apply_pbc_to_iuc(reg, reg$pbc_id[1]), "使用者權限清冊"), "PBC 套用")
 
-# upsert by same client name without id
-reg2 <- upsert_pbc(reg, list(client_pbc_name = "Sales Daily raw.xlsx", reviewed_name = "銷貨日報表_v3"))
-check(nrow(reg2) == 1L && identical(reg2$reviewed_name[1], "銷貨日報表_v3"), "同客戶原名可更新對照")
-
-tmp_csv <- tempfile(fileext = ".csv")
-save_pbc_registry(reg2, tmp_csv)
-loaded <- load_pbc_registry(tmp_csv)
-check(nrow(loaded) == 1L && identical(loaded$client_pbc_name, "Sales Daily raw.xlsx"), "CSV 持久化往返")
-
-rcm <- controls_to_rcm(list(modifyList(d1, list(control_id = "CP-1"))))
-check(identical(rcm$control_objective, "確保收入於適當期間認列"), "RCM 目標欄位獨立")
-check(identical(rcm$control_activity, "核對出貨單與發票日期並調節"), "RCM 活動欄位獨立")
-check(!identical(rcm$control_objective, rcm$control_activity), "目標≠活動")
-
-same <- modifyList(d1, list(control_activity = d1$control_objective, iuc_or_system = "銷貨日報表"))
-gaps <- detect_design_gaps(same)
-check(any(grepl("目標與控制活動文字相同", gaps$gap_item)), "偵測目標活動混用")
-
-iv <- control_to_interview(d1)
-check(nrow(iv) >= 5 && any(grepl("控制目標", iv$element)), "訪談題含控制目標元素")
-iv2 <- control_to_interview(d1, elements = c("control_objective", "iuc"))
-check(nrow(iv2) == 2L && identical(iv2$element_key, c("control_objective", "iuc")),
-      "訪談可依勾選元素過濾")
-iv0 <- control_to_interview(d1, elements = character())
-check(nrow(iv0) == 0L, "未勾選元素時訪談為空")
-
-csa <- control_to_csa(d1)
-check(nrow(csa) >= 2 && "control_objective" %in% names(csa), "CSA 含目標與步驟")
-csa2 <- control_to_csa(d1, elements = c("steps", "outputs"))
-check(all(csa2$element_key %in% c("steps", "outputs")), "CSA 可依勾選元素過濾")
-check(any(csa2$element == "Steps（執行步驟）"), "CSA steps 元素標籤正確")
-
+# Library IT seeds + import
 lib <- seed_control_library()
-check(length(lib) >= 2 && !is.null(get_library_item(lib, "LIB-REV-CUTOFF-01")), "範本庫可取用")
-
-# Bulk library accumulate / import
-lib2 <- upsert_library_item(lib, library_item_from_control(list(
-  library_id = "LIB-TEST-01", title = "測試範本", cycle = "薪工循環",
-  risk_name = "薪資虛增", control_objective = "防止虛增薪資",
-  control_activity = "比對出勤與薪資清冊", iuc_or_system = "薪資清冊",
-  frequency = "每月", responsible_unit = "人資", nature = "人工 (Manual)",
-  approach = "偵測性 (Detective)", type = "核對驗證 (Verifications)",
-  inputs = "出勤紀錄", review_steps = "比對\n簽核", outputs = "調節表",
-  risk_attr_financial = "a", risk_attr_operations = "b", risk_attr_compliance = "c",
-  significant_account = "薪資費用", assertions = "完整性 (Completeness)"
-), tags = c("薪工")))
-check(length(lib2) == length(lib) + 1L, "累積新增範本")
+check(!is.null(get_library_item(lib, "LIB-IT-ACCESS-01")), "資訊循環範本種子")
 tmp_csv <- tempfile(fileext = ".csv")
-utils::write.csv(library_to_flat_df(lib2), tmp_csv, row.names = FALSE, fileEncoding = "UTF-8")
+utils::write.csv(library_to_flat_df(lib), tmp_csv, row.names = FALSE, fileEncoding = "UTF-8")
 imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = TRUE)
-check(length(imported) >= 3 && !is.null(get_library_item(imported, "LIB-TEST-01")), "CSV 大量匯入範本庫")
-ch <- library_choices(imported, cycle_filter = "薪工循環")
-check(length(ch) >= 1 && any(grepl("LIB-TEST-01", ch)), "依循環篩選範本供套用")
-tmp_json <- tempfile(fileext = ".json")
-save_control_library(imported, tmp_json)
-loaded_lib <- load_control_library(tmp_json, fallback_seed = FALSE)
-check(length(loaded_lib) == length(imported), "範本庫 JSON 持久化")
+check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
 
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

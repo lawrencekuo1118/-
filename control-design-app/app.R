@@ -176,15 +176,45 @@ ui <- page_navbar(
   ),
   nav_panel(
     "訪談／CSA",
+    card(
+      card_header("選擇要用來產製底稿的設計元素（元素拆分可勾選）"),
+      p(class = "text-muted small",
+        "訪談問題與 CSA 底稿各自勾選；僅輸出勾選元素對應的題目／自我評估步驟。",
+        "亦可限定控制點。"),
+      layout_columns(
+        col_widths = c(4, 4, 4),
+        checkboxGroupInput(
+          "interview_elements", "訪談問題 — 納入元素",
+          choices = DESIGN_ELEMENTS,
+          selected = DEFAULT_INTERVIEW_ELEMENTS
+        ),
+        checkboxGroupInput(
+          "csa_elements", "CSA 底稿 — 納入元素",
+          choices = DESIGN_ELEMENTS,
+          selected = DEFAULT_CSA_ELEMENTS
+        ),
+        div(
+          selectizeInput(
+            "worksheet_controls", "限定控制點（空白＝全部）",
+            choices = NULL, multiple = TRUE,
+            options = list(placeholder = "產生控制點後可選")
+          ),
+          actionButton("ws_select_all_iv", "訪談全選", class = "btn-sm"),
+          actionButton("ws_select_core_iv", "訪談核心", class = "btn-sm"),
+          actionButton("ws_select_all_csa", "CSA 全選", class = "btn-sm"),
+          actionButton("ws_select_core_csa", "CSA 核心", class = "btn-sm")
+        )
+      )
+    ),
     layout_columns(
       col_widths = c(6, 6),
       card(
-        card_header("訪談問題（依設計元素拆分）"),
+        card_header("訪談問題底稿"),
         DTOutput("interview_table"),
         downloadButton("download_interview", "下載訪談 CSV", class = "btn-sm")
       ),
       card(
-        card_header("CSA 自我評估步驟"),
+        card_header("CSA（內部控制自我評估）底稿"),
         DTOutput("csa_table"),
         downloadButton("download_csa", "下載 CSA CSV", class = "btn-sm")
       )
@@ -506,14 +536,49 @@ server <- function(input, output, session) {
     datatable(controls_to_rcm(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 10))
   })
-  output$interview_table <- renderDT({
+
+  selected_worksheet_controls <- reactive({
     cs <- controls()
-    df <- if (!length(cs)) control_to_interview(list())[0, ] else do.call(rbind, lapply(cs, control_to_interview))
+    if (!length(cs)) return(list())
+    ids <- input$worksheet_controls
+    if (!length(ids) || all(!nzchar(ids))) return(cs)
+    Filter(function(c) c$control_id %in% ids, cs)
+  })
+
+  observe({
+    cs <- controls()
+    if (!length(cs)) {
+      updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
+      return()
+    }
+    ch <- stats::setNames(
+      vapply(cs, function(x) x$control_id, ""),
+      vapply(cs, function(x) {
+        sprintf("%s｜%s｜%s", x$control_id, x$risk_name %||% "", x$iuc_or_system %||% "")
+      }, "")
+    )
+    updateSelectizeInput(session, "worksheet_controls", choices = ch, server = TRUE)
+  })
+
+  observeEvent(input$ws_select_all_iv, {
+    updateCheckboxGroupInput(session, "interview_elements", selected = names(DESIGN_ELEMENTS))
+  })
+  observeEvent(input$ws_select_core_iv, {
+    updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
+  })
+  observeEvent(input$ws_select_all_csa, {
+    updateCheckboxGroupInput(session, "csa_elements", selected = names(DESIGN_ELEMENTS))
+  })
+  observeEvent(input$ws_select_core_csa, {
+    updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
+  })
+
+  output$interview_table <- renderDT({
+    df <- controls_to_interview(selected_worksheet_controls(), input$interview_elements)
     datatable(df, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10))
   })
   output$csa_table <- renderDT({
-    cs <- controls()
-    df <- if (!length(cs)) control_to_csa(list())[0, ] else do.call(rbind, lapply(cs, control_to_csa))
+    df <- controls_to_csa(selected_worksheet_controls(), input$csa_elements)
     datatable(df, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10))
   })
   output$gap_table <- renderDT({
@@ -528,6 +593,8 @@ server <- function(input, output, session) {
       drafts = drafts(),
       controls = controls(),
       pbc = pbc_reg(),
+      interview_elements = input$interview_elements,
+      csa_elements = input$csa_elements,
       saved_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
     )
     write_json(payload, draft_path, auto_unbox = TRUE, pretty = TRUE, force = TRUE)
@@ -543,13 +610,23 @@ server <- function(input, output, session) {
       persist_pbc(pbc_reg())
       refresh_pbc_choices()
     }
+    if (!is.null(payload$interview_elements)) {
+      updateCheckboxGroupInput(session, "interview_elements",
+                               selected = unlist(payload$interview_elements))
+    }
+    if (!is.null(payload$csa_elements)) {
+      updateCheckboxGroupInput(session, "csa_elements",
+                               selected = unlist(payload$csa_elements))
+    }
     showNotification("草稿已載入", type = "message")
   })
 
   output$download_json <- downloadHandler(
     filename = function() sprintf("control-pack-%s.json", format(Sys.time(), "%Y%m%d-%H%M%S")),
     content = function(file) {
-      write_json(list(drafts = drafts(), controls = controls(), pbc = pbc_reg()),
+      write_json(list(drafts = drafts(), controls = controls(), pbc = pbc_reg(),
+                      interview_elements = input$interview_elements,
+                      csa_elements = input$csa_elements),
                  file, auto_unbox = TRUE, pretty = TRUE, force = TRUE)
     }
   )
@@ -560,16 +637,14 @@ server <- function(input, output, session) {
   output$download_interview <- downloadHandler(
     filename = function() "interview.csv",
     content = function(file) {
-      cs <- controls()
-      df <- if (!length(cs)) data.frame() else do.call(rbind, lapply(cs, control_to_interview))
+      df <- controls_to_interview(selected_worksheet_controls(), input$interview_elements)
       write.csv(df, file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )
   output$download_csa <- downloadHandler(
     filename = function() "csa.csv",
     content = function(file) {
-      cs <- controls()
-      df <- if (!length(cs)) data.frame() else do.call(rbind, lapply(cs, control_to_csa))
+      df <- controls_to_csa(selected_worksheet_controls(), input$csa_elements)
       write.csv(df, file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )

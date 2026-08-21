@@ -72,8 +72,17 @@ check(any(grepl("目標與控制活動文字相同", gaps$gap_item)), "偵測目
 
 iv <- control_to_interview(d1)
 check(nrow(iv) >= 5 && any(grepl("控制目標", iv$element)), "訪談題含控制目標元素")
+iv2 <- control_to_interview(d1, elements = c("control_objective", "iuc"))
+check(nrow(iv2) == 2L && identical(iv2$element_key, c("control_objective", "iuc")),
+      "訪談可依勾選元素過濾")
+iv0 <- control_to_interview(d1, elements = character())
+check(nrow(iv0) == 0L, "未勾選元素時訪談為空")
+
 csa <- control_to_csa(d1)
 check(nrow(csa) >= 2 && "control_objective" %in% names(csa), "CSA 含目標與步驟")
+csa2 <- control_to_csa(d1, elements = c("steps", "outputs"))
+check(all(csa2$element_key %in% c("steps", "outputs")), "CSA 可依勾選元素過濾")
+check(any(csa2$element == "Steps（執行步驟）"), "CSA steps 元素標籤正確")
 
 lib <- seed_control_library()
 check(length(lib) >= 2 && !is.null(get_library_item(lib, "LIB-REV-CUTOFF-01")), "範本庫可取用")

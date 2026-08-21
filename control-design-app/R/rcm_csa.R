@@ -61,25 +61,7 @@ strip_attr_label <- function(x) {
 
 is_blank <- function(x) !nzchar(trimws(as.character(x %||% "")))
 
-# Objective must be purpose; activity must be how — never identical / near-duplicate
-rcm_objective_activity_check <- function(objective, activity) {
-  obj <- trimws(as.character(objective %||% ""))
-  act <- trimws(as.character(activity %||% ""))
-  if (!nzchar(obj) || !nzchar(act)) {
-    return(list(ok = FALSE, msg = "控制目標或控制活動空白"))
-  }
-  if (identical(obj, act)) {
-    return(list(ok = FALSE, msg = "控制目標與控制活動文字相同（禁止）"))
-  }
-  if (nchar(act) <= nchar(obj) + 6 && grepl(obj, act, fixed = TRUE)) {
-    return(list(ok = FALSE, msg = "控制活動幾乎只重述控制目標"))
-  }
-  # Heuristic: objective should not look like imperative steps
-  if (grepl("每[日週月季年]|逐筆|簽核|比對|覆核後", obj) && !grepl("確保|達成|防止|避免|及時|正確|完整", obj)) {
-    return(list(ok = FALSE, msg = "控制目標似為執行步驟，請改寫為「要達成什麼」"))
-  }
-  list(ok = TRUE, msg = "OK")
-}
+# rcm_objective_activity_check() lives in R/objective_activity.R
 
 derive_risk_id <- function(ctrl, seq_no = 1L) {
   if (!is_blank(ctrl$risk_id)) return(trimws(ctrl$risk_id))
@@ -138,7 +120,11 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     `相關IUC_表單_系統` = ctrl$iuc_or_system %||% "",
     `相關科目` = ctrl$significant_account %||% "",
     `相關聲明` = ctrl$assertions %||% "",
-    `設計檢核` = if (chk$ok) "通過" else paste0("待修：", chk$msg),
+    `設計檢核` = if (isTRUE(chk$ok)) {
+      sprintf("通過（目標：%s；活動：%s）", chk$objective_verdict, chk$activity_verdict)
+    } else {
+      paste0("待修：", chk$msg)
+    },
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -444,8 +430,9 @@ detect_design_gaps <- function(ctrl) {
   if (is_blank(ctrl$assertions)) add("缺資訊", "中", "缺少相關聲明", "對應 assertion")
 
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
-  if (!chk$ok && !is_blank(ctrl$control_objective) && !is_blank(ctrl$control_activity)) {
-    add("控制缺失", "高", chk$msg, "重寫目標／活動使 RCM 兩欄可乾淨分列")
+  if (!isTRUE(chk$ok)) {
+    add("控制缺失", "高", chk$msg,
+        paste(c("重寫使目標＝Why、活動＝How", chk$hints), collapse = "；"))
   }
 
   if (is_blank(ctrl$iuc_or_system)) {

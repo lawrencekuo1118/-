@@ -24,6 +24,7 @@ dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
 
 source(file.path(root, "R", "constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
+source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
@@ -102,8 +103,16 @@ ui <- page_navbar(
       card(
         full_screen = TRUE,
         textInput("control_id", NULL, value = "CD-001", placeholder = "控制點 ID"),
-        textAreaInput("control_objective", NULL, rows = 2, placeholder = "控制目標（Why）"),
-        textAreaInput("control_activity", NULL, rows = 2, placeholder = "控制活動（How，勿重述目標）"),
+        textAreaInput("control_objective", NULL, rows = 2,
+                      placeholder = "控制目標 Why：確保／防止…（結果，勿寫步驟）"),
+        textAreaInput("control_activity", NULL, rows = 2,
+                      placeholder = "控制活動 How：誰＋動作＋表單／系統（勿重述目標）"),
+        uiOutput("oa_live_check"),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
+          actionButton("oa_swap", "對調兩欄", class = "btn-sm btn-outline-secondary")
+        ),
         textInput("sub_process", NULL, placeholder = "子作業（例：存取管理／變更管理）"),
         textAreaInput("company_status", NULL, rows = 2, placeholder = "公司現況描述（選定元素後再寫；可空則自動拼湊）"),
         layout_columns(
@@ -578,24 +587,57 @@ server <- function(input, output, session) {
   })
 
   output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
+  output$oa_live_check <- renderUI({
+    chk <- rcm_objective_activity_check(input$control_objective, input$control_activity)
+    cls <- if (isTRUE(chk$ok)) "alert alert-success py-1 mb-2" else "alert alert-danger py-1 mb-2"
+    div(class = cls, format_oa_check_html(chk))
+  })
+
+  observeEvent(input$oa_swap, {
+    o <- input$control_objective %||% ""
+    a <- input$control_activity %||% ""
+    updateTextAreaInput(session, "control_objective", value = a)
+    updateTextAreaInput(session, "control_activity", value = o)
+  })
+
+  observeEvent(input$oa_split_suggest, {
+    # Prefer splitting whichever field looks mixed; else join both
+    blob <- paste(
+      c(input$control_objective %||% "", input$control_activity %||% ""),
+      collapse = "。"
+    )
+    sug <- suggest_objective_activity_split(blob)
+    updateTextAreaInput(session, "control_objective", value = sug$objective)
+    updateTextAreaInput(session, "control_activity", value = sug$activity)
+    showNotification(sug$note, type = "message")
+  })
+
   output$live_validation <- renderUI({
     d <- current_draft_from_inputs()
     gaps <- detect_design_gaps(d)
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
     ready <- is_rcm_row_ready(d)
-    if (isTRUE(ready$ready)) {
-      div(class = "alert alert-success py-1 mb-2", "可寫入 RCM 一列（設計檢核通過）")
+    if (isTRUE(ready$ready) && isTRUE(chk$ok)) {
+      div(class = "alert alert-success py-1 mb-2",
+          "可寫入 RCM 一列｜", format_oa_check_html(chk))
     } else {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
-      summary <- if (nrow(high)) {
-        paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
-      } else if (!chk$ok) chk$msg else paste(gaps$gap_item, collapse = "；")
+      summary <- if (!isTRUE(chk$ok)) chk$msg
+      else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
+      else paste(gaps$gap_item, collapse = "；")
       div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM：", summary))
     }
   })
 
   observeEvent(input$add_draft, {
     d <- current_draft_from_inputs()
+    chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
+    if (!isTRUE(chk$ok)) {
+      return(showNotification(
+        paste0("目標／活動未分開，無法加入：", chk$msg),
+        type = "error", duration = 8
+      ))
+    }
     d$draft_id <- next_id()
     if (!nzchar(trimws(d$control_id))) d$control_id <- sprintf("CD-%03d", d$draft_id)
     drafts(c(drafts(), list(d)))
@@ -632,8 +674,12 @@ server <- function(input, output, session) {
   observeEvent(input$update_draft, {
     idx <- selected_draft_index()
     if (is.null(idx)) return(showNotification("請選佇列列", type = "warning"))
-    ds <- drafts()
     new_d <- current_draft_from_inputs()
+    chk <- rcm_objective_activity_check(new_d$control_objective, new_d$control_activity)
+    if (!isTRUE(chk$ok)) {
+      return(showNotification(paste0("目標／活動未分開：", chk$msg), type = "error", duration = 8))
+    }
+    ds <- drafts()
     new_d$draft_id <- ds[[idx]]$draft_id
     ds[[idx]] <- new_d
     drafts(ds)

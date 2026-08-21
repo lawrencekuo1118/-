@@ -12,6 +12,7 @@ if (!file.exists(file.path(root, "R", "assemble.R"))) {
 }
 source(file.path(root, "R", "constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
+source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
@@ -52,11 +53,30 @@ check(identical(rcm[["控制目標"]], "確保系統使用者權限與現職一�
 check(identical(rcm[["控制活動"]], "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
 check(!identical(rcm[["控制目標"]], rcm[["控制活動"]]), "目標≠活動")
 check(grepl("^IT-C-", rcm[["控制點編號"]]), "資訊循環控制點編號格式")
-check(identical(rcm[["設計檢核"]], "通過"), "設計檢核通過")
+check(grepl("^通過", rcm[["設計檢核"]]), "設計檢核通過")
 
 bad <- modifyList(d1, list(control_activity = d1$control_objective))
 rcm_bad <- controls_to_rcm(list(bad))
 check(grepl("待修", rcm_bad[["設計檢核"]]), "目標活動相同時設計檢核失敗")
+
+# Extra OA cleanliness cases
+chk1 <- rcm_objective_activity_check(
+  "每季產出權限清冊並請主管簽核後完成異動",
+  "每季產出權限清冊並請主管簽核後完成異動"
+)
+check(!isTRUE(chk1$ok), "步驟句不可同時當目標與活動")
+chk2 <- rcm_objective_activity_check(
+  "確保系統使用者權限與現職及職責分離原則一致",
+  "權限管理員每季產出使用者權限清冊，由各單位主管覆核後回簽並完成異動"
+)
+check(isTRUE(chk2$ok), "標準 Why/How 應通過")
+check(grepl("結果導向", chk2$objective_verdict), "目標判定為結果導向")
+check(grepl("行動導向", chk2$activity_verdict), "活動判定為行動導向")
+chk3 <- rcm_objective_activity_check("確保權限正確", "確保權限正確且完整")
+check(!isTRUE(chk3$ok), "活動不可只是目標的延伸句")
+sug <- suggest_objective_activity_split("確保收入於正確期間認列。會計每日比對出貨單與發票並呈主管簽核")
+check(nzchar(sug$objective) && nzchar(sug$activity) && !identical(sug$objective, sug$activity),
+      "拆分建議可分開 Why/How")
 
 gaps <- detect_design_gaps(bad)
 check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")

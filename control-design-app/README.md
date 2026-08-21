@@ -1,6 +1,8 @@
-# Control Design Assistant (Shiny) — Form 4120SR / RCM / CSA v1
+# Control Design Assistant (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
 
 輔助**快速且精準**設計標準內部控制點，並產出 RCM、訪談問題與 CSA 底稿。
+
+詳見 [`RELEASE_v1.md`](RELEASE_v1.md)、[`VERSION`](VERSION)。
 
 RCM 標題列對齊 **鯨鏈科技_資訊循環_RCM v1 (0820).xlsx**；設計採**強制引導流程**。
 

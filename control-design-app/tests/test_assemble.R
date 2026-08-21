@@ -100,6 +100,31 @@ check(any(gaps2$category == "缺文件"), "缺 IUC／產出歸類為缺文件")
 ready <- is_rcm_row_ready(d1)
 check(isTRUE(ready$ready), "完整控制點可視為 RCM 列就緒")
 
+# 設計完成＝RCM 一列（1:1）
+fin <- finalize_control_as_rcm_row(d1, existing_ids = character(), seq_hint = 1L)
+check(isTRUE(fin$ok), "finalize 成功＝寫入 RCM 一列")
+check(!is.null(fin$rcm_row), "finalize 產出 rcm_row")
+check(identical(fin$control$control_id, as.character(fin$rcm_row[["控制編號"]])),
+      "控制點編號＝RCM 控制編號")
+check(nrow(controls_to_rcm(list(fin$control))) == 1L, "一控制點對應一 RCM 列")
+parity <- assert_design_rcm_parity(list(fin$control, finalize_control_as_rcm_row(
+  modifyList(d1, list(control_id = "", iuc_or_system = "另一IUC",
+                      control_activity = "每月覆核另一清冊")),
+  existing_ids = fin$control$control_id, seq_hint = 2L
+)$control))
+# rebuild properly
+fin2 <- finalize_control_as_rcm_row(
+  modifyList(d1, list(control_id = "", iuc_or_system = "另一IUC",
+                      control_activity = "資訊每月覆核另一清冊並簽核")),
+  existing_ids = c(fin$control$control_id), seq_hint = 2L
+)
+check(isTRUE(fin2$ok), "第二點亦可定稿")
+parity <- assert_design_rcm_parity(list(fin$control, fin2$control))
+check(isTRUE(parity$ok) && parity$n_controls == 2L && parity$n_rcm_rows == 2L,
+      "兩控制點＝兩 RCM 列且 ID 對齊")
+fin_bad <- finalize_control_as_rcm_row(modifyList(d1, list(control_activity = d1$control_objective)))
+check(!isTRUE(fin_bad$ok), "未完成設計不可定稿為 RCM 列")
+
 iv <- control_to_interview(d1, elements = c("control_objective", "iuc"))
 check(nrow(iv) == 2L, "訪談可依元素過濾")
 

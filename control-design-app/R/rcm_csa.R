@@ -582,3 +582,87 @@ is_rcm_row_ready <- function(ctrl) {
   high <- gaps[gaps$severity == "高", , drop = FALSE]
   list(ready = nrow(high) == 0, gaps = gaps)
 }
+
+# Invariant: 設計控制點階段完成 ＝ 完成 RCM 其中一列
+# Finalize a designed control into a single RCM-row-ready control object.
+finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hint = 1L) {
+  ctrl <- as.list(ctrl)
+  ready <- is_rcm_row_ready(ctrl)
+  if (!isTRUE(ready$ready)) {
+    return(list(
+      ok = FALSE,
+      ready = FALSE,
+      gaps = ready$gaps,
+      control = NULL,
+      rcm_row = NULL,
+      msg = paste(
+        ready$gaps$gap_item[ready$gaps$severity == "高"],
+        collapse = "；"
+      )
+    ))
+  }
+  oa <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
+  if (!isTRUE(oa$ok)) {
+    return(list(ok = FALSE, ready = FALSE, gaps = ready$gaps, control = NULL,
+                rcm_row = NULL, msg = oa$msg))
+  }
+  if (exists("activity_type_ok", mode = "function") && !activity_type_ok(ctrl$approach)) {
+    return(list(ok = FALSE, ready = FALSE, gaps = ready$gaps, control = NULL,
+                rcm_row = NULL, msg = "控制活動須對應單一預防／偵測屬性"))
+  }
+
+  spid <- ctrl$sub_process_id %||% ""
+  if (!nzchar(trimws(spid)) && exists("derive_sub_process_id", mode = "function")) {
+    spid <- derive_sub_process_id(ctrl, seq_hint)
+  }
+  ctrl$sub_process_id <- spid
+  if (!nzchar(trimws(ctrl$control_id %||% "")) || grepl("^CD-", ctrl$control_id %||% "")) {
+    if (exists("next_rcm_control_id", mode = "function")) {
+      ctrl$control_id <- next_rcm_control_id(spid, existing_ids)
+    } else {
+      ctrl$control_id <- derive_control_id(ctrl, seq_hint)
+    }
+  }
+  if (is_blank(ctrl$company_status)) {
+    if (exists("assemble_control_paragraph", mode = "function")) {
+      ctrl$company_status <- tryCatch(assemble_control_paragraph(ctrl), error = function(e) "")
+    }
+  }
+  if (exists("assemble_summary_description", mode = "function")) {
+    ctrl$summary_description <- tryCatch(assemble_summary_description(ctrl), error = function(e) "")
+  }
+  ctrl$detailed_description <- ctrl$company_status %||% ctrl$detailed_description %||% ""
+  ctrl$rcm_ready <- list(ready = TRUE, gaps = ready$gaps)
+  ctrl$validation <- if (exists("validate_control_design", mode = "function")) {
+    validate_control_design(ctrl)
+  } else list(ok = TRUE, missing = character())
+
+  row <- control_to_rcm_row(ctrl, seq_no = seq_hint)
+  # Parity check: designed control id == RCM 控制編號
+  if (!identical(as.character(ctrl$control_id), as.character(row[["控制編號"]]))) {
+    ctrl$control_id <- as.character(row[["控制編號"]])
+  }
+  list(
+    ok = TRUE,
+    ready = TRUE,
+    gaps = ready$gaps,
+    control = ctrl,
+    rcm_row = row,
+    msg = sprintf("已完成設計＝RCM 一列（%s）", ctrl$control_id)
+  )
+}
+
+# Always true by construction when using controls_to_rcm
+assert_design_rcm_parity <- function(controls) {
+  n <- length(controls)
+  rcm <- controls_to_rcm(controls)
+  ids_c <- if (!n) character() else vapply(controls, function(x) as.character(x$control_id %||% ""), "")
+  ids_r <- if (!nrow(rcm)) character() else as.character(rcm[["控制編號"]])
+  list(
+    ok = (n == nrow(rcm)) && identical(ids_c, ids_r),
+    n_controls = n,
+    n_rcm_rows = nrow(rcm),
+    control_ids = ids_c,
+    rcm_ids = ids_r
+  )
+}

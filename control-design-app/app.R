@@ -310,19 +310,21 @@ ui <- page_navbar(
         ),
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
-          actionButton("add_draft", "加入佇列＝預備 RCM 列", class = "btn-primary btn-sm"),
-          actionButton("update_draft", "更新", class = "btn-sm"),
-          actionButton("remove_draft", "刪除列", class = "btn-sm btn-outline-danger"),
-          actionButton("generate_controls", "產生控制點＝RCM列", class = "btn-success btn-sm"),
-          actionButton("collect_ready_to_lib", "就緒→累積範本庫", class = "btn-outline-success btn-sm")
+          actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
+          actionButton("add_draft", "暫存佇列（未定稿）", class = "btn-outline-primary btn-sm"),
+          actionButton("update_draft", "更新佇列", class = "btn-sm"),
+          actionButton("remove_draft", "刪除佇列", class = "btn-sm btn-outline-danger"),
+          actionButton("generate_controls", "佇列批次定稿→RCM", class = "btn-outline-success btn-sm"),
+          actionButton("collect_ready_to_lib", "RCM列→累積範本庫", class = "btn-outline-success btn-sm")
         )
       ),
       card(
         uiOutput("live_validation"),
+        uiOutput("rcm_parity_box"),
         verbatimTextOutput("live_preview"),
         navset_underline(
-          nav_panel("佇列", DTOutput("draft_table")),
-          nav_panel("控制點", DTOutput("control_table"), verbatimTextOutput("control_paragraph"))
+          nav_panel("RCM 列", DTOutput("control_table"), verbatimTextOutput("control_paragraph")),
+          nav_panel("暫存佇列", DTOutput("draft_table"))
         )
       )
     )
@@ -394,9 +396,11 @@ ui <- page_navbar(
     "RCM",
     card(
       p(class = "text-muted small mb-1",
-        "完成控制點設計＝完成 RCM 一列（鯨鏈標題列）。欄位群組：",
+        strong("設計控制點完成＝RCM 一列"),
+        "（1 控制點 ↔ 1 RCM 列）。欄位群組：",
         paste(names(RCM_HEADER_GROUPS), collapse = " ｜ "),
         "。", strong("控制目標≠控制活動"), "；類型欄防呆見「設計檢核」。"),
+      uiOutput("rcm_count_box"),
       DTOutput("rcm_table"),
       downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
       tags$hr(),
@@ -1297,15 +1301,67 @@ server <- function(input, output, session) {
     six <- six_status_rules_check(d)
     if (isTRUE(ready$ready) && isTRUE(chk$ok) && isTRUE(six$ok)) {
       div(class = "alert alert-success py-1 mb-2",
-          "可寫入 RCM 一列｜", format_oa_check_html(chk))
+          "設計完成＝可寫入 RCM 一列｜", format_oa_check_html(chk))
     } else {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
       summary <- if (!isTRUE(chk$ok)) chk$msg
       else if (!isTRUE(six$ok)) paste0("六大未齊：", paste(six$missing, collapse = "、"))
       else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
       else paste(gaps$gap_item, collapse = "；")
-      div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM：", summary))
+      div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM 一列：", summary))
     }
+  })
+
+  output$rcm_parity_box <- renderUI({
+    parity <- assert_design_rcm_parity(controls())
+    cls <- if (isTRUE(parity$ok)) "alert alert-secondary py-1 mb-2 small" else "alert alert-danger py-1 mb-2 small"
+    div(class = cls,
+        sprintf("不變條件：設計控制點 %d ＝ RCM 列 %d", parity$n_controls, parity$n_rcm_rows),
+        if (!parity$ok) "（不一致，請重新定稿）")
+  })
+  output$rcm_count_box <- renderUI({
+    parity <- assert_design_rcm_parity(controls())
+    tags$p(class = "small mb-2",
+           sprintf("目前已定稿 %d 個控制點＝%d 列 RCM", parity$n_controls, parity$n_rcm_rows))
+  })
+
+  # Primary path: 設計完成 → 直接寫入一筆控制點／RCM 列（1:1）
+  observeEvent(input$finalize_rcm_row, {
+    d <- current_draft_from_inputs()
+    ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    fin <- finalize_control_as_rcm_row(d, existing_ids = ids, seq_hint = length(controls()) + 1L)
+    if (!isTRUE(fin$ok)) {
+      return(showNotification(
+        paste0("尚未完成設計，不能寫入 RCM 列：", fin$msg),
+        type = "error", duration = 10
+      ))
+    }
+    pt <- fin$control
+    # upsert by control_id into controls()
+    cs <- controls()
+    idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
+    if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
+    controls(cs)
+    # also keep a draft snapshot for edit history
+    d$control_id <- pt$control_id
+    d$draft_id <- next_id()
+    drafts(c(drafts(), list(d)))
+    next_id(next_id() + 1L)
+    updateTextInput(session, "control_id",
+                    value = next_rcm_control_id(
+                      pt$sub_process_id,
+                      collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+                    ))
+    if (isTRUE(input$auto_collect_lib)) {
+      res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)
+      showNotification(
+        sprintf("%s｜已累積入庫 +%d／覆寫 %d", fin$msg, res$added, res$updated),
+        type = "message", duration = 8
+      )
+    } else {
+      showNotification(fin$msg, type = "message", duration = 8)
+    }
+    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
   observeEvent(input$add_draft, {
@@ -1313,21 +1369,7 @@ server <- function(input, output, session) {
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
     if (!isTRUE(chk$ok)) {
       return(showNotification(
-        paste0("目標／活動未分開，無法加入：", chk$msg),
-        type = "error", duration = 8
-      ))
-    }
-    tchk <- rcm_type_fields_check(d$nature, d$approach)
-    if (!isTRUE(tchk$ok)) {
-      return(showNotification(paste0("類型欄位防呆：", tchk$msg), type = "error", duration = 8))
-    }
-    if (!activity_type_ok(d$approach)) {
-      return(showNotification("每個控制活動只能對應一種屬性（預防性或偵測性）", type = "error"))
-    }
-    six <- six_status_rules_check(d)
-    if (!isTRUE(six$ok)) {
-      return(showNotification(
-        paste0("六大控制項目未齊，無法加入：", paste(six$missing, collapse = "、")),
+        paste0("目標／活動未分開，無法暫存：", chk$msg),
         type = "error", duration = 8
       ))
     }
@@ -1338,10 +1380,8 @@ server <- function(input, output, session) {
     }
     drafts(c(drafts(), list(d)))
     next_id(next_id() + 1L)
-    # preview next id
-    ids2 <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
-    updateTextInput(session, "control_id",
-                    value = next_rcm_control_id(d$sub_process_id, ids2))
+    showNotification("已暫存佇列（尚未定稿為 RCM 列；就緒後請按「完成設計＝寫入 RCM 一列」）",
+                     type = "message")
     if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
@@ -1393,38 +1433,37 @@ server <- function(input, output, session) {
 
   observeEvent(input$generate_controls, {
     ds <- drafts()
-    if (!length(ds)) return(showNotification("無佇列", type = "warning"))
+    if (!length(ds)) return(showNotification("無暫存佇列可批次定稿", type = "warning"))
+    # Also split by IUC within same risk
     risk_keys <- vapply(ds, function(d) paste(d$cycle, d$risk_name, sep = "||"), "")
     groups <- split(seq_along(ds), risk_keys)
-    result <- list()
+    result <- controls()
     used_ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    n_ok <- 0L
+    n_fail <- 0L
     for (gk in names(groups)) {
-      for (pt in split_controls_by_iuc(ds[groups[[gk]]])) {
-        spid <- pt$sub_process_id %||% derive_sub_process_id(pt, length(result) + 1L)
-        pt$sub_process_id <- spid
-        if (!nzchar(trimws(pt$control_id %||% "")) || grepl("^CD-", pt$control_id)) {
-          pt$control_id <- next_rcm_control_id(spid, used_ids)
+      for (pt0 in split_controls_by_iuc(ds[groups[[gk]]])) {
+        fin <- finalize_control_as_rcm_row(pt0, existing_ids = used_ids,
+                                          seq_hint = length(result) + 1L)
+        if (!isTRUE(fin$ok)) {
+          n_fail <- n_fail + 1L
+          next
         }
+        pt <- fin$control
         used_ids <- c(used_ids, pt$control_id)
-        pt$risk_id <- derive_risk_id(pt, length(result) + 1L)
-        if (is_blank(pt$company_status) || !nzchar(trimws(pt$company_status %||% ""))) {
-          pt$company_status <- assemble_control_paragraph(pt)
-        }
-        pt$summary_description <- assemble_summary_description(pt)
-        pt$detailed_description <- pt$company_status
-        pt$validation <- validate_control_design(pt)
-        pt$rcm_ready <- is_rcm_row_ready(pt)
-        result[[length(result) + 1]] <- pt
+        idx <- which(vapply(result, function(x) identical(x$control_id, pt$control_id), logical(1)))
+        if (length(idx)) result[[idx[[1]]]] <- pt else result[[length(result) + 1]] <- pt
+        n_ok <- n_ok + 1L
       }
     }
     controls(result)
-    n_ready <- sum(vapply(result, function(x) isTRUE(x$rcm_ready$ready), logical(1)))
+    parity <- assert_design_rcm_parity(result)
     showNotification(
-      sprintf("已產生 %d 控制點＝%d 列 RCM（其中 %d 列設計檢核通過）",
-              length(result), length(result), n_ready),
-      type = "message"
+      sprintf("批次定稿：成功 %d 列 RCM／未就緒 %d｜不變條件 控制點%d＝RCM%d",
+              n_ok, n_fail, parity$n_controls, parity$n_rcm_rows),
+      type = if (n_ok) "message" else "warning", duration = 10
     )
-    if (isTRUE(input$auto_collect_lib) && n_ready > 0) {
+    if (isTRUE(input$auto_collect_lib) && n_ok > 0) {
       ready <- Filter(function(x) isTRUE(x$rcm_ready$ready), result)
       res <- collect_many_to_lib(ready, source = "auto_rcm", quality_gate = TRUE)
       showNotification(
@@ -1438,14 +1477,18 @@ server <- function(input, output, session) {
   controls_df <- reactive({
     cs <- controls()
     if (!length(cs)) {
-      return(data.frame(控制編號 = character(), IUC = character(), RCM = character(),
+      return(data.frame(控制編號 = character(), IUC = character(), RCM列 = character(),
                         摘要 = character(), stringsAsFactors = FALSE))
     }
+    rcm <- controls_to_rcm(cs)
     data.frame(
       控制編號 = vapply(cs, function(x) x$control_id, ""),
       IUC = vapply(cs, function(x) x$iuc_or_system, ""),
-      RCM = vapply(cs, function(x) if (isTRUE(x$rcm_ready$ready)) "可入列" else "待補", ""),
-      摘要 = vapply(cs, function(x) x$summary_description, ""),
+      RCM列 = vapply(seq_along(cs), function(i) {
+        if (isTRUE(cs[[i]]$rcm_ready$ready)) "已定稿＝1列" else "待補"
+      }, ""),
+      目標 = if (nrow(rcm)) as.character(rcm[["控制目標"]]) else character(length(cs)),
+      活動 = if (nrow(rcm)) as.character(rcm[["控制活動"]]) else character(length(cs)),
       stringsAsFactors = FALSE
     )
   })

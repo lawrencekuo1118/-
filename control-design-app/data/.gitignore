@@ -1,2 +1,5 @@
-*
+* 
 !.gitignore
+!drafts/
+!drafts/.gitignore
+!control_library_template.csv

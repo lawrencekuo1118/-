@@ -87,5 +87,28 @@ check(any(csa2$element == "Steps（執行步驟）"), "CSA steps 元素標籤正
 lib <- seed_control_library()
 check(length(lib) >= 2 && !is.null(get_library_item(lib, "LIB-REV-CUTOFF-01")), "範本庫可取用")
 
+# Bulk library accumulate / import
+lib2 <- upsert_library_item(lib, library_item_from_control(list(
+  library_id = "LIB-TEST-01", title = "測試範本", cycle = "薪工循環",
+  risk_name = "薪資虛增", control_objective = "防止虛增薪資",
+  control_activity = "比對出勤與薪資清冊", iuc_or_system = "薪資清冊",
+  frequency = "每月", responsible_unit = "人資", nature = "人工 (Manual)",
+  approach = "偵測性 (Detective)", type = "核對驗證 (Verifications)",
+  inputs = "出勤紀錄", review_steps = "比對\n簽核", outputs = "調節表",
+  risk_attr_financial = "a", risk_attr_operations = "b", risk_attr_compliance = "c",
+  significant_account = "薪資費用", assertions = "完整性 (Completeness)"
+), tags = c("薪工")))
+check(length(lib2) == length(lib) + 1L, "累積新增範本")
+tmp_csv <- tempfile(fileext = ".csv")
+utils::write.csv(library_to_flat_df(lib2), tmp_csv, row.names = FALSE, fileEncoding = "UTF-8")
+imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = TRUE)
+check(length(imported) >= 3 && !is.null(get_library_item(imported, "LIB-TEST-01")), "CSV 大量匯入範本庫")
+ch <- library_choices(imported, cycle_filter = "薪工循環")
+check(length(ch) >= 1 && any(grepl("LIB-TEST-01", ch)), "依循環篩選範本供套用")
+tmp_json <- tempfile(fileext = ".json")
+save_control_library(imported, tmp_json)
+loaded_lib <- load_control_library(tmp_json, fallback_seed = FALSE)
+check(length(loaded_lib) == length(imported), "範本庫 JSON 持久化")
+
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

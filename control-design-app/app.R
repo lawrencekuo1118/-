@@ -67,12 +67,18 @@ ui <- page_navbar(
   sidebar = sidebar(
     width = 280,
     open = "desktop",
-    textInput("company", NULL, placeholder = "公司名稱"),
     selectInput("cycle", NULL, choices = CYCLES_NINE),
+    textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
+    selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
+    div(
+      class = "d-flex gap-1 flex-wrap",
+      actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
+      actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
+    ),
+    tags$hr(class = "my-2"),
     textInput("risk_name", NULL, placeholder = "風險名稱"),
     textAreaInput("risk_description", NULL, rows = 2, placeholder = "風險描述（RoMM）"),
-    selectInput("lib_pick", NULL, choices = c("範本庫…" = "")),
-    actionButton("apply_lib", "套用範本", class = "btn-sm btn-outline-primary w-100"),
+    textInput("company", NULL, placeholder = "公司名稱"),
     tags$hr(class = "my-2"),
     tags$strong("草稿"),
     textInput("draft_name", NULL, placeholder = "草稿名稱"),
@@ -167,6 +173,33 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
+    "範本庫",
+    layout_columns(
+      col_widths = c(4, 8),
+      card(
+        p(class = "text-muted small mb-1",
+          "大量完美控制點可 CSV／JSON 匯入；設計時優先從此庫套用。亦可將目前表單或已產生控制點存入（累積制）。"),
+        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON",
+                  accept = c(".csv", ".json")),
+        checkboxInput("lib_overwrite", "同 ID 則覆蓋", TRUE),
+        div(
+          class = "d-flex gap-1 flex-wrap",
+          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
+          actionButton("lib_add_selected_control", "控制點→庫", class = "btn-sm"),
+          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
+          downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
+          downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
+        ),
+        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
+        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）")
+      ),
+      card(
+        DTOutput("lib_table"),
+        verbatimTextOutput("lib_preview")
+      )
+    )
+  ),
+  nav_panel(
     "PBC",
     layout_columns(
       col_widths = c(4, 8),
@@ -237,12 +270,34 @@ server <- function(input, output, session) {
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
-  lib <- reactiveVal(seed_control_library())
+  lib_path_json <- file.path(data_dir, "control_library.json")
+  lib_path_csv <- file.path(data_dir, "control_library.csv")
+  # Seed once if missing, then always load persisted (accumulative)
+  if (!file.exists(lib_path_json)) {
+    save_control_library(seed_control_library(), lib_path_json, lib_path_csv)
+  }
+  lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
   next_id <- reactiveVal(1L)
   last_saved_at <- reactiveVal(NULL)
   draft_tick <- reactiveVal(0L)
 
   persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
+  persist_lib <- function(library) {
+    save_control_library(library, lib_path_json, lib_path_csv)
+    library
+  }
+
+  refresh_lib_choices <- function() {
+    ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    updateSelectInput(
+      session, "lib_pick",
+      choices = c("① 優先：從範本庫套用…" = "", ch),
+      selected = {
+        cur <- input$lib_pick %||% ""
+        if (nzchar(cur) && cur %in% ch) cur else ""
+      }
+    )
+  }
 
   refresh_draft_list <- function(selected = NULL) {
     df <- list_saved_drafts(data_dir)
@@ -265,8 +320,9 @@ server <- function(input, output, session) {
   }
 
   observe({
-    updateSelectInput(session, "lib_pick",
-                      choices = c("範本庫…" = "", library_choices(lib())))
+    input$cycle
+    input$lib_query
+    refresh_lib_choices()
   })
   observe({
     input$cycle
@@ -306,12 +362,91 @@ server <- function(input, output, session) {
 
   observeEvent(input$apply_lib, {
     id <- input$lib_pick
-    if (!nzchar(id %||% "")) return(showNotification("請先選擇範本", type = "warning"))
+    if (!nzchar(id %||% "")) return(showNotification("請先從範本庫選擇", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
     fill_inputs_from_ctrl(session, item$control)
-    showNotification(paste("已套用", item$title), type = "message")
+    # Prefer library detailed description into preview path via fields already filled
+    showNotification(paste("已套用範本：", item$title), type = "message")
   })
+
+  add_ctrl_to_library <- function(ctrl, title = NULL, tags = character()) {
+    if (!is.null(title) && nzchar(trimws(title))) ctrl$title <- trimws(title)
+    tag_vec <- unlist(strsplit(as.character(tags %||% ""), "[;；,，|/]+"))
+    tag_vec <- trimws(tag_vec)
+    tag_vec <- tag_vec[nzchar(tag_vec)]
+    item <- library_item_from_control(ctrl, tags = tag_vec)
+    new_lib <- upsert_library_item(lib(), item)
+    lib(persist_lib(new_lib))
+    refresh_lib_choices()
+    item
+  }
+
+  observeEvent(input$save_to_lib, {
+    d <- current_draft_from_inputs()
+    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags)
+    showNotification(paste("已存入範本庫", item$library_id), type = "message")
+  })
+  observeEvent(input$lib_add_current, {
+    d <- current_draft_from_inputs()
+    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags)
+    showNotification(paste("已存入", item$library_id), type = "message")
+  })
+  observeEvent(input$lib_add_selected_control, {
+    s <- input$control_table_rows_selected
+    cs <- controls()
+    if (is.null(s) || !length(cs)) return(showNotification("請先在設計頁選取控制點", type = "warning"))
+    item <- add_ctrl_to_library(cs[[s]], title = input$lib_title_override, tags = input$lib_tags)
+    showNotification(paste("控制點已存入", item$library_id), type = "message")
+  })
+  observeEvent(input$upload_lib, {
+    f <- input$upload_lib
+    if (is.null(f)) return()
+    tryCatch({
+      new_lib <- import_control_library_file(f$datapath, lib(), overwrite = isTRUE(input$lib_overwrite))
+      lib(persist_lib(new_lib))
+      refresh_lib_choices()
+      showNotification(sprintf("範本庫共 %d 筆", length(new_lib)), type = "message")
+    }, error = function(e) showNotification(conditionMessage(e), type = "error"))
+  })
+  observeEvent(input$lib_delete, {
+    s <- input$lib_table_rows_selected
+    if (is.null(s)) return(showNotification("請選取範本列", type = "warning"))
+    df <- library_summary_df(lib())
+    id <- df$library_id[s]
+    lib(persist_lib(delete_library_item(lib(), id)))
+    refresh_lib_choices()
+  })
+  output$lib_table <- renderDT({
+    datatable(
+      library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)),
+      selection = "single", rownames = FALSE,
+      options = list(pageLength = 10, scrollX = TRUE, dom = "ftip")
+    )
+  })
+  output$lib_preview <- renderText({
+    s <- input$lib_table_rows_selected
+    items <- filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    if (is.null(s) || !length(items)) return("選取範本以預覽描述")
+    item <- items[[s]]
+    paste(
+      c(
+        paste0("【", item$library_id, "】", item$title),
+        item$control$summary_description %||% "",
+        "----",
+        item$control$detailed_description %||% assemble_control_paragraph(item$control)
+      ),
+      collapse = "\n"
+    )
+  })
+  output$download_lib_csv <- downloadHandler(
+    filename = function() sprintf("control_library-%s.csv", format(Sys.time(), "%Y%m%d")),
+    content = function(file) utils::write.csv(library_to_flat_df(lib()), file, row.names = FALSE, fileEncoding = "UTF-8")
+  )
+  output$download_lib_json <- downloadHandler(
+    filename = function() sprintf("control_library-%s.json", format(Sys.time(), "%Y%m%d")),
+    content = function(file) save_control_library(lib(), file)
+  )
 
   labelize <- function(label, body) {
     body <- trimws(body %||% "")

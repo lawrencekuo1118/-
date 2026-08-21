@@ -1,4 +1,4 @@
-# Control Design Assistant — Form 4120SR / RCM / CSA
+# Control Design Assistant — compact UI + named drafts
 # Run: shiny::runApp("control-design-app")
 
 library(shiny)
@@ -27,15 +27,19 @@ source(file.path(root, "R", "assemble.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
+source(file.path(root, "R", "draft_store.R"), local = TRUE)
 
 fill_inputs_from_ctrl <- function(session, ctrl) {
   if (is.null(ctrl)) return()
   updateSelectInput(session, "cycle", selected = ctrl$cycle %||% CYCLES_NINE[[1]])
   updateTextInput(session, "risk_name", value = ctrl$risk_name %||% "")
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
-  updateTextAreaInput(session, "risk_attr_financial", value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_financial %||% ""))
-  updateTextAreaInput(session, "risk_attr_operations", value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_operations %||% ""))
-  updateTextAreaInput(session, "risk_attr_compliance", value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_compliance %||% ""))
+  updateTextAreaInput(session, "risk_attr_financial",
+                      value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_financial %||% ""))
+  updateTextAreaInput(session, "risk_attr_operations",
+                      value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_operations %||% ""))
+  updateTextAreaInput(session, "risk_attr_compliance",
+                      value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_compliance %||% ""))
   updateTextInput(session, "significant_account", value = ctrl$significant_account %||% "")
   updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
@@ -53,178 +57,176 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
 }
 
 ui <- page_navbar(
-  title = "控制點設計｜RCM／CSA",
-  theme = bs_theme(version = 5, bootswatch = "flatly", primary = "#1B4F72",
-                   base_font = font_google("Noto Sans TC")),
+  title = "控制設計",
+  theme = bs_theme(
+    version = 5, bootswatch = "flatly", primary = "#1B4F72",
+    base_font = font_google("Noto Sans TC"),
+    "font-size-base" = "0.9rem"
+  ),
   fillable = TRUE,
   sidebar = sidebar(
-    width = 300,
+    width = 280,
     open = "desktop",
-    textInput("company", "公司", placeholder = "公司名稱"),
-    selectInput("lib_pick", "範本庫（優先套用）", choices = c("（不使用）" = ""), selected = ""),
-    actionButton("apply_lib", "套用範本", class = "btn-sm btn-outline-primary"),
-    hr(),
-    selectInput("cycle", "九大循環", choices = CYCLES_NINE),
-    textInput("risk_name", "風險", placeholder = "風險名稱"),
-    textAreaInput("risk_description", NULL, rows = 2, placeholder = "RoMM 完整描述"),
-    textInput("attr_label_fr", NULL, value = "財務報導"),
-    textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "屬性1"),
-    textInput("attr_label_op", NULL, value = "營運"),
-    textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "屬性2"),
-    textInput("attr_label_cp", NULL, value = "法令遵循"),
-    textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "屬性3"),
-    textInput("significant_account", "重大科目", placeholder = "科目"),
-    selectizeInput("assertions", "聲明", choices = ASSERTION_CHOICES, multiple = TRUE,
-                   selected = ASSERTION_CHOICES[1:2], options = list(create = TRUE)),
-    selectInput("romm_classification", "RoMM", choices = ROMM_CLASS_CHOICES),
-    hr(),
-    actionButton("save_draft_file", "儲存草稿", class = "btn-sm btn-secondary"),
-    actionButton("load_draft_file", "載入草稿", class = "btn-sm btn-outline-secondary"),
-    downloadButton("download_json", "匯出 JSON", class = "btn-sm")
+    textInput("company", NULL, placeholder = "公司名稱"),
+    selectInput("cycle", NULL, choices = CYCLES_NINE),
+    textInput("risk_name", NULL, placeholder = "風險名稱"),
+    textAreaInput("risk_description", NULL, rows = 2, placeholder = "風險描述（RoMM）"),
+    selectInput("lib_pick", NULL, choices = c("範本庫…" = "")),
+    actionButton("apply_lib", "套用範本", class = "btn-sm btn-outline-primary w-100"),
+    tags$hr(class = "my-2"),
+    tags$strong("草稿"),
+    textInput("draft_name", NULL, placeholder = "草稿名稱"),
+    selectInput("draft_pick", NULL, choices = c("已存草稿…" = "")),
+    div(
+      class = "d-flex gap-1 flex-wrap",
+      actionButton("save_draft_file", "儲存", class = "btn-sm btn-primary"),
+      actionButton("load_draft_file", "載入", class = "btn-sm btn-outline-secondary"),
+      actionButton("delete_draft_file", "刪除", class = "btn-sm btn-outline-danger")
+    ),
+    checkboxInput("autosave_draft", "自動儲存", TRUE),
+    uiOutput("draft_status"),
+    downloadButton("download_json", "匯出 JSON", class = "btn-sm w-100 mt-1")
   ),
   nav_panel(
     "設計",
     layout_columns(
-      col_widths = c(6, 6),
+      col_widths = c(7, 5),
       card(
-        card_header("控制元素（目標 ≠ 活動）"),
+        full_screen = TRUE,
+        textInput("control_id", NULL, value = "CD-001", placeholder = "控制點 ID"),
+        textAreaInput("control_objective", NULL, rows = 2, placeholder = "控制目標（Why）"),
+        textAreaInput("control_activity", NULL, rows = 2, placeholder = "控制活動（How，勿重述目標）"),
         layout_columns(
           col_widths = c(6, 6),
-          textInput("control_id", "ID", value = "CD-001"),
-          selectInput("frequency", "頻率", choices = FREQUENCY_CHOICES, selected = FREQUENCY_CHOICES[[4]])
+          selectInput("frequency", NULL, choices = FREQUENCY_CHOICES, selected = FREQUENCY_CHOICES[[4]]),
+          textInput("responsible_unit", NULL, placeholder = "負責單位")
         ),
-        textInput("responsible_unit", "負責單位", placeholder = "Owner"),
-        textAreaInput("control_objective", "控制目標（Why／對應風險與聲明）", rows = 2),
-        textAreaInput("control_activity", "控制活動（How／執行作為，勿重述目標）", rows = 2),
         selectizeInput(
-          "pbc_apply", "套用 IUC／PBC 命名庫（顯示：客戶原名 → 檢視後命名）",
-          choices = NULL, multiple = TRUE,
-          options = list(placeholder = "多選後寫入 IUC 與 Inputs 對照")
+          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "套用 IUC／PBC（原名→新名）")
         ),
-        checkboxInput("pbc_also_inputs", "套用時一併寫入 Inputs 命名對照（原名／新名）", TRUE),
-        textAreaInput("iuc_or_system", "IUC／制度（採用檢視後命名；不同則分拆控制點）", rows = 2),
-        verbatimTextOutput("pbc_status_preview"),
-        layout_columns(
-          col_widths = c(4, 4, 4),
-          selectizeInput("nature", "Nature", choices = NATURE_CHOICES, options = list(create = TRUE)),
-          selectizeInput("approach", "Approach", choices = APPROACH_CHOICES, options = list(create = TRUE)),
-          selectizeInput("type", "Type", choices = TYPE_CHOICES, options = list(create = TRUE))
+        textAreaInput("iuc_or_system", NULL, rows = 1, placeholder = "IUC／制度（不同則分拆）"),
+        accordion(
+          open = FALSE,
+          accordion_panel(
+            "進階",
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("attr_label_fr", NULL, value = "財務報導"),
+              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "屬性1")
+            ),
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("attr_label_op", NULL, value = "營運"),
+              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "屬性2")
+            ),
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("attr_label_cp", NULL, value = "法令遵循"),
+              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "屬性3")
+            ),
+            textInput("significant_account", NULL, placeholder = "重大科目"),
+            selectizeInput(
+              "assertions", NULL, choices = ASSERTION_CHOICES, multiple = TRUE,
+              selected = ASSERTION_CHOICES[1:2],
+              options = list(create = TRUE, placeholder = "聲明")
+            ),
+            selectInput("romm_classification", NULL, choices = ROMM_CLASS_CHOICES),
+            layout_columns(
+              col_widths = c(4, 4, 4),
+              selectizeInput("nature", NULL, choices = NATURE_CHOICES,
+                             options = list(create = TRUE, placeholder = "Nature")),
+              selectizeInput("approach", NULL, choices = APPROACH_CHOICES,
+                             options = list(create = TRUE, placeholder = "Approach")),
+              selectizeInput("type", NULL, choices = TYPE_CHOICES,
+                             options = list(create = TRUE, placeholder = "Type"))
+            ),
+            textAreaInput("inputs", NULL, rows = 1, placeholder = "Inputs"),
+            textAreaInput("review_steps", NULL, rows = 3, placeholder = "Steps（每行一步）"),
+            textAreaInput("outputs", NULL, rows = 1, placeholder = "Outputs"),
+            textAreaInput("investigation_threshold", NULL, rows = 1, placeholder = "調查門檻"),
+            checkboxInput("pbc_also_inputs", "套用 PBC 時寫入 Inputs 對照", TRUE)
+          )
         ),
-        textAreaInput("inputs", "Inputs", rows = 1),
-        textAreaInput("review_steps", "Steps（每行一步）", rows = 3),
-        textAreaInput("outputs", "Outputs", rows = 1),
-        textAreaInput("investigation_threshold", "調查門檻（選填）", rows = 1),
         div(
-          actionButton("add_draft", "加入草稿", class = "btn-primary btn-sm"),
-          actionButton("update_draft", "更新選取", class = "btn-sm"),
-          actionButton("remove_draft", "刪除選取", class = "btn-sm btn-outline-danger"),
+          class = "d-flex gap-1 flex-wrap mt-2",
+          actionButton("add_draft", "加入", class = "btn-primary btn-sm"),
+          actionButton("update_draft", "更新", class = "btn-sm"),
+          actionButton("remove_draft", "刪除列", class = "btn-sm btn-outline-danger"),
           actionButton("generate_controls", "產生控制點", class = "btn-success btn-sm")
         )
       ),
       card(
-        card_header("預覽／缺漏"),
-        verbatimTextOutput("live_preview"),
         uiOutput("live_validation"),
-        hr(),
-        h6("草稿"),
-        DTOutput("draft_table"),
-        h6("控制點"),
-        DTOutput("control_table"),
-        verbatimTextOutput("control_paragraph")
+        verbatimTextOutput("live_preview"),
+        navset_underline(
+          nav_panel("佇列", DTOutput("draft_table")),
+          nav_panel("控制點", DTOutput("control_table"), verbatimTextOutput("control_paragraph"))
+        )
       )
     )
   ),
   nav_panel(
-    "IUC／PBC",
-    card(
-      card_header("IUC／PBC 命名管理（客戶原名 ↔ 檢視後命名，設計時可套用）"),
-      p(class = "text-muted small",
-        "登錄客戶提供的 PBC 原始名稱，並記錄檢視後標準化命名。",
-        "撰寫控制現況／設計控制點時，於「設計」頁從命名庫選擇即可重複套用。"),
-      layout_columns(
-        col_widths = c(2, 3, 3, 2, 2),
-        textInput("pbc_id", "ID", placeholder = "自動／選列帶入"),
-        textInput("pbc_client", "客戶取得原名", placeholder = "原始檔名或 PBC 標題"),
-        textInput("pbc_reviewed", "檢視後新命名", placeholder = "標準 IUC／制度名"),
-        selectInput("pbc_cycle", "所屬循環", choices = c("（共用）" = "", CYCLES_NINE)),
-        textInput("pbc_notes", "備註", placeholder = "版本／來源")
+    "PBC",
+    layout_columns(
+      col_widths = c(4, 8),
+      card(
+        textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
+        textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
+        textInput("pbc_id", NULL, placeholder = "ID（可空）"),
+        selectInput("pbc_cycle", NULL, choices = c("循環（共用）" = "", CYCLES_NINE)),
+        textInput("pbc_notes", NULL, placeholder = "備註"),
+        div(
+          class = "d-flex gap-1 flex-wrap",
+          actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
+          actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
+          downloadButton("download_pbc", "匯出", class = "btn-sm")
+        ),
+        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv")
       ),
-      div(
-        actionButton("pbc_add", "登錄／更新", class = "btn-primary btn-sm"),
-        actionButton("pbc_delete", "刪除選取", class = "btn-outline-danger btn-sm"),
-        actionButton("pbc_clear", "清空表單", class = "btn-sm"),
-        actionButton("pbc_save", "儲存命名庫", class = "btn-secondary btn-sm"),
-        actionButton("pbc_reload", "重新載入", class = "btn-outline-secondary btn-sm"),
-        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm"),
-        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = c(".csv"),
-                  width = "180px")
-      ),
-      DTOutput("pbc_table"),
-      h6("控制現況用命名對照預覽"),
-      verbatimTextOutput("pbc_all_status")
+      card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
     )
   ),
   nav_panel(
     "RCM",
     card(
-      card_header("RCM 底稿（控制目標與控制活動分欄，不混用）"),
-      p(class = "text-muted small",
-        "控制目標＝要達成什麼／對應何風險與聲明；控制活動＝如何執行。兩者文字不得相同。"),
+      p(class = "text-muted small mb-1", "目標＝Why；活動＝How。兩欄不得相同。"),
       DTOutput("rcm_table"),
-      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm")
+      downloadButton("download_rcm", "下載 RCM", class = "btn-sm"),
+      tags$hr(),
+      tags$strong("缺漏"),
+      DTOutput("gap_table")
     )
   ),
   nav_panel(
     "訪談／CSA",
-    card(
-      card_header("選擇要用來產製底稿的設計元素（元素拆分可勾選）"),
-      p(class = "text-muted small",
-        "訪談問題與 CSA 底稿各自勾選；僅輸出勾選元素對應的題目／自我評估步驟。",
-        "亦可限定控制點。"),
-      layout_columns(
-        col_widths = c(4, 4, 4),
-        checkboxGroupInput(
-          "interview_elements", "訪談問題 — 納入元素",
-          choices = DESIGN_ELEMENTS,
-          selected = DEFAULT_INTERVIEW_ELEMENTS
+    layout_columns(
+      col_widths = c(3, 9),
+      card(
+        selectizeInput(
+          "worksheet_controls", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "控制點（空＝全部）")
         ),
-        checkboxGroupInput(
-          "csa_elements", "CSA 底稿 — 納入元素",
-          choices = DESIGN_ELEMENTS,
-          selected = DEFAULT_CSA_ELEMENTS
-        ),
+        checkboxGroupInput("interview_elements", "訪談元素",
+                           choices = DESIGN_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS),
+        checkboxGroupInput("csa_elements", "CSA 元素",
+                           choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
         div(
-          selectizeInput(
-            "worksheet_controls", "限定控制點（空白＝全部）",
-            choices = NULL, multiple = TRUE,
-            options = list(placeholder = "產生控制點後可選")
-          ),
-          actionButton("ws_select_all_iv", "訪談全選", class = "btn-sm"),
+          class = "d-flex gap-1 flex-wrap",
           actionButton("ws_select_core_iv", "訪談核心", class = "btn-sm"),
-          actionButton("ws_select_all_csa", "CSA 全選", class = "btn-sm"),
           actionButton("ws_select_core_csa", "CSA 核心", class = "btn-sm")
         )
-      )
-    ),
-    layout_columns(
-      col_widths = c(6, 6),
-      card(
-        card_header("訪談問題底稿"),
-        DTOutput("interview_table"),
-        downloadButton("download_interview", "下載訪談 CSV", class = "btn-sm")
       ),
-      card(
-        card_header("CSA（內部控制自我評估）底稿"),
-        DTOutput("csa_table"),
-        downloadButton("download_csa", "下載 CSA CSV", class = "btn-sm")
+      navset_card_underline(
+        nav_panel(
+          "訪談", DTOutput("interview_table"),
+          downloadButton("download_interview", "下載", class = "btn-sm")
+        ),
+        nav_panel(
+          "CSA", DTOutput("csa_table"),
+          downloadButton("download_csa", "下載", class = "btn-sm")
+        )
       )
-    )
-  ),
-  nav_panel(
-    "缺漏",
-    card(
-      card_header("設計缺漏／待補文件／潛在控制缺失"),
-      DTOutput("gap_table")
     )
   )
 )
@@ -237,36 +239,58 @@ server <- function(input, output, session) {
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
   lib <- reactiveVal(seed_control_library())
   next_id <- reactiveVal(1L)
+  last_saved_at <- reactiveVal(NULL)
+  draft_tick <- reactiveVal(0L)
 
-  persist_pbc <- function(reg) {
-    save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
+  persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
+
+  refresh_draft_list <- function(selected = NULL) {
+    df <- list_saved_drafts(data_dir)
+    draft_tick(draft_tick() + 1L)
+    ch <- c("已存草稿…" = "")
+    if (nrow(df)) {
+      labels <- sprintf("%s（%s｜Q%d／C%d）", df$name, df$saved_at, df$n_drafts, df$n_controls)
+      ch <- c(ch, stats::setNames(df$path, labels))
+    }
+    updateSelectInput(session, "draft_pick", choices = ch,
+                      selected = if (!is.null(selected) && selected %in% ch) selected else "")
   }
 
   refresh_pbc_choices <- function() {
     ch <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
-    updateSelectizeInput(session, "pbc_apply", choices = ch, server = TRUE,
-                         selected = intersect(input$pbc_apply %||% character(), ch))
+    updateSelectizeInput(
+      session, "pbc_apply", choices = ch, server = TRUE,
+      selected = intersect(input$pbc_apply %||% character(), unname(ch))
+    )
   }
 
   observe({
     updateSelectInput(session, "lib_pick",
-                      choices = c("（不使用）" = "", library_choices(lib())))
+                      choices = c("範本庫…" = "", library_choices(lib())))
   })
-
   observe({
     input$cycle
     refresh_pbc_choices()
   })
+  observe({
+    refresh_draft_list()
+  })
+
+  # Auto-resume last session on start
+  observeEvent(TRUE, {
+    legacy <- file.path(data_dir, "session_draft.json")
+    if (file.exists(legacy)) {
+      try(apply_payload(load_draft_payload(legacy), notify = FALSE), silent = TRUE)
+    }
+  }, once = TRUE)
 
   observeEvent(input$pbc_apply, {
     ids <- input$pbc_apply
     if (!length(ids)) return()
-    updateTextAreaInput(session, "iuc_or_system",
-                        value = apply_pbc_to_iuc(pbc_reg(), ids))
+    updateTextAreaInput(session, "iuc_or_system", value = apply_pbc_to_iuc(pbc_reg(), ids))
     if (isTRUE(input$pbc_also_inputs)) {
       mapped <- format_pbc_for_inputs(pbc_reg(), ids)
       cur <- trimws(input$inputs %||% "")
-      # Replace prior mapping block if present; else append
       if (grepl("【IUC／PBC 命名對照】", cur, fixed = TRUE)) {
         cur <- trimws(sub("【IUC／PBC 命名對照】[\\s\\S]*$", "", cur))
       }
@@ -275,24 +299,14 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
-  output$pbc_status_preview <- renderText({
-    ids <- input$pbc_apply
-    if (!length(ids)) return("（選取命名庫項目後，此處顯示原名→新名對照，供控制現況重複引用）")
-    paste(format_pbc_status_lines(pbc_reg(), ids), collapse = "\n")
-  })
-
   output$pbc_all_status <- renderText({
     lines <- format_pbc_status_lines(pbc_reg())
-    if (!length(lines)) return("（命名庫尚無資料）")
-    paste(lines, collapse = "\n")
+    if (!length(lines)) "（命名庫尚無資料）" else paste(lines, collapse = "\n")
   })
 
   observeEvent(input$apply_lib, {
     id <- input$lib_pick
-    if (!nzchar(id %||% "")) {
-      showNotification("請先選擇範本", type = "warning")
-      return()
-    }
+    if (!nzchar(id %||% "")) return(showNotification("請先選擇範本", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
     fill_inputs_from_ctrl(session, item$control)
@@ -337,16 +351,98 @@ server <- function(input, output, session) {
     )
   }
 
+  form_snapshot <- function() {
+    list(
+      company = input$company, cycle = input$cycle, risk_name = input$risk_name,
+      risk_description = input$risk_description,
+      control_id = input$control_id, control_objective = input$control_objective,
+      control_activity = input$control_activity, frequency = input$frequency,
+      responsible_unit = input$responsible_unit, iuc_or_system = input$iuc_or_system
+    )
+  }
+
+  make_payload <- function(name = NULL) {
+    build_draft_payload(
+      drafts = drafts(), controls = controls(), pbc = pbc_reg(),
+      interview_elements = input$interview_elements,
+      csa_elements = input$csa_elements,
+      form_snapshot = form_snapshot(),
+      name = name
+    )
+  }
+
+  apply_payload <- function(payload, notify = TRUE) {
+    if (!is.null(payload$drafts)) drafts(payload$drafts)
+    if (!is.null(payload$controls)) controls(payload$controls)
+    if (!is.null(payload$pbc) && length(payload$pbc)) {
+      pbc_reg(normalize_pbc_df(as.data.frame(payload$pbc, stringsAsFactors = FALSE)))
+      persist_pbc(pbc_reg())
+      refresh_pbc_choices()
+    }
+    if (!is.null(payload$interview_elements)) {
+      updateCheckboxGroupInput(session, "interview_elements",
+                               selected = unlist(payload$interview_elements))
+    }
+    if (!is.null(payload$csa_elements)) {
+      updateCheckboxGroupInput(session, "csa_elements",
+                               selected = unlist(payload$csa_elements))
+    }
+    snap <- payload$form_snapshot
+    if (!is.null(snap)) {
+      if (!is.null(snap$company)) updateTextInput(session, "company", value = snap$company)
+      if (!is.null(snap$cycle)) updateSelectInput(session, "cycle", selected = snap$cycle)
+      if (!is.null(snap$risk_name)) updateTextInput(session, "risk_name", value = snap$risk_name)
+      if (!is.null(snap$risk_description)) {
+        updateTextAreaInput(session, "risk_description", value = snap$risk_description)
+      }
+      if (!is.null(snap$control_objective)) {
+        updateTextAreaInput(session, "control_objective", value = snap$control_objective)
+      }
+      if (!is.null(snap$control_activity)) {
+        updateTextAreaInput(session, "control_activity", value = snap$control_activity)
+      }
+      if (!is.null(snap$iuc_or_system)) {
+        updateTextAreaInput(session, "iuc_or_system", value = snap$iuc_or_system)
+      }
+    }
+    if (!is.null(payload$name) && nzchar(payload$name)) {
+      updateTextInput(session, "draft_name", value = payload$name)
+    }
+    last_saved_at(payload$saved_at %||% format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+    if (notify) showNotification("草稿已載入", type = "message")
+  }
+
+  do_save_draft <- function(name = NULL, quiet = FALSE) {
+    nm <- name %||% input$draft_name
+    if (!nzchar(trimws(nm %||% ""))) nm <- format(Sys.time(), "草稿_%Y%m%d_%H%M%S")
+    path <- save_named_draft(data_dir, nm, make_payload(nm))
+    updateTextInput(session, "draft_name", value = sanitize_draft_name(nm))
+    last_saved_at(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+    refresh_draft_list(selected = path)
+    if (!quiet) showNotification(paste("已儲存", basename(path)), type = "message")
+    path
+  }
+
+  output$draft_status <- renderUI({
+    draft_tick()
+    ts <- last_saved_at()
+    nq <- length(drafts())
+    nc <- length(controls())
+    txt <- if (is.null(ts)) sprintf("未儲存｜佇列 %d／控制點 %d", nq, nc)
+    else sprintf("已存 %s｜佇列 %d／控制點 %d", ts, nq, nc)
+    tags$small(class = "text-muted", txt)
+  })
+
   output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
   output$live_validation <- renderUI({
     v <- validate_control_design(current_draft_from_inputs())
     gaps <- detect_design_gaps(current_draft_from_inputs())
     if (v$ok && !nrow(gaps)) {
-      div(class = "alert alert-success py-1", "元素齊備")
+      div(class = "alert alert-success py-1 mb-2", "元素齊備")
     } else {
       miss <- if (!v$ok) paste("缺：", paste(v$missing, collapse = "、")) else NULL
       extra <- if (nrow(gaps)) paste(gaps$gap_item, collapse = "；") else NULL
-      div(class = "alert alert-warning py-1", paste(na.omit(c(miss, extra)), collapse = "｜"))
+      div(class = "alert alert-warning py-1 mb-2", paste(na.omit(c(miss, extra)), collapse = "｜"))
     }
   })
 
@@ -357,6 +453,7 @@ server <- function(input, output, session) {
     drafts(c(drafts(), list(d)))
     next_id(next_id() + 1L)
     updateTextInput(session, "control_id", value = sprintf("CD-%03d", next_id()))
+    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
   drafts_df <- reactive({
@@ -374,8 +471,10 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
   })
-  output$draft_table <- renderDT(datatable(drafts_df(), selection = "single", rownames = FALSE,
-                                           options = list(dom = "t", pageLength = 5, scrollX = TRUE)))
+  output$draft_table <- renderDT({
+    datatable(drafts_df(), selection = "single", rownames = FALSE,
+              options = list(dom = "t", pageLength = 6, scrollX = TRUE, ordering = FALSE))
+  })
 
   selected_draft_index <- reactive({
     s <- input$draft_table_rows_selected
@@ -384,22 +483,24 @@ server <- function(input, output, session) {
 
   observeEvent(input$update_draft, {
     idx <- selected_draft_index()
-    if (is.null(idx)) return(showNotification("請選草稿", type = "warning"))
+    if (is.null(idx)) return(showNotification("請選佇列列", type = "warning"))
     ds <- drafts()
     new_d <- current_draft_from_inputs()
     new_d$draft_id <- ds[[idx]]$draft_id
     ds[[idx]] <- new_d
     drafts(ds)
+    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
   observeEvent(input$remove_draft, {
     idx <- selected_draft_index()
     if (is.null(idx)) return()
     drafts(drafts()[-idx])
+    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
   observeEvent(input$generate_controls, {
     ds <- drafts()
-    if (!length(ds)) return(showNotification("無草稿", type = "warning"))
+    if (!length(ds)) return(showNotification("無佇列", type = "warning"))
     risk_keys <- vapply(ds, function(d) paste(d$cycle, d$risk_name, sep = "||"), "")
     groups <- split(seq_along(ds), risk_keys)
     result <- list()
@@ -415,7 +516,8 @@ server <- function(input, output, session) {
       }
     }
     controls(result)
-    showNotification(sprintf("已產生 %d 控制點（已依 IUC 分拆／合併）", length(result)), type = "message")
+    showNotification(sprintf("已產生 %d 控制點", length(result)), type = "message")
+    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
   controls_df <- reactive({
@@ -431,25 +533,24 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
   })
-  output$control_table <- renderDT(datatable(controls_df(), selection = "single", rownames = FALSE,
-                                             options = list(dom = "t", pageLength = 5, scrollX = TRUE)))
+  output$control_table <- renderDT({
+    datatable(controls_df(), selection = "single", rownames = FALSE,
+              options = list(dom = "t", pageLength = 6, scrollX = TRUE, ordering = FALSE))
+  })
   output$control_paragraph <- renderText({
     s <- input$control_table_rows_selected
     cs <- controls()
-    if (is.null(s) || !length(cs)) return("選取控制點以檢視段落")
+    if (is.null(s) || !length(cs)) return("選取控制點以檢視")
     cs[[s]]$detailed_description
   })
 
-  # PBC registry
+  # PBC
   observeEvent(input$pbc_add, {
     tryCatch({
       reg <- upsert_pbc(pbc_reg(), list(
-        pbc_id = input$pbc_id,
-        client_pbc_name = input$pbc_client,
-        reviewed_name = input$pbc_reviewed,
-        iuc_or_system = input$pbc_reviewed,
-        cycle = input$pbc_cycle,
-        notes = input$pbc_notes
+        pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
+        reviewed_name = input$pbc_reviewed, iuc_or_system = input$pbc_reviewed,
+        cycle = input$pbc_cycle, notes = input$pbc_notes
       ))
       pbc_reg(reg)
       persist_pbc(reg)
@@ -458,26 +559,16 @@ server <- function(input, output, session) {
       updateTextInput(session, "pbc_client", value = "")
       updateTextInput(session, "pbc_reviewed", value = "")
       updateTextInput(session, "pbc_notes", value = "")
-      showNotification("已登錄並儲存命名庫", type = "message")
+      showNotification("已登錄 PBC", type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
-
-  observeEvent(input$pbc_clear, {
-    updateTextInput(session, "pbc_id", value = "")
-    updateTextInput(session, "pbc_client", value = "")
-    updateTextInput(session, "pbc_reviewed", value = "")
-    updateTextInput(session, "pbc_notes", value = "")
-    updateSelectInput(session, "pbc_cycle", selected = "")
-  })
-
   output$pbc_table <- renderDT({
     df <- pbc_reg()
-    show <- df[, c("pbc_id", "client_pbc_name", "reviewed_name", "cycle", "notes", "updated_at"), drop = FALSE]
-    names(show) <- c("ID", "客戶取得原名", "檢視後新命名", "循環", "備註", "更新時間")
+    show <- df[, c("pbc_id", "client_pbc_name", "reviewed_name", "cycle", "notes"), drop = FALSE]
+    names(show) <- c("ID", "客戶原名", "檢視後", "循環", "備註")
     datatable(show, selection = "single", rownames = FALSE,
-              options = list(pageLength = 10, scrollX = TRUE))
+              options = list(pageLength = 8, scrollX = TRUE, dom = "tip"))
   })
-
   observeEvent(input$pbc_table_rows_selected, {
     s <- input$pbc_table_rows_selected
     if (is.null(s)) return()
@@ -489,29 +580,14 @@ server <- function(input, output, session) {
     updateSelectInput(session, "pbc_cycle",
                       selected = if (nzchar(row$cycle[[1]])) row$cycle[[1]] else "")
   }, ignoreInit = TRUE)
-
   observeEvent(input$pbc_delete, {
     s <- input$pbc_table_rows_selected
-    if (is.null(s)) return(showNotification("請先選取列", type = "warning"))
-    reg <- pbc_reg()
-    rid <- reg$pbc_id[s]
-    reg <- delete_pbc(reg, rid)
+    if (is.null(s)) return(showNotification("請先選取", type = "warning"))
+    reg <- delete_pbc(pbc_reg(), pbc_reg()$pbc_id[s])
     pbc_reg(reg)
     persist_pbc(reg)
     refresh_pbc_choices()
   })
-
-  observeEvent(input$pbc_save, {
-    persist_pbc(pbc_reg())
-    showNotification(paste("已寫入", pbc_path_csv), type = "message")
-  })
-
-  observeEvent(input$pbc_reload, {
-    pbc_reg(load_pbc_registry(pbc_path_csv, pbc_path_json))
-    refresh_pbc_choices()
-    showNotification("命名庫已重新載入", type = "message")
-  })
-
   observeEvent(input$upload_pbc, {
     f <- input$upload_pbc
     if (is.null(f)) return()
@@ -520,23 +596,19 @@ server <- function(input, output, session) {
       pbc_reg(reg)
       persist_pbc(reg)
       refresh_pbc_choices()
-      showNotification(sprintf("已匯入，目前共 %d 筆", nrow(reg)), type = "message")
+      showNotification(sprintf("已匯入，共 %d 筆", nrow(reg)), type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
-
   output$download_pbc <- downloadHandler(
-    filename = function() sprintf("pbc_registry-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) {
-      utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
-    }
+    filename = function() sprintf("pbc-%s.csv", format(Sys.time(), "%Y%m%d")),
+    content = function(file) utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
   )
 
-  # RCM / interview / CSA / gaps
+  # RCM / worksheets
   output$rcm_table <- renderDT({
     datatable(controls_to_rcm(controls()), rownames = FALSE,
-              options = list(scrollX = TRUE, pageLength = 10))
+              options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
-
   selected_worksheet_controls <- reactive({
     cs <- controls()
     if (!length(cs)) return(list())
@@ -544,7 +616,6 @@ server <- function(input, output, session) {
     if (!length(ids) || all(!nzchar(ids))) return(cs)
     Filter(function(c) c$control_id %in% ids, cs)
   })
-
   observe({
     cs <- controls()
     if (!length(cs)) {
@@ -553,82 +624,63 @@ server <- function(input, output, session) {
     }
     ch <- stats::setNames(
       vapply(cs, function(x) x$control_id, ""),
-      vapply(cs, function(x) {
-        sprintf("%s｜%s｜%s", x$control_id, x$risk_name %||% "", x$iuc_or_system %||% "")
-      }, "")
+      vapply(cs, function(x) sprintf("%s｜%s", x$control_id, x$risk_name %||% ""), "")
     )
     updateSelectizeInput(session, "worksheet_controls", choices = ch, server = TRUE)
-  })
-
-  observeEvent(input$ws_select_all_iv, {
-    updateCheckboxGroupInput(session, "interview_elements", selected = names(DESIGN_ELEMENTS))
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
   })
-  observeEvent(input$ws_select_all_csa, {
-    updateCheckboxGroupInput(session, "csa_elements", selected = names(DESIGN_ELEMENTS))
-  })
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
   })
-
   output$interview_table <- renderDT({
-    df <- controls_to_interview(selected_worksheet_controls(), input$interview_elements)
-    datatable(df, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10))
+    datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements),
+              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
   output$csa_table <- renderDT({
-    df <- controls_to_csa(selected_worksheet_controls(), input$csa_elements)
-    datatable(df, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10))
+    datatable(controls_to_csa(selected_worksheet_controls(), input$csa_elements),
+              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
   output$gap_table <- renderDT({
     datatable(detect_gaps_many(controls()), rownames = FALSE,
-              options = list(scrollX = TRUE, pageLength = 12))
+              options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
 
-  # Persistence
-  draft_path <- file.path(data_dir, "session_draft.json")
-  observeEvent(input$save_draft_file, {
-    payload <- list(
-      drafts = drafts(),
-      controls = controls(),
-      pbc = pbc_reg(),
-      interview_elements = input$interview_elements,
-      csa_elements = input$csa_elements,
-      saved_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-    )
-    write_json(payload, draft_path, auto_unbox = TRUE, pretty = TRUE, force = TRUE)
-    showNotification(paste("已儲存", draft_path), type = "message")
-  })
+  # Named drafts
+  observeEvent(input$save_draft_file, do_save_draft())
   observeEvent(input$load_draft_file, {
-    if (!file.exists(draft_path)) return(showNotification("尚無草稿檔", type = "warning"))
-    payload <- read_json(draft_path, simplifyVector = FALSE)
-    if (!is.null(payload$drafts)) drafts(payload$drafts)
-    if (!is.null(payload$controls)) controls(payload$controls)
-    if (!is.null(payload$pbc) && length(payload$pbc)) {
-      pbc_reg(normalize_pbc_df(as.data.frame(payload$pbc, stringsAsFactors = FALSE)))
-      persist_pbc(pbc_reg())
-      refresh_pbc_choices()
+    path <- input$draft_pick
+    if (!nzchar(path %||% "")) {
+      path <- file.path(data_dir, "session_draft.json")
     }
-    if (!is.null(payload$interview_elements)) {
-      updateCheckboxGroupInput(session, "interview_elements",
-                               selected = unlist(payload$interview_elements))
-    }
-    if (!is.null(payload$csa_elements)) {
-      updateCheckboxGroupInput(session, "csa_elements",
-                               selected = unlist(payload$csa_elements))
-    }
-    showNotification("草稿已載入", type = "message")
+    if (!file.exists(path)) return(showNotification("尚無草稿", type = "warning"))
+    apply_payload(load_draft_payload(path))
   })
+  observeEvent(input$delete_draft_file, {
+    nm <- input$draft_name
+    path <- input$draft_pick
+    if (nzchar(path %||% "") && basename(path) != "session_draft.json") {
+      file.remove(path)
+    } else if (nzchar(trimws(nm %||% ""))) {
+      delete_named_draft(data_dir, nm)
+    } else {
+      return(showNotification("請選擇或輸入要刪除的草稿", type = "warning"))
+    }
+    refresh_draft_list()
+    showNotification("草稿已刪除", type = "message")
+  })
+  observeEvent(input$draft_pick, {
+    path <- input$draft_pick
+    if (!nzchar(path %||% "")) return()
+    nm <- if (basename(path) == "session_draft.json") "（自動／預設）" else sub("\\.json$", "", basename(path))
+    updateTextInput(session, "draft_name", value = nm)
+  }, ignoreInit = TRUE)
 
   output$download_json <- downloadHandler(
     filename = function() sprintf("control-pack-%s.json", format(Sys.time(), "%Y%m%d-%H%M%S")),
-    content = function(file) {
-      write_json(list(drafts = drafts(), controls = controls(), pbc = pbc_reg(),
-                      interview_elements = input$interview_elements,
-                      csa_elements = input$csa_elements),
-                 file, auto_unbox = TRUE, pretty = TRUE, force = TRUE)
-    }
+    content = function(file) write_json(make_payload(input$draft_name), file,
+                                        auto_unbox = TRUE, pretty = TRUE, force = TRUE)
   )
   output$download_rcm <- downloadHandler(
     filename = function() "rcm.csv",
@@ -637,15 +689,15 @@ server <- function(input, output, session) {
   output$download_interview <- downloadHandler(
     filename = function() "interview.csv",
     content = function(file) {
-      df <- controls_to_interview(selected_worksheet_controls(), input$interview_elements)
-      write.csv(df, file, row.names = FALSE, fileEncoding = "UTF-8")
+      write.csv(controls_to_interview(selected_worksheet_controls(), input$interview_elements),
+                file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )
   output$download_csa <- downloadHandler(
     filename = function() "csa.csv",
     content = function(file) {
-      df <- controls_to_csa(selected_worksheet_controls(), input$csa_elements)
-      write.csv(df, file, row.names = FALSE, fileEncoding = "UTF-8")
+      write.csv(controls_to_csa(selected_worksheet_controls(), input$csa_elements),
+                file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )
 }

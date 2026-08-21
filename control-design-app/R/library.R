@@ -18,8 +18,8 @@ LIBRARY_CONTROL_FIELDS <- c(
   "dependent_controls", "detailed_description", "summary_description", "control_id"
 )
 
-seed_control_library <- function() {
-  list(
+seed_control_library <- function(include_jinglian_batch = TRUE) {
+  base <- list(
     library_item_from_control(list(
       library_id = "LIB-REV-CUTOFF-01",
       title = "銷售截止覆核（銷貨日報表）",
@@ -45,7 +45,7 @@ seed_control_library <- function() {
       outputs = "截止調節表、差異追蹤清單、主管簽核紀錄",
       investigation_threshold = "出貨日與認列日差異逾1日",
       dependent_controls = ""
-    ), tags = c("銷售", "截止", "Significant Risk")),
+    ), tags = c("銷售", "截止", "Significant Risk"), source = "seed"),
     library_item_from_control(list(
       library_id = "LIB-AP-3WAY-01",
       title = "採購三方比對核准",
@@ -71,7 +71,7 @@ seed_control_library <- function() {
       outputs = "三方比對紀錄、系統過帳 log、退回文件",
       investigation_threshold = "數量或金額任一不符即暫停付款",
       dependent_controls = "採購核決權限控制"
-    ), tags = c("採購", "三方比對")),
+    ), tags = c("採購", "三方比對"), source = "seed"),
     library_item_from_control(list(
       library_id = "LIB-IT-ACCESS-01",
       title = "資訊循環｜使用者權限定期覆核",
@@ -99,7 +99,7 @@ seed_control_library <- function() {
       investigation_threshold = "任何不應存在之權限均須異動；逾期未回簽列入追蹤",
       dependent_controls = "入離職帳號開立／停用控制",
       key_control = "Y"
-    ), tags = c("資訊循環", "存取管理", "ITGC")),
+    ), tags = c("資訊循環", "存取管理", "ITGC"), source = "seed"),
     library_item_from_control(list(
       library_id = "LIB-IT-CHANGE-01",
       title = "資訊循環｜程式變更上線核准",
@@ -127,8 +127,38 @@ seed_control_library <- function() {
       investigation_threshold = "缺測試或缺核准不得移轉",
       dependent_controls = "開發／營運環境職責分離",
       key_control = "Y"
-    ), tags = c("資訊循環", "變更管理", "ITGC"))
+    ), tags = c("資訊循環", "變更管理", "ITGC"), source = "seed")
   )
+
+  if (!isTRUE(include_jinglian_batch)) return(base)
+
+  # Resolve package/app root from this file when possible
+  app_root <- local({
+    # walk common locations
+    for (p in c(
+      getwd(),
+      file.path(getwd(), "control-design-app"),
+      if (exists("root", inherits = TRUE)) get("root", inherits = TRUE) else NULL
+    )) {
+      if (is.null(p)) next
+      if (file.exists(file.path(p, "templates")) || file.exists(file.path(p, "data"))) {
+        return(normalizePath(p))
+      }
+    }
+    normalizePath(getwd())
+  })
+
+  batch_json <- file.path(app_root, "data", "jinglian_it_rcm_batch.json")
+  if (file.exists(batch_json)) {
+    jl <- tryCatch(load_control_library(batch_json, fallback_seed = FALSE), error = function(e) list())
+    if (length(jl)) return(merge_libraries(base, jl, overwrite = TRUE))
+  }
+  xlsx <- file.path(app_root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+  if (file.exists(xlsx)) {
+    jl <- tryCatch(import_rcm_xlsx_as_library(xlsx), error = function(e) list())
+    if (length(jl)) return(merge_libraries(base, jl, overwrite = TRUE))
+  }
+  base
 }
 
 library_item_from_control <- function(ctrl, tags = character(), source = "manual") {
@@ -544,7 +574,7 @@ import_rcm_xlsx_as_library <- function(path) {
   # If duplicates, make unique
   if (any(duplicated(headers))) headers <- make.unique(headers, sep = "_")
 
-  df <- as.data.frame(readxl::read_excel(path, sheet = sheet, skip = 1, col_names = FALSE),
+  df <- as.data.frame(readxl::read_excel(path, sheet = sheet, skip = 2, col_names = FALSE),
                       stringsAsFactors = FALSE)
   if (!nrow(df)) return(list())
   # Align columns
@@ -552,21 +582,35 @@ import_rcm_xlsx_as_library <- function(path) {
   df <- df[, seq_len(n), drop = FALSE]
   names(df) <- headers[seq_len(n)]
 
-  # Keep rows with 控制目標 or 控制活動
+  # Keep real control rows; drop leftover header echo rows
   keep <- vapply(seq_len(nrow(df)), function(i) {
     obj <- if ("控制目標" %in% names(df)) trimws(as.character(df[["控制目標"]][i] %||% "")) else ""
     act <- if ("控制活動" %in% names(df)) trimws(as.character(df[["控制活動"]][i] %||% "")) else ""
+    cid <- if ("控制編號" %in% names(df)) trimws(as.character(df[["控制編號"]][i] %||% "")) else ""
+    cy <- if ("循環名稱" %in% names(df)) trimws(as.character(df[["循環名稱"]][i] %||% "")) else ""
+    if (identical(cid, "控制編號") || identical(obj, "控制目標") || identical(cy, "循環名稱")) {
+      return(FALSE)
+    }
+    if (identical(cid, "") && identical(obj, "") && identical(act, "")) return(FALSE)
+    # Prefer rows with an EC-/SP- style id or non-empty objective+activity
     nzchar(obj) || nzchar(act)
   }, logical(1))
   df <- df[keep, , drop = FALSE]
 
-  lapply(seq_len(nrow(df)), function(i) {
+  items <- lapply(seq_len(nrow(df)), function(i) {
     row <- as.list(df[i, , drop = FALSE])
     # unlist length-1
     row <- lapply(row, function(x) if (length(x)) x[[1]] else x)
     ctrl <- rcm_row_to_control(row)
-    library_item_from_control(ctrl, tags = c("鯨鏈RCM", "資訊循環", "首批"))
+    # Skip if control_id still looks like a header label
+    if (identical(ctrl$control_id, "控制編號") ||
+        (!nzchar(ctrl$control_objective %||% "") && !nzchar(ctrl$control_activity %||% ""))) {
+      return(NULL)
+    }
+    library_item_from_control(ctrl, tags = c("鯨鏈RCM", "資訊循環", "首批"),
+                              source = "jinglian_batch")
   })
+  Filter(Negate(is.null), items)
 }
 
 library_summary_df <- function(library) {

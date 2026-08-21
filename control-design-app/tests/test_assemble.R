@@ -188,6 +188,14 @@ if (file.exists(xlsx)) {
   check(length(jl) >= 20, sprintf("鯨鏈 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
   check(any(vapply(jl, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1))),
         "鯨鏈匯入控制編號帶 JL-EC- 前綴")
+  check(!any(vapply(jl, function(x) grepl("控制編號", x$library_id %||% ""), logical(1))),
+        "鯨鏈匯入不含標題列雜訊")
+  # Seed includes Jinglian as first batch
+  seeded <- seed_control_library(TRUE)
+  jl_seed <- sum(vapply(seeded, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1)))
+  check(jl_seed >= 20, sprintf("種子庫含鯨鏈首批（JL-EC 實際 %d）", jl_seed))
+  batch_file <- file.path(root, "data", "jinglian_it_rcm_batch.json")
+  check(file.exists(batch_file), "已提交 jinglian_it_rcm_batch.json 首批資料")
   sample_ctrl <- jl[[1]]$control
   rcm_jl <- control_to_rcm_row(sample_ctrl, 1L)
   check(all(c("控制目標", "控制活動", "控制類型", "控制活動類型") %in% names(rcm_jl)),

@@ -1,5 +1,7 @@
-* 
+*
 !.gitignore
 !drafts/
 !drafts/.gitignore
 !control_library_template.csv
+!jinglian_it_rcm_batch.json
+!seed_jinglian_batch.R

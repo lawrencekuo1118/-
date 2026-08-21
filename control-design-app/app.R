@@ -33,30 +33,60 @@ source(file.path(root, "R", "draft_store.R"), local = TRUE)
 fill_inputs_from_ctrl <- function(session, ctrl) {
   if (is.null(ctrl)) return()
   updateSelectInput(session, "cycle", selected = ctrl$cycle %||% CYCLES_NINE[[1]])
-  updateTextInput(session, "risk_name", value = ctrl$risk_name %||% "")
+  # ① 流程資訊
+  updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
+  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
+  updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
+  # ② 風險資訊
+  updateTextInput(session, "risk_factor", value = ctrl$risk_factor %||% ctrl$risk_name %||% "")
+  updateTextInput(session, "risk_name", value = ctrl$risk_name %||% ctrl$risk_factor %||% "")
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
+  rc <- normalize_risk_category(ctrl)
+  updateSelectInput(session, "risk_category", selected = if (nzchar(rc)) rc else "")
+  updateTextInput(session, "significant_account",
+                  value = {
+                    ac <- ctrl$significant_account %||% ""
+                    if (identical(ac, "NA")) "" else ac
+                  })
+  # ③ 控制資訊
+  updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
+  updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
+  ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
+  updateSelectInput(session, "nature", selected = if (nzchar(ct)) ct else "")
+  updateSelectInput(session, "approach", selected = if (nzchar(at)) at else "")
+  freq <- ctrl$frequency %||% ""
+  if (nzchar(freq) && !(freq %in% FREQUENCY_CHOICES)) {
+    updateSelectInput(session, "frequency", choices = unique(c(FREQUENCY_CHOICES, freq)), selected = freq)
+  } else if (nzchar(freq)) {
+    updateSelectInput(session, "frequency", selected = freq)
+  }
+  updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
+  updateTextAreaInput(session, "iuc_or_system",
+                      value = ctrl$related_system %||% ctrl$iuc_or_system %||% "")
+  updateTextAreaInput(session, "company_status",
+                      value = ctrl$company_status %||% ctrl$detailed_description %||% "")
+  updateTextAreaInput(session, "design_gap_note", value = ctrl$design_gap_note %||% "")
+  updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
+  updateTextInput(session, "related_law", value = ctrl$related_law %||% "")
+  updateTextInput(session, "related_document",
+                  value = ctrl$related_document %||% ctrl$outputs %||% "")
+  # ④ 控制分析與評估
+  updateSelectInput(session, "effectiveness", selected = ctrl$effectiveness %||% "")
+  updateTextAreaInput(session, "residual_risk", value = ctrl$residual_risk %||% "")
+  updateTextAreaInput(session, "improvement", value = ctrl$improvement %||% "")
+  # 進階 4120SR
   updateTextAreaInput(session, "risk_attr_financial",
                       value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_financial %||% ""))
   updateTextAreaInput(session, "risk_attr_operations",
                       value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_operations %||% ""))
   updateTextAreaInput(session, "risk_attr_compliance",
                       value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_compliance %||% ""))
-  updateTextInput(session, "significant_account", value = ctrl$significant_account %||% "")
-  updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
-  updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
-  updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
-  updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
-  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
-  updateTextAreaInput(session, "company_status", value = ctrl$company_status %||% "")
-  updateTextAreaInput(session, "iuc_or_system", value = ctrl$iuc_or_system %||% "")
-  updateSelectizeInput(session, "nature", selected = ctrl$nature %||% NATURE_CHOICES[[1]])
-  updateSelectizeInput(session, "approach", selected = ctrl$approach %||% APPROACH_CHOICES[[1]])
   updateSelectizeInput(session, "type", selected = ctrl$type %||% TYPE_CHOICES[[1]])
   updateTextAreaInput(session, "inputs", value = ctrl$inputs %||% "")
   updateTextAreaInput(session, "review_steps", value = ctrl$review_steps %||% "")
-  updateTextAreaInput(session, "outputs", value = ctrl$outputs %||% "")
+  updateTextAreaInput(session, "outputs", value = ctrl$outputs %||% ctrl$related_document %||% "")
   updateTextAreaInput(session, "investigation_threshold", value = ctrl$investigation_threshold %||% "")
-  if (!is.null(ctrl$frequency)) updateSelectInput(session, "frequency", selected = ctrl$frequency)
 }
 
 ui <- page_navbar(
@@ -70,7 +100,7 @@ ui <- page_navbar(
   sidebar = sidebar(
     width = 280,
     open = "desktop",
-    selectInput("cycle", NULL, choices = CYCLES_NINE),
+    selectInput("cycle", NULL, choices = CYCLES_NINE, selected = "電腦化資訊系統循環"),
     textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
     selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
     div(
@@ -79,8 +109,14 @@ ui <- page_navbar(
       actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
     ),
     tags$hr(class = "my-2"),
-    textInput("risk_name", NULL, placeholder = "風險名稱"),
-    textAreaInput("risk_description", NULL, rows = 2, placeholder = "風險描述（RoMM）"),
+    tags$strong(class = "small", "引導選取（候選來自範本庫）"),
+    selectInput("cascade_sub", NULL, choices = c("② 子作業…" = "")),
+    selectInput("cascade_risk", NULL, choices = c("③ 風險因素…" = "")),
+    selectInput("cascade_objective", NULL, choices = c("④ 控制目標…" = "")),
+    selectInput("cascade_activity", NULL, choices = c("⑤ 控制活動…" = "")),
+    selectInput("cascade_iuc", NULL, choices = c("⑥ IUC／相關系統…" = "")),
+    actionButton("apply_cascade", "套用引導選取", class = "btn-sm btn-primary w-100"),
+    tags$hr(class = "my-2"),
     textInput("company", NULL, placeholder = "公司名稱"),
     tags$hr(class = "my-2"),
     tags$strong("草稿"),
@@ -102,64 +138,102 @@ ui <- page_navbar(
       col_widths = c(7, 5),
       card(
         full_screen = TRUE,
-        textInput("control_id", NULL, value = "CD-001", placeholder = "控制點 ID"),
-        textAreaInput("control_objective", NULL, rows = 2,
-                      placeholder = "控制目標 Why：確保／防止…（結果，勿寫步驟）"),
-        textAreaInput("control_activity", NULL, rows = 2,
-                      placeholder = "控制活動 How：誰＋動作＋表單／系統（勿重述目標）"),
-        uiOutput("oa_live_check"),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
-          actionButton("oa_swap", "對調兩欄", class = "btn-sm btn-outline-secondary")
+        # ---- 依鯨鏈 RCM 標題列分組防呆 ----
+        p(
+          class = "small text-muted mb-2",
+          "欄位依鯨鏈 RCM 標題列分組：",
+          strong("流程｜風險｜控制｜分析"),
+          "。", strong("控制目標 ≠ 控制活動"),
+          "；", strong("控制類型（人工/自動）≠ 控制活動類型（預防/偵測）"), "。"
         ),
-        textInput("sub_process", NULL, placeholder = "子作業（例：存取管理／變更管理）"),
-        textAreaInput("company_status", NULL, rows = 2, placeholder = "公司現況描述（選定元素後再寫；可空則自動拼湊）"),
-        layout_columns(
-          col_widths = c(6, 6),
-          selectInput("frequency", NULL, choices = FREQUENCY_CHOICES, selected = FREQUENCY_CHOICES[[4]]),
-          textInput("responsible_unit", NULL, placeholder = "負責單位")
-        ),
-        selectizeInput(
-          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "套用 IUC／PBC（原名→新名）")
-        ),
-        textAreaInput("iuc_or_system", NULL, rows = 1, placeholder = "IUC／制度（不同則分拆）"),
         accordion(
-          open = FALSE,
+          id = "rcm_design_groups",
+          open = c("① 流程資訊", "② 風險資訊", "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）"),
           accordion_panel(
-            "進階",
+            "① 流程資訊",
+            textInput("sub_process_id", NULL, placeholder = "子作業編號（例：EC-101）"),
+            textInput("sub_process", NULL, placeholder = "子作業名稱"),
+            textInput("control_id", NULL, value = "", placeholder = "控制編號（空則自動 EC-101-01）")
+          ),
+          accordion_panel(
+            "② 風險資訊",
+            textInput("risk_factor", NULL, placeholder = "風險因素（Risk Factor）"),
+            textInput("risk_name", NULL, placeholder = "風險簡稱（可同因素；亦可自訂）"),
+            textAreaInput("risk_description", NULL, rows = 2, placeholder = "風險描述（Risk Description）"),
+            selectInput("risk_category", NULL, choices = c("風險類別（報導面／營運面／遵循面）…" = "", RISK_CATEGORY_CHOICES)),
+            textInput("significant_account", NULL, placeholder = "會計科目（無則 NA）")
+          ),
+          accordion_panel(
+            "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）",
+            textAreaInput("control_objective", NULL, rows = 2,
+                          placeholder = "控制目標 Why：確保／防止…（結果，勿寫步驟）"),
+            textAreaInput("control_activity", NULL, rows = 2,
+                          placeholder = "控制活動 How：誰＋動作＋表單／系統（勿重述目標；單一活動僅對應一種預防/偵測）"),
+            uiOutput("oa_live_check"),
+            uiOutput("type_live_check"),
+            div(
+              class = "d-flex gap-1 flex-wrap mb-2",
+              actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
+              actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
+            ),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput("nature", NULL, choices = c("控制類型（人工/自動）…" = "", CONTROL_TYPE_MANUAL_AUTO)),
+              selectInput("approach", NULL, choices = c("控制活動類型（預防/偵測）…" = "", CONTROL_ACTIVITY_TYPE_PD))
+            ),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput("frequency", NULL,
+                          choices = unique(c(FREQUENCY_CHOICES, "持續")),
+                          selected = FREQUENCY_CHOICES[[4]]),
+              textInput("responsible_unit", NULL, placeholder = "流程負責單位")
+            ),
+            selectizeInput(
+              "pbc_apply", NULL, choices = NULL, multiple = TRUE,
+              options = list(placeholder = "套用 IUC／PBC（原名→新名）→相關系統／文件")
+            ),
+            textAreaInput("iuc_or_system", NULL, rows = 1, placeholder = "相關系統／IUC（不同則分拆；無則可自訂並存庫）"),
+            textAreaInput("company_status", NULL, rows = 3,
+                          placeholder = "控制現況描述（選定目標／活動／IUC 後再書寫）"),
+            textAreaInput("design_gap_note", NULL, rows = 2, placeholder = "控制設計差異說明"),
+            layout_columns(
+              col_widths = c(6, 6),
+              textInput("related_policy", NULL, placeholder = "相關政策或程序"),
+              textInput("related_law", NULL, placeholder = "相關法令")
+            ),
+            textInput("related_document", NULL, placeholder = "相關文件")
+          ),
+          accordion_panel(
+            "④ 控制分析與評估",
+            selectInput("effectiveness", NULL, choices = c("控制有效性評估…" = "", "有效", "無效")),
+            textAreaInput("residual_risk", NULL, rows = 1, placeholder = "可能潛在風險"),
+            textAreaInput("improvement", NULL, rows = 1, placeholder = "建議改善方式")
+          ),
+          accordion_panel(
+            "進階（4120SR／三大屬性細節）",
             layout_columns(
               col_widths = c(4, 8),
               textInput("attr_label_fr", NULL, value = "財務報導"),
-              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "屬性1")
+              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "屬性1細節")
             ),
             layout_columns(
               col_widths = c(4, 8),
               textInput("attr_label_op", NULL, value = "營運"),
-              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "屬性2")
+              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "屬性2細節")
             ),
             layout_columns(
               col_widths = c(4, 8),
               textInput("attr_label_cp", NULL, value = "法令遵循"),
-              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "屬性3")
+              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "屬性3細節")
             ),
-            textInput("significant_account", NULL, placeholder = "重大科目"),
             selectizeInput(
               "assertions", NULL, choices = ASSERTION_CHOICES, multiple = TRUE,
               selected = ASSERTION_CHOICES[1:2],
-              options = list(create = TRUE, placeholder = "聲明")
+              options = list(create = TRUE, placeholder = "聲明（輔助）")
             ),
             selectInput("romm_classification", NULL, choices = ROMM_CLASS_CHOICES),
-            layout_columns(
-              col_widths = c(4, 4, 4),
-              selectizeInput("nature", NULL, choices = NATURE_CHOICES,
-                             options = list(create = TRUE, placeholder = "Nature")),
-              selectizeInput("approach", NULL, choices = APPROACH_CHOICES,
-                             options = list(create = TRUE, placeholder = "Approach")),
-              selectizeInput("type", NULL, choices = TYPE_CHOICES,
-                             options = list(create = TRUE, placeholder = "Type"))
-            ),
+            selectizeInput("type", NULL, choices = TYPE_CHOICES,
+                           options = list(create = TRUE, placeholder = "Form 4120SR Type")),
             textAreaInput("inputs", NULL, rows = 1, placeholder = "Inputs"),
             textAreaInput("review_steps", NULL, rows = 3, placeholder = "Steps（每行一步）"),
             textAreaInput("outputs", NULL, rows = 1, placeholder = "Outputs"),
@@ -172,7 +246,7 @@ ui <- page_navbar(
           actionButton("add_draft", "加入", class = "btn-primary btn-sm"),
           actionButton("update_draft", "更新", class = "btn-sm"),
           actionButton("remove_draft", "刪除列", class = "btn-sm btn-outline-danger"),
-          actionButton("generate_controls", "產生控制點", class = "btn-success btn-sm")
+          actionButton("generate_controls", "產生控制點＝RCM列", class = "btn-success btn-sm")
         )
       ),
       card(
@@ -192,9 +266,11 @@ ui <- page_navbar(
       card(
         p(class = "text-muted small mb-1",
           "大量完美控制點可 CSV／JSON 匯入；設計時優先從此庫套用。亦可將目前表單或已產生控制點存入（累積制）。"),
-        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON",
-                  accept = c(".csv", ".json")),
+        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
+                  accept = c(".csv", ".json", ".xlsx", ".xls")),
         checkboxInput("lib_overwrite", "同 ID 則覆蓋", TRUE),
+        actionButton("import_jinglian_seed", "載入鯨鏈資訊循環 RCM（首批）",
+                     class = "btn-sm btn-outline-primary w-100 mb-2"),
         div(
           class = "d-flex gap-1 flex-wrap",
           actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
@@ -237,10 +313,11 @@ ui <- page_navbar(
     "RCM",
     card(
       p(class = "text-muted small mb-1",
-        "完成控制點設計＝完成 RCM 一列。",
-        strong("控制目標≠控制活動"), "；兩欄防呆見「設計檢核」。缺漏見下方。"),
+        "完成控制點設計＝完成 RCM 一列（鯨鏈標題列）。欄位群組：",
+        paste(names(RCM_HEADER_GROUPS), collapse = " ｜ "),
+        "。", strong("控制目標≠控制活動"), "；類型欄防呆見「設計檢核」。"),
       DTOutput("rcm_table"),
-      downloadButton("download_rcm", "下載 RCM", class = "btn-sm"),
+      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
       tags$hr(),
       tags$strong("缺漏／缺文件／控制缺失"),
       DTOutput("gap_table")
@@ -289,9 +366,33 @@ server <- function(input, output, session) {
   lib_path_csv <- file.path(data_dir, "control_library.csv")
   # Seed once if missing, then always load persisted (accumulative)
   if (!file.exists(lib_path_json)) {
-    save_control_library(seed_control_library(), lib_path_json, lib_path_csv)
+    seed <- seed_control_library()
+    jl_path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    if (file.exists(jl_path)) {
+      seed <- tryCatch(
+        import_control_library_file(jl_path, seed, overwrite = TRUE),
+        error = function(e) seed
+      )
+    }
+    save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
+  # If persisted library lacks 鯨鏈首批，合併一次（不覆蓋既有同 ID 以外的新增）
+  observeEvent(TRUE, {
+    jl_path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    cur <- lib()
+    has_jl <- any(vapply(cur, function(x) grepl("^JL-", x$library_id %||% ""), logical(1)))
+    if (!has_jl && file.exists(jl_path)) {
+      merged <- tryCatch(
+        import_control_library_file(jl_path, cur, overwrite = FALSE),
+        error = function(e) cur
+      )
+      if (length(merged) > length(cur)) {
+        lib(persist_lib(merged))
+        refresh_lib_choices()
+      }
+    }
+  }, once = TRUE)
   next_id <- reactiveVal(1L)
   last_saved_at <- reactiveVal(NULL)
   draft_tick <- reactiveVal(0L)
@@ -477,8 +578,15 @@ server <- function(input, output, session) {
       control_id = input$control_id %||% "",
       company = input$company %||% "",
       cycle = input$cycle %||% "",
-      risk_name = input$risk_name %||% "",
+      sub_process_id = input$sub_process_id %||% "",
+      sub_process = input$sub_process %||% "",
+      risk_factor = input$risk_factor %||% "",
+      risk_name = {
+        rn <- trimws(input$risk_name %||% "")
+        if (nzchar(rn)) rn else trimws(input$risk_factor %||% "")
+      },
       risk_description = input$risk_description %||% "",
+      risk_category = input$risk_category %||% "",
       risk_attr_financial = labelize(input$attr_label_fr, input$risk_attr_financial),
       risk_attr_operations = labelize(input$attr_label_op, input$risk_attr_operations),
       risk_attr_compliance = labelize(input$attr_label_cp, input$risk_attr_compliance),
@@ -487,17 +595,29 @@ server <- function(input, output, session) {
       assertions = paste(input$assertions %||% character(), collapse = "；"),
       control_objective = input$control_objective %||% "",
       control_activity = input$control_activity %||% "",
-      sub_process = input$sub_process %||% "",
       company_status = input$company_status %||% "",
+      design_gap_note = input$design_gap_note %||% "",
       frequency = input$frequency %||% "",
       responsible_unit = input$responsible_unit %||% "",
       iuc_or_system = input$iuc_or_system %||% "",
+      related_system = input$iuc_or_system %||% "",
+      related_policy = input$related_policy %||% "",
+      related_law = input$related_law %||% "",
+      related_document = input$related_document %||% "",
+      effectiveness = input$effectiveness %||% "",
+      residual_risk = input$residual_risk %||% "",
+      improvement = input$improvement %||% "",
       nature = input$nature %||% "",
       approach = input$approach %||% "",
+      control_type = input$nature %||% "",
+      control_activity_type = input$approach %||% "",
       type = input$type %||% "",
       inputs = input$inputs %||% "",
       review_steps = input$review_steps %||% "",
-      outputs = input$outputs %||% "",
+      outputs = {
+        out <- trimws(input$outputs %||% "")
+        if (nzchar(out)) out else trimws(input$related_document %||% "")
+      },
       investigation_threshold = input$investigation_threshold %||% "",
       dependent_controls = "",
       key_control = "Y"
@@ -506,11 +626,15 @@ server <- function(input, output, session) {
 
   form_snapshot <- function() {
     list(
-      company = input$company, cycle = input$cycle, risk_name = input$risk_name,
-      risk_description = input$risk_description,
+      company = input$company, cycle = input$cycle,
+      sub_process_id = input$sub_process_id, sub_process = input$sub_process,
+      risk_factor = input$risk_factor, risk_name = input$risk_name,
+      risk_description = input$risk_description, risk_category = input$risk_category,
       control_id = input$control_id, control_objective = input$control_objective,
       control_activity = input$control_activity, frequency = input$frequency,
-      responsible_unit = input$responsible_unit, iuc_or_system = input$iuc_or_system
+      responsible_unit = input$responsible_unit, iuc_or_system = input$iuc_or_system,
+      nature = input$nature, approach = input$approach,
+      company_status = input$company_status, design_gap_note = input$design_gap_note
     )
   }
 
@@ -592,6 +716,178 @@ server <- function(input, output, session) {
     cls <- if (isTRUE(chk$ok)) "alert alert-success py-1 mb-2" else "alert alert-danger py-1 mb-2"
     div(class = cls, format_oa_check_html(chk))
   })
+  output$type_live_check <- renderUI({
+    tchk <- rcm_type_fields_check(input$nature, input$approach)
+    cls <- if (isTRUE(tchk$ok)) "alert alert-secondary py-1 mb-2" else "alert alert-warning py-1 mb-2"
+    div(class = cls, tags$small(tags$strong("類型欄防呆："), tchk$msg))
+  })
+
+  # ---- Cascade candidates from library (cycle → 子作業 → 風險 → 目標 → 活動 → IUC) ----
+  cascade_pool <- reactive({
+    items <- filter_library(lib(), cycle_filter = input$cycle, query = NULL)
+    lapply(items, function(it) it$control)
+  })
+
+  observe({
+    pool <- cascade_pool()
+    subs <- unique(vapply(pool, function(c) {
+      paste(c$sub_process_id %||% "", c$sub_process %||% "", sep = "||")
+    }, character(1)))
+    subs <- subs[nzchar(gsub("\\|", "", subs))]
+    labels <- vapply(subs, function(k) {
+      parts <- strsplit(k, "\\|\\|", perl = TRUE)[[1]]
+      sprintf("%s｜%s", parts[[1]], if (length(parts) > 1) parts[[2]] else "")
+    }, character(1))
+    ch <- c("② 子作業…" = "", stats::setNames(subs, labels))
+    updateSelectInput(session, "cascade_sub", choices = ch,
+                      selected = if ((input$cascade_sub %||% "") %in% subs) input$cascade_sub else "")
+  })
+
+  observe({
+    pool <- cascade_pool()
+    sub_key <- input$cascade_sub %||% ""
+    if (nzchar(sub_key)) {
+      parts <- strsplit(sub_key, "\\|\\|", perl = TRUE)[[1]]
+      spid <- parts[[1]]
+      spn <- if (length(parts) > 1) parts[[2]] else ""
+      pool <- Filter(function(c) {
+        identical(c$sub_process_id %||% "", spid) ||
+          (nzchar(spn) && identical(c$sub_process %||% "", spn))
+      }, pool)
+    }
+    risks <- unique(vapply(pool, function(c) c$risk_factor %||% c$risk_name %||% "", character(1)))
+    risks <- risks[nzchar(risks)]
+    ch <- c("③ 風險因素…" = "", stats::setNames(risks, risks), "＋自訂新增" = "__custom__")
+    updateSelectInput(session, "cascade_risk", choices = ch,
+                      selected = if ((input$cascade_risk %||% "") %in% c(risks, "__custom__")) input$cascade_risk else "")
+  })
+
+  observe({
+    pool <- cascade_pool()
+    rk <- input$cascade_risk %||% ""
+    if (nzchar(rk) && !identical(rk, "__custom__")) {
+      pool <- Filter(function(c) {
+        identical(c$risk_factor %||% "", rk) || identical(c$risk_name %||% "", rk)
+      }, pool)
+    }
+    objs <- unique(vapply(pool, function(c) c$control_objective %||% "", character(1)))
+    objs <- objs[nzchar(objs)]
+    labels <- vapply(objs, function(o) {
+      if (nchar(o) > 48) paste0(substr(o, 1, 48), "…") else o
+    }, character(1))
+    ch <- c("④ 控制目標…" = "", stats::setNames(objs, labels), "＋自訂新增" = "__custom__")
+    updateSelectInput(session, "cascade_objective", choices = ch,
+                      selected = if ((input$cascade_objective %||% "") %in% c(objs, "__custom__")) input$cascade_objective else "")
+  })
+
+  observe({
+    pool <- cascade_pool()
+    obj <- input$cascade_objective %||% ""
+    if (nzchar(obj) && !identical(obj, "__custom__")) {
+      pool <- Filter(function(c) identical(c$control_objective %||% "", obj), pool)
+    }
+    acts <- unique(vapply(pool, function(c) {
+      paste(c$control_activity %||% "", normalize_control_activity_type_pd(c$approach %||% c$control_activity_type), sep = "||")
+    }, character(1)))
+    acts <- acts[nzchar(gsub("\\|", "", acts))]
+    labels <- vapply(acts, function(k) {
+      parts <- strsplit(k, "\\|\\|", perl = TRUE)[[1]]
+      act <- parts[[1]]
+      pd <- if (length(parts) > 1) parts[[2]] else ""
+      short <- if (nchar(act) > 40) paste0(substr(act, 1, 40), "…") else act
+      sprintf("[%s] %s", if (nzchar(pd)) pd else "屬性未定", short)
+    }, character(1))
+    ch <- c("⑤ 控制活動…" = "", stats::setNames(acts, labels), "＋自訂新增" = "__custom__")
+    updateSelectInput(session, "cascade_activity", choices = ch,
+                      selected = if ((input$cascade_activity %||% "") %in% c(acts, "__custom__")) input$cascade_activity else "")
+  })
+
+  observe({
+    pool <- cascade_pool()
+    iucs <- unique(vapply(pool, function(c) c$related_system %||% c$iuc_or_system %||% "", character(1)))
+    iucs <- iucs[nzchar(iucs)]
+    # also from PBC registry
+    pbc_names <- unique(c(pbc_reg()$reviewed_name, pbc_reg()$client_pbc_name))
+    pbc_names <- pbc_names[nzchar(as.character(pbc_names))]
+    all_iuc <- unique(c(iucs, as.character(pbc_names)))
+    ch <- c("⑥ IUC／相關系統…" = "", stats::setNames(all_iuc, all_iuc), "＋自訂新增" = "__custom__")
+    updateSelectInput(session, "cascade_iuc", choices = ch,
+                      selected = if ((input$cascade_iuc %||% "") %in% c(all_iuc, "__custom__")) input$cascade_iuc else "")
+  })
+
+  observeEvent(input$apply_cascade, {
+    pool <- cascade_pool()
+    sub_key <- input$cascade_sub %||% ""
+    if (nzchar(sub_key)) {
+      parts <- strsplit(sub_key, "\\|\\|", perl = TRUE)[[1]]
+      updateTextInput(session, "sub_process_id", value = parts[[1]])
+      if (length(parts) > 1) updateTextInput(session, "sub_process", value = parts[[2]])
+      pool <- Filter(function(c) {
+        identical(c$sub_process_id %||% "", parts[[1]]) ||
+          (length(parts) > 1 && identical(c$sub_process %||% "", parts[[2]]))
+      }, pool)
+    }
+    rk <- input$cascade_risk %||% ""
+    if (nzchar(rk) && !identical(rk, "__custom__")) {
+      updateTextInput(session, "risk_factor", value = rk)
+      updateTextInput(session, "risk_name", value = rk)
+      hit <- Filter(function(c) identical(c$risk_factor %||% "", rk) || identical(c$risk_name %||% "", rk), pool)
+      if (length(hit)) {
+        fill_inputs_from_ctrl(session, hit[[1]])
+        pool <- hit
+      }
+    }
+    obj <- input$cascade_objective %||% ""
+    if (nzchar(obj) && !identical(obj, "__custom__")) {
+      updateTextAreaInput(session, "control_objective", value = obj)
+      pool <- Filter(function(c) identical(c$control_objective %||% "", obj), pool)
+      if (length(pool) == 1L) fill_inputs_from_ctrl(session, pool[[1]])
+    }
+    act_key <- input$cascade_activity %||% ""
+    if (nzchar(act_key) && !identical(act_key, "__custom__")) {
+      parts <- strsplit(act_key, "\\|\\|", perl = TRUE)[[1]]
+      updateTextAreaInput(session, "control_activity", value = parts[[1]])
+      if (length(parts) > 1 && nzchar(parts[[2]])) {
+        updateSelectInput(session, "approach", selected = parts[[2]])
+      }
+      hit <- Filter(function(c) identical(c$control_activity %||% "", parts[[1]]), pool)
+      if (length(hit)) {
+        # preserve OA already set; fill remaining Jinglian fields
+        fill_inputs_from_ctrl(session, hit[[1]])
+        updateTextAreaInput(session, "control_objective", value = obj)
+        updateTextAreaInput(session, "control_activity", value = parts[[1]])
+        if (length(parts) > 1 && nzchar(parts[[2]])) {
+          updateSelectInput(session, "approach", selected = parts[[2]])
+        }
+      }
+    }
+    iuc <- input$cascade_iuc %||% ""
+    if (nzchar(iuc) && !identical(iuc, "__custom__")) {
+      updateTextAreaInput(session, "iuc_or_system", value = iuc)
+    }
+    # auto control id from sub_process_id
+    spid <- input$sub_process_id %||% {
+      if (nzchar(sub_key)) strsplit(sub_key, "\\|\\|", perl = TRUE)[[1]][[1]] else ""
+    }
+    if (nzchar(spid) && !nzchar(trimws(input$control_id %||% ""))) {
+      n <- length(controls()) + length(drafts()) + 1L
+      updateTextInput(session, "control_id", value = sprintf("%s-%02d", spid, n))
+    }
+    showNotification("已套用引導選取；請補寫控制現況描述", type = "message")
+  })
+
+  observeEvent(input$import_jinglian_seed, {
+    path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    if (!file.exists(path)) {
+      return(showNotification("找不到鯨鏈 RCM 範本檔", type = "error"))
+    }
+    tryCatch({
+      new_lib <- import_control_library_file(path, lib(), overwrite = isTRUE(input$lib_overwrite))
+      lib(persist_lib(new_lib))
+      refresh_lib_choices()
+      showNotification(sprintf("已載入鯨鏈 RCM，範本庫共 %d 筆", length(new_lib)), type = "message")
+    }, error = function(e) showNotification(conditionMessage(e), type = "error"))
+  })
 
   observeEvent(input$oa_swap, {
     o <- input$control_objective %||% ""
@@ -638,11 +934,17 @@ server <- function(input, output, session) {
         type = "error", duration = 8
       ))
     }
+    tchk <- rcm_type_fields_check(d$nature, d$approach)
+    if (!isTRUE(tchk$ok)) {
+      return(showNotification(paste0("類型欄位防呆：", tchk$msg), type = "error", duration = 8))
+    }
     d$draft_id <- next_id()
-    if (!nzchar(trimws(d$control_id))) d$control_id <- sprintf("CD-%03d", d$draft_id)
+    if (!nzchar(trimws(d$control_id))) {
+      d$control_id <- derive_control_id(d, length(drafts()) + 1L)
+    }
     drafts(c(drafts(), list(d)))
     next_id(next_id() + 1L)
-    updateTextInput(session, "control_id", value = sprintf("CD-%03d", next_id()))
+    updateTextInput(session, "control_id", value = "")
     if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
@@ -727,11 +1029,11 @@ server <- function(input, output, session) {
   controls_df <- reactive({
     cs <- controls()
     if (!length(cs)) {
-      return(data.frame(控制點編號 = character(), IUC = character(), RCM = character(),
+      return(data.frame(控制編號 = character(), IUC = character(), RCM = character(),
                         摘要 = character(), stringsAsFactors = FALSE))
     }
     data.frame(
-      控制點編號 = vapply(cs, function(x) x$control_id, ""),
+      控制編號 = vapply(cs, function(x) x$control_id, ""),
       IUC = vapply(cs, function(x) x$iuc_or_system, ""),
       RCM = vapply(cs, function(x) if (isTRUE(x$rcm_ready$ready)) "可入列" else "待補", ""),
       摘要 = vapply(cs, function(x) x$summary_description, ""),

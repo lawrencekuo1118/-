@@ -1,4 +1,4 @@
-# Extended tests: IUC split, PBC, RCM/CSA worksheets, gaps, library
+# Extended tests: IUC split, PBC, RCM/CSA worksheets, gaps, library, Jinglian headers
 args <- commandArgs(trailingOnly = FALSE)
 file_arg <- grep("^--file=", args, value = TRUE)
 root <- if (length(file_arg)) {
@@ -26,19 +26,22 @@ check <- function(cond, msg) {
 }
 
 base <- list(
-  company = "示範公司", cycle = "電腦化資訊系統循環", sub_process = "存取管理",
-  risk_name = "不當權限", risk_description = "離職未停權",
+  company = "示範公司", cycle = "電腦化資訊系統循環",
+  sub_process_id = "EC-101", sub_process = "存取管理",
+  risk_factor = "不當權限", risk_name = "不當權限", risk_description = "離職未停權",
+  risk_category = "營運面",
   risk_attr_financial = "[財務報導] 未授權交易", risk_attr_operations = "[營運] 權限不一致",
   risk_attr_compliance = "[法令遵循] 資安政策",
   romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "多科目",
   assertions = "存在／發生 (Existence/Occurrence)",
   control_objective = "確保系統使用者權限與現職一致",
   control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
-  responsible_unit = "資訊部", nature = NATURE_CHOICES[[3]],
-  approach = APPROACH_CHOICES[[2]], type = TYPE_CHOICES[[6]],
+  responsible_unit = "資訊部", nature = "人工＋自動",
+  approach = "偵測性控制", type = TYPE_CHOICES[[6]],
   inputs = "在職名單、權限清冊", review_steps = "產製清冊\n主管覆核\n完成異動",
   outputs = "簽回清冊、異動 log", investigation_threshold = "任何不當權限均須異動",
   dependent_controls = "", control_id = "", iuc_or_system = "使用者權限清冊",
+  company_status = "每季產出權限清冊並由主管覆核後完成異動",
   key_control = "Y"
 )
 
@@ -46,18 +49,26 @@ d1 <- modifyList(base, list(iuc_or_system = "使用者權限清冊"))
 d2 <- modifyList(base, list(iuc_or_system = "AD 群組報表", control_activity = "覆核 AD 群組"))
 check(length(split_controls_by_iuc(list(d1, d2))) == 2L, "IUC 分拆")
 
-# RCM row = designed control; objective ≠ activity
+# RCM row = designed control; objective ≠ activity (Jinglian headers)
 rcm <- controls_to_rcm(list(d1))
-check(all(RCM_HEADERS %in% names(rcm)), "RCM 含標準標題列")
-check(identical(rcm[["控制目標"]], "確保系統使用者權限與現職一致"), "RCM 目標欄獨立")
-check(identical(rcm[["控制活動"]], "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
-check(!identical(rcm[["控制目標"]], rcm[["控制活動"]]), "目標≠活動")
-check(grepl("^IT-C-", rcm[["控制點編號"]]), "資訊循環控制點編號格式")
-check(grepl("^通過", rcm[["設計檢核"]]), "設計檢核通過")
+check(all(RCM_HEADERS %in% names(rcm)), "RCM 含鯨鏈標準標題列")
+check(identical(as.character(rcm[["控制目標"]]), "確保系統使用者權限與現職一致"), "RCM 目標欄獨立")
+check(identical(as.character(rcm[["控制活動"]]), "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
+check(!identical(as.character(rcm[["控制目標"]]), as.character(rcm[["控制活動"]])), "目標≠活動")
+check(grepl("^EC-101-", as.character(rcm[["控制編號"]])), "資訊循環控制編號格式 EC-101-##")
+check(identical(as.character(rcm[["控制類型"]]), "人工＋自動"), "控制類型＝人工/自動")
+check(identical(as.character(rcm[["控制活動類型"]]), "偵測性控制"), "控制活動類型＝預防/偵測")
+check(identical(as.character(rcm[["風險類別"]]), "營運面"), "風險類別映射")
+check(grepl("^通過", as.character(rcm[["設計檢核"]])), "設計檢核通過")
+
+# Type field 防呆：對調應失敗
+swapped <- modifyList(d1, list(nature = "預防性控制", approach = "人工"))
+tchk <- rcm_type_fields_check(swapped$nature, swapped$approach)
+check(!isTRUE(tchk$ok), "類型欄對調時防呆失敗")
 
 bad <- modifyList(d1, list(control_activity = d1$control_objective))
 rcm_bad <- controls_to_rcm(list(bad))
-check(grepl("待修", rcm_bad[["設計檢核"]]), "目標活動相同時設計檢核失敗")
+check(grepl("待修", as.character(rcm_bad[["設計檢核"]])), "目標活動相同時設計檢核失敗")
 
 # Extra OA cleanliness cases
 chk1 <- rcm_objective_activity_check(
@@ -82,7 +93,7 @@ gaps <- detect_design_gaps(bad)
 check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")
 check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
 
-gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", outputs = "")))
+gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", related_system = "", outputs = "", related_document = "")))
 check(any(gaps2$category == "缺文件"), "缺 IUC／產出歸類為缺文件")
 
 ready <- is_rcm_row_ready(d1)
@@ -108,6 +119,24 @@ tmp_csv <- tempfile(fileext = ".csv")
 utils::write.csv(library_to_flat_df(lib), tmp_csv, row.names = FALSE, fileEncoding = "UTF-8")
 imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = TRUE)
 check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
+
+# Jinglian RCM xlsx → library batch
+xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+if (file.exists(xlsx)) {
+  jl <- import_rcm_xlsx_as_library(xlsx)
+  check(length(jl) >= 20, sprintf("鯨鏈 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
+  check(any(vapply(jl, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1))),
+        "鯨鏈匯入控制編號帶 JL-EC- 前綴")
+  sample_ctrl <- jl[[1]]$control
+  rcm_jl <- control_to_rcm_row(sample_ctrl, 1L)
+  check(all(c("控制目標", "控制活動", "控制類型", "控制活動類型") %in% names(rcm_jl)),
+        "鯨鏈列可映射回 RCM 標題")
+  check(!identical(as.character(rcm_jl[["控制目標"]]), as.character(rcm_jl[["控制活動"]])) ||
+          grepl("待修", as.character(rcm_jl[["設計檢核"]])),
+        "鯨鏈列目標/活動分欄或設計檢核標示")
+} else {
+  message("SKIP: 鯨鏈 xlsx 不在 templates/")
+}
 
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

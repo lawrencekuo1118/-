@@ -41,6 +41,7 @@ TYPE_CHOICES <- c(
 )
 
 FREQUENCY_CHOICES <- c(
+  "持續",
   "即時／每筆交易",
   "每日",
   "每週",

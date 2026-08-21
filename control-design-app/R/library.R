@@ -1,14 +1,21 @@
 # Persistent accumulative library of well-designed control points.
 # Prefer selecting from library when designing new controls.
 
+if (!exists("%||%", mode = "function", inherits = TRUE)) {
+  `%||%` <- function(x, y) if (is.null(x)) y else x
+}
+
 LIBRARY_CONTROL_FIELDS <- c(
-  "library_id", "title", "cycle", "risk_name", "risk_description",
+  "library_id", "title", "cycle", "sub_process_id", "sub_process",
+  "risk_factor", "risk_name", "risk_description", "risk_category",
   "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
   "romm_classification", "significant_account", "assertions",
   "control_objective", "control_activity", "frequency", "responsible_unit",
-  "iuc_or_system", "nature", "approach", "type",
+  "iuc_or_system", "related_system", "related_policy", "related_law", "related_document",
+  "company_status", "design_gap_note", "effectiveness", "residual_risk", "improvement",
+  "nature", "approach", "type",
   "inputs", "review_steps", "outputs", "investigation_threshold",
-  "dependent_controls", "detailed_description", "summary_description"
+  "dependent_controls", "detailed_description", "summary_description", "control_id"
 )
 
 seed_control_library <- function() {
@@ -290,28 +297,42 @@ load_control_library <- function(path_json, fallback_seed = TRUE) {
   items
 }
 
-# Bulk import CSV (flat) or JSON (list of items/controls)
+# Bulk import CSV (flat), JSON, or 鯨鏈-style RCM xlsx (row1 groups + row2 headers)
 import_control_library_file <- function(path, existing = list(), overwrite = TRUE) {
   ext <- tolower(tools::file_ext(path))
   incoming <- list()
-  if (ext == "csv") {
+  if (ext %in% c("xlsx", "xls")) {
+    incoming <- import_rcm_xlsx_as_library(path)
+  } else if (ext == "csv") {
     df <- utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
     # flexible aliases
     names(df) <- gsub("\\s+", "_", names(df))
     alias_map <- c(
-      library_id = "library_id|id|範本id|控制點編號",
+      library_id = "library_id|id|範本id|控制點編號|控制編號",
       title = "title|名稱|範本名稱",
-      cycle = "cycle|循環|九大循環",
-      risk_name = "risk_name|風險|風險名稱",
+      cycle = "cycle|循環|九大循環|循環名稱",
+      sub_process_id = "sub_process_id|子作業編號",
+      sub_process = "sub_process|子作業|子作業名稱",
+      risk_factor = "risk_factor|風險因素",
+      risk_name = "risk_name|風險|風險名稱|風險因素",
       risk_description = "risk_description|風險描述|RoMM",
+      risk_category = "risk_category|風險類別",
       control_objective = "control_objective|控制目標|目標",
       control_activity = "control_activity|控制活動|活動",
       frequency = "frequency|頻率|控制頻率",
-      responsible_unit = "responsible_unit|負責單位|owner",
-      iuc_or_system = "iuc_or_system|IUC|制度|iuc",
-      nature = "nature|性質",
-      approach = "approach|取向|預防偵測",
+      responsible_unit = "responsible_unit|負責單位|owner|流程負責單位",
+      iuc_or_system = "iuc_or_system|IUC|制度|iuc|相關系統",
+      nature = "nature|性質|控制類型",
+      approach = "approach|取向|預防偵測|控制活動類型",
       type = "type|類型",
+      company_status = "company_status|控制現況描述|現況",
+      design_gap_note = "design_gap_note|控制設計差異說明",
+      related_policy = "related_policy|相關政策或程序",
+      related_law = "related_law|相關法令",
+      related_document = "related_document|相關文件",
+      effectiveness = "effectiveness|控制有效性評估",
+      residual_risk = "residual_risk|可能潛在風險",
+      improvement = "improvement|建議改善方式",
       inputs = "inputs|投入",
       review_steps = "review_steps|steps|步驟",
       outputs = "outputs|產出",
@@ -351,9 +372,131 @@ import_control_library_file <- function(path, existing = list(), overwrite = TRU
       library_item_from_control(ctrl, tags = unlist(x$tags %||% list()))
     })
   } else {
-    stop("僅支援 CSV 或 JSON 匯入")
+    stop("僅支援 CSV、JSON 或 RCM xlsx 匯入")
   }
   merge_libraries(existing, incoming, overwrite = overwrite)
+}
+
+# Normalize Jinglian / RCM workbook header cell → short canonical name
+normalize_rcm_header_cell <- function(x) {
+  x <- as.character(x %||% "")
+  x <- gsub("\r?\n", "", x)
+  x <- gsub("\\s+", "", x)
+  # strip parenthetical English / notes
+  x <- sub("（.*$", "", x)
+  x <- sub("\\(.*$", "", x)
+  trimws(x)
+}
+
+rcm_row_to_control <- function(row) {
+  getv <- function(... ) {
+    keys <- c(...)
+    for (k in keys) {
+      if (k %in% names(row)) {
+        v <- row[[k]]
+        if (!is.null(v) && !(length(v) == 1 && is.na(v))) {
+          s <- trimws(as.character(v))
+          if (nzchar(s) && !identical(toupper(s), "NA")) return(s)
+        }
+      }
+    }
+    ""
+  }
+  cycle_raw <- getv("循環名稱")
+  cycle <- if (grepl("資訊", cycle_raw)) "電腦化資訊系統循環" else cycle_raw
+  risk_factor <- getv("風險因素")
+  risk_desc <- getv("風險描述")
+  risk_cat <- getv("風險類別")
+  ctrl <- list(
+    control_id = getv("控制編號"),
+    library_id = {
+      cid <- getv("控制編號")
+      if (nzchar(cid)) paste0("JL-", cid) else NULL
+    },
+    title = {
+      obj <- getv("控制目標")
+      if (nzchar(obj)) obj else paste(getv("子作業名稱"), getv("風險因素"), sep = "｜")
+    },
+    cycle = cycle,
+    sub_process_id = getv("子作業編號"),
+    sub_process = getv("子作業名稱"),
+    risk_factor = risk_factor,
+    risk_name = risk_factor,
+    risk_description = risk_desc,
+    risk_category = risk_cat,
+    risk_attr_financial = if (grepl("報導", risk_cat)) paste0("[財務報導] ", risk_desc) else "",
+    risk_attr_operations = if (grepl("營運", risk_cat) || !nzchar(risk_cat)) paste0("[營運] ", risk_desc) else "",
+    risk_attr_compliance = if (grepl("遵循", risk_cat)) paste0("[法令遵循] ", risk_desc) else "",
+    significant_account = getv("會計科目"),
+    control_objective = getv("控制目標"),
+    control_activity = getv("控制活動"),
+    nature = normalize_control_type_manual_auto(getv("控制類型")),
+    approach = normalize_control_activity_type_pd(getv("控制活動類型")),
+    frequency = getv("控制頻率"),
+    company_status = getv("控制現況描述"),
+    design_gap_note = getv("控制設計差異說明"),
+    related_system = getv("相關系統"),
+    iuc_or_system = getv("相關系統", "相關文件"),
+    related_policy = getv("相關政策或程序"),
+    related_law = getv("相關法令"),
+    related_document = getv("相關文件"),
+    responsible_unit = getv("流程負責單位"),
+    effectiveness = getv("控制有效性評估"),
+    residual_risk = getv("可能潛在風險"),
+    improvement = getv("建議改善方式"),
+    outputs = getv("相關文件"),
+    detailed_description = getv("控制現況描述"),
+    key_control = "Y"
+  )
+  ctrl
+}
+
+import_rcm_xlsx_as_library <- function(path) {
+  if (!requireNamespace("readxl", quietly = TRUE)) {
+    stop("需要 readxl 套件以匯入 RCM xlsx：install.packages(\"readxl\")")
+  }
+  sheets <- readxl::excel_sheets(path)
+  sheet <- sheets[[1]]
+  # Prefer sheet named like 資訊循環 / RCM
+  hit <- grep("循環|RCM|控制", sheets, ignore.case = TRUE)
+  if (length(hit)) sheet <- sheets[[hit[[1]]]]
+
+  header_row <- readxl::read_excel(path, sheet = sheet, col_names = FALSE, n_max = 2)
+  headers <- vapply(seq_len(ncol(header_row)), function(j) {
+    normalize_rcm_header_cell(header_row[[j]][2])
+  }, character(1))
+  # Fall back to row1 if row2 empty
+  for (j in seq_along(headers)) {
+    if (!nzchar(headers[[j]])) headers[[j]] <- normalize_rcm_header_cell(header_row[[j]][1])
+  }
+  # Deduplicate empty / NA headers
+  headers[is.na(headers) | !nzchar(headers)] <- paste0("col_", seq_along(headers))[is.na(headers) | !nzchar(headers)]
+  # If duplicates, make unique
+  if (any(duplicated(headers))) headers <- make.unique(headers, sep = "_")
+
+  df <- as.data.frame(readxl::read_excel(path, sheet = sheet, skip = 1, col_names = FALSE),
+                      stringsAsFactors = FALSE)
+  if (!nrow(df)) return(list())
+  # Align columns
+  n <- min(ncol(df), length(headers))
+  df <- df[, seq_len(n), drop = FALSE]
+  names(df) <- headers[seq_len(n)]
+
+  # Keep rows with 控制目標 or 控制活動
+  keep <- vapply(seq_len(nrow(df)), function(i) {
+    obj <- if ("控制目標" %in% names(df)) trimws(as.character(df[["控制目標"]][i] %||% "")) else ""
+    act <- if ("控制活動" %in% names(df)) trimws(as.character(df[["控制活動"]][i] %||% "")) else ""
+    nzchar(obj) || nzchar(act)
+  }, logical(1))
+  df <- df[keep, , drop = FALSE]
+
+  lapply(seq_len(nrow(df)), function(i) {
+    row <- as.list(df[i, , drop = FALSE])
+    # unlist length-1
+    row <- lapply(row, function(x) if (length(x)) x[[1]] else x)
+    ctrl <- rcm_row_to_control(row)
+    library_item_from_control(ctrl, tags = c("鯨鏈RCM", "資訊循環", "首批"))
+  })
 }
 
 library_summary_df <- function(library) {

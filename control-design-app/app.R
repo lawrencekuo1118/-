@@ -344,15 +344,21 @@ ui <- page_navbar(
           accordion_panel(
             "5W1H／PBC",
             p(class = "small text-muted mb-2",
-              "模組化拼湊回答架構（預設＝人事時地物全鏈）；IUC 可串接 PBC 資料庫。"),
+              "勾選 5W1H 模組拼湊回答架構與探針題；「取得什麼文件或資訊(IUC)」可串接 PBC 資料庫。"),
             checkboxGroupInput(
               "interview_5w1h", NULL,
               choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
             ),
+            uiOutput("interview_scaffold_preview"),
+            checkboxInput(
+              "interview_include_modules",
+              "將勾選之 5W1H 模組展開為獨立探針題",
+              value = TRUE
+            ),
             selectizeInput(
-              "interview_pbc_link", "串接 PBC（選填）",
+              "interview_pbc_link", "串接 PBC 資料庫（選填）",
               choices = NULL, multiple = TRUE,
-              options = list(placeholder = "從 PBC 資料庫選取預期佐證")
+              options = list(placeholder = "選取後寫入建議串接PBC／What 探針")
             )
           )
         )
@@ -929,16 +935,22 @@ server <- function(input, output, session) {
   }
 
   refresh_pbc_choices <- function() {
-    ch <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
+    ch_design <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
     updateSelectizeInput(
-      session, "pbc_apply", choices = ch, server = TRUE,
-      selected = intersect(input$pbc_apply %||% character(), unname(ch))
+      session, "pbc_apply", choices = ch_design, server = TRUE,
+      selected = intersect(input$pbc_apply %||% character(), unname(ch_design))
     )
+    cy_iv <- input$interview_cycle %||% ""
+    ch_iv <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy_iv)) cy_iv else NULL)
     updateSelectizeInput(
-      session, "interview_pbc_link", choices = ch, server = TRUE,
-      selected = intersect(input$interview_pbc_link %||% character(), unname(ch))
+      session, "interview_pbc_link", choices = ch_iv, server = TRUE,
+      selected = intersect(input$interview_pbc_link %||% character(), unname(ch_iv))
     )
   }
+
+  observeEvent(input$interview_cycle, {
+    refresh_pbc_choices()
+  }, ignoreNULL = FALSE)
 
   interview_worksheet <- function() {
     src <- input$interview_source %||% "rcm"
@@ -959,26 +971,31 @@ server <- function(input, output, session) {
       cs <- Filter(function(c) c$control_id %in% ids, cs)
     }
     mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
-    iv <- controls_to_interview(
+    pbc_ids <- input$interview_pbc_link %||% character()
+    controls_to_interview(
       cs, input$interview_elements,
       finalized_only = finalized_only,
       modules = mods,
-      pbc_reg = pbc_reg()
+      pbc_reg = pbc_reg(),
+      pbc_ids = pbc_ids,
+      include_module_rows = isTRUE(input$interview_include_modules %||% TRUE)
     )
-    # Overlay explicit PBC picks onto 建議串接PBC
-    pbc_ids <- input$interview_pbc_link %||% character()
-    if (length(pbc_ids) && nrow(iv)) {
-      linked <- tryCatch(format_pbc_for_inputs(pbc_reg(), pbc_ids), error = function(e) "")
-      if (nzchar(trimws(linked))) {
-        iv[["建議串接PBC"]] <- vapply(iv[["建議串接PBC"]], function(x) {
-          x <- as.character(x %||% "")
-          if (!nzchar(x) || identical(x, "（待對照 PBC 資料庫）")) linked
-          else paste(x, linked, sep = "｜")
-        }, character(1))
-      }
-    }
-    iv
   }
+
+  output$interview_scaffold_preview <- renderUI({
+    mods <- input$interview_5w1h %||% character()
+    if (!length(mods)) {
+      return(tags$small(class = "text-warning", "尚未勾選 5W1H 模組。"))
+    }
+    sc <- interview_answer_scaffold(mods)
+    n_pbc <- length(input$interview_pbc_link %||% character())
+    tags$div(
+      class = "small border rounded p-2 mb-2 bg-light",
+      tags$strong("拼湊預覽："), sc,
+      if (n_pbc > 0) tags$div(class = "text-muted mt-1",
+                              sprintf("已串接 PBC %d 筆（寫入 What／建議串接PBC）。", n_pbc))
+    )
+  })
 
   interview_pool_controls <- reactive({
     src <- input$interview_source %||% "rcm"

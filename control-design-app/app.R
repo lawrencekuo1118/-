@@ -227,7 +227,7 @@ ui <- page_navbar(
         uiOutput("cascade_risk_detail"),
         conditionalPanel(
           "input.cascade_risk == '__custom__'",
-          textInput("custom_risk_factor", NULL, placeholder = "自訂風險因素"),
+          textInput("custom_risk_factor", NULL, placeholder = "自訂風險 tag（簡短）"),
           textAreaInput("custom_risk_desc", NULL, rows = 2, placeholder = "自訂風險描述"),
           selectInput("custom_risk_category", NULL,
                       choices = c("風險類別…" = "", RISK_CATEGORY_CHOICES))
@@ -289,7 +289,7 @@ ui <- page_navbar(
             uiOutput("form_risk_detail"),
             conditionalPanel(
               "input.risk_factor == '__custom__'",
-              textInput("custom_form_risk_factor", NULL, placeholder = "自訂風險因素")
+              textInput("custom_form_risk_factor", NULL, placeholder = "自訂風險 tag（簡短，不含[]）")
             ),
             textInput("risk_name", "風險簡稱", placeholder = "可同因素；亦可自訂"),
             textAreaInput("risk_description", lab_req("風險描述"), rows = 2,
@@ -963,15 +963,22 @@ server <- function(input, output, session) {
       sub_process = input$sub_process %||% "",
       risk_factor = {
         rf <- input$risk_factor %||% ""
-        if (identical(rf, "__custom__")) trimws(input$custom_form_risk_factor %||% "")
-        else trimws(rf)
+        raw <- if (identical(rf, "__custom__")) {
+          trimws(input$custom_form_risk_factor %||% "")
+        } else {
+          trimws(rf)
+        }
+        risk_factor_tag(raw)
       },
       risk_name = {
         rn <- trimws(input$risk_name %||% "")
         rf <- input$risk_factor %||% ""
-        if (nzchar(rn)) rn else if (identical(rf, "__custom__")) {
+        raw <- if (nzchar(rn)) rn else if (identical(rf, "__custom__")) {
           trimws(input$custom_form_risk_factor %||% "")
-        } else trimws(rf)
+        } else {
+          trimws(rf)
+        }
+        risk_factor_tag(raw)
       },
       risk_description = input$risk_description %||% "",
       risk_category = input$risk_category %||% "",

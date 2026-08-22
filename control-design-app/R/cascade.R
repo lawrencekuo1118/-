@@ -163,6 +163,18 @@ cascade_sub_process_choices <- function(rows) {
   stats::setNames(keys, labels)
 }
 
+# Short tag label for 風險因素（風險描述之 tag；不含 []）
+risk_factor_tag <- function(x) {
+  x <- trimws(as.character(x %||% ""))
+  if (!nzchar(x)) return("")
+  x <- gsub("[\\[\\]]", "", x)
+  parts <- trimws(strsplit(x, "\\s*/\\s*")[[1]])
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) return("")
+  tag <- parts[[1]]
+  if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
+}
+
 build_risk_factor_choices <- function(rows,
                                       empty_label = "請選擇風險因素…",
                                       include_custom = TRUE,
@@ -170,7 +182,7 @@ build_risk_factor_choices <- function(rows,
   ch_risk <- if (length(rows)) cascade_risk_choices(rows) else character()
   extra <- trimws(as.character(extra_selected %||% ""))
   if (nzchar(extra) && !(extra %in% unname(ch_risk))) {
-    ch_risk <- c(stats::setNames(extra, extra), ch_risk)
+    ch_risk <- c(stats::setNames(extra, risk_factor_tag(extra)), ch_risk)
   }
   ch <- c(stats::setNames("", empty_label), ch_risk)
   if (isTRUE(include_custom)) ch <- c(ch, "＋自訂新增風險" = "__custom__")
@@ -197,7 +209,7 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
   if (nzchar(det$risk_category)) {
     updateSelectInput(session, "risk_category", selected = det$risk_category)
   }
-  updateTextInput(session, "risk_name", value = risk_factor)
+  updateTextInput(session, "risk_name", value = risk_factor_tag(risk_factor))
   r <- det$sample
   if (is.list(r) && length(r)) {
     strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
@@ -215,19 +227,20 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
 }
 
 cascade_risk_choices <- function(rows) {
-  # value = risk_factor; label includes category + short description
+  # value = canonical risk_factor; label = short tag（不含 []、不附描述）
   factors <- unique(vapply(rows, function(r) r$risk_factor, character(1)))
   factors <- factors[nzchar(factors)]
-  labels <- vapply(factors, function(f) {
-    hit <- Filter(function(r) identical(r$risk_factor, f) || identical(r$risk_name, f), rows)
-    cat <- if (length(hit)) hit[[1]]$risk_category else ""
-    desc <- if (length(hit)) hit[[1]]$risk_description else ""
-    short <- if (nchar(desc) > 36) paste0(substr(desc, 1, 36), "…") else desc
-    if (nzchar(cat) && nzchar(short)) sprintf("[%s] %s — %s", cat, f, short)
-    else if (nzchar(cat)) sprintf("[%s] %s", cat, f)
-    else if (nzchar(short)) sprintf("%s — %s", f, short)
-    else f
-  }, character(1))
+  tags <- vapply(factors, risk_factor_tag, character(1))
+  labels <- tags
+  dup <- unique(tags[duplicated(tags) | duplicated(tags, fromLast = TRUE)])
+  if (length(dup)) {
+    for (i in seq_along(factors)) {
+      if (tags[i] %in% dup) {
+        alt <- gsub("[\\[\\]]", "", factors[i])
+        labels[i] <- if (nchar(alt) > 28) paste0(substr(alt, 1, 27), "…") else alt
+      }
+    }
+  }
   stats::setNames(factors, labels)
 }
 

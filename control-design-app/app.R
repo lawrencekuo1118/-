@@ -291,9 +291,9 @@ ui <- page_navbar(
         card_header("訪談問項設計"),
         uiOutput("interview_status"),
         p(class = "small text-muted mb-2",
-          "深入且快速了解各循環／子作業之預期風險與預期控制目標／活動，",
-          "並對照內部控制實際執行現況。每題答案須含人事時地物",
-          "（頻率／誰／IUC／具體行為／下一步）。"),
+          "最主要功能：針對不同循環／子作業下之預期風險與預期控制目標／活動，",
+          "深入且快速了解實際執行現況。每題答案必須含人事時地物：",
+          "以何頻率 → 誰取得什麼文件或資訊(IUC) → 做什麼（具體控制行為）→ 才會進行什麼下一步。"),
         radioButtons(
           "interview_source", NULL,
           choices = INTERVIEW_SOURCE_CHOICES,
@@ -328,17 +328,23 @@ ui <- page_navbar(
           accordion_panel(
             "訪談焦點",
             p(class = "small text-muted mb-2",
-              "勾選要深挖的預期風險／目標／活動等元素。"),
+              "預設僅預期風險／目標／活動（深入且快速）；可再勾選擴充元素。"),
             checkboxGroupInput(
               "interview_elements", NULL,
               choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
             ),
-            actionButton("ws_select_core_iv", "現況走查核心題", class = "btn-sm btn-primary")
+            div(
+              class = "d-flex gap-1 flex-wrap",
+              actionButton("ws_select_core_iv", "深入且快速（風險／目標／活動）",
+                           class = "btn-sm btn-primary"),
+              actionButton("ws_select_full_iv", "完整走查（含頻率／IUC／步驟）",
+                           class = "btn-sm btn-outline-primary")
+            )
           ),
           accordion_panel(
             "5W1H／PBC",
             p(class = "small text-muted mb-2",
-              "模組化拼湊回答架構；What 可串接 PBC 資料庫。"),
+              "模組化拼湊回答架構（預設＝人事時地物全鏈）；IUC 可串接 PBC 資料庫。"),
             checkboxGroupInput(
               "interview_5w1h", NULL,
               choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
@@ -2550,6 +2556,13 @@ server <- function(input, output, session) {
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
+    updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
+  })
+  observeEvent(input$ws_select_full_iv, {
+    updateCheckboxGroupInput(
+      session, "interview_elements",
+      selected = unique(c(DEFAULT_INTERVIEW_ELEMENTS, INTERVIEW_WALKTHROUGH_EXTRA))
+    )
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
   })
   observeEvent(input$ws_select_core_csa, {

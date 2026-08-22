@@ -25,49 +25,52 @@ DESIGN_ELEMENTS <- c(
 )
 
 # 訪談問項設計
-# 主目標：促進有效訪談，完整了解公司流程與內部控制實際執行現況
-# 核心：針對循環／子作業下「預期風險」與「預期控制目標／活動」深入且快速了解
-# 每題答案須含人事時地物：以何頻率、誰、取得什麼文件／IUC、做什麼、下一步
+# 主目標：針對不同循環／子作業下之「預期風險」與「預期控制目標／活動」深入且快速了解
+# 每題答案必須含人事時地物鏈：
+#   以何頻率 → 誰取得什麼文件或資訊(IUC) → 做什麼（具體控制行為）→ 才會進行什麼下一步
 DEFAULT_INTERVIEW_ELEMENTS <- c(
-  "risk", "control_objective", "control_activity",
-  "frequency_owner", "iuc", "steps", "outputs", "exception"
+  "risk", "control_objective", "control_activity"
 )
 
-# 訪談焦點勾選標籤（強調預期風險／目標／活動）
+# 訪談焦點勾選標籤（主軸＝預期風險／目標／活動）
 INTERVIEW_ELEMENTS <- c(
   risk = "預期風險（循環／子作業）",
   risk_attributes = "風險類別／屬性",
   control_objective = "預期控制目標",
   control_activity = "預期控制活動（走查）",
   control_types = "控制類型／活動類型",
-  frequency_owner = "頻率／權責（When／Who）",
-  iuc = "IUC／PBC（What）",
+  frequency_owner = "頻率／權責",
+  iuc = "IUC／PBC",
   company_status = "控制現況描述",
   design_gap = "控制設計差異",
   nature_approach_type = "Nature／Approach／Type",
   inputs = "Inputs（投入）",
   steps = "Steps（逐步現況）",
-  outputs = "Outputs／產出（Next）",
-  exception = "例外／門檻（Next）",
+  outputs = "Outputs／產出",
+  exception = "例外／門檻",
   assertion_account = "科目／聲明"
+)
+
+# 完整走查時可一鍵擴充的元素（頻率／IUC／步驟／產出／例外）
+INTERVIEW_WALKTHROUGH_EXTRA <- c(
+  "frequency_owner", "iuc", "steps", "outputs", "exception"
 )
 
 INTERVIEW_ANSWER_SCAFFOLD <- paste0(
   "請以人事時地物回答：",
-  "①以何頻率（When）",
-  "②誰執行／誰覆核（Who）",
-  "③取得什麼文件或資訊／IUC（What）",
-  "④做什麼具體控制行為（How）",
-  "⑤完成後下一步或產出／例外如何處理（Next）"
+  "以何頻率 → ",
+  "誰取得什麼文件或資訊(IUC) → ",
+  "做什麼（具體控制行為）→ ",
+  "才會進行什麼下一步"
 )
 
-# 可勾選之 5W1H 模組（拼湊組建回答架構；可串 PBC）
+# 可勾選之 5W1H 模組（拼湊組建；預設組合成上列鏈）
 INTERVIEW_5W1H_MODULES <- c(
-  when = "When｜以何頻率／何時執行",
-  who = "Who｜誰執行／誰覆核",
-  what = "What｜取得什麼文件或 IUC（可串 PBC）",
-  how = "How｜具體控制行為",
-  next_step = "Next｜下一步／產出／例外處理"
+  when = "以何頻率",
+  who = "誰（執行／覆核）",
+  what = "取得什麼文件或資訊(IUC)",
+  how = "做什麼（具體控制行為）",
+  next_step = "才會進行什麼下一步"
 )
 
 DEFAULT_INTERVIEW_5W1H <- names(INTERVIEW_5W1H_MODULES)
@@ -714,15 +717,30 @@ rcm_group_for_column <- function(col) {
   "其他"
 }
 
-# ---- Interview：了解流程與內控實際執行現況（5W1H）----
+# ---- Interview：循環／子作業下預期風險與預期目標／活動（人事時地物鏈）----
 interview_answer_scaffold <- function(modules = DEFAULT_INTERVIEW_5W1H) {
   mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
   if (!length(mods)) return(INTERVIEW_ANSWER_SCAFFOLD)
+  # 全選時使用標準鏈（頻率→誰取得IUC→做什麼→下一步）
+  if (setequal(mods, DEFAULT_INTERVIEW_5W1H)) return(INTERVIEW_ANSWER_SCAFFOLD)
   bits <- unname(INTERVIEW_5W1H_MODULES[mods])
-  paste0("請依下列模組回答（人事時地物）：", paste(bits, collapse = "；"))
+  # 若同時勾 who + what，合併為「誰取得什麼文件或資訊(IUC)」
+  if (all(c("who", "what") %in% mods)) {
+    bits <- character()
+    for (m in mods) {
+      if (identical(m, "who")) {
+        bits <- c(bits, "誰取得什麼文件或資訊(IUC)")
+      } else if (identical(m, "what")) {
+        next
+      } else {
+        bits <- c(bits, INTERVIEW_5W1H_MODULES[[m]])
+      }
+    }
+  }
+  paste0("請以人事時地物回答：", paste(bits, collapse = " → "))
 }
 
-# 題幹尾綴：強制每題答案含人事時地物
+# 題幹尾綴：強制每題答案含人事時地物鏈
 interview_people_place_suffix <- function(modules = DEFAULT_INTERVIEW_5W1H) {
   paste0("（答案必含：", interview_answer_scaffold(modules), "）")
 }
@@ -813,7 +831,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     risk = list(
       element = unname(INTERVIEW_ELEMENTS[["risk"]]),
       question = paste0(sprintf(
-        "就「%s／%s」預期風險「%s」（設計：%s）：實務上如何發生、如何被偵知／防範？",
+        "就「%s／%s」預期風險「%s」（設計：%s）：請深入且快速說明實務上如何發生、如何被偵知／防範。",
         cycle_nm, sub_nm, risk_label, risk_desc
       ), suffix),
       evidence = "流程說明／事件紀錄／前一年度缺失"
@@ -829,7 +847,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     control_objective = list(
       element = unname(INTERVIEW_ELEMENTS[["control_objective"]]),
       question = paste0(sprintf(
-        "就「%s／%s」預期控制目標「%s」：實務上如何衡量／確認已達成？請勿只複述活動步驟。",
+        "就「%s／%s」預期控制目標「%s」：請深入且快速說明實務上如何衡量／確認已達成（勿只複述活動步驟）。",
         cycle_nm, sub_nm, obj
       ), suffix),
       evidence = "制度／KPI／管理報表"
@@ -837,7 +855,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     control_activity = list(
       element = unname(INTERVIEW_ELEMENTS[["control_activity"]]),
       question = paste0(sprintf(
-        "就「%s／%s」預期控制活動「%s」：請快速走查實際執行現況。",
+        "就「%s／%s」預期控制活動「%s」：請走查實際執行——以何頻率、誰取得什麼文件或資訊(IUC)、做什麼具體控制行為、才會進行什麼下一步。",
         cycle_nm, sub_nm, act
       ), suffix),
       evidence = "現場示範／螢幕錄影／逐步說明"

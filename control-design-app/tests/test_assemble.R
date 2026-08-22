@@ -280,15 +280,26 @@ check(all(c("控制編號", "訪談問題", "預期佐證_PBC", "受訪者回答
       "訪談工作底稿含標準欄位")
 check(identical(as.character(iv[["控制編號"]][1]), derive_control_id(d1, 1L)),
       "訪談對齊控制編號")
-check(all(grepl("人事時地物|When|Who|What|How|Next", iv[["回答架構_5W1H"]])),
-      "訪談題含 5W1H 回答架構")
-check(all(grepl("答案必含|人事時地物", iv[["訪談問題"]])),
+check(all(grepl("以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步|人事時地物",
+                iv[["回答架構_5W1H"]])),
+      "訪談題含人事時地物回答鏈")
+check(all(grepl("答案必含|人事時地物|以何頻率", iv[["訪談問題"]])),
       "每題問項答案須含人事時地物")
+check(grepl("以何頻率 → 誰取得什麼文件或資訊\\(IUC\\) → 做什麼（具體控制行為）→ 才會進行什麼下一步",
+            INTERVIEW_ANSWER_SCAFFOLD),
+      "標準回答鏈＝頻率→誰取得IUC→做什麼→下一步")
+check(identical(DEFAULT_INTERVIEW_ELEMENTS,
+                c("risk", "control_objective", "control_activity")),
+      "預設焦點＝預期風險／目標／活動（深入且快速）")
 check(any(grepl("預期|實際|現況|走查|誰", iv[["訪談問題"]])),
       "訪談問題導向預期風險／目標／活動與實際執行現況")
+iv_act <- control_to_interview(d1, elements = c("control_activity"))
+check(grepl("以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步",
+            iv_act[["訪談問題"]][1]),
+      "控制活動題明示人事時地物回答鏈")
 iv_mod <- control_to_interview(d1, elements = c("iuc"), modules = c("what", "who"))
-check(grepl("What", iv_mod[["回答架構_5W1H"]][1]) && grepl("Who", iv_mod[["回答架構_5W1H"]][1]),
-      "5W1H 模組可拼湊組建")
+check(grepl("誰取得什麼文件或資訊\\(IUC\\)", iv_mod[["回答架構_5W1H"]][1]),
+      "5W1H 模組可拼湊組建（who+what 合併）")
 check(grepl("使用者權限清冊", suggest_interview_pbc(d1)),
       "建議串接 PBC 帶出 IUC")
 lib_iv <- library_items_as_interview_controls(list(
@@ -399,8 +410,12 @@ check(nrow(csa_default) >= 1L && identical(as.character(csa_default[["控制現�
       "無自訂情境時使用預設現況一組")
 
 # Phase order evidence: interview columns ready independently of CSA
-check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) >= 5,
-      "訪談核心元素可產出完整題綱")
+check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) == 3L,
+      "深入且快速預設產出風險／目標／活動三題")
+check(nrow(control_to_interview(
+  fin_ok, unique(c(DEFAULT_INTERVIEW_ELEMENTS, INTERVIEW_WALKTHROUGH_EXTRA))
+)) >= 5,
+      "完整走查可產出擴充題綱")
 
 # PBC
 reg <- empty_pbc_registry()

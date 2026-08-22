@@ -122,7 +122,7 @@ check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別"
 fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
 check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
 
-# 報導面會計科目必填；其它類別不可填
+# 報導面會計科目必填；其他類別不可填
 rep_ok <- design_required_check(modifyList(d1, list(
   risk_category = "報導面", significant_account = "應收帳款"
 )))
@@ -154,7 +154,7 @@ fin_rep <- finalize_control_as_rcm_row(modifyList(d1, list(
 )), existing_ids = character())
 check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺科目不可定稿")
 
-# 遵循面相關法令必填；其它類別不可填
+# 遵循面相關法令必填；其他類別不可填
 comp_ok <- design_required_check(modifyList(d1, list(
   risk_category = "遵循面", related_law = "證券交易法", significant_account = ""
 )))
@@ -401,6 +401,28 @@ check(!length(miss_btn), sprintf("全部 actionButton 有 observeEvent（缺：%
 check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺：%s）", paste(miss_dl, collapse = ",")))
 check(length(btn_ids) >= 16, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
 check(length(dl_ids) >= 5, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
+
+# Locale: ban Mainland / HK-Macau terms in UI + committed seed (Taiwan + US proper nouns only)
+banned_locale <- c(
+  "資料數據", "大批量", "重覆", "系統帳戶", "安裝或設置", "應設置密碼",
+  "系統資源配置", "其它類別", "信息系統", "軟件", "網絡", "數據庫", "默認", "登录"
+)
+locale_scan_files <- c(
+  file.path(root, "app.R"),
+  file.path(root, "R", "rcm_csa.R"),
+  file.path(root, "R", "cascade.R"),
+  file.path(root, "R", "constants.R"),
+  file.path(root, "data", "jinglian_it_rcm_batch.json")
+)
+locale_hits <- character()
+for (fp in locale_scan_files) {
+  if (!file.exists(fp)) next
+  txt <- paste(readLines(fp, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  for (b in banned_locale) {
+    if (grepl(b, txt, fixed = TRUE)) locale_hits <- c(locale_hits, paste0(basename(fp), ":", b))
+  }
+}
+check(!length(locale_hits), sprintf("用語僅台灣／美式專有名詞（違規：%s）", paste(locale_hits, collapse = ",")))
 
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

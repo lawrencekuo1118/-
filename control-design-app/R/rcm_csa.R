@@ -645,8 +645,8 @@ DESIGN_REQUIRED_FIELDS <- c(
 )
 
 DESIGN_OPTIONAL_FIELDS <- c(
-  significant_account = "會計科目（僅報導面必填；其它類別不可填）",
-  related_law = "相關法令（僅遵循面必填；其它類別不可填）",
+  significant_account = "會計科目（僅報導面必填；其他類別不可填）",
+  related_law = "相關法令（僅遵循面必填；其他類別不可填）",
   related_policy = "相關政策或程序",
   related_document = "相關文件"
 )
@@ -730,7 +730,7 @@ design_required_check <- function(ctrl) {
     missing <- c(missing, "控制活動類型須為單一預防／偵測（不可混用）")
     filled$approach <- FALSE
   }
-  # 會計科目：報導面必填；其它類別不得填入（僅允許空白／NA）
+  # 會計科目：報導面必填；其他類別不得填入（僅允許空白／NA）
   cat <- design_field_value(ctrl, "risk_category")
   acct <- trimws(as.character(ctrl$significant_account %||% ""))
   if (is_reporting_risk_category(cat)) {
@@ -746,7 +746,7 @@ design_required_check <- function(ctrl) {
   } else {
     filled$significant_account <- TRUE
   }
-  # 相關法令：遵循面必填；其它類別不得填入
+  # 相關法令：遵循面必填；其他類別不得填入
   law <- trimws(as.character(ctrl$related_law %||% ""))
   if (is_compliance_risk_category(cat)) {
     filled$related_law <- law_is_filled(law)
@@ -874,7 +874,7 @@ is_rcm_row_ready <- function(ctrl) {
 # Finalize a designed control into a single RCM-row-ready control object.
 finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hint = 1L) {
   ctrl <- as.list(ctrl)
-  # 會計科目：報導面保留；其它類別強制清空
+  # 會計科目：報導面保留；其他類別強制清空
   if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
     if (identical(toupper(trimws(ctrl$significant_account %||% "")), "NA")) {
       ctrl$significant_account <- ""
@@ -882,7 +882,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   } else {
     ctrl$significant_account <- ""
   }
-  # 相關法令：遵循面保留；其它類別強制清空
+  # 相關法令：遵循面保留；其他類別強制清空
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
   }

@@ -8,6 +8,11 @@ BRAND_BLACK <- "#000000"
 BRAND_WHITE <- "#FFFFFF"
 BRAND_GRAY <- "#F5F5F5"
 
+# Locale policy: Traditional Chinese (Taiwan) + American English proper nouns only.
+# Prefer: 資訊、軟體、網路、資料庫、預設、登入、使用者、資料、大量／批次、設定／組態、帳號、檔案、螢幕、伺服器。
+# Do not use Mainland China / Hong Kong / Macau equivalents of the above.
+# Keep English proper nouns as-is: SOX, RCM, CSA, PBC, IUC, Form 4120SR, RoMM, Assertions, Inputs/Steps/Outputs, Type.
+
 CYCLES_NINE <- c(
   "銷售及收款循環",
   "採購及付款循環",

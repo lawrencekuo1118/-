@@ -127,9 +127,102 @@ normalize_risk_category <- function(ctrl) {
   op <- strip_attr_label(ctrl$risk_attr_operations)
   cp <- strip_attr_label(ctrl$risk_attr_compliance)
   filled <- c(報導面 = nzchar(fr), 營運面 = nzchar(op), 遵循面 = nzchar(cp))
+  # 三擇一：僅在剛好一項有值時推導；複數視為未定（勿逕自改為營運面以掩蓋錯誤）
   if (sum(filled) == 1) return(names(filled)[filled][1])
-  if (sum(filled) > 1) return("營運面")
   ""
+}
+
+# Map 風險類別 ↔ 三大屬性 kind（financial / operations / compliance）
+risk_attr_kind_from_category <- function(cat) {
+  x <- trimws(as.character(cat %||% ""))
+  if (!nzchar(x)) return("")
+  if (grepl("報導|財務", x)) return("financial")
+  if (grepl("遵循|法令|合規", x)) return("compliance")
+  if (grepl("營運|作業", x)) return("operations")
+  ""
+}
+
+risk_attr_kind_label <- function(kind) {
+  switch(as.character(kind %||% ""),
+         financial = "財務報導",
+         operations = "營運",
+         compliance = "法令遵循",
+         "")
+}
+
+risk_attr_kind_from_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  k <- risk_attr_kind_from_category(ctrl$risk_category)
+  if (nzchar(k)) return(k)
+  fr <- nzchar(strip_attr_label(ctrl$risk_attr_financial))
+  op <- nzchar(strip_attr_label(ctrl$risk_attr_operations))
+  cp <- nzchar(strip_attr_label(ctrl$risk_attr_compliance))
+  if (fr + op + cp == 1L) {
+    if (fr) return("financial")
+    if (op) return("operations")
+    return("compliance")
+  }
+  # UI 預設：營運（仍須使用者確認；定稿時會清空非選項）
+  "operations"
+}
+
+risk_attr_detail_from_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  kind <- risk_attr_kind_from_ctrl(ctrl)
+  pick <- function(x) strip_attr_label(x)
+  switch(kind,
+         financial = pick(ctrl$risk_attr_financial),
+         operations = pick(ctrl$risk_attr_operations),
+         compliance = pick(ctrl$risk_attr_compliance),
+         "")
+}
+
+# 同一控制點僅保留一種風險屬性細節；複數屬性應另設控制點
+enforce_single_risk_attr <- function(ctrl, kind = NULL, detail = NULL) {
+  ctrl <- as.list(ctrl)
+  if (is.null(kind) || !nzchar(trimws(as.character(kind)))) {
+    kind <- risk_attr_kind_from_ctrl(ctrl)
+  }
+  kind <- as.character(kind)
+  if (!kind %in% c("financial", "operations", "compliance")) {
+    kind <- "operations"
+  }
+  strip <- function(x) strip_attr_label(x)
+  if (is.null(detail)) {
+    detail <- switch(kind,
+                     financial = strip(ctrl$risk_attr_financial),
+                     operations = strip(ctrl$risk_attr_operations),
+                     compliance = strip(ctrl$risk_attr_compliance),
+                     "")
+    if (!nzchar(detail)) {
+      for (f in c(ctrl$risk_attr_financial, ctrl$risk_attr_operations, ctrl$risk_attr_compliance)) {
+        d <- strip(f)
+        if (nzchar(d)) {
+          detail <- d
+          break
+        }
+      }
+    }
+  } else {
+    detail <- strip(detail)
+  }
+  lab <- risk_attr_kind_label(kind)
+  val <- if (nzchar(detail)) sprintf("[%s] %s", lab, detail) else ""
+  ctrl$risk_attr_financial <- if (identical(kind, "financial")) val else ""
+  ctrl$risk_attr_operations <- if (identical(kind, "operations")) val else ""
+  ctrl$risk_attr_compliance <- if (identical(kind, "compliance")) val else ""
+  cats <- c(financial = "報導面", operations = "營運面", compliance = "遵循面")
+  ctrl$risk_category <- cats[[kind]]
+  ctrl
+}
+
+count_filled_risk_attrs <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  sum(c(
+    nzchar(strip_attr_label(ctrl$risk_attr_financial)),
+    nzchar(strip_attr_label(ctrl$risk_attr_operations)),
+    nzchar(strip_attr_label(ctrl$risk_attr_compliance))
+  ))
 }
 
 # rcm_objective_activity_check() lives in R/objective_activity.R
@@ -805,11 +898,13 @@ detect_design_gaps <- function(ctrl) {
       is_blank(ctrl$risk_factor)) {
     add("缺資訊", "高", "缺少風險名稱／描述", "補 RoMM 全文，勿只填編號")
   }
-  if (is_blank(ctrl$risk_category) &&
-      (is_blank(ctrl$risk_attr_financial) || is_blank(ctrl$risk_attr_operations) ||
-       is_blank(ctrl$risk_attr_compliance))) {
-    add("缺資訊", "中", "風險三大屬性細節不完整（類別已另列必填）",
-        "可於進階區補財務報導／營運／遵循細節")
+  n_attr <- count_filled_risk_attrs(ctrl)
+  if (n_attr > 1L) {
+    add("控制缺失", "高", "風險屬性細節不可複選（三擇一）",
+        "同一控制點僅保留一種屬性；若需涵蓋其他屬性請另設新控制點")
+  } else if (n_attr == 0L && is_blank(ctrl$risk_category)) {
+    add("缺資訊", "中", "尚未選擇風險屬性（財務報導／營運／法令遵循三擇一）",
+        "於風險辨識區擇一並可補屬性細節")
   }
 
   tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type,
@@ -874,6 +969,8 @@ is_rcm_row_ready <- function(ctrl) {
 # Finalize a designed control into a single RCM-row-ready control object.
 finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hint = 1L) {
   ctrl <- as.list(ctrl)
+  # 三大風險屬性三擇一（定稿前強制清空非選項）
+  ctrl <- enforce_single_risk_attr(ctrl)
   # 會計科目：報導面保留；其他類別強制清空
   if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
     if (identical(toupper(trimws(ctrl$significant_account %||% "")), "NA")) {

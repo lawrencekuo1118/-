@@ -228,9 +228,10 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
   updateTextInput(session, "related_document",
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
   strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-  updateTextAreaInput(session, "risk_attr_financial", value = strip(ctrl$risk_attr_financial))
-  updateTextAreaInput(session, "risk_attr_operations", value = strip(ctrl$risk_attr_operations))
-  updateTextAreaInput(session, "risk_attr_compliance", value = strip(ctrl$risk_attr_compliance))
+  kind <- risk_attr_kind_from_ctrl(ctrl)
+  detail <- risk_attr_detail_from_ctrl(ctrl)
+  updateRadioButtons(session, "risk_attr_kind", selected = kind)
+  updateTextAreaInput(session, "risk_attr_detail", value = detail)
   if (nzchar(ctrl$type %||% "")) {
     updateSelectizeInput(session, "type", selected = ctrl$type)
   }
@@ -277,18 +278,28 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
   }
   updateTextInput(session, "risk_name", value = risk_factor_tag(risk_factor))
   r <- det$sample
+  kind <- risk_attr_kind_from_category(det$risk_category)
+  if (!nzchar(kind) && is.list(r) && length(r)) {
+    kind <- risk_attr_kind_from_ctrl(r)
+  }
+  if (!nzchar(kind)) kind <- "operations"
+  detail <- ""
   if (is.list(r) && length(r)) {
     strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-    if (nzchar(r$risk_attr_financial)) {
-      updateTextAreaInput(session, "risk_attr_financial", value = strip(r$risk_attr_financial))
-    }
-    if (nzchar(r$risk_attr_operations)) {
-      updateTextAreaInput(session, "risk_attr_operations", value = strip(r$risk_attr_operations))
-    }
-    if (nzchar(r$risk_attr_compliance)) {
-      updateTextAreaInput(session, "risk_attr_compliance", value = strip(r$risk_attr_compliance))
+    detail <- switch(kind,
+                     financial = strip(r$risk_attr_financial),
+                     operations = strip(r$risk_attr_operations),
+                     compliance = strip(r$risk_attr_compliance),
+                     "")
+    if (!nzchar(detail)) {
+      for (f in c(r$risk_attr_financial, r$risk_attr_operations, r$risk_attr_compliance)) {
+        d <- strip(f)
+        if (nzchar(d)) { detail <- d; break }
+      }
     }
   }
+  updateRadioButtons(session, "risk_attr_kind", selected = kind)
+  updateTextAreaInput(session, "risk_attr_detail", value = detail)
   invisible(det)
 }
 

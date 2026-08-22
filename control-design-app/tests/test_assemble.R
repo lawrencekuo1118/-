@@ -32,8 +32,9 @@ base <- list(
   sub_process_id = "EC-101", sub_process = "存取管理",
   risk_factor = "不當權限", risk_name = "不當權限", risk_description = "離職未停權",
   risk_category = "營運面",
-  risk_attr_financial = "[財務報導] 未授權交易", risk_attr_operations = "[營運] 權限不一致",
-  risk_attr_compliance = "[法令遵循] 資安政策",
+  risk_attr_financial = "",
+  risk_attr_operations = "[營運] 權限不一致",
+  risk_attr_compliance = "",
   romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "",
   assertions = "存在／發生 (Existence/Occurrence)",
   control_objective = "確保系統使用者權限與現職一致",
@@ -72,6 +73,25 @@ check(identical(fin_auto$control$frequency, "持續"), "定稿後頻率強制持
 check(identical(as.character(rcm[["控制活動類型"]]), "偵測性控制"), "控制活動類型＝預防/偵測")
 check(identical(as.character(rcm[["風險類別"]]), "營運面"), "風險類別映射")
 check(grepl("^通過", as.character(rcm[["設計檢核"]])), "設計檢核通過")
+
+# 風險屬性三擇一
+multi_attr <- modifyList(d1, list(
+  risk_attr_financial = "[財務報導] A",
+  risk_attr_operations = "[營運] B",
+  risk_attr_compliance = "[法令遵循] C"
+))
+check(count_filled_risk_attrs(multi_attr) == 3L, "複數屬性可計數")
+gaps_multi <- detect_design_gaps(multi_attr)
+check(any(grepl("三擇一|不可複選", gaps_multi$gap_item)), "複數屬性設計缺漏")
+check(!isTRUE(is_rcm_row_ready(multi_attr)$ready), "複數屬性不可就緒")
+one <- enforce_single_risk_attr(multi_attr, kind = "operations", detail = "僅營運")
+check(count_filled_risk_attrs(one) == 1L, "強制三擇一後僅一項")
+check(identical(one$risk_category, "營運面"), "屬性對應風險類別")
+check(!nzchar(strip_attr_label(one$risk_attr_financial)), "清空財務報導屬性")
+check(!nzchar(strip_attr_label(one$risk_attr_compliance)), "清空法令遵循屬性")
+fin_one <- finalize_control_as_rcm_row(multi_attr)
+check(isTRUE(fin_one$ok), "定稿強制三擇一後可成功")
+check(count_filled_risk_attrs(fin_one$control) == 1L, "定稿後僅保留一種屬性")
 
 # Type field 防呆：對調應失敗
 swapped <- modifyList(d1, list(nature = "預防性控制", approach = "人工"))

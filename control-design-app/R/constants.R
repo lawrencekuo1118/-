@@ -38,7 +38,12 @@ CYCLES_NINE_CHOICES <- c(
   "資訊循環（電腦化資訊系統循環）" = "電腦化資訊系統循環"
 )
 
-# 風險三大屬性（COSO 三類目標；使用者可改寫標籤與內容）
+# 風險三大屬性（COSO 三類目標；同一控制點三擇一，不可複選）
+RISK_ATTR_KIND_CHOICES <- c(
+  "財務報導" = "financial",
+  "營運" = "operations",
+  "法令遵循" = "compliance"
+)
 RISK_ATTR_DEFAULTS <- list(
   financial_reporting = list(
     label = "財務報導",

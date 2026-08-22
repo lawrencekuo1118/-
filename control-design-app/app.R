@@ -208,6 +208,7 @@ ui <- page_navbar(
           tags$li(strong("控制目標 ≠ 控制活動"), "（Why／How 分欄；可拆分建議或對調）。"),
           tags$li(strong("控制類型"), "僅人工／自動；", strong("自動"), "時頻率強制「持續」。"),
           tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
+          tags$li(strong("風險屬性"), "三擇一（財務報導／營運／法令遵循）；同一控制點不可複選，需其他屬性時另設控制點。"),
           tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
         ),
@@ -362,21 +363,18 @@ ui <- page_navbar(
             textInput("significant_account", "會計科目", value = "",
                       placeholder = "僅報導面可填且必填"),
             uiOutput("significant_account_hint"),
-            tags$p(class = "small text-muted mb-1", "三大風險屬性細節"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("attr_label_fr", NULL, value = "財務報導"),
-              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "財務報導屬性細節")
+            radioButtons(
+              "risk_attr_kind",
+              lab_req("風險屬性（三擇一）"),
+              choices = RISK_ATTR_KIND_CHOICES,
+              selected = "operations",
+              inline = TRUE
             ),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("attr_label_op", NULL, value = "營運"),
-              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "營運屬性細節")
-            ),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("attr_label_cp", NULL, value = "法令遵循"),
-              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "法令遵循屬性細節")
+            p(class = "small text-muted mb-2",
+              "同一控制點僅對應一種屬性。若同一風險需涵蓋其他屬性，請另設新控制點。"),
+            textAreaInput(
+              "risk_attr_detail", "屬性細節", rows = 2,
+              placeholder = "擇一屬性後填寫細節（可空）"
             ),
             selectizeInput(
               "assertions", "聲明（Assertions）", choices = ASSERTION_CHOICES, multiple = TRUE,
@@ -986,20 +984,17 @@ server <- function(input, output, session) {
 
   current_draft_from_inputs <- function() {
     sel <- resolve_cascade_selection()
-    matched <- match_cascade_control(cascade_rows(), sel)
-    lib_ctrl <- if (!is.null(matched) && is.list(matched)) {
-      if (!is.null(matched$raw)) matched$raw else matched
-    } else {
-      NULL
-    }
-    strip_attr <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-    pick_attr <- function(field, supplement) {
-      if (nzchar(supplement)) return(supplement)
-      if (!is.null(lib_ctrl)) strip_attr(lib_ctrl[[field]]) else ""
-    }
     rf_tag <- risk_factor_tag(sel$risk_factor)
     nature <- normalize_control_type_manual_auto(sel$nature)
     approach <- normalize_control_activity_type_pd(sel$approach)
+    # Prefer cascade risk_category for kind; else user radio（三擇一）
+    kind <- risk_attr_kind_from_category(sel$risk_category)
+    if (!nzchar(kind)) kind <- input$risk_attr_kind %||% "operations"
+    attr_ctrl <- enforce_single_risk_attr(
+      list(risk_category = sel$risk_category),
+      kind = kind,
+      detail = input$risk_attr_detail %||% ""
+    )
     list(
       control_id = input$control_id %||% "",
       company = input$company %||% "",
@@ -1009,19 +1004,10 @@ server <- function(input, output, session) {
       risk_factor = rf_tag,
       risk_name = rf_tag,
       risk_description = sel$risk_description,
-      risk_category = sel$risk_category,
-      risk_attr_financial = labelize(
-        input$attr_label_fr,
-        pick_attr("risk_attr_financial", input$risk_attr_financial %||% "")
-      ),
-      risk_attr_operations = labelize(
-        input$attr_label_op,
-        pick_attr("risk_attr_operations", input$risk_attr_operations %||% "")
-      ),
-      risk_attr_compliance = labelize(
-        input$attr_label_cp,
-        pick_attr("risk_attr_compliance", input$risk_attr_compliance %||% "")
-      ),
+      risk_category = attr_ctrl$risk_category,
+      risk_attr_financial = attr_ctrl$risk_attr_financial,
+      risk_attr_operations = attr_ctrl$risk_attr_operations,
+      risk_attr_compliance = attr_ctrl$risk_attr_compliance,
       romm_classification = input$romm_classification %||% "",
       significant_account = input$significant_account %||% "",
       assertions = paste(input$assertions %||% character(), collapse = "；"),
@@ -1186,6 +1172,32 @@ server <- function(input, output, session) {
       helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法令。")
     }
   })
+
+  # 引導風險類別 → 風險屬性三擇一同步（單一風險／單一控制點僅一種屬性）
+  observe({
+    sel <- resolve_cascade_selection()
+    kind <- risk_attr_kind_from_category(sel$risk_category)
+    if (!nzchar(kind) && identical(input$cascade_risk %||% "", "__custom__")) {
+      kind <- risk_attr_kind_from_category(input$custom_risk_category %||% "")
+    }
+    if (nzchar(kind) && !identical(input$risk_attr_kind %||% "", kind)) {
+      updateRadioButtons(session, "risk_attr_kind", selected = kind)
+    }
+  })
+
+  # When user changes attr kind under custom risk, keep category aligned
+  observeEvent(input$risk_attr_kind, {
+    if (!identical(input$cascade_risk %||% "", "__custom__")) return()
+    kind <- input$risk_attr_kind %||% ""
+    cat <- switch(kind,
+                  financial = "報導面",
+                  operations = "營運面",
+                  compliance = "遵循面",
+                  "")
+    if (nzchar(cat)) {
+      updateSelectInput(session, "custom_risk_category", selected = cat)
+    }
+  }, ignoreInit = TRUE)
 
   observe({
     sel <- resolve_cascade_selection()

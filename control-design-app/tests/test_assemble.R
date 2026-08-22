@@ -36,7 +36,7 @@ base <- list(
   risk_attr_operations = "[營運] 權限不一致",
   risk_attr_compliance = "",
   romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "",
-  assertions = "存在／發生 (Existence/Occurrence)",
+  assertions = "完整性 (Completeness)",
   control_objective = "確保系統使用者權限與現職一致",
   control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
   responsible_unit = "資訊部", nature = "人工",
@@ -176,13 +176,21 @@ check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺�
 
 # 遵循面相關法令必填；其他類別不可填
 comp_ok <- design_required_check(modifyList(d1, list(
-  risk_category = "遵循面", related_law = "證券交易法", significant_account = ""
+  risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
+  assertions = ""
 )))
 check(isTRUE(comp_ok$ok), "遵循面＋法令＝必填通過")
 comp_bad <- design_required_check(modifyList(d1, list(
-  risk_category = "遵循面", related_law = "", significant_account = ""
+  risk_category = "遵循面", related_law = "", significant_account = "",
+  assertions = ""
 )))
 check(!isTRUE(comp_bad$ok) && any(grepl("相關法令", comp_bad$missing)), "遵循面缺法令不可過")
+comp_as_bad <- design_required_check(modifyList(d1, list(
+  risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
+  assertions = "完整性 (Completeness)"
+)))
+check(!isTRUE(comp_as_bad$ok) && any(grepl("聲明", comp_as_bad$missing)),
+      "遵循面填聲明應擋下")
 comp_lock <- design_required_check(modifyList(d1, list(
   risk_category = "營運面", related_law = "SOX", significant_account = ""
 )))
@@ -435,6 +443,57 @@ check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src
       "已移除自訂風險獨立輸入（改由風險辨識）")
 check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),
       "已移除風險屬性 radio（改由風險類別）")
+
+# 聲明（Assertions）依風險類別
+check(length(ASSERTION_CHOICES_REPORTING) == 8L, "報導面 Assertions 為 Thomson Reuters 八種")
+check(all(c(
+  "存在或發生 (Existence or Occurrence)", "完整性 (Completeness)",
+  "權利與義務 (Rights and Obligations)", "評價或分攤 (Valuation or Allocation)",
+  "正確性 (Accuracy)", "截止 (Cutoff)", "分類 (Classification)", "表達 (Presentation)"
+) %in% ASSERTION_CHOICES_REPORTING), "報導面含八種英文對照")
+check(identical(ASSERTION_CHOICES_OPERATIONS, c(
+  "完整性 (Completeness)", "正確性 (Accuracy)", "即時性 (Timeliness)"
+)), "營運面僅完整性／正確性／即時性")
+check(identical(assertion_mode_for_category("報導面"), "reporting"), "報導面 assertion mode")
+check(identical(assertion_mode_for_category("營運面"), "operations"), "營運面 assertion mode")
+check(identical(assertion_mode_for_category("遵循面"), "locked"), "遵循面 assertion 鎖定")
+check(!length(assertion_choices_for_category("遵循面")), "遵循面無可選 Assertions")
+check(identical(
+  normalize_assertions_for_category(
+    "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)", "營運面"
+  ),
+  "即時性 (Timeliness)"
+), "營運面過濾掉非允許聲明、保留即時性")
+check(identical(
+  normalize_assertions_for_category(
+    "存在或發生 (Existence or Occurrence)", "營運面"
+  ),
+  ""
+), "營運面僅報導面聲明時清空")
+check(identical(
+  normalize_assertions_for_category(
+    paste(ASSERTION_CHOICES_OPERATIONS, collapse = "；"), "營運面"
+  ),
+  paste(ASSERTION_CHOICES_OPERATIONS, collapse = "；")
+), "營運面三種可保留")
+check(identical(normalize_assertions_for_category("完整性 (Completeness)", "遵循面"), ""),
+      "遵循面定稿清空聲明")
+fin_as <- finalize_control_as_rcm_row(modifyList(base, list(
+  assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"
+)))
+check(isTRUE(fin_as$ok), "營運面含非法聲明仍可定稿（自動過濾）")
+check(!grepl("存在或發生", fin_as$control$assertions %||% ""), "定稿後僅保留營運面允許聲明")
+check(grepl("即時性", fin_as$control$assertions %||% ""), "定稿保留即時性")
+fin_comp <- finalize_control_as_rcm_row(modifyList(base, list(
+  risk_category = "遵循面",
+  risk_attr_operations = "",
+  risk_attr_compliance = "[遵循] 資安政策",
+  significant_account = "",
+  related_law = "證券交易法",
+  assertions = "完整性 (Completeness)"
+)))
+check(isTRUE(fin_comp$ok), "遵循面可定稿")
+check(!nzchar(trimws(fin_comp$control$assertions %||% "")), "遵循面定稿無 Assertions")
 
 # Locale: ban Mainland / HK-Macau terms in UI + committed seed (Taiwan + US proper nouns only)
 banned_locale <- c(

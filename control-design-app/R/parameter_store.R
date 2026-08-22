@@ -21,7 +21,11 @@ app_preset_parameters <- function() {
     "控制活動類型" = if (exists("CONTROL_ACTIVITY_TYPE_PD")) CONTROL_ACTIVITY_TYPE_PD else character(),
     "控制頻率" = if (exists("FREQUENCY_CHOICES")) FREQUENCY_CHOICES else character(),
     "相關法令" = unname(if (exists("RELATED_LAW_CHOICES")) RELATED_LAW_CHOICES else character()),
-    "聲明" = if (exists("ASSERTION_CHOICES")) ASSERTION_CHOICES else character(),
+    "聲明" = {
+      rep <- if (exists("ASSERTION_CHOICES_REPORTING")) ASSERTION_CHOICES_REPORTING else character()
+      ops <- if (exists("ASSERTION_CHOICES_OPERATIONS")) ASSERTION_CHOICES_OPERATIONS else character()
+      unique(c(rep, ops))
+    },
     "Form 4120SR Type" = if (exists("TYPE_CHOICES")) TYPE_CHOICES else character(),
     "RoMM 分類" = if (exists("ROMM_CLASS_CHOICES")) ROMM_CLASS_CHOICES else character(),
     "控制有效性評估" = c("有效", "無效"),

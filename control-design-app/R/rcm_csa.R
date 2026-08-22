@@ -740,6 +740,7 @@ DESIGN_REQUIRED_FIELDS <- c(
 DESIGN_OPTIONAL_FIELDS <- c(
   significant_account = "會計科目（僅報導面必填；其他類別不可填）",
   related_law = "相關法令（僅遵循面必填；其他類別不可填）",
+  assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",
   related_document = "相關文件"
 )
@@ -748,8 +749,65 @@ is_reporting_risk_category <- function(cat) {
   grepl("^報導", trimws(as.character(cat %||% "")))
 }
 
+is_operations_risk_category <- function(cat) {
+  grepl("^營運", trimws(as.character(cat %||% "")))
+}
+
 is_compliance_risk_category <- function(cat) {
   grepl("^遵循", trimws(as.character(cat %||% "")))
+}
+
+# 聲明（Assertions）依風險類別：報導面八種／營運面三種／遵循面不可選
+assertion_choices_for_category <- function(cat) {
+  if (is_reporting_risk_category(cat)) {
+    if (exists("ASSERTION_CHOICES_REPORTING")) ASSERTION_CHOICES_REPORTING else character()
+  } else if (is_operations_risk_category(cat)) {
+    if (exists("ASSERTION_CHOICES_OPERATIONS")) ASSERTION_CHOICES_OPERATIONS else character()
+  } else {
+    character()
+  }
+}
+
+assertion_mode_for_category <- function(cat) {
+  if (is_reporting_risk_category(cat)) "reporting"
+  else if (is_operations_risk_category(cat)) "operations"
+  else if (is_compliance_risk_category(cat)) "locked"
+  else "pending"
+}
+
+parse_assertion_values <- function(x) {
+  if (is.null(x)) return(character())
+  if (length(x) > 1L) {
+    vals <- trimws(as.character(x))
+  } else {
+    raw <- trimws(as.character(x %||% ""))
+    if (!nzchar(raw)) return(character())
+    vals <- trimws(unlist(strsplit(raw, "[;；|/]+")))
+  }
+  vals[nzchar(vals)]
+}
+
+assertions_are_filled <- function(x) {
+  length(parse_assertion_values(x)) > 0L
+}
+
+# 依類別過濾／清空聲明；回傳分號連接字串
+normalize_assertions_for_category <- function(assertions, cat) {
+  vals <- parse_assertion_values(assertions)
+  allowed <- assertion_choices_for_category(cat)
+  if (!length(allowed)) return("")
+  keep <- vals[vals %in% allowed]
+  paste(unique(keep), collapse = "；")
+}
+
+assertions_allowed_ok <- function(assertions, cat) {
+  vals <- parse_assertion_values(assertions)
+  mode <- assertion_mode_for_category(cat)
+  if (identical(mode, "locked") || identical(mode, "pending")) {
+    return(!length(vals))
+  }
+  allowed <- assertion_choices_for_category(cat)
+  all(vals %in% allowed)
 }
 
 # TRUE if account is considered "filled" for 報導面
@@ -854,6 +912,27 @@ design_required_check <- function(ctrl) {
   } else {
     filled$related_law <- TRUE
   }
+  # 聲明（Assertions）：報導面八種／營運面三種可複選；遵循面不可填
+  asrt <- parse_assertion_values(ctrl$assertions)
+  mode_as <- assertion_mode_for_category(cat)
+  if (identical(mode_as, "locked")) {
+    filled$assertions <- !length(asrt)
+    if (length(asrt)) {
+      missing <- c(missing, "聲明僅報導面／營運面可填（遵循面請清空）")
+    }
+  } else if (identical(mode_as, "reporting") || identical(mode_as, "operations")) {
+    ok_as <- assertions_allowed_ok(asrt, cat)
+    filled$assertions <- ok_as
+    if (!ok_as) {
+      missing <- c(missing, if (identical(mode_as, "operations")) {
+        "聲明超出營運面可選（完整性／正確性／即時性）"
+      } else {
+        "聲明超出報導面可選（Thomson Reuters／AICPA 八種）"
+      })
+    }
+  } else {
+    filled$assertions <- !length(asrt)
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
@@ -861,7 +940,8 @@ design_required_check <- function(ctrl) {
     required = DESIGN_REQUIRED_FIELDS,
     optional = DESIGN_OPTIONAL_FIELDS,
     account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
-    law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending"
+    law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
+    assertion_mode = mode_as
   )
 }
 
@@ -913,7 +993,18 @@ detect_design_gaps <- function(ctrl) {
     add("控制缺失", "高", tchk$msg %||% "類型欄錯誤",
         "控制類型＝人工/自動；控制活動類型＝預防/偵測，勿對調")
   }
-  if (is_blank(ctrl$assertions)) add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助）")
+  if (!is_blank(ctrl$assertions) &&
+      (is_reporting_risk_category(ctrl$risk_category %||% "") ||
+       is_operations_risk_category(ctrl$risk_category %||% "")) &&
+      !assertions_allowed_ok(ctrl$assertions, ctrl$risk_category)) {
+    add("缺資訊", "中", "聲明選項與風險類別不符",
+        "報導面用八種 Assertions；營運面僅完整性／正確性／即時性；遵循面不可選")
+  }
+  if (is_blank(ctrl$assertions) &&
+      (is_reporting_risk_category(ctrl$risk_category %||% "") ||
+       is_operations_risk_category(ctrl$risk_category %||% ""))) {
+    add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助；可複選）")
+  }
 
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   if (!isTRUE(chk$ok)) {
@@ -983,6 +1074,10 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
   }
+  # 聲明：依風險類別過濾；遵循面強制清空
+  ctrl$assertions <- normalize_assertions_for_category(
+    ctrl$assertions, ctrl$risk_category %||% ""
+  )
   if (is_blank(ctrl$risk_name) && !is_blank(ctrl$risk_factor)) {
     ctrl$risk_name <- ctrl$risk_factor
   }

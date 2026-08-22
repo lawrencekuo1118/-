@@ -90,6 +90,17 @@ ui <- page_navbar(
         el.disabled = !msg.enabled;
       }
     });
+    Shiny.addCustomMessageHandler('toggleAssertions', function(msg) {
+      var el = document.getElementById('assertions');
+      if (!el) return;
+      var $el = $('#assertions');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+      }
+    });
     Shiny.addCustomMessageHandler('toggleFrequency', function(msg) {
       var el = document.getElementById('frequency');
       if (!el) return;
@@ -210,6 +221,8 @@ ui <- page_navbar(
           tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
                   strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
           tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
+          tags$li(strong("聲明（Assertions）"), "：報導面可複選 Thomson Reuters／AICPA 八種；",
+                  "營運面僅完整性／正確性／即時性；遵循面不可選。"),
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
         ),
         p(class = "small text-muted mb-0",
@@ -398,10 +411,14 @@ ui <- page_navbar(
               options = list(placeholder = "原名→新名")
             ),
             selectizeInput(
-              "assertions", "聲明（Assertions）", choices = ASSERTION_CHOICES, multiple = TRUE,
-              selected = ASSERTION_CHOICES[1:2],
-              options = list(create = TRUE, placeholder = "聲明（輔助）")
+              "assertions", "聲明（Assertions）",
+              choices = character(0), multiple = TRUE, selected = character(0),
+              options = list(
+                create = FALSE,
+                placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+              )
             ),
+            uiOutput("assertions_hint"),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
               "related_law", "相關法令",
@@ -814,6 +831,9 @@ server <- function(input, output, session) {
       "RoMM 分類" = function() {
         updateSelectInput(session, "romm_classification", selected = val)
       },
+      "聲明" = function() {
+        updateSelectizeInput(session, "assertions", selected = val)
+      },
       "會計科目" = function() updateTextInput(session, "significant_account", value = val),
       "控制目標" = function() {
         updateTextAreaInput(session, "custom_objective", value = val)
@@ -1214,6 +1234,26 @@ server <- function(input, output, session) {
       helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法令。")
     }
   })
+
+  output$assertions_hint <- renderUI({
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
+    mode <- assertion_mode_for_category(cat)
+    if (identical(mode, "reporting")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          "報導面：可複選八種 Assertions（Existence or Occurrence、Completeness、",
+          "Rights and Obligations、Valuation or Allocation、Accuracy、Cutoff、",
+          "Classification、Presentation）。")
+    } else if (identical(mode, "operations")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          "營運面：聲明限縮為三種可複選——完整性、正確性、即時性。")
+    } else if (identical(mode, "locked")) {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          "遵循面：無 Assertions 可選（已鎖定並清空）。")
+    } else {
+      helpText(class = "text-muted small", "請先於風險辨識選擇風險類別，以決定聲明可選範圍。")
+    }
+  })
+
   # 基本資料：循環名稱 → 自動帶入循環編號（可覆寫）
   observeEvent(input$cycle, {
     cy <- input$cycle %||% ""
@@ -1247,7 +1287,7 @@ server <- function(input, output, session) {
     apply_risk_detail_to_inputs(session, rows, rk)
   }, ignoreInit = TRUE)
 
-  # 引導完成且未手動填編號 → 自動順編；風險類別驅動會計科目／法令鎖定
+  # 引導完成且未手動填編號 → 自動順編；風險類別驅動會計科目／法令／聲明鎖定
   observe({
     sel <- resolve_cascade_selection()
     cat <- trimws(input$risk_category %||% sel$risk_category %||% "")
@@ -1258,6 +1298,29 @@ server <- function(input, output, session) {
     session$sendCustomMessage(
       "toggleLaw",
       list(enabled = is_compliance_risk_category(cat))
+    )
+    as_mode <- assertion_mode_for_category(cat)
+    as_choices <- assertion_choices_for_category(cat)
+    cur_as <- parse_assertion_values(input$assertions)
+    keep_as <- if (length(as_choices)) intersect(cur_as, as_choices) else character(0)
+    updateSelectizeInput(
+      session, "assertions",
+      choices = as_choices,
+      selected = keep_as,
+      options = list(
+        create = FALSE,
+        placeholder = switch(
+          as_mode,
+          reporting = "報導面：可複選八種 Assertions",
+          operations = "營運面：完整性／正確性／即時性",
+          locked = "遵循面：無 Assertions 可選",
+          "請先選擇風險類別"
+        )
+      )
+    )
+    session$sendCustomMessage(
+      "toggleAssertions",
+      list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
       if (nzchar(trimws(input$significant_account %||% ""))) {
@@ -1478,14 +1541,31 @@ server <- function(input, output, session) {
         if (ok_l) "✓ " else "○ ", "相關法令已鎖定（非遵循面不可填）"
       )))
     }
+    if (identical(req$assertion_mode, "reporting")) {
+      items <- c(items, list(tags$li(
+        class = "text-muted", "○ ", "聲明（報導面：八種可複選）"
+      )))
+    } else if (identical(req$assertion_mode, "operations")) {
+      items <- c(items, list(tags$li(
+        class = "text-muted", "○ ", "聲明（營運面：完整性／正確性／即時性）"
+      )))
+    } else if (identical(req$assertion_mode, "locked")) {
+      ok_as <- isTRUE(req$filled$assertions)
+      items <- c(items, list(tags$li(
+        class = if (ok_as) "text-success" else "text-danger",
+        if (ok_as) "✓ " else "○ ", "聲明已鎖定（遵循面不可選）"
+      )))
+    }
     cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
     n_cascade <- length(cascade_rows())
     acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
     law_needed <- identical(req$law_mode, "required") || identical(req$law_mode, "locked")
-    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed)
+    as_needed <- identical(req$assertion_mode, "locked")
+    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed) + as.integer(as_needed)
     n_ok <- sum(unlist(req$filled[names(req$required)])) +
       as.integer(acct_needed && isTRUE(req$filled$significant_account)) +
-      as.integer(law_needed && isTRUE(req$filled$related_law))
+      as.integer(law_needed && isTRUE(req$filled$related_law)) +
+      as.integer(as_needed && isTRUE(req$filled$assertions))
     div(
       class = cls,
       tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),

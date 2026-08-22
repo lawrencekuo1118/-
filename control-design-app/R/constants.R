@@ -111,16 +111,28 @@ ROMM_CLASS_CHOICES <- c(
   "其他／自訂"
 )
 
-ASSERTION_CHOICES <- c(
-  "存在／發生 (Existence/Occurrence)",
+# 報導面：Thomson Reuters / AICPA GAAS 八種（可複選）
+# https://tax.thomsonreuters.com/blog/audit-assertions-explained-types-risks-and-best-practices/
+ASSERTION_CHOICES_REPORTING <- c(
+  "存在或發生 (Existence or Occurrence)",
   "完整性 (Completeness)",
   "權利與義務 (Rights and Obligations)",
-  "評價與分攤 (Valuation/Allocation)",
-  "表達與揭露 (Presentation/Disclosure)",
-  "截止 (Cutoff)",
+  "評價或分攤 (Valuation or Allocation)",
   "正確性 (Accuracy)",
-  "其他／自訂"
+  "截止 (Cutoff)",
+  "分類 (Classification)",
+  "表達 (Presentation)"
 )
+
+# 營運面：僅三種可複選
+ASSERTION_CHOICES_OPERATIONS <- c(
+  "完整性 (Completeness)",
+  "正確性 (Accuracy)",
+  "即時性 (Timeliness)"
+)
+
+# 向後相容：預設＝報導面完整清單
+ASSERTION_CHOICES <- ASSERTION_CHOICES_REPORTING
 
 # 相關法規預設（台灣＋美國財務報導／商業常見）
 RELATED_LAW_CHOICES_TW <- c(

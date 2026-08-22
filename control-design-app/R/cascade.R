@@ -251,6 +251,14 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
   detail <- risk_attr_detail_from_ctrl(ctrl)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)
+  as_vals <- parse_assertion_values(normalize_assertions_for_category(
+    ctrl$assertions, ctrl$risk_category %||% ""
+  ))
+  updateSelectizeInput(
+    session, "assertions",
+    choices = assertion_choices_for_category(ctrl$risk_category %||% ""),
+    selected = as_vals
+  )
   if (nzchar(ctrl$type %||% "")) {
     updateSelectizeInput(session, "type", selected = ctrl$type)
   }

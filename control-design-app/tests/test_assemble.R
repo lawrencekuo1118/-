@@ -240,6 +240,11 @@ check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) >= 5,
 reg <- empty_pbc_registry()
 reg <- upsert_pbc(reg, list(client_pbc_name = "user_access.xlsx", reviewed_name = "使用者權限清冊"))
 check(identical(apply_pbc_to_iuc(reg, reg$pbc_id[1]), "使用者權限清冊"), "PBC 套用")
+reg2 <- upsert_pbc(reg, list(
+  client_pbc_name = "outlook.msg", reviewed_name = "核准信", pbc_kind = "EMAIL"))
+check(identical(apply_pbc_to_iuc(reg2, reg2$pbc_id[2]), "【EMAIL】核准信"), "PBC 證據類型標示套用")
+check(identical(format_pbc_reviewed_label("制度手冊", "政策制度"), "【政策制度】制度手冊"),
+      "PBC 格式化標示")
 
 # Library IT seeds + import
 lib <- seed_control_library()

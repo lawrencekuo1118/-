@@ -24,7 +24,8 @@ app_preset_parameters <- function() {
     "聲明" = if (exists("ASSERTION_CHOICES")) ASSERTION_CHOICES else character(),
     "Form 4120SR Type" = if (exists("TYPE_CHOICES")) TYPE_CHOICES else character(),
     "RoMM 分類" = if (exists("ROMM_CLASS_CHOICES")) ROMM_CLASS_CHOICES else character(),
-    "控制有效性評估" = c("有效", "無效")
+    "控制有效性評估" = c("有效", "無效"),
+    "PBC 證據類型" = if (exists("PBC_KIND_VALUES")) PBC_KIND_VALUES else character()
   )
 }
 
@@ -88,6 +89,7 @@ parameter_catalog <- function(library = list(), controls = list(),
   if (is.data.frame(pbc) && nrow(pbc)) {
     add_vals("PBC 客戶原名", pbc$client_pbc_name, "PBC命名庫")
     add_vals("PBC 檢視後命名", pbc$reviewed_name, "PBC命名庫")
+    add_vals("PBC 證據類型", pbc$pbc_kind, "PBC命名庫")
     add_vals("相關系統／IUC", pbc$iuc_or_system, "PBC命名庫")
   }
   if (!length(rows)) return(empty_parameter_store())

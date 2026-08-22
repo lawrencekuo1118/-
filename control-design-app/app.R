@@ -469,8 +469,14 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(4, 8),
       card(
+        card_header("PBC 命名整理"),
+        p(class = "small text-muted mb-2",
+          "登錄客戶取得原名 → 檢視後標準命名。",
+          strong("證據類型"),
+          "請特別標示：螢幕截圖、EMAIL、系統表單、政策制度（套用時以【類型】前綴顯示）。"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
+        selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
         textInput("pbc_id", NULL, placeholder = "ID（可空）"),
         selectInput("pbc_cycle", NULL, choices = c("循環（共用）" = "", CYCLES_NINE)),
         textInput("pbc_notes", NULL, placeholder = "備註"),
@@ -1561,7 +1567,8 @@ server <- function(input, output, session) {
     tryCatch({
       reg <- upsert_pbc(pbc_reg(), list(
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
-        reviewed_name = input$pbc_reviewed, iuc_or_system = input$pbc_reviewed,
+        reviewed_name = input$pbc_reviewed, pbc_kind = input$pbc_kind,
+        iuc_or_system = input$pbc_reviewed,
         cycle = input$pbc_cycle, notes = input$pbc_notes
       ))
       pbc_reg(reg)
@@ -1570,16 +1577,52 @@ server <- function(input, output, session) {
       updateTextInput(session, "pbc_id", value = "")
       updateTextInput(session, "pbc_client", value = "")
       updateTextInput(session, "pbc_reviewed", value = "")
+      updateSelectInput(session, "pbc_kind", selected = "")
       updateTextInput(session, "pbc_notes", value = "")
       showNotification("已登錄 PBC", type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
   output$pbc_table <- renderDT({
     df <- pbc_reg()
-    show <- df[, c("pbc_id", "client_pbc_name", "reviewed_name", "cycle", "notes"), drop = FALSE]
-    names(show) <- c("ID", "客戶原名", "檢視後", "循環", "備註")
-    datatable(show, selection = "single", rownames = FALSE,
-              options = list(pageLength = 8, scrollX = TRUE, dom = "tip"))
+    if (!nrow(df)) {
+      empty <- data.frame(
+        ID = character(), 證據類型 = character(), 客戶原名 = character(),
+        檢視後 = character(), 循環 = character(), 備註 = character(),
+        stringsAsFactors = FALSE
+      )
+      return(datatable(empty, selection = "single", rownames = FALSE,
+                       options = list(pageLength = 8, scrollX = TRUE, dom = "tip")))
+    }
+    show <- data.frame(
+      ID = df$pbc_id,
+      證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
+      客戶原名 = df$client_pbc_name,
+      檢視後 = vapply(seq_len(nrow(df)), function(i) {
+        format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
+      }, character(1)),
+      循環 = df$cycle,
+      備註 = df$notes,
+      stringsAsFactors = FALSE
+    )
+    dt <- datatable(show, selection = "single", rownames = FALSE,
+                    options = list(pageLength = 8, scrollX = TRUE, dom = "tip"))
+    for (kind in PBC_KIND_VALUES) {
+      dt <- DT::formatStyle(
+        dt, "證據類型",
+        target = "cell",
+        backgroundColor = DT::styleEqual(
+          kind,
+          switch(kind,
+                 "螢幕截圖" = "#E8F4FD",
+                 "EMAIL" = "#FFF3CD",
+                 "系統表單" = "#D1E7DD",
+                 "政策制度" = "#F8D7DA",
+                 "#FFFFFF")
+        ),
+        fontWeight = DT::styleEqual(kind, "bold")
+      )
+    }
+    dt
   })
   observeEvent(input$pbc_table_rows_selected, {
     s <- input$pbc_table_rows_selected
@@ -1588,6 +1631,8 @@ server <- function(input, output, session) {
     updateTextInput(session, "pbc_id", value = row$pbc_id[[1]])
     updateTextInput(session, "pbc_client", value = row$client_pbc_name[[1]])
     updateTextInput(session, "pbc_reviewed", value = row$reviewed_name[[1]])
+    updateSelectInput(session, "pbc_kind",
+                      selected = normalize_pbc_kind(row$pbc_kind[[1]]))
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
     updateSelectInput(session, "pbc_cycle",
                       selected = if (nzchar(row$cycle[[1]])) row$cycle[[1]] else "")

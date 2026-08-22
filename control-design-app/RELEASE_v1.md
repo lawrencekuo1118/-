@@ -1,4 +1,4 @@
-# Control Design Assistant — v1.0.0
+# 尬電SOX — v1.0.0
 
 第一版交付（2026-08-21）
 

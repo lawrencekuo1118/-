@@ -1,4 +1,4 @@
-# Control Design Assistant (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
+# 尬電SOX (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
 
 輔助**快速且精準**設計標準內部控制點，並產出 RCM、訪談問題與 CSA 底稿。
 

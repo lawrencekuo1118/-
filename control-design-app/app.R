@@ -1,4 +1,4 @@
-# Control Design Assistant — compact UI
+# 尬電SOX — compact UI
 # Run: shiny::runApp("control-design-app")
 
 library(shiny)
@@ -115,7 +115,8 @@ fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL) {
 }
 
 ui <- page_navbar(
-  title = "控制設計",
+  title = "尬電SOX",
+  window_title = "尬電SOX",
   theme = bs_theme(
     version = 5, bootswatch = "flatly", primary = "#1B4F72",
     # Do not use font_google() — it stalls shinyapps cold start (shiny-busy / disconnect)

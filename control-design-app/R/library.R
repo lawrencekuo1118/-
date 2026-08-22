@@ -618,7 +618,7 @@ library_summary_df <- function(library) {
     return(data.frame(
       library_id = character(), cycle = character(), title = character(),
       risk = character(), objective = character(), activity = character(),
-      iuc = character(), source = character(), tags = character(),
+      iuc = character(), source = character(),
       stringsAsFactors = FALSE
     ))
   }
@@ -631,7 +631,6 @@ library_summary_df <- function(library) {
     activity = vapply(library, function(x) x$control$control_activity %||% "", ""),
     iuc = vapply(library, function(x) x$control$iuc_or_system %||% "", ""),
     source = vapply(library, function(x) x$source %||% "", ""),
-    tags = vapply(library, function(x) paste(x$tags %||% character(), collapse = ";"), ""),
     stringsAsFactors = FALSE
   )
 }

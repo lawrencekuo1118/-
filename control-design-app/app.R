@@ -55,7 +55,11 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
   updateTextInput(session, "significant_account",
                   value = {
                     ac <- trimws(as.character(ctrl$significant_account %||% ""))
-                    if (!nzchar(ac)) "NA" else ac
+                    if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
+                      if (!nzchar(ac) || identical(toupper(ac), "NA")) "" else ac
+                    } else {
+                      ""
+                    }
                   })
   # ③ 控制資訊
   updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
@@ -105,11 +109,21 @@ ui <- page_navbar(
     base_font = font_google("Noto Sans TC"),
     "font-size-base" = "0.9rem"
   ),
+  header = tags$script(HTML("
+    Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
+      var el = document.getElementById('significant_account');
+      if (!el) return;
+      el.disabled = !msg.enabled;
+      el.readOnly = !msg.enabled;
+      el.classList.toggle('bg-light', !msg.enabled);
+    });
+  ")),
   fillable = TRUE,
   sidebar = sidebar(
     width = 280,
     open = "desktop",
-    selectInput("cycle", NULL, choices = CYCLES_NINE, selected = "電腦化資訊系統循環"),
+    selectInput("cycle", "循環", choices = CYCLES_NINE_CHOICES,
+                selected = "電腦化資訊系統循環"),
     textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
     selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
     div(
@@ -229,8 +243,9 @@ ui <- page_navbar(
                           placeholder = "Risk Description"),
             selectInput("risk_category", lab_req("風險類別"),
                         choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES)),
-            textInput("significant_account", lab_req("會計科目"), value = "NA",
-                      placeholder = "無則填 NA")
+            textInput("significant_account", "會計科目", value = "",
+                      placeholder = "僅報導面可填且必填"),
+            uiOutput("significant_account_hint")
           ),
           accordion_panel(
             "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）",
@@ -490,20 +505,30 @@ server <- function(input, output, session) {
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
-  # If persisted library lacks 鯨鏈首批，合併一次（不覆蓋既有同 ID 以外的新增）
+  # Ensure 鯨鏈／資訊循環首批一定在庫（空庫或缺 JL- 時強制合併）
   observeEvent(TRUE, {
-    jl_path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
     cur <- lib()
-    has_jl <- any(vapply(cur, function(x) grepl("^JL-", x$library_id %||% ""), logical(1)))
-    if (!has_jl && file.exists(jl_path)) {
+    jl_ids <- sum(vapply(cur, function(x) grepl("^JL-", x$library_id %||% ""), logical(1)))
+    need <- length(cur) < 5 || jl_ids < 10
+    if (!need) return()
+    batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
+    jl_path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    merged <- cur
+    if (file.exists(batch)) {
       merged <- tryCatch(
-        import_control_library_file(jl_path, cur, overwrite = FALSE),
-        error = function(e) cur
+        merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = FALSE),
+        error = function(e) merged
       )
-      if (length(merged) > length(cur)) {
-        lib(persist_lib(merged))
-        refresh_lib_choices()
-      }
+    } else if (file.exists(jl_path)) {
+      merged <- tryCatch(
+        import_control_library_file(jl_path, merged, overwrite = FALSE),
+        error = function(e) merged
+      )
+    }
+    if (!length(merged)) merged <- seed_control_library(TRUE)
+    if (length(merged) > length(cur) || jl_ids < 10) {
+      lib(persist_lib(merged))
+      refresh_lib_choices()
     }
   }, once = TRUE)
   next_id <- reactiveVal(1L)
@@ -1003,10 +1028,44 @@ server <- function(input, output, session) {
     )
   }
 
+  # 會計科目：僅報導面可填且必填；其它類別鎖定並清空
+  output$significant_account_hint <- renderUI({
+    cat <- input$risk_category %||% ""
+    if (is_reporting_risk_category(cat)) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          lab_req("報導面"), " — 會計科目為必填，請填財務報表科目。")
+    } else if (nzchar(cat)) {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          "非報導面：會計科目已鎖定不可填（將自動清空）。")
+    } else {
+      helpText(class = "text-muted small", "請先選擇風險類別；僅報導面可填會計科目。")
+    }
+  })
+
+  observe({
+    cat <- input$risk_category %||% ""
+    session$sendCustomMessage(
+      "toggleAccount",
+      list(enabled = is_reporting_risk_category(cat))
+    )
+    if (nzchar(cat) && !is_reporting_risk_category(cat)) {
+      if (nzchar(trimws(input$significant_account %||% ""))) {
+        updateTextInput(session, "significant_account", value = "")
+      }
+    }
+  })
+
   observe({
     rows <- cascade_rows()
     ch_sub <- cascade_sub_process_choices(rows)
-    ch <- c("② 選擇子作業…" = "", ch_sub, "＋自訂新增子作業" = "__custom__")
+    n_lib <- length(lib())
+    n_rows <- length(rows)
+    label0 <- if (n_rows) {
+      sprintf("② 選擇子作業…（本循環 %d 筆／庫 %d）", n_rows, n_lib)
+    } else {
+      sprintf("② 尚無子作業候選（庫 %d 筆 — 請確認循環或載入鯨鏈首批）", n_lib)
+    }
+    ch <- c(stats::setNames("", label0), ch_sub, "＋自訂新增子作業" = "__custom__")
     cur <- input$cascade_sub %||% ""
     updateSelectInput(session, "cascade_sub", choices = ch,
                       selected = if (cur %in% unname(ch)) cur else "")
@@ -1137,11 +1196,13 @@ server <- function(input, output, session) {
 
   output$design_required_checklist <- renderUI({
     d <- current_draft_from_inputs()
-    # Treat blank 會計科目 as pending NA default for display parity with finalize
-    if (!nzchar(trimws(d$significant_account %||% ""))) d$significant_account <- "NA"
     req <- design_required_check(d)
-    n_ok <- sum(unlist(req$filled))
-    n_all <- length(req$required)
+    # Count core required + conditional account rule
+    core_n <- length(req$required)
+    acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
+    n_all <- core_n + if (acct_needed) 1L else 0L
+    n_ok <- sum(unlist(req$filled[names(req$required)])) +
+      if (acct_needed && isTRUE(req$filled$significant_account)) 1L else 0L
     items <- lapply(names(req$required), function(f) {
       ok <- isTRUE(req$filled[[f]])
       tags$li(
@@ -1150,12 +1211,31 @@ server <- function(input, output, session) {
         req$required[[f]]
       )
     })
+    if (identical(req$account_mode, "required")) {
+      ok_a <- isTRUE(req$filled$significant_account)
+      items <- c(items, list(tags$li(
+        class = if (ok_a) "text-success" else "text-danger",
+        if (ok_a) "✓ " else "○ ", "會計科目（報導面必填）"
+      )))
+    } else if (identical(req$account_mode, "locked")) {
+      ok_a <- isTRUE(req$filled$significant_account)
+      items <- c(items, list(tags$li(
+        class = if (ok_a) "text-success" else "text-danger",
+        if (ok_a) "✓ " else "○ ", "會計科目已鎖定（非報導面不可填）"
+      )))
+    }
     cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
+    n_cascade <- length(cascade_rows())
     div(
       class = cls,
       tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),
+      tags$span(class = "text-muted ms-2", sprintf("｜引導候選 %d 筆", n_cascade)),
       tags$ul(class = "mb-0 ps-3", style = "columns: 2; -webkit-columns: 2;", items),
-      if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、"))
+      if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、")),
+      if (!n_cascade) tags$div(
+        class = "mt-1 text-danger",
+        "本循環尚無引導選項 — 請按「載入鯨鏈資訊循環 RCM（首批）」或確認循環為資訊循環。"
+      )
     )
   })
 
@@ -1347,8 +1427,14 @@ server <- function(input, output, session) {
 
   output$live_validation <- renderUI({
     d <- current_draft_from_inputs()
-    if (!nzchar(trimws(d$significant_account %||% ""))) d$significant_account <- "NA"
-    gaps <- detect_design_gaps(d)
+    gaps <- tryCatch(detect_design_gaps(d), error = function(e) {
+      data.frame(
+        control_id = "", category = "系統", severity = "高",
+        gap_item = paste0("檢核錯誤：", conditionMessage(e)),
+        suggested_action = "請回報此錯誤",
+        stringsAsFactors = FALSE
+      )
+    })
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
     ready <- is_rcm_row_ready(d)
     six <- six_status_rules_check(d)
@@ -1359,7 +1445,7 @@ server <- function(input, output, session) {
     } else {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
       summary <- if (!isTRUE(req$ok)) paste0("必填未齊：", paste(req$missing, collapse = "、"))
-      else if (!isTRUE(chk$ok)) chk$msg
+      else if (!isTRUE(chk$ok)) (chk$msg %||% paste(chk$issues, collapse = "；"))
       else if (!isTRUE(six$ok)) paste0("六大未齊：", paste(six$missing, collapse = "、"))
       else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
       else paste(gaps$gap_item, collapse = "；")

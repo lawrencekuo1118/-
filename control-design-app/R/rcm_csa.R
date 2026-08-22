@@ -616,6 +616,7 @@ controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
 
 # ---- 設計必填欄位（對齊鯨鏈 RCM 核心欄；定稿＝RCM 一列前置）----
 # 選填：控制設計差異／相關政策法令文件／有效性評估／4120SR 進階欄
+# 會計科目：僅風險類別＝報導面時必填；其餘類別鎖定不可填
 DESIGN_REQUIRED_FIELDS <- c(
   cycle = "循環名稱",
   sub_process_id = "子作業編號",
@@ -623,7 +624,6 @@ DESIGN_REQUIRED_FIELDS <- c(
   risk_factor = "風險因素",
   risk_description = "風險描述",
   risk_category = "風險類別",
-  significant_account = "會計科目（無則填 NA）",
   control_objective = "控制目標",
   control_activity = "控制活動",
   nature = "控制類型（人工／自動）",
@@ -634,6 +634,7 @@ DESIGN_REQUIRED_FIELDS <- c(
 )
 
 DESIGN_OPTIONAL_FIELDS <- c(
+  significant_account = "會計科目（僅報導面必填；其它類別不可填）",
   company_status = "控制現況描述（六大就緒後書寫；定稿時可自動帶入）",
   design_gap_note = "控制設計差異說明",
   related_policy = "相關政策或程序",
@@ -643,6 +644,16 @@ DESIGN_OPTIONAL_FIELDS <- c(
   residual_risk = "可能潛在風險",
   improvement = "建議改善方式"
 )
+
+is_reporting_risk_category <- function(cat) {
+  grepl("^報導", trimws(as.character(cat %||% "")))
+}
+
+# TRUE if account is considered "filled" for 報導面
+account_is_filled <- function(x) {
+  v <- trimws(as.character(x %||% ""))
+  nzchar(v) && !identical(toupper(v), "NA") && !identical(v, "—") && !identical(v, "-")
+}
 
 # Resolve field value with aliases used across cascade / RCM / Form 4120SR
 design_field_value <- function(ctrl, field) {
@@ -688,12 +699,30 @@ design_required_check <- function(ctrl) {
     missing <- c(missing, "控制活動類型須為單一預防／偵測（不可混用）")
     filled$approach <- FALSE
   }
+  # 會計科目：報導面必填；其它類別不得填入（僅允許空白／NA）
+  cat <- design_field_value(ctrl, "risk_category")
+  acct <- trimws(as.character(ctrl$significant_account %||% ""))
+  if (is_reporting_risk_category(cat)) {
+    filled$significant_account <- account_is_filled(acct)
+    if (!account_is_filled(acct)) {
+      missing <- c(missing, "會計科目（報導面必填）")
+    }
+  } else if (nzchar(cat)) {
+    # non-reporting: account must not be filled
+    filled$significant_account <- !account_is_filled(acct)
+    if (account_is_filled(acct)) {
+      missing <- c(missing, "會計科目僅報導面可填（請清空）")
+    }
+  } else {
+    filled$significant_account <- TRUE
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
     filled = filled,
     required = DESIGN_REQUIRED_FIELDS,
-    optional = DESIGN_OPTIONAL_FIELDS
+    optional = DESIGN_OPTIONAL_FIELDS,
+    account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending"
   )
 }
 
@@ -703,10 +732,16 @@ design_required_check <- function(ctrl) {
 detect_design_gaps <- function(ctrl) {
   gaps <- list()
   add <- function(category, severity, item, action) {
+    cid <- tryCatch(as.character(derive_control_id(ctrl, 1L)), error = function(e) "")
+    if (!length(cid) || is.na(cid[[1]])) cid <- ""
+    cid <- cid[[1]]
+    item <- paste(as.character(item %||% ""), collapse = "；")
+    action <- paste(as.character(action %||% ""), collapse = "；")
+    if (!nzchar(item)) item <- "（未命名缺漏）"
     gaps[[length(gaps) + 1]] <<- data.frame(
-      control_id = derive_control_id(ctrl, 1L),
-      category = category,
-      severity = severity,
+      control_id = cid,
+      category = as.character(category[[1]] %||% ""),
+      severity = as.character(severity[[1]] %||% ""),
       gap_item = item,
       suggested_action = action,
       stringsAsFactors = FALSE
@@ -734,14 +769,17 @@ detect_design_gaps <- function(ctrl) {
   tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type,
                                 ctrl$approach %||% ctrl$control_activity_type)
   if (!isTRUE(tchk$ok)) {
-    add("控制缺失", "高", tchk$msg, "控制類型＝人工/自動；控制活動類型＝預防/偵測，勿對調")
+    add("控制缺失", "高", tchk$msg %||% "類型欄錯誤",
+        "控制類型＝人工/自動；控制活動類型＝預防/偵測，勿對調")
   }
   if (is_blank(ctrl$assertions)) add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助）")
 
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   if (!isTRUE(chk$ok)) {
-    add("控制缺失", "高", chk$msg,
-        paste(c("重寫使目標＝Why、活動＝How", chk$hints), collapse = "；"))
+    oa_msg <- chk$msg %||% paste(chk$issues %||% character(), collapse = "；")
+    if (!nzchar(oa_msg)) oa_msg <- "控制目標／活動分欄未通過"
+    add("控制缺失", "高", oa_msg,
+        paste(c("重寫使目標＝Why、活動＝How", chk$hints %||% character()), collapse = "；"))
   }
 
   if (is_blank(ctrl$inputs)) {
@@ -757,7 +795,9 @@ detect_design_gaps <- function(ctrl) {
   }
   if (is_blank(ctrl$investigation_threshold) &&
       grepl("覆核|Review|調節|Reconcili|偵測",
-            paste(ctrl$type, ctrl$approach, ctrl$control_activity), ignore.case = TRUE)) {
+            paste(ctrl$type %||% "", ctrl$approach %||% "", ctrl$control_activity %||% "",
+                  sep = " "),
+            ignore.case = TRUE)) {
     add("控制缺失", "中", "含覆核／偵測性質但未訂調查門檻", "補門檻與追蹤，否則控制精度不足")
   }
 
@@ -792,8 +832,14 @@ is_rcm_row_ready <- function(ctrl) {
 # Finalize a designed control into a single RCM-row-ready control object.
 finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hint = 1L) {
   ctrl <- as.list(ctrl)
-  # 會計科目無對應時允許 NA
-  if (is_blank(ctrl$significant_account)) ctrl$significant_account <- "NA"
+  # 會計科目：報導面保留；其它類別強制清空
+  if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
+    if (identical(toupper(trimws(ctrl$significant_account %||% "")), "NA")) {
+      ctrl$significant_account <- ""
+    }
+  } else {
+    ctrl$significant_account <- ""
+  }
   if (is_blank(ctrl$risk_name) && !is_blank(ctrl$risk_factor)) {
     ctrl$risk_name <- ctrl$risk_factor
   }

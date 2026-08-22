@@ -33,7 +33,7 @@ base <- list(
   risk_category = "營運面",
   risk_attr_financial = "[財務報導] 未授權交易", risk_attr_operations = "[營運] 權限不一致",
   risk_attr_compliance = "[法令遵循] 資安政策",
-  romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "多科目",
+  romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "",
   assertions = "存在／發生 (Existence/Occurrence)",
   control_objective = "確保系統使用者權限與現職一致",
   control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
@@ -110,10 +110,44 @@ check(any(grepl("流程負責單位", req_bad$missing)), "必填清單含負責�
 check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別")
 fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
 check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
-fin_na <- finalize_control_as_rcm_row(modifyList(d1, list(significant_account = "")),
-                                     existing_ids = character())
-check(isTRUE(fin_na$ok) && identical(fin_na$control$significant_account, "NA"),
-      "空白會計科目定稿時自動填 NA")
+
+# 報導面會計科目必填；其它類別不可填
+rep_ok <- design_required_check(modifyList(d1, list(
+  risk_category = "報導面", significant_account = "應收帳款"
+)))
+check(isTRUE(rep_ok$ok), "報導面＋科目＝必填通過")
+rep_bad <- design_required_check(modifyList(d1, list(
+  risk_category = "報導面", significant_account = ""
+)))
+check(!isTRUE(rep_bad$ok) && any(grepl("會計科目", rep_bad$missing)), "報導面缺科目不可過")
+ops_lock <- design_required_check(modifyList(d1, list(
+  risk_category = "營運面", significant_account = "存貨"
+)))
+check(!isTRUE(ops_lock$ok) && any(grepl("不可填|清空", ops_lock$missing)), "營運面填科目應擋下")
+ops_ok <- design_required_check(modifyList(d1, list(
+  risk_category = "營運面", significant_account = ""
+)))
+check(isTRUE(ops_ok$ok), "營運面空白科目可過")
+fin_ops <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "營運面", significant_account = "存貨"
+)), existing_ids = character())
+check(isTRUE(fin_ops$ok) && identical(fin_ops$control$significant_account, ""),
+      "營運面定稿自動清空誤填科目")
+fin_clear <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "營運面", significant_account = ""
+)), existing_ids = character())
+check(isTRUE(fin_clear$ok) && identical(fin_clear$control$significant_account, ""),
+      "營運面定稿科目清空")
+fin_rep <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "報導面", significant_account = ""
+)), existing_ids = character())
+check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺科目不可定稿")
+
+# 空表單不可因 gaps 崩潰（曾導致引導選單無法更新）
+empty_draft <- list(cycle = "電腦化資訊系統循環", frequency = "每季")
+gaps_empty <- tryCatch(detect_design_gaps(empty_draft), error = function(e) e)
+check(is.data.frame(gaps_empty), "空草稿 detect_design_gaps 不崩潰")
+check(nrow(gaps_empty) > 0, "空草稿仍回報必填缺漏")
 
 ready <- is_rcm_row_ready(d1)
 check(isTRUE(ready$ready), "完整控制點可視為 RCM 列就緒")

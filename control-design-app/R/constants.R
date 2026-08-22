@@ -13,6 +13,19 @@ CYCLES_NINE <- c(
   "電腦化資訊系統循環"
 )
 
+# Display labels (value remains CYCLES_NINE entry)
+CYCLES_NINE_CHOICES <- c(
+  "銷售及收款循環" = "銷售及收款循環",
+  "採購及付款循環" = "採購及付款循環",
+  "生產循環" = "生產循環",
+  "薪工循環" = "薪工循環",
+  "融資循環" = "融資循環",
+  "固定資產循環" = "固定資產循環",
+  "投資循環" = "投資循環",
+  "研發循環" = "研發循環",
+  "資訊循環（電腦化資訊系統循環）" = "電腦化資訊系統循環"
+)
+
 # 風險三大屬性（COSO 三類目標；使用者可改寫標籤與內容）
 RISK_ATTR_DEFAULTS <- list(
   financial_reporting = list(

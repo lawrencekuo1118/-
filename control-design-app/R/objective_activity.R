@@ -54,7 +54,8 @@ rcm_objective_activity_check <- function(objective, activity) {
       ok = FALSE, severity = "高", issues = issues,
       objective_verdict = if (nzchar(obj)) "已填" else "未填",
       activity_verdict = if (nzchar(act)) "已填" else "未填",
-      hints = c("目標＝Why（要達成什麼）；活動＝How（誰如何做）")
+      hints = c("目標＝Why（要達成什麼）；活動＝How（誰如何做）"),
+      msg = paste(issues, collapse = "；")
     ))
   }
 

@@ -967,10 +967,6 @@ server <- function(input, output, session) {
     )
   }
 
-  observeEvent(input$interview_cycle, {
-    refresh_pbc_choices()
-  }, ignoreNULL = FALSE)
-
   interview_worksheet <- function() {
     src <- input$interview_source %||% "rcm"
     if (identical(src, "library")) {

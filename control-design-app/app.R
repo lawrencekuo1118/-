@@ -47,12 +47,30 @@ ui <- page_navbar(
   title = "尬電SOX",
   window_title = "尬電SOX",
   theme = bs_theme(
-    version = 5, bootswatch = "flatly", primary = "#1B4F72",
+    version = 5,
+    primary = BRAND_BLUE,
+    success = BRAND_GREEN,
+    secondary = "#4A4A4A",
+    dark = BRAND_BLACK,
+    light = BRAND_GRAY,
+    "body-bg" = BRAND_WHITE,
+    "body-color" = BRAND_BLACK,
+    "navbar-bg" = BRAND_BLACK,
+    "navbar-dark-color" = "rgba(255,255,255,0.85)",
+    "navbar-dark-hover-color" = BRAND_GREEN,
+    "navbar-dark-active-color" = BRAND_GREEN,
+    "navbar-dark-brand-color" = BRAND_WHITE,
+    "navbar-dark-brand-hover-color" = BRAND_GREEN,
+    "link-color" = BRAND_BLUE,
+    "link-hover-color" = BRAND_GREEN,
+    "border-color" = "#D9D9D9",
+    "input-border-color" = "#C8C8C8",
+    "focus-ring-color" = "rgba(134, 188, 37, 0.35)",
     # Do not use font_google() — it stalls shinyapps cold start (shiny-busy / disconnect)
     base_font = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Segoe UI", sans-serif',
     "font-size-base" = "0.9rem"
   ),
-  header = tags$script(HTML("
+  header = tags$script(HTML(sprintf("
     Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
       var el = document.getElementById('significant_account');
       if (!el) return;
@@ -78,19 +96,43 @@ ui <- page_navbar(
       el.disabled = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
     });
-    /* Prevent control overlap in library options / sidebar */
     document.addEventListener('DOMContentLoaded', function() {
       var style = document.createElement('style');
       style.textContent = [
+        ':root { --brand-blue: %s; --brand-green: %s; --brand-black: %s; --brand-white: %s; }',
+        '.navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }',
+        '.navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }',
+        '.navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%%; background: var(--brand-green); vertical-align: middle; }',
+        '.navbar .nav-link { color: rgba(255,255,255,0.82) !important; }',
+        '.navbar .nav-link:hover, .navbar .nav-link.active { color: var(--brand-green) !important; }',
+        '.bslib-sidebar-layout > .sidebar { background: var(--brand-white); border-right: 1px solid #E5E5E5; }',
+        '.card { border-color: #E5E5E5; }',
+        '.card-header { background: var(--brand-white); border-bottom: 2px solid var(--brand-green); color: var(--brand-blue); font-weight: 600; }',
+        '.btn-primary { background-color: var(--brand-blue); border-color: var(--brand-blue); }',
+        '.btn-primary:hover, .btn-primary:focus { background-color: #00205B; border-color: #00205B; }',
+        '.btn-success { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); font-weight: 600; }',
+        '.btn-success:hover, .btn-success:focus { background-color: #6FA01E; border-color: #6FA01E; color: var(--brand-black); }',
+        '.btn-outline-success { color: var(--brand-green); border-color: var(--brand-green); }',
+        '.btn-outline-success:hover { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); }',
+        '.btn-outline-primary { color: var(--brand-blue); border-color: var(--brand-blue); }',
+        '.btn-outline-primary:hover { background-color: var(--brand-blue); color: var(--brand-white); }',
+        '.accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }',
+        '.accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }',
+        '.form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }',
+        '.alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }',
+        '.alert-info { background-color: rgba(0,46,130,0.08); border-color: var(--brand-blue); color: var(--brand-blue); }',
+        '.text-danger { color: #C41E3A !important; }',
+        'a { color: var(--brand-blue); }',
+        'a:hover { color: var(--brand-green); }',
         '.lib-options-section .shiny-input-container { margin-bottom: 0.75rem; }',
         '.lib-options-section .form-check { margin-bottom: 0.75rem; }',
-        '.lib-options-actions { clear: both; width: 100%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
+        '.lib-options-actions { clear: both; width: 100%%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
         '.sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }',
         '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }'
       ].join('\\n');
       document.head.appendChild(style);
     });
-  ")),
+  ", BRAND_BLUE, BRAND_GREEN, BRAND_BLACK, BRAND_WHITE))),
   fillable = TRUE,
   sidebar = sidebar(
     width = 280,
@@ -1600,10 +1642,10 @@ server <- function(input, output, session) {
         backgroundColor = DT::styleEqual(
           kind,
           switch(kind,
-                 "螢幕截圖" = "#E8F4FD",
-                 "EMAIL" = "#FFF3CD",
-                 "系統表單" = "#D1E7DD",
-                 "政策制度" = "#F8D7DA",
+                 "螢幕截圖" = "#E8EEF8",
+                 "EMAIL" = "#F4F9E8",
+                 "系統表單" = "#EAF4D4",
+                 "政策制度" = "#F0F0F0",
                  "#FFFFFF")
         ),
         fontWeight = DT::styleEqual(kind, "bold")

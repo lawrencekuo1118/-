@@ -1,6 +1,13 @@
 # Form 4120SR Significant Risk — design-side field catalogue
 # and Taiwan internal-control 「九大循環」 defaults.
 
+# Brand palette (Deloitte-aligned: navy + green accent on black/white)
+BRAND_BLUE <- "#002E82"
+BRAND_GREEN <- "#86BC25"
+BRAND_BLACK <- "#000000"
+BRAND_WHITE <- "#FFFFFF"
+BRAND_GRAY <- "#F5F5F5"
+
 CYCLES_NINE <- c(
   "銷售及收款循環",
   "採購及付款循環",

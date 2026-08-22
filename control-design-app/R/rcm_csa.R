@@ -609,7 +609,7 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
       if (grepl("資訊|電腦", cy)) "資訊循環" else cy
     },
     `子作業編號` = derive_sub_process_id(ctrl, seq_no),
-    `子作業名稱` = ctrl$sub_process %||% "",
+    `子作業名稱` = normalize_sub_process_name(ctrl$sub_process %||% ""),
     `風險因素` = risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% ""),
     `風險描述` = {
       if (!is_blank(ctrl$risk_description)) ctrl$risk_description
@@ -1079,7 +1079,7 @@ controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
 DESIGN_REQUIRED_FIELDS <- c(
   cycle = "循環名稱",
   sub_process_id = "子作業編號",
-  sub_process = "子作業名稱",
+  sub_process = "子作業名稱（…作業）",
   risk_factor = "風險因素",
   risk_description = "風險描述",
   risk_category = "風險類別",
@@ -1091,6 +1091,19 @@ DESIGN_REQUIRED_FIELDS <- c(
   responsible_unit = "流程負責單位",
   iuc_or_system = "相關系統／IUC"
 )
+
+#' 子作業名稱統一為「…作業」格式（已結尾則保留）
+normalize_sub_process_name <- function(x) {
+  x <- trimws(as.character(x %||% ""))
+  if (!nzchar(x)) return("")
+  if (grepl("作業$", x)) return(x)
+  paste0(x, "作業")
+}
+
+sub_process_name_ok <- function(x) {
+  x <- trimws(as.character(x %||% ""))
+  nzchar(x) && grepl("作業$", x)
+}
 
 DESIGN_OPTIONAL_FIELDS <- c(
   significant_account = "會計科目（僅報導面必填；常見科目複選／全部適用；其他類別不可填）",
@@ -1230,6 +1243,9 @@ design_field_value <- function(ctrl, field) {
     return(risk_factor_tag(trimws(as.character(
       ctrl$risk_factor %||% ctrl$risk_name %||% ""
     ))))
+  }
+  if (identical(field, "sub_process")) {
+    return(normalize_sub_process_name(ctrl$sub_process))
   }
   if (identical(field, "iuc_or_system")) {
     return(trimws(as.character(
@@ -1461,6 +1477,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   ctrl <- as.list(ctrl)
   # 三大風險屬性三擇一（定稿前強制清空非選項）
   ctrl <- enforce_single_risk_attr(ctrl)
+  ctrl$sub_process <- normalize_sub_process_name(ctrl$sub_process)
   # 會計科目：報導面保留並正規化複選；其他類別強制清空
   if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
     ctrl$significant_account <- join_significant_accounts(ctrl$significant_account)

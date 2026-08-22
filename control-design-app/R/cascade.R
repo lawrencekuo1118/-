@@ -64,7 +64,11 @@ library_controls_flat <- function(library, cycle = NULL) {
       library_id = it$library_id %||% c$library_id %||% "",
       cycle = c$cycle %||% it$cycle %||% "",
       sub_process_id = nzchar_trim(c$sub_process_id),
-      sub_process = nzchar_trim(c$sub_process),
+      sub_process = {
+        if (exists("normalize_sub_process_name", mode = "function")) {
+          normalize_sub_process_name(c$sub_process)
+        } else nzchar_trim(c$sub_process)
+      },
       risk_factor = nzchar_trim(c$risk_factor %||% c$risk_name),
       risk_name = nzchar_trim(c$risk_name %||% c$risk_factor),
       risk_description = nzchar_trim(c$risk_description),
@@ -191,7 +195,7 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
   if (nzchar(spid) || nzchar(spn)) {
     updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
     updateTextInput(session, "sub_process_id", value = spid)
-    updateTextInput(session, "sub_process", value = spn)
+    updateTextInput(session, "sub_process", value = normalize_sub_process_name(spn))
   }
   rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
   if (nzchar(rf)) {
@@ -222,7 +226,8 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
     if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
   })
   updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
-  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
+  updateTextInput(session, "sub_process",
+                  value = normalize_sub_process_name(ctrl$sub_process %||% ""))
   rf <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% "")
   updateTextInput(session, "risk_factor", value = rf)
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
@@ -557,7 +562,7 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
   ctrl <- list(
     cycle = sel$cycle %||% "",
     sub_process_id = sel$sub_process_id %||% "",
-    sub_process = sel$sub_process %||% "",
+    sub_process = normalize_sub_process_name(sel$sub_process %||% ""),
     risk_factor = sel$risk_factor %||% "",
     risk_name = sel$risk_name %||% sel$risk_factor %||% "",
     risk_description = sel$risk_description %||% "",

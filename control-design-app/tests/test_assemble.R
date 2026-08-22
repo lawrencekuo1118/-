@@ -30,7 +30,7 @@ check <- function(cond, msg) {
 
 base <- list(
   company = "示範公司", cycle = "電腦化資訊系統循環",
-  sub_process_id = "EC-101", sub_process = "存取管理",
+  sub_process_id = "EC-101", sub_process = "存取管理作業",
   risk_factor = "不當權限", risk_name = "不當權限", risk_description = "離職未停權",
   risk_category = "營運面",
   risk_attr_financial = "",
@@ -58,6 +58,15 @@ rcm <- controls_to_rcm(list(d1))
 check(all(RCM_HEADERS %in% names(rcm)), "RCM 含鯨鏈標準標題列")
 check(identical(as.character(rcm[["控制目標"]]), "確保系統使用者權限與現職一致"), "RCM 目標欄獨立")
 check(identical(as.character(rcm[["控制活動"]]), "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
+check(identical(as.character(rcm[["子作業名稱"]]), "存取管理作業"), "RCM 子作業名稱＝…作業")
+check(identical(normalize_sub_process_name("存取管理"), "存取管理作業"), "缺「作業」自動補上")
+check(identical(normalize_sub_process_name("程式修改控制作業"), "程式修改控制作業"), "已含作業不重複")
+check(isTRUE(sub_process_name_ok("存取管理作業")), "…作業格式通過")
+check(!isTRUE(sub_process_name_ok("存取管理")), "無作業後綴不通過")
+fin_sp <- finalize_control_as_rcm_row(modifyList(d1, list(sub_process = "權限覆核")),
+                                     existing_ids = character())
+check(isTRUE(fin_sp$ok) && identical(fin_sp$control$sub_process, "權限覆核作業"),
+      "定稿時子作業名稱正規化為…作業")
 check(!identical(as.character(rcm[["控制目標"]]), as.character(rcm[["控制活動"]])), "目標≠活動")
 check(grepl("^EC-101-", as.character(rcm[["控制編號"]])), "資訊循環控制編號格式 EC-101-##")
 check(identical(as.character(rcm[["控制類型"]]), "人工"), "控制類型＝人工/自動")

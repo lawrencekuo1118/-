@@ -18,6 +18,25 @@ LIBRARY_CONTROL_FIELDS <- c(
   "dependent_controls", "detailed_description", "summary_description", "control_id"
 )
 
+# 非控制點「設計」欄位：輸入檔／既有 RCM 常帶入，不可污染 APP 範本庫／參數庫
+NON_DESIGN_CONTROL_FIELDS <- c(
+  "company_status",      # 控制現況描述／公司現況
+  "design_gap_note",     # 控制設計差異說明
+  "effectiveness",       # 控制有效性評估
+  "residual_risk",       # 可能潛在風險
+  "improvement"          # 建議改善方式
+)
+
+strip_non_design_control_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  for (f in NON_DESIGN_CONTROL_FIELDS) {
+    ctrl[[f]] <- ""
+  }
+  # 匯入檔常把「控制現況描述」誤塞進 detailed_description；設計庫一律清空後由組裝函式重建
+  ctrl$detailed_description <- ""
+  ctrl
+}
+
 seed_control_library <- function(include_jinglian_batch = TRUE) {
   base <- list(
     library_item_from_control(list(
@@ -162,7 +181,7 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
 }
 
 library_item_from_control <- function(ctrl, tags = character(), source = "manual") {
-  ctrl <- as.list(ctrl)
+  ctrl <- strip_non_design_control_fields(as.list(ctrl))
   # Stable accumulative ID: prefer real RCM 控制編號 so re-save updates same template
   if (is.null(ctrl$library_id) || !nzchar(as.character(ctrl$library_id %||% ""))) {
     cid <- trimws(as.character(ctrl$control_id %||% ""))
@@ -362,14 +381,21 @@ flat_row_to_library_item <- function(row) {
 
 save_control_library <- function(library, path_json, path_csv = NULL) {
   payload <- lapply(library, function(item) {
+    ctrl <- strip_non_design_control_fields(item$control %||% list())
+    if (!nzchar(trimws(as.character(ctrl$detailed_description %||% ""))) &&
+        exists("assemble_control_paragraph", mode = "function")) {
+      ctrl$detailed_description <- tryCatch(
+        assemble_control_paragraph(ctrl), error = function(e) ""
+      )
+    }
     list(
       library_id = item$library_id,
       title = item$title,
       tags = item$tags,
-      cycle = item$cycle %||% item$control$cycle %||% "",
+      cycle = item$cycle %||% ctrl$cycle %||% "",
       source = item$source %||% "manual",
       updated_at = item$updated_at %||% "",
-      control = item$control
+      control = ctrl
     )
   })
   jsonlite::write_json(payload, path_json, auto_unbox = TRUE, pretty = TRUE, force = TRUE, null = "null")
@@ -425,17 +451,13 @@ import_control_library_file <- function(path, existing = list(), overwrite = TRU
       nature = "nature|性質|控制類型",
       approach = "approach|取向|預防偵測|控制活動類型",
       type = "type|類型",
-      company_status = "company_status|控制現況描述|現況",
-      design_gap_note = "design_gap_note|控制設計差異說明",
       related_policy = "related_policy|相關政策或程序",
       related_law = "related_law|相關法令",
       related_document = "related_document|相關文件",
-      effectiveness = "effectiveness|控制有效性評估",
-      residual_risk = "residual_risk|可能潛在風險",
-      improvement = "improvement|建議改善方式",
       inputs = "inputs|投入",
       review_steps = "review_steps|steps|步驟",
       outputs = "outputs|產出",
+      # 故意不映射公司現況／有效性／潛在風險／改善建議，避免污染設計庫
       detailed_description = "detailed_description|控制描述|描述",
       summary_description = "summary_description|摘要",
       tags = "tags|標籤"
@@ -533,19 +555,20 @@ rcm_row_to_control <- function(row) {
     nature = normalize_control_type_manual_auto(getv("控制類型")),
     approach = normalize_control_activity_type_pd(getv("控制活動類型")),
     frequency = getv("控制頻率"),
-    company_status = getv("控制現況描述"),
-    design_gap_note = getv("控制設計差異說明"),
+    # 現況／分析評估不入庫（由 strip_non_design_control_fields 再保險清空）
+    company_status = "",
+    design_gap_note = "",
     related_system = getv("相關系統"),
     iuc_or_system = getv("相關系統", "相關文件"),
     related_policy = getv("相關政策或程序"),
     related_law = getv("相關法令"),
     related_document = getv("相關文件"),
     responsible_unit = getv("流程負責單位"),
-    effectiveness = getv("控制有效性評估"),
-    residual_risk = getv("可能潛在風險"),
-    improvement = getv("建議改善方式"),
+    effectiveness = "",
+    residual_risk = "",
+    improvement = "",
     outputs = getv("相關文件"),
-    detailed_description = getv("控制現況描述"),
+    detailed_description = "",
     key_control = "Y"
   )
   ctrl

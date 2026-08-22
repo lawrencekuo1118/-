@@ -81,8 +81,7 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("相關法令", c$related_law, source)
     add_vals("相關政策或程序", c$related_policy, source)
     add_vals("相關文件", c$related_document %||% c$outputs, source)
-    add_vals("控制現況描述", c$company_status %||% c$detailed_description, source)
-    add_vals("控制有效性評估", c$effectiveness, source)
+    # 不收集公司現況／有效性等非設計欄，避免輸入檔污染參數庫
     add_vals("聲明", c$assertions, source)
     add_vals("Form 4120SR Type", c$type, source)
     add_vals("RoMM 分類", c$romm_classification, source)

@@ -228,7 +228,7 @@ ui <- page_navbar(
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
         ),
         p(class = "small text-muted mb-0",
-          "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
+          "本 APP 僅產出設計欄位；輸入檔之控制現況／分析評估等不寫入範本庫與參數庫。",
           "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
           "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
       )

@@ -519,6 +519,31 @@ lib1 <- patch_library_item_fields(
 check(identical(lib1[[1]]$title, "新標題") && identical(lib1[[1]]$control$risk_factor, "新風險"),
       "範本庫可高權直接改欄位")
 
+# 輸入檔非設計欄位不得污染範本庫／參數庫
+polluted <- list(
+  risk_factor = "測試風險", control_objective = "確保測試",
+  control_activity = "執行測試步驟", cycle = "電腦化資訊系統循環",
+  company_status = "公司目前實際做法一大段",
+  design_gap_note = "與設計差異",
+  effectiveness = "有效", residual_risk = "殘餘風險", improvement = "建議改善",
+  detailed_description = "這其實是控制現況描述"
+)
+clean_item <- library_item_from_control(polluted, source = "import")
+check(!nzchar(trimws(clean_item$control$company_status %||% "")), "入庫清空公司現況")
+check(!nzchar(trimws(clean_item$control$effectiveness %||% "")), "入庫清空有效性評估")
+check(!nzchar(trimws(clean_item$control$residual_risk %||% "")), "入庫清空潛在風險")
+check(!nzchar(trimws(clean_item$control$improvement %||% "")), "入庫清空改善建議")
+check(!nzchar(trimws(clean_item$control$design_gap_note %||% "")), "入庫清空設計差異")
+check(!identical(clean_item$control$detailed_description %||% "", "這其實是控制現況描述"),
+      "入庫不以現況文字當 detailed_description")
+pcat_pollute <- parameter_catalog(
+  list(clean_item),
+  list(modifyList(polluted, list(control_id = "X-1"))),
+  presets = list()
+)
+check(!any(pcat_pollute$參數 == "控制現況描述"), "參數庫不收集控制現況描述")
+check(!any(grepl("公司目前實際做法", pcat_pollute$選項值)), "參數庫不含現況原文")
+
 fin_as <- finalize_control_as_rcm_row(modifyList(base, list(
   assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"
 )))

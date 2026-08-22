@@ -78,6 +78,18 @@ ui <- page_navbar(
       el.disabled = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
     });
+    /* Prevent control overlap in library options / sidebar */
+    document.addEventListener('DOMContentLoaded', function() {
+      var style = document.createElement('style');
+      style.textContent = [
+        '.lib-options-section .shiny-input-container { margin-bottom: 0.75rem; }',
+        '.lib-options-section .form-check { margin-bottom: 0.75rem; }',
+        '.lib-options-actions { clear: both; width: 100%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
+        '.sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }',
+        '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }'
+      ].join('\\n');
+      document.head.appendChild(style);
+    });
   ")),
   fillable = TRUE,
   sidebar = sidebar(
@@ -92,12 +104,12 @@ ui <- page_navbar(
                     selected = "")
       ),
       div(
-        class = "mt-auto pt-2",
+        class = "mt-auto pt-2 sidebar-lib-block",
         tags$hr(class = "my-2"),
         textInput("lib_query", NULL, placeholder = "搜尋範本庫…"),
         selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
         div(
-          class = "d-flex gap-1 flex-wrap",
+          class = "d-flex gap-1 flex-wrap mb-2",
           actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
           actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
         ),
@@ -331,40 +343,38 @@ ui <- page_navbar(
     ),
     card(
       card_header("累積制通用範本庫 — 選項"),
-      p(
-        class = "text-muted small mb-2",
-        "管道：", strong("設計／RCM 就緒列 → 入庫"), "｜",
-        strong("CSV／JSON／RCM xlsx 匯入"), "｜",
-        strong("自訂引導項"), "。入庫後設計時", strong("優先套用"), "，完善後可覆寫同 ID（累積）。"
-      ),
-      verbatimTextOutput("lib_stats_text"),
-      layout_columns(
-        col_widths = c(6, 6),
+      div(
+        class = "lib-options-section",
+        p(
+          class = "text-muted small mb-3 mt-0",
+          "管道：", strong("設計／RCM 就緒列 → 入庫"), "｜",
+          strong("CSV／JSON／RCM xlsx 匯入"), "｜",
+          strong("自訂引導項"), "。入庫後設計時", strong("優先套用"), "，完善後可覆寫同 ID（累積）。"
+        ),
+        uiOutput("lib_stats_box"),
+        tags$hr(class = "my-2"),
+        tags$h6(class = "small fw-bold mb-2", "匯入"),
+        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
+                  accept = c(".csv", ".json", ".xlsx", ".xls")),
+        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
+        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
+                     class = "btn-sm btn-outline-primary mb-3"),
+        tags$hr(class = "my-2"),
+        tags$h6(class = "small fw-bold mb-2", "收集入庫"),
+        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
+        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
         div(
-          tags$strong(class = "small", "匯入"),
-          fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
-                    accept = c(".csv", ".json", ".xlsx", ".xls")),
-          checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-          actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
-                       class = "btn-sm btn-outline-primary w-100")
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
+          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
+          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
         ),
         div(
-          tags$strong(class = "small", "收集入庫"),
-          textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
-          textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
-          div(
-            class = "d-flex gap-1 flex-wrap",
-            actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-            actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-            actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
-          )
+          class = "lib-options-actions d-flex gap-2 flex-wrap",
+          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
+          downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
+          downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
         )
-      ),
-      div(
-        class = "d-flex gap-1 flex-wrap mt-2",
-        actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
-        downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
-        downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
       )
     )
   ),
@@ -596,16 +606,16 @@ server <- function(input, output, session) {
     st <- library_stats(lib())
     tags$small(class = "text-muted", sprintf("範本庫累積 %d 筆／%d 循環", st$n, st$n_cycles))
   })
-  output$lib_stats_text <- renderText({
+  output$lib_stats_box <- renderUI({
     st <- library_stats(lib())
     src <- if (length(st$sources)) {
       paste(sprintf("%s=%s", names(st$sources), unlist(st$sources)), collapse = "；")
     } else "—"
-    paste(
-      sprintf("累積筆數：%d", st$n),
-      sprintf("涵蓋循環：%d（%s）", st$n_cycles, paste(st$cycles, collapse = "、")),
-      sprintf("來源：%s", src),
-      sep = "\n"
+    div(
+      class = "alert alert-secondary py-2 mb-0 small",
+      tags$div(sprintf("累積筆數：%d", st$n)),
+      tags$div(sprintf("涵蓋循環：%d（%s）", st$n_cycles, paste(st$cycles, collapse = "、"))),
+      tags$div(sprintf("來源：%s", src))
     )
   })
 

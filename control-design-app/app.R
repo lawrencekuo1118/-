@@ -83,6 +83,7 @@ ui <- page_navbar(
   sidebar = sidebar(
     width = 280,
     open = "desktop",
+    textInput("company", NULL, placeholder = "公司名稱"),
     selectInput("cycle", "循環",
                 choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
                 selected = ""),
@@ -94,9 +95,7 @@ ui <- page_navbar(
       actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
     ),
     checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
-    uiOutput("lib_count_badge"),
-    tags$hr(class = "my-2"),
-    textInput("company", NULL, placeholder = "公司名稱")
+    uiOutput("lib_count_badge")
   ),
   nav_panel(
     "訪談問項設計",

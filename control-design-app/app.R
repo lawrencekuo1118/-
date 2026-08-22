@@ -200,40 +200,21 @@ ui <- page_navbar(
           actionButton("reset_cascade", "重設引導", class = "btn-outline-secondary btn-sm")
         ),
         uiOutput("auto_control_id_box"),
-        uiOutput("cascade_selection_summary"),
-        uiOutput("oa_live_check"),
-        uiOutput("type_live_check"),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
-          actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
-        ),
         tags$hr(),
         p(
           class = "small text-muted mb-2",
-          strong("補充設計欄位"),
-          "（引導已涵蓋子作業／風險／目標／活動／IUC／類型／頻率；此處僅填引導未含項目）。"
+          strong("控制點設計欄位"),
+          "：引導已涵蓋子作業／風險／目標／活動／IUC／類型／頻率；以下依",
+          strong("基本資料 → 風險辨識 → 控制設計"),
+          "補齊。測試步驟（4120SR Inputs／Steps／Outputs）請至「自我評估測試步驟設計」填寫。"
         ),
         accordion(
           id = "rcm_design_groups",
-          open = c("① 控制編號", "② 報導面科目", "③ 政策／法令／文件"),
+          open = c("基本資料", "風險辨識", "控制設計"),
           accordion_panel(
-            "① 控制編號",
+            "基本資料",
             textInput("control_id", "控制編號", value = "",
-                      placeholder = "自動順編（可覆寫）")
-          ),
-          accordion_panel(
-            "② 報導面科目",
-            textInput("significant_account", "會計科目", value = "",
-                      placeholder = "僅報導面可填且必填"),
-            uiOutput("significant_account_hint")
-          ),
-          accordion_panel(
-            "③ 政策／法令／文件",
-            selectizeInput(
-              "pbc_apply", "套用 IUC／PBC", choices = NULL, multiple = TRUE,
-              options = list(placeholder = "原名→新名")
-            ),
+                      placeholder = "自動順編（可覆寫）"),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
               "related_law", "相關法令",
@@ -245,35 +226,48 @@ ui <- page_navbar(
             textInput("related_document", lab_opt("相關文件"))
           ),
           accordion_panel(
-            "進階（4120SR／三大屬性細節）",
+            "風險辨識",
+            textInput("significant_account", "會計科目", value = "",
+                      placeholder = "僅報導面可填且必填"),
+            uiOutput("significant_account_hint"),
+            tags$p(class = "small text-muted mb-1", "三大風險屬性細節"),
             layout_columns(
               col_widths = c(4, 8),
               textInput("attr_label_fr", NULL, value = "財務報導"),
-              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "屬性1細節")
+              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "財務報導屬性細節")
             ),
             layout_columns(
               col_widths = c(4, 8),
               textInput("attr_label_op", NULL, value = "營運"),
-              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "屬性2細節")
+              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "營運屬性細節")
             ),
             layout_columns(
               col_widths = c(4, 8),
               textInput("attr_label_cp", NULL, value = "法令遵循"),
-              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "屬性3細節")
+              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "法令遵循屬性細節")
             ),
             selectizeInput(
-              "assertions", NULL, choices = ASSERTION_CHOICES, multiple = TRUE,
+              "assertions", "聲明（Assertions）", choices = ASSERTION_CHOICES, multiple = TRUE,
               selected = ASSERTION_CHOICES[1:2],
               options = list(create = TRUE, placeholder = "聲明（輔助）")
             ),
-            selectInput("romm_classification", NULL, choices = ROMM_CLASS_CHOICES),
-            selectizeInput("type", NULL, choices = TYPE_CHOICES,
-                           options = list(create = TRUE, placeholder = "Form 4120SR Type")),
-            textAreaInput("inputs", NULL, rows = 1, placeholder = "Inputs"),
-            textAreaInput("review_steps", NULL, rows = 3, placeholder = "Steps（每行一步）"),
-            textAreaInput("outputs", NULL, rows = 1, placeholder = "Outputs"),
-            textAreaInput("investigation_threshold", NULL, rows = 1, placeholder = "調查門檻"),
-            checkboxInput("pbc_also_inputs", "套用 PBC 時寫入 Inputs 對照", TRUE)
+            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES)
+          ),
+          accordion_panel(
+            "控制設計",
+            uiOutput("oa_live_check"),
+            uiOutput("type_live_check"),
+            div(
+              class = "d-flex gap-1 flex-wrap mb-2",
+              actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
+              actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
+            ),
+            selectizeInput(
+              "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
+              options = list(placeholder = "原名→新名")
+            ),
+            p(class = "small text-muted mb-0",
+              "控制目標／活動／類型／頻率／負責單位／IUC 由上方引導選取；此處可對調或拆分自訂目標／活動，並套用 PBC 命名。")
           )
         ),
         div(
@@ -294,13 +288,13 @@ ui <- page_navbar(
   nav_panel(
     "自我評估測試步驟設計",
     layout_columns(
-      col_widths = c(3, 9),
+      col_widths = c(4, 8),
       card(
         card_header("自我評估測試步驟設計"),
         p(class = "small text-muted mb-2",
           "在控制點定稿後，依 RCM 列設計",
           strong("自我評估（CSA）測試步驟"),
-          "：測試程序／PBC／預期結果。"),
+          "：測試程序／PBC／預期結果。亦可先填寫下方 Form 4120SR 測試步驟欄位，再回「控制點設計」定稿。"),
         selectizeInput(
           "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
@@ -308,7 +302,18 @@ ui <- page_navbar(
         checkboxGroupInput("csa_elements", "測試步驟元素",
                            choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
         actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
-        uiOutput("csa_status")
+        uiOutput("csa_status"),
+        tags$hr(),
+        tags$strong(class = "small", "Form 4120SR 測試步驟設定"),
+        p(class = "small text-muted mb-2",
+          "Inputs／Steps／Outputs／調查門檻會一併寫入控制點草稿（定稿時帶入 RCM）。"),
+        selectizeInput("type", "Type", choices = TYPE_CHOICES,
+                       options = list(create = TRUE, placeholder = "Form 4120SR Type")),
+        textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
+        textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
+        textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
+        textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻"),
+        checkboxInput("pbc_also_inputs", "於「控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
       ),
       card(
         DTOutput("csa_table"),
@@ -1254,36 +1259,6 @@ server <- function(input, output, session) {
     cur <- input$cascade_iuc %||% ""
     updateSelectInput(session, "cascade_iuc", choices = ch,
                       selected = if (cur %in% unname(ch)) cur else "")
-  })
-
-  output$cascade_selection_summary <- renderUI({
-    sel <- resolve_cascade_selection()
-    nz <- function(x) {
-      v <- trimws(as.character(x %||% ""))
-      if (nzchar(v)) v else tags$span(class = "text-muted", "（未選）")
-    }
-    div(
-      class = "alert alert-light border py-2 mb-2 small",
-      tags$strong("引導已選（唯讀摘要）"),
-      tags$table(
-        class = "table table-sm table-borderless mb-0 mt-1",
-        tags$tbody(
-          tags$tr(tags$td("子作業"), tags$td(sprintf("%s｜%s", nz(sel$sub_process_id), nz(sel$sub_process)))),
-          tags$tr(tags$td("風險 tag"), tags$td(nz(risk_factor_tag(sel$risk_factor)))),
-          tags$tr(tags$td("風險類別"), tags$td(nz(sel$risk_category))),
-          tags$tr(tags$td("風險描述"), tags$td(
-            if (nzchar(sel$risk_description)) sel$risk_description else tags$span(class = "text-muted", "（未選）")
-          )),
-          tags$tr(tags$td("控制目標"), tags$td(nz(sel$control_objective))),
-          tags$tr(tags$td("控制活動"), tags$td(nz(sel$control_activity))),
-          tags$tr(tags$td("控制類型"), tags$td(nz(normalize_control_type_manual_auto(sel$nature)))),
-          tags$tr(tags$td("活動類型"), tags$td(nz(normalize_control_activity_type_pd(sel$approach)))),
-          tags$tr(tags$td("頻率"), tags$td(nz(resolve_control_frequency(sel$nature, sel$frequency)))),
-          tags$tr(tags$td("負責單位"), tags$td(nz(sel$responsible_unit))),
-          tags$tr(tags$td("IUC"), tags$td(nz(sel$iuc_or_system)))
-        )
-      )
-    )
   })
 
   output$cascade_step_status <- renderUI({

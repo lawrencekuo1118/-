@@ -240,7 +240,16 @@ cascade_iuc_choices <- function(rows, pbc_df = NULL) {
   iucs <- unique(vapply(rows, function(r) r$iuc_or_system, character(1)))
   iucs <- iucs[nzchar(iucs)]
   if (!is.null(pbc_df) && nrow(pbc_df)) {
-    extra <- unique(c(as.character(pbc_df$reviewed_name), as.character(pbc_df$client_pbc_name)))
+    extra <- unique(c(
+      as.character(pbc_df$reviewed_name),
+      as.character(pbc_df$client_pbc_name),
+      as.character(pbc_df$iuc_or_system),
+      if (exists("format_pbc_reviewed_label", mode = "function")) {
+        vapply(seq_len(nrow(pbc_df)), function(i) {
+          format_pbc_reviewed_label(pbc_df$reviewed_name[i], pbc_df$pbc_kind[i])
+        }, character(1))
+      } else character()
+    ))
     extra <- extra[nzchar(extra) & !is.na(extra)]
     iucs <- unique(c(iucs, extra))
   }

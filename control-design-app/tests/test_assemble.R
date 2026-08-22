@@ -295,6 +295,52 @@ check(all(csa_freq[["建議樣本數"]] == "3"), "CSA 每月建議樣本數寫�
 check(all(grepl("每月|樣本數 3", csa_freq[["抽樣或範圍"]])), "CSA 抽樣或範圍含頻率樣本說明")
 check(nrow(controls_to_csa(list(not_ready), finalized_only = TRUE)) == 0L,
       "未定版控制點不產出 CSA")
+
+# CSA 多情境組：同一控制點不同現況 → 多組測試步驟
+ctrl_sc <- fin_ok
+ctrl_sc$csa_scenarios <- list(
+  new_csa_scenario(
+    scenario_name = "電子簽核路徑",
+    company_status = "經 EasyFlow 申請後主管核准",
+    review_steps = "抽核電子簽核單\n核對核准層級",
+    outputs = "EasyFlow 簽核紀錄",
+    scenario_id = "S1"
+  ),
+  new_csa_scenario(
+    scenario_name = "紙本／口頭路徑",
+    company_status = "會議口頭討論後執行，無正式簽核",
+    review_steps = "訪談執行人\n取得會議紀錄或郵件",
+    outputs = "會議紀錄／郵件",
+    scenario_id = "S2"
+  )
+)
+csa_sc <- control_to_csa(ctrl_sc, elements = c("steps", "outputs"))
+check(length(unique(csa_sc[["情境組號"]])) == 2L, "CSA 兩情境組各一組號")
+check(all(c("電子簽核路徑", "紙本／口頭路徑") %in% unique(csa_sc[["控制現況情境"]])),
+      "CSA 含兩種控制現況情境名稱")
+check(any(grepl("電子簽核", csa_sc[["測試程序"]])) && any(grepl("訪談執行人", csa_sc[["測試程序"]])),
+      "各情境組測試步驟內容不同")
+check(all(c("情境組號", "控制現況情境", "情境現況說明") %in% names(csa_sc)),
+      "CSA 含情境組欄位")
+ctrl_up <- upsert_control_csa_scenario(fin_ok, new_csa_scenario(
+  scenario_name = "唯一情境", review_steps = "一步", scenario_id = "S9"
+))
+check(length(ctrl_up$csa_scenarios) == 1L &&
+        identical(ctrl_up$csa_scenarios[[1]]$scenario_name, "唯一情境"),
+      "upsert 可寫入 csa_scenarios")
+ctrl_up2 <- upsert_control_csa_scenario(ctrl_up, new_csa_scenario(
+  scenario_name = "第二情境", review_steps = "另一步", scenario_id = "S10"
+))
+check(length(control_csa_scenarios(ctrl_up2)) == 2L, "同一控制可累積兩情境組")
+ctrl_rm <- remove_control_csa_scenario(ctrl_up2, "S9")
+check(length(ctrl_rm$csa_scenarios) == 1L &&
+        identical(ctrl_rm$csa_scenarios[[1]]$scenario_id, "S10"),
+      "可刪除指定情境組")
+# 無自訂情境時仍產出一組預設
+csa_default <- control_to_csa(fin_ok, elements = c("control_activity"))
+check(nrow(csa_default) >= 1L && identical(as.character(csa_default[["控制現況情境"]][1]), "預設現況"),
+      "無自訂情境時使用預設現況一組")
+
 # Phase order evidence: interview columns ready independently of CSA
 check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) >= 5,
       "訪談核心元素可產出完整題綱")

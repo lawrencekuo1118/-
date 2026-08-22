@@ -455,6 +455,7 @@ ui <- page_navbar(
         card_header("控制點測試設計（CSA）"),
         p(class = "small text-muted mb-2",
           "僅能選取「風險控制點設計」已定版並寫入 RCM 之控制點。",
+          "同一控制點可因不同控制現況情境維護多組測試步驟。",
           "抽樣樣本數依該控制實際發生頻率訂定（PCAOB AS 2301／AS 2315；Deloitte 頻率對應表）；",
           "Higher RoMM／Fraud 時上調。"),
         selectizeInput(
@@ -487,7 +488,29 @@ ui <- page_navbar(
           )
         ),
         tags$hr(),
-        tags$strong(class = "small", "Form 4120SR 測試步驟設定"),
+        tags$strong(class = "small", "控制現況情境組（同一控制點可多組）"),
+        p(class = "small text-muted mb-2",
+          "同一已定版控制點可因不同控制現況情境，各自維護一組測試步驟（Type／Inputs／Steps／Outputs）。"),
+        selectizeInput(
+          "csa_edit_control", "編輯控制點", choices = NULL,
+          options = list(placeholder = "選擇已定版控制點以編輯情境組")
+        ),
+        selectizeInput(
+          "csa_scenario_pick", "情境組", choices = NULL,
+          options = list(placeholder = "選擇或新增情境組")
+        ),
+        textInput("csa_scenario_name", "控制現況情境名稱",
+                  placeholder = "例：電子簽核路徑／口頭核准路徑"),
+        textAreaInput("csa_scenario_status", "該情境之控制現況說明", rows = 2,
+                      placeholder = "描述此情境下公司實際怎麼做"),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
+          actionButton("csa_scenario_save", "儲存此情境組", class = "btn-sm btn-primary"),
+          actionButton("csa_scenario_dup", "複製情境組", class = "btn-sm btn-outline-secondary"),
+          actionButton("csa_scenario_del", "刪除此情境組", class = "btn-sm btn-outline-danger")
+        ),
+        tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
         selectizeInput("type", "Type", choices = TYPE_CHOICES,
                        options = list(create = TRUE, placeholder = "Form 4120SR Type")),
         textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
@@ -2154,11 +2177,33 @@ server <- function(input, output, session) {
     if (!length(ids) || all(!nzchar(ids))) return(cs)
     Filter(function(c) c$control_id %in% ids, cs)
   })
+  csa_edit_ctrl <- reactive({
+    cs <- Filter(is_control_finalized_for_rcm, controls())
+    if (!length(cs)) return(NULL)
+    id <- input$csa_edit_control
+    if (!nzchar(id %||% "")) return(cs[[1]])
+    hit <- Filter(function(c) identical(c$control_id, id), cs)
+    if (length(hit)) hit[[1]] else cs[[1]]
+  })
+  fill_csa_scenario_form <- function(sc) {
+    updateTextInput(session, "csa_scenario_name", value = sc$scenario_name %||% "")
+    updateTextAreaInput(session, "csa_scenario_status", value = sc$company_status %||% "")
+    if (nzchar(trimws(sc$type %||% ""))) {
+      updateSelectizeInput(session, "type", selected = sc$type)
+    }
+    updateTextAreaInput(session, "inputs", value = sc$inputs %||% "")
+    updateTextAreaInput(session, "review_steps", value = sc$review_steps %||% "")
+    updateTextAreaInput(session, "outputs", value = sc$outputs %||% "")
+    updateTextAreaInput(session, "investigation_threshold",
+                        value = sc$investigation_threshold %||% "")
+  }
   observe({
     cs <- controls()
     if (!length(cs)) {
       updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
       updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_edit_control", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
       return()
     }
     ch_all <- stats::setNames(
@@ -2169,20 +2214,152 @@ server <- function(input, output, session) {
     cs_fin <- Filter(is_control_finalized_for_rcm, cs)
     if (!length(cs_fin)) {
       updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_edit_control", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
     } else {
       ch_fin <- stats::setNames(
         vapply(cs_fin, function(x) x$control_id, ""),
         vapply(cs_fin, function(x) {
           plan <- control_test_sample_plan(x)
-          sprintf("%s｜%s｜%s→%s",
+          n_sc <- length(control_csa_scenarios(x))
+          sprintf("%s｜%s｜%s→%s｜%d組",
                   x$control_id,
                   x$risk_name %||% "",
                   plan$frequency,
-                  plan$sample_size_label)
+                  plan$sample_size_label,
+                  n_sc)
         }, "")
       )
       updateSelectizeInput(session, "worksheet_controls_sa", choices = ch_fin, server = TRUE)
+      updateSelectizeInput(session, "csa_edit_control", choices = ch_fin, server = TRUE)
     }
+  })
+  observe({
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) {
+      updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
+      return()
+    }
+    ch <- csa_scenario_choices(ctrl)
+    cur <- input$csa_scenario_pick
+    sel <- if (nzchar(cur %||% "") && cur %in% unname(ch)) cur else unname(ch)[[1]]
+    updateSelectizeInput(session, "csa_scenario_pick", choices = ch, selected = sel, server = TRUE)
+  })
+  observeEvent(list(input$csa_edit_control, input$csa_scenario_pick), {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) return()
+    scs <- control_csa_scenarios(ctrl)
+    sid <- input$csa_scenario_pick
+    hit <- Filter(function(x) identical(x$scenario_id, sid), scs)
+    sc <- if (length(hit)) hit[[1]] else scs[[1]]
+    fill_csa_scenario_form(sc)
+  }, ignoreInit = FALSE)
+  read_csa_scenario_from_inputs <- function(scenario_id = NULL) {
+    new_csa_scenario(
+      scenario_name = input$csa_scenario_name %||% "",
+      company_status = input$csa_scenario_status %||% "",
+      type = input$type %||% "",
+      inputs = input$inputs %||% "",
+      review_steps = input$review_steps %||% "",
+      outputs = input$outputs %||% "",
+      investigation_threshold = input$investigation_threshold %||% "",
+      scenario_id = scenario_id
+    )
+  }
+  patch_control_in_store <- function(ctrl) {
+    cs <- controls()
+    idx <- which(vapply(cs, function(x) identical(x$control_id, ctrl$control_id), logical(1)))
+    if (!length(idx)) return(FALSE)
+    cs[[idx[[1]]]] <- ctrl
+    controls(cs)
+    TRUE
+  }
+  observeEvent(input$csa_scenario_save, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) {
+      return(showNotification("請先選擇已定版控制點", type = "warning"))
+    }
+    sid <- input$csa_scenario_pick
+    if (!nzchar(sid %||% "") || identical(sid, "S1")) {
+      # First explicit save: if only synthetic, create stored S1
+      if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+        sid <- "S1"
+      }
+    }
+    sc <- read_csa_scenario_from_inputs(scenario_id = sid %||% "S1")
+    if (!nzchar(trimws(sc$scenario_name))) {
+      return(showNotification("請填寫控制現況情境名稱", type = "warning"))
+    }
+    ctrl2 <- upsert_control_csa_scenario(ctrl, sc)
+    patch_control_in_store(ctrl2)
+    showNotification(sprintf("已儲存情境組「%s」", sc$scenario_name), type = "message")
+  })
+  observeEvent(input$csa_scenario_add, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) {
+      return(showNotification("請先選擇已定版控制點", type = "warning"))
+    }
+    # Persist current form first if named
+    cur_name <- trimws(input$csa_scenario_name %||% "")
+    if (nzchar(cur_name) && nzchar(input$csa_scenario_pick %||% "")) {
+      ctrl <- upsert_control_csa_scenario(
+        ctrl, read_csa_scenario_from_inputs(scenario_id = input$csa_scenario_pick)
+      )
+    } else if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+      # Seed default before adding second
+      ctrl <- upsert_control_csa_scenario(ctrl, synthetic_default_csa_scenario(ctrl))
+    }
+    n <- length(ctrl$csa_scenarios %||% list()) + 1L
+    sc_new <- new_csa_scenario(
+      scenario_name = sprintf("現況情境 %d", n),
+      company_status = "",
+      type = ctrl$type %||% "",
+      inputs = "",
+      review_steps = "",
+      outputs = "",
+      investigation_threshold = ""
+    )
+    ctrl2 <- upsert_control_csa_scenario(ctrl, sc_new)
+    patch_control_in_store(ctrl2)
+    updateSelectizeInput(session, "csa_scenario_pick",
+                         choices = csa_scenario_choices(ctrl2),
+                         selected = sc_new$scenario_id, server = TRUE)
+    fill_csa_scenario_form(sc_new)
+    showNotification(sprintf("已新增情境組「%s」", sc_new$scenario_name), type = "message")
+  })
+  observeEvent(input$csa_scenario_dup, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
+    sc <- read_csa_scenario_from_inputs(scenario_id = NULL)
+    sc$scenario_name <- paste0(sc$scenario_name, "（複本）")
+    if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+      ctrl <- upsert_control_csa_scenario(ctrl, synthetic_default_csa_scenario(ctrl))
+    }
+    ctrl2 <- upsert_control_csa_scenario(ctrl, sc)
+    patch_control_in_store(ctrl2)
+    updateSelectizeInput(session, "csa_scenario_pick",
+                         choices = csa_scenario_choices(ctrl2),
+                         selected = sc$scenario_id, server = TRUE)
+    fill_csa_scenario_form(sc)
+    showNotification(sprintf("已複製為「%s」", sc$scenario_name), type = "message")
+  })
+  observeEvent(input$csa_scenario_del, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
+    sid <- input$csa_scenario_pick
+    if (!nzchar(sid %||% "")) return()
+    if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+      return(showNotification("目前僅有預設情境組，無需刪除", type = "warning"))
+    }
+    if (length(ctrl$csa_scenarios) <= 1L) {
+      return(showNotification("至少保留一組情境", type = "warning"))
+    }
+    ctrl2 <- remove_control_csa_scenario(ctrl, sid)
+    patch_control_in_store(ctrl2)
+    ch <- csa_scenario_choices(ctrl2)
+    updateSelectizeInput(session, "csa_scenario_pick", choices = ch,
+                         selected = unname(ch)[[1]], server = TRUE)
+    showNotification("已刪除情境組", type = "message")
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
@@ -2204,17 +2381,19 @@ server <- function(input, output, session) {
       return(tags$small(class = "text-warning",
                         "尚無已定版風險控制點；請先於「風險控制點設計」完成設計並寫入 RCM。"))
     }
+    n_sc <- sum(vapply(cs, function(x) length(control_csa_scenarios(x)), integer(1)))
     plans <- lapply(cs, control_test_sample_plan)
     summary_bits <- vapply(seq_along(cs), function(i) {
-      sprintf("%s：%s→%s",
+      sprintf("%s：%s→%s（%d組）",
               cs[[i]]$control_id %||% "—",
               plans[[i]]$frequency,
-              plans[[i]]$sample_size_label)
+              plans[[i]]$sample_size_label,
+              length(control_csa_scenarios(cs[[i]])))
     }, character(1))
     tagList(
       tags$small(
         class = "text-muted",
-        sprintf("已定版風險控制點 %d 點 → 測試步驟 %d 列", length(cs), nrow(csa))
+        sprintf("已定版 %d 點／情境組 %d → 測試步驟 %d 列", length(cs), n_sc, nrow(csa))
       ),
       tags$br(),
       tags$small(class = "text-muted", paste(summary_bits, collapse = "；"))

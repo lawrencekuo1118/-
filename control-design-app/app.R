@@ -150,10 +150,7 @@ ui <- page_navbar(
     div(
       class = "d-flex flex-column h-100",
       div(
-        textInput("company", NULL, placeholder = "公司名稱"),
-        selectInput("cycle", "循環",
-                    choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                    selected = "")
+        textInput("company", NULL, placeholder = "公司名稱")
       ),
       div(
         class = "mt-auto pt-2 sidebar-lib-block",
@@ -185,12 +182,12 @@ ui <- page_navbar(
         card_header("整體設計流程"),
         tags$ol(
           class = "home-steps mb-0",
-          tags$li(tags$strong("左側選循環"), "（與公司名稱）→ 範本庫可搜尋／套用既有控制點。"),
+          tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱並套用範本庫。"),
           tags$li(tags$strong("控制點設計"), "：依序選取 ",
                   strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
                   "（", tags$span(class = "text-danger", "須依序選取"),
                   "：未選上一層時，下一層沒有候選）。"),
-          tags$li("補齊 ", strong("基本資料 → 風險辨識 → 控制設計"),
+          tags$li("補齊 ", strong("風險辨識 → 控制設計"),
                   "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
           tags$li(strong("完成設計＝寫入 RCM 一列"),
                   "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
@@ -225,7 +222,7 @@ ui <- page_navbar(
         class = "home-tabs-grid",
         div(class = "home-tab-card",
             strong("控制點設計"),
-            "引導選取＋基本資料／風險辨識／控制設計；定稿寫入 RCM。"),
+            "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
         div(class = "home-tab-card",
             strong("訪談問項設計"),
             "對齊已定稿 RCM 產出訪談題綱；請先完成控制點定稿。"),
@@ -250,10 +247,11 @@ ui <- page_navbar(
       class = "home-section",
       card_header("建議操作順序"),
       p(class = "mb-1",
-        "① 首頁了解流程 → ② 左側選循環（可套用範本）→ ③ ",
-        strong("控制點設計"), " 引導＋定稿 → ④ ",
+        "① 首頁了解流程 → ② ",
+        strong("基本資料"), "（循環／子作業）→ ③ 引導選取風險～IUC → ④ ",
+        strong("風險辨識"), "／", strong("控制設計"), " → ⑤ 定稿 → ⑥ ",
         strong("訪談問項"), "／", strong("自我評估測試步驟"),
-        " → ⑤ 需要時維護 ", strong("範本庫"), "／", strong("PBC"), "／", strong("參數庫"), "。"),
+        " → ⑦ 需要時維護 ", strong("範本庫"), "／", strong("PBC"), "／", strong("參數庫"), "。"),
       p(class = "small text-muted mb-0",
         "測試步驟欄位填於「自我評估測試步驟設計」，定稿時會一併寫入控制點草稿。")
     )
@@ -293,11 +291,8 @@ ui <- page_navbar(
         selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
         conditionalPanel(
           "input.cascade_sub == '__custom__'",
-          layout_columns(
-            col_widths = c(4, 8),
-            textInput("custom_sub_id", NULL, placeholder = "子作業編號"),
-            textInput("custom_sub_name", NULL, placeholder = "子作業名稱")
-          )
+          p(class = "small text-muted mb-2",
+            "自訂子作業：請於下方「基本資料」填寫子作業編號與名稱。")
         ),
         # Step 3: 風險
         selectInput("cascade_risk", NULL, choices = c("③ 選擇風險因素…" = "")),
@@ -346,17 +341,25 @@ ui <- page_navbar(
           open = c("基本資料", "風險辨識", "控制設計"),
           accordion_panel(
             "基本資料",
-            textInput("control_id", "控制編號", value = "",
-                      placeholder = "自動順編（可覆寫）"),
-            textInput("related_policy", lab_opt("相關政策或程序")),
-            selectizeInput(
-              "related_law", "相關法令",
-              choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
-              multiple = TRUE,
-              options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
+            p(class = "small text-muted mb-2",
+              "此次控制點設計之流程定位：循環與子作業（可與上方引導選取同步，亦可直接覆寫）。"),
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("cycle_code", lab_req("循環編號"), value = "",
+                        placeholder = "例：EC"),
+              selectInput("cycle", lab_req("循環名稱"),
+                          choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
+                          selected = "")
             ),
-            uiOutput("related_law_hint"),
-            textInput("related_document", lab_opt("相關文件"))
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("sub_process_id", lab_req("子作業編號"), value = "",
+                        placeholder = "例：EC-101"),
+              textInput("sub_process", lab_req("子作業名稱"), value = "",
+                        placeholder = "例：存取管理")
+            ),
+            textInput("control_id", "控制編號", value = "",
+                      placeholder = "自動順編（可覆寫）")
           ),
           accordion_panel(
             "風險辨識",
@@ -395,7 +398,16 @@ ui <- page_navbar(
             selectizeInput(
               "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
               options = list(placeholder = "原名→新名")
-            )
+            ),
+            textInput("related_policy", lab_opt("相關政策或程序")),
+            selectizeInput(
+              "related_law", "相關法令",
+              choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
+              multiple = TRUE,
+              options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
+            ),
+            uiOutput("related_law_hint"),
+            textInput("related_document", lab_opt("相關文件"))
           )
         ),
         div(
@@ -620,7 +632,7 @@ server <- function(input, output, session) {
     n_lib <- length(lib())
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先在左側選擇循環。"),
+                 tags$strong("請先於「基本資料」選擇循環名稱。"),
                  "選定後才會載入該循環的子作業／風險／目標／活動候選。"))
     }
     rows <- cascade_rows()
@@ -772,13 +784,16 @@ server <- function(input, output, session) {
     param <- as.character(row$參數[[1]])
     val <- as.character(row$選項值[[1]])
     mapped <- list(
-      "循環" = function() updateSelectInput(session, "cycle", selected = val),
+      "循環" = function() {
+        updateSelectInput(session, "cycle", selected = val)
+        updateTextInput(session, "cycle_code", value = cycle_code_for(val))
+      },
       "子作業編號" = function() {
-        updateTextInput(session, "custom_sub_id", value = val)
+        updateTextInput(session, "sub_process_id", value = val)
         updateSelectInput(session, "cascade_sub", selected = "__custom__")
       },
       "子作業名稱" = function() {
-        updateTextInput(session, "custom_sub_name", value = val)
+        updateTextInput(session, "sub_process", value = val)
         updateSelectInput(session, "cascade_sub", selected = "__custom__")
       },
       "風險因素" = function() updateSelectInput(session, "cascade_risk", selected = val),
@@ -999,8 +1014,18 @@ server <- function(input, output, session) {
       control_id = input$control_id %||% "",
       company = input$company %||% "",
       cycle = sel$cycle,
-      sub_process_id = sel$sub_process_id,
-      sub_process = sel$sub_process,
+      cycle_code = {
+        cc <- trimws(input$cycle_code %||% "")
+        if (nzchar(cc)) cc else cycle_code_for(sel$cycle)
+      },
+      sub_process_id = {
+        sp <- trimws(input$sub_process_id %||% "")
+        if (nzchar(sp)) sp else sel$sub_process_id
+      },
+      sub_process = {
+        spn <- trimws(input$sub_process %||% "")
+        if (nzchar(spn)) spn else sel$sub_process
+      },
       risk_factor = rf_tag,
       risk_name = rf_tag,
       risk_description = sel$risk_description,
@@ -1063,13 +1088,14 @@ server <- function(input, output, session) {
 
   resolve_cascade_selection <- function() {
     sub_key <- input$cascade_sub %||% ""
-    sp_id <- ""; sp_name <- ""
-    if (identical(sub_key, "__custom__")) {
-      sp_id <- trimws(input$custom_sub_id %||% "")
-      sp_name <- trimws(input$custom_sub_name %||% "")
-    } else if (nzchar(sub_key)) {
+    # 基本資料為子作業編號／名稱的來源；引導選取會回填這些欄位
+    sp_id <- trimws(input$sub_process_id %||% "")
+    sp_name <- trimws(input$sub_process %||% "")
+    if (!identical(sub_key, "__custom__") && nzchar(sub_key) &&
+        (!nzchar(sp_id) || !nzchar(sp_name))) {
       sp <- parse_sub_process_key(sub_key)
-      sp_id <- sp$id; sp_name <- sp$name
+      if (!nzchar(sp_id)) sp_id <- sp$id
+      if (!nzchar(sp_name)) sp_name <- sp$name
     }
 
     rk <- input$cascade_risk %||% ""
@@ -1129,6 +1155,7 @@ server <- function(input, output, session) {
 
     list(
       cycle = input$cycle %||% "",
+      cycle_code = trimws(input$cycle_code %||% ""),
       sub_process_id = sp_id,
       sub_process = sp_name,
       risk_factor = risk_factor,
@@ -1199,6 +1226,28 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
+  # 基本資料：循環名稱 → 自動帶入循環編號（可覆寫）
+  observeEvent(input$cycle, {
+    cy <- input$cycle %||% ""
+    code <- cycle_code_for(cy)
+    cur <- trimws(input$cycle_code %||% "")
+    # 空值或仍為對照表內既有代碼時才覆寫，避免蓋掉使用者自訂編號
+    known <- unname(CYCLE_CODE_MAP)
+    if (!nzchar(cur) || cur %in% known) {
+      updateTextInput(session, "cycle_code", value = code)
+    }
+  }, ignoreInit = TRUE)
+
+  # 引導選子作業 → 回填基本資料子作業編號／名稱
+  observeEvent(input$cascade_sub, {
+    sub_key <- input$cascade_sub %||% ""
+    if (!nzchar(sub_key) || identical(sub_key, "__custom__")) return()
+    sp <- parse_sub_process_key(sub_key)
+    updateTextInput(session, "sub_process_id", value = sp$id)
+    updateTextInput(session, "sub_process", value = sp$name)
+  }, ignoreInit = TRUE)
+
+  # 引導完成且未手動填編號 → 自動順編
   observe({
     sel <- resolve_cascade_selection()
     cat <- sel$risk_category %||% ""
@@ -1220,12 +1269,13 @@ server <- function(input, output, session) {
         updateSelectizeInput(session, "related_law", selected = character(0))
       }
     }
-    # 引導完成且未手動填編號 → 自動順編
     ready <- cascade_selection_ready(sel)
-    if (isTRUE(ready$ready) && nzchar(sel$sub_process_id) &&
+    spid <- trimws(input$sub_process_id %||% "")
+    if (!nzchar(spid)) spid <- sel$sub_process_id
+    if (isTRUE(ready$ready) && nzchar(spid) &&
         !nzchar(trimws(input$control_id %||% ""))) {
       ids <- collect_existing_control_ids(lists = list(lib(), controls()))
-      updateTextInput(session, "control_id", value = next_rcm_control_id(sel$sub_process_id, ids))
+      updateTextInput(session, "control_id", value = next_rcm_control_id(spid, ids))
     }
   })
 

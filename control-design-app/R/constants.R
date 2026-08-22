@@ -38,6 +38,26 @@ CYCLES_NINE_CHOICES <- c(
   "資訊循環（電腦化資訊系統循環）" = "電腦化資訊系統循環"
 )
 
+# 循環編號（設計基本資料；資訊循環對齊鯨鏈 EC 前綴）
+CYCLE_CODE_MAP <- c(
+  "銷售及收款循環" = "SC",
+  "採購及付款循環" = "PP",
+  "生產循環" = "PR",
+  "薪工循環" = "PY",
+  "融資循環" = "FN",
+  "固定資產循環" = "FA",
+  "投資循環" = "IV",
+  "研發循環" = "RD",
+  "電腦化資訊系統循環" = "EC"
+)
+
+cycle_code_for <- function(cycle_name) {
+  cy <- trimws(as.character(cycle_name %||% ""))
+  if (!nzchar(cy)) return("")
+  code <- unname(CYCLE_CODE_MAP[cy])
+  if (length(code) && !is.na(code) && nzchar(code)) code else ""
+}
+
 # 風險三大屬性（COSO 三類目標；同一控制點三擇一，不可複選）
 RISK_ATTR_KIND_CHOICES <- c(
   "財務報導" = "financial",

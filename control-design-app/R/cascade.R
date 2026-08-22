@@ -180,11 +180,18 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
   if (nzchar(ctrl$cycle %||% "")) {
     updateSelectInput(session, "cycle", selected = ctrl$cycle)
+    updateTextInput(session, "cycle_code",
+                    value = {
+                      cc <- trimws(ctrl$cycle_code %||% "")
+                      if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle)
+                    })
   }
   spid <- ctrl$sub_process_id %||% ""
   spn <- ctrl$sub_process %||% ""
   if (nzchar(spid) || nzchar(spn)) {
     updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
+    updateTextInput(session, "sub_process_id", value = spid)
+    updateTextInput(session, "sub_process", value = spn)
   }
   rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
   if (nzchar(rf)) {
@@ -210,6 +217,12 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
 apply_supplement_from_ctrl <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
   updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
+  updateTextInput(session, "cycle_code", value = {
+    cc <- trimws(ctrl$cycle_code %||% "")
+    if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
+  })
+  updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
+  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
   updateTextInput(session, "significant_account",
                   value = {
                     ac <- trimws(as.character(ctrl$significant_account %||% ""))

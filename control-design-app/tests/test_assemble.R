@@ -97,7 +97,7 @@ check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
 
 gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", related_system = "", outputs = "", related_document = "")))
 check(any(gaps2$severity == "高" & grepl("IUC|相關系統|必填", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
-check(any(gaps2$severity == "中" & grepl("產出|相關文件", gaps2$gap_item)), "缺產出改為選填中嚴重度")
+check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)), "缺產出改為選填低嚴重度")
 
 # 設計必填欄位
 req_ok <- design_required_check(d1)
@@ -217,6 +217,11 @@ check(identical(as.character(iv[["控制編號"]][1]), derive_control_id(d1, 1L)
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))
 fin_ok <- finalize_control_as_rcm_row(d1, existing_ids = character())$control
+check(isTRUE(finalize_control_as_rcm_row(modifyList(d1, list(company_status = "")), existing_ids = character())$ok),
+      "無公司現況亦可定稿")
+fin_blank <- finalize_control_as_rcm_row(modifyList(d1, list(company_status = "")), existing_ids = character())
+check(!nzchar(trimws(as.character(fin_blank$rcm_row[["控制現況描述"]] %||% ""))),
+      "定稿 RCM 控制現況描述留空")
 iv_multi <- controls_to_interview(list(fin_ok, not_ready), finalized_only = TRUE)
 check(all(iv_multi[["控制編號"]] == fin_ok$control_id), "訪談僅取已定稿 RCM 列")
 
@@ -366,8 +371,8 @@ miss_btn <- setdiff(btn_ids, obs_ids)
 miss_dl <- setdiff(dl_ids, dlh_ids)
 check(!length(miss_btn), sprintf("全部 actionButton 有 observeEvent（缺：%s）", paste(miss_btn, collapse = ",")))
 check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺：%s）", paste(miss_dl, collapse = ",")))
-check(length(btn_ids) >= 20, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
-check(length(dl_ids) >= 6, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
+check(length(btn_ids) >= 18, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
+check(length(dl_ids) >= 4, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
 
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

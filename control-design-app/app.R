@@ -78,9 +78,6 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
   updateTextAreaInput(session, "iuc_or_system",
                       value = ctrl$related_system %||% ctrl$iuc_or_system %||% "")
-  updateTextAreaInput(session, "company_status",
-                      value = ctrl$company_status %||% ctrl$detailed_description %||% "")
-  updateTextAreaInput(session, "design_gap_note", value = ctrl$design_gap_note %||% "")
   updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
   updateSelectizeInput(session, "related_law",
                        selected = {
@@ -89,10 +86,6 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
                        })
   updateTextInput(session, "related_document",
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
-  # ④ 控制分析與評估
-  updateSelectInput(session, "effectiveness", selected = ctrl$effectiveness %||% "")
-  updateTextAreaInput(session, "residual_risk", value = ctrl$residual_risk %||% "")
-  updateTextAreaInput(session, "improvement", value = ctrl$improvement %||% "")
   # 進階 4120SR
   updateTextAreaInput(session, "risk_attr_financial",
                       value = gsub("^\\[[^\\]]+\\]\\s*", "", ctrl$risk_attr_financial %||% ""))
@@ -181,8 +174,8 @@ ui <- page_navbar(
           "（", tags$span(class = "text-danger", "須依序選取"),
           "：未選上一層時，下一層本來就沒有候選）。",
           tags$span(class = "text-danger", "*"), "為", strong("設計必填"),
-          "；六大就緒後才可書寫", strong("公司現況"),
-          "。控制編號自動順編（如 EC-101-01）。"
+          "；", strong("完成設計＝RCM 一列"),
+          "（公司現況／訪談／CSA 不在本 APP 範圍）。控制編號自動順編（如 EC-101-01）。"
         ),
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
@@ -245,10 +238,10 @@ ui <- page_navbar(
         ),
         uiOutput("auto_control_id_box"),
         tags$hr(),
-        # ---- 依鯨鏈 RCM 標題列分組（由引導填入；現況欄受鎖）----
+        # ---- 依鯨鏈 RCM 標題列分組（由引導填入；僅設計欄位）----
         p(
           class = "small text-muted mb-2",
-          "下方為 RCM 欄位（引導填入後可微調）。",
+          "下方為 RCM 設計欄位（引導填入後可微調）。",
           strong("控制目標 ≠ 控制活動"), "；",
           strong("控制類型 ≠ 控制活動類型"), "。"
         ),
@@ -308,21 +301,6 @@ ui <- page_navbar(
             ),
             textAreaInput("iuc_or_system", lab_req("相關系統／IUC"), rows = 1,
                           placeholder = "須由引導選擇或自訂入庫"),
-            uiOutput("six_rules_box"),
-            uiOutput("company_status_lock_msg"),
-            # Hidden unlock flag driven by server
-            div(style = "display:none;", checkboxInput("status_unlocked", NULL, FALSE)),
-            conditionalPanel(
-              condition = "input.status_unlocked == true",
-              textAreaInput("company_status", lab_opt("控制現況描述"), rows = 5,
-                            placeholder = "依六大控制項目書寫公司實際作法；定稿可自動帶入"),
-              actionButton("fill_status_scaffold", "帶入六大規則草稿", class = "btn-sm btn-outline-primary mb-2")
-            ),
-            conditionalPanel(
-              condition = "input.status_unlocked != true",
-              helpText(class = "text-muted small", "（公司現況欄位將於引導＋六大就緒後顯示）")
-            ),
-            textAreaInput("design_gap_note", lab_opt("控制設計差異說明"), rows = 2),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
               "related_law", "相關法令",
@@ -332,13 +310,6 @@ ui <- page_navbar(
             ),
             uiOutput("related_law_hint"),
             textInput("related_document", lab_opt("相關文件"))
-          ),
-          accordion_panel(
-            "④ 控制分析與評估",
-            selectInput("effectiveness", lab_opt("控制有效性評估"),
-                        choices = c("…" = "", "有效", "無效")),
-            textAreaInput("residual_risk", lab_opt("可能潛在風險"), rows = 1),
-            textAreaInput("improvement", lab_opt("建議改善方式"), rows = 1)
           ),
           accordion_panel(
             "進階（4120SR／三大屬性細節）",
@@ -492,7 +463,9 @@ ui <- page_navbar(
     card(
       p(class = "text-muted small mb-1",
         strong("設計控制點完成＝RCM 一列"),
-        "（1 控制點 ↔ 1 RCM 列）。欄位群組：",
+        "（1 控制點 ↔ 1 RCM 列）。本 APP 僅產出設計欄位；",
+        strong("控制現況描述／分析評估"),
+        "等後續欄位留空。欄位群組：",
         paste(names(RCM_HEADER_GROUPS), collapse = " ｜ "),
         "。", strong("控制目標≠控制活動"), "；類型欄防呆見「設計檢核」。"),
       uiOutput("rcm_count_box"),
@@ -501,46 +474,6 @@ ui <- page_navbar(
       tags$hr(),
       tags$strong("缺漏／缺文件／控制缺失"),
       DTOutput("gap_table")
-    )
-  ),
-  nav_panel(
-    "① 訪談",
-    layout_columns(
-      col_widths = c(3, 9),
-      card(
-        p(class = "small text-muted",
-          strong("優先：訪談問題"), "（對齊已定稿 RCM 列）。勾選元素後下載題綱。"),
-        selectizeInput(
-          "worksheet_controls", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
-        ),
-        checkboxGroupInput("interview_elements", "訪談元素",
-                           choices = DESIGN_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS),
-        actionButton("ws_select_core_iv", "訪談核心元素", class = "btn-sm btn-primary"),
-        uiOutput("interview_status")
-      ),
-      card(
-        DTOutput("interview_table"),
-        downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-sm")
-      )
-    )
-  ),
-  nav_panel(
-    "② CSA",
-    layout_columns(
-      col_widths = c(3, 9),
-      card(
-        p(class = "small text-muted",
-          "在訪談＋RCM 定稿後設計 CSA 測試步驟（測試程序／PBC／預期結果）。"),
-        checkboxGroupInput("csa_elements", "CSA 元素",
-                           choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
-        actionButton("ws_select_core_csa", "CSA 核心元素", class = "btn-sm"),
-        uiOutput("csa_status")
-      ),
-      card(
-        DTOutput("csa_table"),
-        downloadButton("download_csa", "下載 CSA 測試步驟 CSV", class = "btn-sm")
-      )
     )
   )
 )
@@ -727,12 +660,14 @@ server <- function(input, output, session) {
     refresh_draft_list()
   })
 
-  # Auto-resume last session on start
+  # Auto-resume last session on start（循環維持未選，需使用者主動選擇）
   observeEvent(TRUE, {
     legacy <- file.path(data_dir, "session_draft.json")
     if (file.exists(legacy)) {
-      try(apply_payload(load_draft_payload(legacy), notify = FALSE), silent = TRUE)
+      try(apply_payload(load_draft_payload(legacy), notify = FALSE, restore_cycle = FALSE),
+          silent = TRUE)
     }
+    updateSelectInput(session, "cycle", selected = "")
   }, once = TRUE)
 
   observeEvent(input$pbc_apply, {
@@ -851,9 +786,7 @@ server <- function(input, output, session) {
       "相關系統／IUC" = function() updateTextAreaInput(session, "iuc_or_system", value = val),
       "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
       "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
-      "相關文件" = function() updateTextInput(session, "related_document", value = val),
-      "控制現況描述" = function() updateTextAreaInput(session, "company_status", value = val),
-      "控制有效性評估" = function() updateSelectInput(session, "effectiveness", selected = val)
+      "相關文件" = function() updateTextInput(session, "related_document", value = val)
     )
     fn <- mapped[[param]]
     if (is.null(fn)) {
@@ -1046,8 +979,6 @@ server <- function(input, output, session) {
       assertions = paste(input$assertions %||% character(), collapse = "；"),
       control_objective = input$control_objective %||% "",
       control_activity = input$control_activity %||% "",
-      company_status = input$company_status %||% "",
-      design_gap_note = input$design_gap_note %||% "",
       frequency = input$frequency %||% "",
       responsible_unit = input$responsible_unit %||% "",
       iuc_or_system = input$iuc_or_system %||% "",
@@ -1058,9 +989,6 @@ server <- function(input, output, session) {
         paste(unique(trimws(as.character(v))), collapse = "；")
       },
       related_document = input$related_document %||% "",
-      effectiveness = input$effectiveness %||% "",
-      residual_risk = input$residual_risk %||% "",
-      improvement = input$improvement %||% "",
       nature = input$nature %||% "",
       approach = input$approach %||% "",
       control_type = input$nature %||% "",
@@ -1087,22 +1015,21 @@ server <- function(input, output, session) {
       control_id = input$control_id, control_objective = input$control_objective,
       control_activity = input$control_activity, frequency = input$frequency,
       responsible_unit = input$responsible_unit, iuc_or_system = input$iuc_or_system,
-      nature = input$nature, approach = input$approach,
-      company_status = input$company_status, design_gap_note = input$design_gap_note
+      nature = input$nature, approach = input$approach
     )
   }
 
   make_payload <- function(name = NULL) {
     build_draft_payload(
       drafts = drafts(), controls = controls(), pbc = pbc_reg(),
-      interview_elements = input$interview_elements,
-      csa_elements = input$csa_elements,
+      interview_elements = NULL,
+      csa_elements = NULL,
       form_snapshot = form_snapshot(),
       name = name
     )
   }
 
-  apply_payload <- function(payload, notify = TRUE) {
+  apply_payload <- function(payload, notify = TRUE, restore_cycle = TRUE) {
     if (!is.null(payload$drafts)) drafts(payload$drafts)
     if (!is.null(payload$controls)) controls(payload$controls)
     if (!is.null(payload$pbc) && length(payload$pbc)) {
@@ -1110,18 +1037,18 @@ server <- function(input, output, session) {
       persist_pbc(pbc_reg())
       refresh_pbc_choices()
     }
-    if (!is.null(payload$interview_elements)) {
-      updateCheckboxGroupInput(session, "interview_elements",
-                               selected = unlist(payload$interview_elements))
+    if (!is.null(payload$interview_elements) && length(payload$interview_elements)) {
+      # legacy drafts may include interview settings; ignored in design-only mode
     }
-    if (!is.null(payload$csa_elements)) {
-      updateCheckboxGroupInput(session, "csa_elements",
-                               selected = unlist(payload$csa_elements))
+    if (!is.null(payload$csa_elements) && length(payload$csa_elements)) {
+      # legacy drafts may include CSA settings; ignored in design-only mode
     }
     snap <- payload$form_snapshot
     if (!is.null(snap)) {
       if (!is.null(snap$company)) updateTextInput(session, "company", value = snap$company)
-      if (!is.null(snap$cycle)) updateSelectInput(session, "cycle", selected = snap$cycle)
+      if (isTRUE(restore_cycle) && !is.null(snap$cycle) && nzchar(snap$cycle)) {
+        updateSelectInput(session, "cycle", selected = snap$cycle)
+      }
       if (!is.null(snap$risk_name)) updateTextInput(session, "risk_name", value = snap$risk_name)
       if (!is.null(snap$risk_description)) {
         updateTextAreaInput(session, "risk_description", value = snap$risk_description)
@@ -1462,7 +1389,7 @@ server <- function(input, output, session) {
     )
     cls <- if (isTRUE(ready$ready)) "alert alert-success py-1 mb-2 small" else "alert alert-secondary py-1 mb-2 small"
     div(class = cls, paste(steps, collapse = " ｜ "),
-        if (!ready$ready) tags$span(class = "text-muted", " — 完成後才可書寫公司現況"))
+        if (!ready$ready) tags$span(class = "text-muted", " — 完成後可套用引導"))
   })
 
   output$design_required_checklist <- renderUI({
@@ -1533,52 +1460,6 @@ server <- function(input, output, session) {
         "自動控制編號預覽：", tags$code(nid),
         "（套用引導或加入佇列時寫入）")
   })
-
-  output$six_rules_box <- renderUI({
-    d <- current_draft_from_inputs()
-    chk <- six_status_rules_check(d)
-    if (isTRUE(chk$ok)) {
-      div(class = "alert alert-success py-1 mb-2 small", "六大控制項目就緒，可書寫公司現況。")
-    } else {
-      div(class = "alert alert-warning py-1 mb-2 small",
-          "六大控制項目未齊：", paste(chk$missing, collapse = "、"))
-    }
-  })
-
-  output$company_status_lock_msg <- renderUI({
-    sel <- resolve_cascade_selection()
-    d <- current_draft_from_inputs()
-    cas <- cascade_selection_ready(sel)
-    six <- six_status_rules_check(d)
-    unlocked <- isTRUE(cas$ready) && isTRUE(six$ok)
-    updateCheckboxInput(session, "status_unlocked", value = unlocked)
-    if (unlocked) {
-      div(class = "alert alert-success py-1 mb-2 small", "公司現況欄已解鎖，請依六大控制項目書寫。")
-    } else {
-      div(
-        class = "alert alert-secondary py-2 mb-2 small",
-        tags$strong("公司現況欄位尚未顯示"),
-        tags$br(),
-        "請先完成引導選取（含 IUC）並補齊六大控制項目。",
-        if (!cas$ready) tags$div(sprintf("引導缺：%s", paste(cas$missing, collapse = ", "))),
-        if (!six$ok) tags$div(sprintf("六大缺：%s", paste(six$missing, collapse = "、")))
-      )
-    }
-  })
-
-  observeEvent(input$fill_status_scaffold, {
-    sel <- resolve_cascade_selection()
-    d <- current_draft_from_inputs()
-    cas <- cascade_selection_ready(sel)
-    six <- six_status_rules_check(d)
-    if (!isTRUE(cas$ready) || !isTRUE(six$ok)) {
-      return(showNotification("請先完成引導與六大控制項目", type = "warning"))
-    }
-    updateTextAreaInput(session, "company_status", value = assemble_status_scaffold(d))
-  })
-
-  # Block empty status add when cascade not ready — soft gate on typing not needed;
-  # hard gate on add_draft already requires six rules.
 
   observeEvent(input$reset_cascade, {
     updateSelectInput(session, "cascade_sub", selected = "")
@@ -1658,7 +1539,7 @@ server <- function(input, output, session) {
     }
 
     showNotification(
-      sprintf("已套用引導；控制編號 %s。六大就緒後可書寫公司現況。", nid),
+      sprintf("已套用引導；控制編號 %s。", nid),
       type = "message"
     )
   })
@@ -1721,7 +1602,6 @@ server <- function(input, output, session) {
     })
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
     ready <- is_rcm_row_ready(d)
-    six <- six_status_rules_check(d)
     req <- design_required_check(d)
     if (isTRUE(ready$ready) && isTRUE(chk$ok) && isTRUE(req$ok)) {
       div(class = "alert alert-success py-1 mb-2",
@@ -1730,7 +1610,6 @@ server <- function(input, output, session) {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
       summary <- if (!isTRUE(req$ok)) paste0("必填未齊：", paste(req$missing, collapse = "、"))
       else if (!isTRUE(chk$ok)) (chk$msg %||% paste(chk$issues, collapse = "；"))
-      else if (!isTRUE(six$ok)) paste0("六大未齊：", paste(six$missing, collapse = "、"))
       else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
       else paste(gaps$gap_item, collapse = "；")
       div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM 一列：", summary))
@@ -1993,54 +1872,6 @@ server <- function(input, output, session) {
     datatable(controls_to_rcm(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
-  selected_worksheet_controls <- reactive({
-    cs <- controls()
-    if (!length(cs)) return(list())
-    ids <- input$worksheet_controls
-    if (!length(ids) || all(!nzchar(ids))) return(cs)
-    Filter(function(c) c$control_id %in% ids, cs)
-  })
-  observe({
-    cs <- controls()
-    if (!length(cs)) {
-      updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
-      return()
-    }
-    ch <- stats::setNames(
-      vapply(cs, function(x) x$control_id, ""),
-      vapply(cs, function(x) sprintf("%s｜%s", x$control_id, x$risk_name %||% ""), "")
-    )
-    updateSelectizeInput(session, "worksheet_controls", choices = ch, server = TRUE)
-  })
-  observeEvent(input$ws_select_core_iv, {
-    updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
-  })
-  observeEvent(input$ws_select_core_csa, {
-    updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
-  })
-  output$interview_status <- renderUI({
-    cs <- selected_worksheet_controls()
-    n <- length(Filter(function(c) isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready), cs))
-    iv <- controls_to_interview(cs, input$interview_elements, finalized_only = TRUE)
-    tags$small(class = "text-muted",
-               sprintf("已定稿 RCM %d 列 → 訪談題 %d 則", n, nrow(iv)))
-  })
-  output$csa_status <- renderUI({
-    cs <- selected_worksheet_controls()
-    csa <- controls_to_csa(cs, input$csa_elements, finalized_only = TRUE)
-    tags$small(class = "text-muted",
-               sprintf("CSA 測試步驟 %d 列（僅已定稿 RCM）", nrow(csa)))
-  })
-  output$interview_table <- renderDT({
-    datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
-                                    finalized_only = TRUE),
-              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
-  })
-  output$csa_table <- renderDT({
-    datatable(controls_to_csa(selected_worksheet_controls(), input$csa_elements,
-                              finalized_only = TRUE),
-              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
-  })
   output$gap_table <- renderDT({
     datatable(detect_gaps_many(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
@@ -2084,22 +1915,6 @@ server <- function(input, output, session) {
   output$download_rcm <- downloadHandler(
     filename = function() "rcm.csv",
     content = function(file) write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")
-  )
-  output$download_interview <- downloadHandler(
-    filename = function() sprintf("interview-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) {
-      write.csv(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
-                                      finalized_only = TRUE),
-                file, row.names = FALSE, fileEncoding = "UTF-8")
-    }
-  )
-  output$download_csa <- downloadHandler(
-    filename = function() sprintf("csa-teststeps-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) {
-      write.csv(controls_to_csa(selected_worksheet_controls(), input$csa_elements,
-                                finalized_only = TRUE),
-                file, row.names = FALSE, fileEncoding = "UTF-8")
-    }
   )
 }
 

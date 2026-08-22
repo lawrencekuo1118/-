@@ -1,6 +1,6 @@
 # RCM / CSA / interview + gap detection
-# RCM: 控制目標(Why) 與 控制活動(How／現況) 嚴格分欄防呆
-# 完成一筆控制點設計 = 完成 RCM 一列
+# RCM: 控制目標(Why) 與 控制活動(How) 嚴格分欄防呆
+# 完成一筆控制點設計 = 完成 RCM 一列（設計欄位；現況／分析評估留空）
 
 # ---- Selectable design elements ----
 # Priority: 訪談問題 + RCM 控制點設計 first; CSA second
@@ -173,10 +173,7 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type, ctrl$approach %||% ctrl$control_activity_type)
   status_desc <- ctrl$company_status %||% ctrl$detailed_description %||% ""
-  if (is_blank(status_desc) && exists("assemble_control_paragraph", mode = "function")) {
-    status_desc <- tryCatch(assemble_control_paragraph(ctrl), error = function(e) "")
-  }
-  design_gap <- ctrl$design_gap_note %||% ctrl$investigation_threshold %||% ""
+  design_gap <- ctrl$design_gap_note %||% ""
   # If OA or type check fails, force 設計檢核
   design_ok <- isTRUE(chk$ok) && isTRUE(tchk$ok)
   design_msg <- if (design_ok) {
@@ -640,13 +637,8 @@ DESIGN_REQUIRED_FIELDS <- c(
 DESIGN_OPTIONAL_FIELDS <- c(
   significant_account = "會計科目（僅報導面必填；其它類別不可填）",
   related_law = "相關法令（僅遵循面必填；其它類別不可填）",
-  company_status = "控制現況描述（六大就緒後書寫；定稿時可自動帶入）",
-  design_gap_note = "控制設計差異說明",
   related_policy = "相關政策或程序",
-  related_document = "相關文件",
-  effectiveness = "控制有效性評估",
-  residual_risk = "可能潛在風險",
-  improvement = "建議改善方式"
+  related_document = "相關文件"
 )
 
 is_reporting_risk_category <- function(cat) {
@@ -817,12 +809,8 @@ detect_design_gaps <- function(ctrl) {
     add("缺文件", "中", "缺少 Inputs 說明", "補投入報表／資料來源（可附 PBC 對照）")
   }
   if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document)) {
-    add("缺文件", "中", "缺少產出／相關文件（選填）",
-        "建議補可驗證證據（簽核、log、調節表）供 CSA／PBC")
-  }
-  if (is_blank(ctrl$review_steps) && is_blank(ctrl$company_status)) {
-    add("缺資訊", "中", "缺少控制現況描述或可測試步驟",
-        "六大就緒後書寫現況；定稿時可自動帶入草稿")
+    add("缺文件", "低", "缺少產出／相關文件（選填）",
+        "建議補可驗證證據（簽核、log、調節表）供後續 PBC")
   }
   if (is_blank(ctrl$investigation_threshold) &&
       grepl("覆核|Review|調節|Reconcili|偵測",
@@ -935,15 +923,16 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
       ctrl$control_id <- derive_control_id(ctrl, seq_hint)
     }
   }
-  if (is_blank(ctrl$company_status)) {
-    if (exists("assemble_control_paragraph", mode = "function")) {
-      ctrl$company_status <- tryCatch(assemble_control_paragraph(ctrl), error = function(e) "")
-    }
-  }
+  # 設計階段：現況／分析評估欄位留空（不在本 APP 範圍）
+  ctrl$company_status <- ""
+  ctrl$design_gap_note <- ctrl$design_gap_note %||% ""
+  ctrl$effectiveness <- ""
+  ctrl$residual_risk <- ""
+  ctrl$improvement <- ""
   if (exists("assemble_summary_description", mode = "function")) {
     ctrl$summary_description <- tryCatch(assemble_summary_description(ctrl), error = function(e) "")
   }
-  ctrl$detailed_description <- ctrl$company_status %||% ctrl$detailed_description %||% ""
+  ctrl$detailed_description <- ctrl$detailed_description %||% ""
   ctrl$rcm_ready <- list(ready = TRUE, gaps = ready$gaps)
   ctrl$validation <- if (exists("validate_control_design", mode = "function")) {
     validate_control_design(ctrl)

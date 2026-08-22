@@ -231,8 +231,8 @@ collect_controls_to_library <- function(library, controls, overwrite = TRUE,
         )$ok)
       }
       six_ok <- TRUE
-      if (exists("six_status_rules_check", mode = "function")) {
-        six_ok <- isTRUE(six_status_rules_check(ctrl)$ok)
+      if (exists("design_required_check", mode = "function")) {
+        six_ok <- isTRUE(design_required_check(ctrl)$ok)
       }
       if (!oa_ok || !six_ok) {
         skipped <- skipped + 1L

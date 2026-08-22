@@ -223,6 +223,15 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
   })
   updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
   updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
+  rf <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+  updateTextInput(session, "risk_factor", value = rf)
+  updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
+  if (nzchar(trimws(ctrl$risk_category %||% ""))) {
+    updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
+  }
+  if (nzchar(trimws(ctrl$romm_classification %||% ""))) {
+    updateSelectInput(session, "romm_classification", selected = ctrl$romm_classification)
+  }
   updateTextInput(session, "significant_account",
                   value = {
                     ac <- trimws(as.character(ctrl$significant_account %||% ""))
@@ -240,10 +249,7 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
                        })
   updateTextInput(session, "related_document",
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
-  strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-  kind <- risk_attr_kind_from_ctrl(ctrl)
   detail <- risk_attr_detail_from_ctrl(ctrl)
-  updateRadioButtons(session, "risk_attr_kind", selected = kind)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)
   if (nzchar(ctrl$type %||% "")) {
     updateSelectizeInput(session, "type", selected = ctrl$type)
@@ -283,14 +289,17 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
     return(invisible(NULL))
   }
   det <- cascade_risk_detail(rows, risk_factor)
+  updateTextInput(session, "risk_factor", value = risk_factor_tag(risk_factor))
   if (nzchar(det$risk_description)) {
     updateTextAreaInput(session, "risk_description", value = det$risk_description)
   }
   if (nzchar(det$risk_category)) {
     updateSelectInput(session, "risk_category", selected = det$risk_category)
   }
-  updateTextInput(session, "risk_name", value = risk_factor_tag(risk_factor))
   r <- det$sample
+  if (is.list(r) && length(r) && nzchar(trimws(r$romm_classification %||% ""))) {
+    updateSelectInput(session, "romm_classification", selected = r$romm_classification)
+  }
   kind <- risk_attr_kind_from_category(det$risk_category)
   if (!nzchar(kind) && is.list(r) && length(r)) {
     kind <- risk_attr_kind_from_ctrl(r)
@@ -311,7 +320,6 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
       }
     }
   }
-  updateRadioButtons(session, "risk_attr_kind", selected = kind)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)
   invisible(det)
 }

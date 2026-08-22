@@ -187,7 +187,9 @@ ui <- page_navbar(
                   strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
                   "（", tags$span(class = "text-danger", "須依序選取"),
                   "：未選上一層時，下一層沒有候選）。"),
-          tags$li("補齊 ", strong("風險辨識 → 控制設計"),
+          tags$li("補齊 ", strong("風險辨識"),
+                  "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
+                  strong("控制設計"),
                   "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
           tags$li(strong("完成設計＝寫入 RCM 一列"),
                   "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
@@ -205,7 +207,8 @@ ui <- page_navbar(
           tags$li(strong("控制目標 ≠ 控制活動"), "（Why／How 分欄；可拆分建議或對調）。"),
           tags$li(strong("控制類型"), "僅人工／自動；", strong("自動"), "時頻率強制「持續」。"),
           tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
-          tags$li(strong("風險屬性"), "三擇一（財務報導／營運／法令遵循）；同一控制點不可複選，需其他屬性時另設控制點。"),
+          tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
+                  strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
           tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
         ),
@@ -299,10 +302,8 @@ ui <- page_navbar(
         uiOutput("cascade_risk_detail"),
         conditionalPanel(
           "input.cascade_risk == '__custom__'",
-          textInput("custom_risk_factor", NULL, placeholder = "自訂風險 tag（簡短）"),
-          textAreaInput("custom_risk_desc", NULL, rows = 2, placeholder = "自訂風險描述"),
-          selectInput("custom_risk_category", NULL,
-                      choices = c("風險類別…" = "", RISK_CATEGORY_CHOICES))
+          p(class = "small text-muted mb-2",
+            "自訂風險：請於下方「風險辨識」填寫風險因素、風險描述、風險類別與 RoMM 分類。")
         ),
         # Step 4: 目標
         selectInput("cascade_objective", NULL, choices = c("④ 選擇控制目標…" = "")),
@@ -363,28 +364,25 @@ ui <- page_navbar(
           ),
           accordion_panel(
             "風險辨識",
+            p(class = "small text-muted mb-2",
+              "包含：風險因素、風險描述、風險類別、RoMM 分類（與上方引導選取同步，可覆寫）。同一控制點僅一種風險類別；需其他類別時另設控制點。"),
+            textInput("risk_factor", lab_req("風險因素"), value = "",
+                      placeholder = "簡短風險 tag／因素名稱"),
+            textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
+                          placeholder = "風險情境與影響描述"),
+            selectInput(
+              "risk_category", lab_req("風險類別"),
+              choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
+              selected = ""
+            ),
+            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
+            uiOutput("significant_account_hint"),
             textInput("significant_account", "會計科目", value = "",
                       placeholder = "僅報導面可填且必填"),
-            uiOutput("significant_account_hint"),
-            radioButtons(
-              "risk_attr_kind",
-              lab_req("風險屬性（三擇一）"),
-              choices = RISK_ATTR_KIND_CHOICES,
-              selected = "operations",
-              inline = TRUE
-            ),
-            p(class = "small text-muted mb-2",
-              "同一控制點僅對應一種屬性。若同一風險需涵蓋其他屬性，請另設新控制點。"),
             textAreaInput(
-              "risk_attr_detail", "屬性細節", rows = 2,
-              placeholder = "擇一屬性後填寫細節（可空）"
-            ),
-            selectizeInput(
-              "assertions", "聲明（Assertions）", choices = ASSERTION_CHOICES, multiple = TRUE,
-              selected = ASSERTION_CHOICES[1:2],
-              options = list(create = TRUE, placeholder = "聲明（輔助）")
-            ),
-            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES)
+              "risk_attr_detail", lab_opt("風險屬性細節"), rows = 2,
+              placeholder = "對應所選風險類別之細節（可空）"
+            )
           ),
           accordion_panel(
             "控制設計",
@@ -398,6 +396,11 @@ ui <- page_navbar(
             selectizeInput(
               "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
               options = list(placeholder = "原名→新名")
+            ),
+            selectizeInput(
+              "assertions", "聲明（Assertions）", choices = ASSERTION_CHOICES, multiple = TRUE,
+              selected = ASSERTION_CHOICES[1:2],
+              options = list(create = TRUE, placeholder = "聲明（輔助）")
             ),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
@@ -796,14 +799,20 @@ server <- function(input, output, session) {
         updateTextInput(session, "sub_process", value = val)
         updateSelectInput(session, "cascade_sub", selected = "__custom__")
       },
-      "風險因素" = function() updateSelectInput(session, "cascade_risk", selected = val),
+      "風險因素" = function() {
+        updateTextInput(session, "risk_factor", value = val)
+        updateSelectInput(session, "cascade_risk", selected = "__custom__")
+      },
       "風險描述" = function() {
-        updateTextAreaInput(session, "custom_risk_desc", value = val)
+        updateTextAreaInput(session, "risk_description", value = val)
         updateSelectInput(session, "cascade_risk", selected = "__custom__")
       },
       "風險類別" = function() {
-        updateSelectInput(session, "custom_risk_category", selected = val)
+        updateSelectInput(session, "risk_category", selected = val)
         updateSelectInput(session, "cascade_risk", selected = "__custom__")
+      },
+      "RoMM 分類" = function() {
+        updateSelectInput(session, "romm_classification", selected = val)
       },
       "會計科目" = function() updateTextInput(session, "significant_account", value = val),
       "控制目標" = function() {
@@ -1002,9 +1011,9 @@ server <- function(input, output, session) {
     rf_tag <- risk_factor_tag(sel$risk_factor)
     nature <- normalize_control_type_manual_auto(sel$nature)
     approach <- normalize_control_activity_type_pd(sel$approach)
-    # Prefer cascade risk_category for kind; else user radio（三擇一）
+    # 風險類別決定屬性種類（三擇一）；細節來自風險辨識
     kind <- risk_attr_kind_from_category(sel$risk_category)
-    if (!nzchar(kind)) kind <- input$risk_attr_kind %||% "operations"
+    if (!nzchar(kind)) kind <- "operations"
     attr_ctrl <- enforce_single_risk_attr(
       list(risk_category = sel$risk_category),
       kind = kind,
@@ -1098,17 +1107,23 @@ server <- function(input, output, session) {
       if (!nzchar(sp_name)) sp_name <- sp$name
     }
 
+    # 風險辨識為風險欄位來源；引導選取會回填這些欄位
+    risk_factor <- trimws(input$risk_factor %||% "")
+    risk_desc <- trimws(input$risk_description %||% "")
+    risk_cat <- trimws(input$risk_category %||% "")
     rk <- input$cascade_risk %||% ""
-    risk_factor <- ""; risk_desc <- ""; risk_cat <- ""
-    if (identical(rk, "__custom__")) {
-      risk_factor <- trimws(input$custom_risk_factor %||% "")
-      risk_desc <- trimws(input$custom_risk_desc %||% "")
-      risk_cat <- input$custom_risk_category %||% ""
-    } else if (nzchar(rk)) {
-      risk_factor <- rk
-      det <- cascade_risk_detail(filter_cascade_rows(cascade_rows(), sub_key = if (!identical(sub_key, "__custom__")) sub_key else NULL), rk)
-      risk_desc <- det$risk_description
-      risk_cat <- det$risk_category
+    if (!identical(rk, "__custom__") && nzchar(rk) &&
+        (!nzchar(risk_factor) || !nzchar(risk_desc) || !nzchar(risk_cat))) {
+      det <- cascade_risk_detail(
+        filter_cascade_rows(
+          cascade_rows(),
+          sub_key = if (!identical(sub_key, "__custom__") && nzchar(sub_key)) sub_key else NULL
+        ),
+        rk
+      )
+      if (!nzchar(risk_factor)) risk_factor <- risk_factor_tag(rk)
+      if (!nzchar(risk_desc)) risk_desc <- det$risk_description %||% ""
+      if (!nzchar(risk_cat)) risk_cat <- det$risk_category %||% ""
     }
 
     obj_sel <- input$cascade_objective %||% ""
@@ -1175,7 +1190,7 @@ server <- function(input, output, session) {
 
   # 會計科目：僅報導面可填且必填；其他類別鎖定並清空
   output$significant_account_hint <- renderUI({
-    cat <- resolve_cascade_selection()$risk_category %||% ""
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_reporting_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
           lab_req("報導面"), " — 會計科目為必填，請填財務報表科目。")
@@ -1188,7 +1203,7 @@ server <- function(input, output, session) {
   })
 
   output$related_law_hint <- renderUI({
-    cat <- resolve_cascade_selection()$risk_category %||% ""
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
           lab_req("遵循面"), " — 相關法令為必填（可多選台灣／美國預設或自訂）。")
@@ -1199,33 +1214,6 @@ server <- function(input, output, session) {
       helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法令。")
     }
   })
-
-  # 引導風險類別 → 風險屬性三擇一同步（單一風險／單一控制點僅一種屬性）
-  observe({
-    sel <- resolve_cascade_selection()
-    kind <- risk_attr_kind_from_category(sel$risk_category)
-    if (!nzchar(kind) && identical(input$cascade_risk %||% "", "__custom__")) {
-      kind <- risk_attr_kind_from_category(input$custom_risk_category %||% "")
-    }
-    if (nzchar(kind) && !identical(input$risk_attr_kind %||% "", kind)) {
-      updateRadioButtons(session, "risk_attr_kind", selected = kind)
-    }
-  })
-
-  # When user changes attr kind under custom risk, keep category aligned
-  observeEvent(input$risk_attr_kind, {
-    if (!identical(input$cascade_risk %||% "", "__custom__")) return()
-    kind <- input$risk_attr_kind %||% ""
-    cat <- switch(kind,
-                  financial = "報導面",
-                  operations = "營運面",
-                  compliance = "遵循面",
-                  "")
-    if (nzchar(cat)) {
-      updateSelectInput(session, "custom_risk_category", selected = cat)
-    }
-  }, ignoreInit = TRUE)
-
   # 基本資料：循環名稱 → 自動帶入循環編號（可覆寫）
   observeEvent(input$cycle, {
     cy <- input$cycle %||% ""
@@ -1247,10 +1235,22 @@ server <- function(input, output, session) {
     updateTextInput(session, "sub_process", value = sp$name)
   }, ignoreInit = TRUE)
 
-  # 引導完成且未手動填編號 → 自動順編
+  # 引導選風險 → 回填風險辨識（因素／描述／類別／RoMM／屬性細節）
+  observeEvent(input$cascade_risk, {
+    rk <- input$cascade_risk %||% ""
+    if (!nzchar(rk) || identical(rk, "__custom__")) return()
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    apply_risk_detail_to_inputs(session, rows, rk)
+  }, ignoreInit = TRUE)
+
+  # 引導完成且未手動填編號 → 自動順編；風險類別驅動會計科目／法令鎖定
   observe({
     sel <- resolve_cascade_selection()
-    cat <- sel$risk_category %||% ""
+    cat <- trimws(input$risk_category %||% sel$risk_category %||% "")
     session$sendCustomMessage(
       "toggleAccount",
       list(enabled = is_reporting_risk_category(cat))

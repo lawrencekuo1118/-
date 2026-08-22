@@ -422,6 +422,20 @@ check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺
 check(length(btn_ids) >= 16, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
 check(length(dl_ids) >= 5, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
 
+check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
+check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
+
+# 風險辨識區塊：風險因素、風險描述、風險類別、RoMM 分類
+check(grepl('accordion_panel\\(\\s*"風險辨識"', app_src), "有風險辨識 accordion")
+check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
+check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
+check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
+check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
+check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),
+      "已移除自訂風險獨立輸入（改由風險辨識）")
+check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),
+      "已移除風險屬性 radio（改由風險類別）")
+
 # Locale: ban Mainland / HK-Macau terms in UI + committed seed (Taiwan + US proper nouns only)
 banned_locale <- c(
   "資料數據", "大批量", "重覆", "系統帳戶", "安裝或設置", "應設置密碼",

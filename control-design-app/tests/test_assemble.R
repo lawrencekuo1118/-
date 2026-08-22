@@ -275,10 +275,40 @@ check(!isTRUE(fin_bad$ok), "未完成設計不可定稿為 RCM 列")
 
 iv <- control_to_interview(d1, elements = c("control_objective", "iuc"))
 check(nrow(iv) == 2L, "訪談可依元素過濾")
-check(all(c("控制編號", "訪談問題", "預期佐證_PBC", "受訪者回答") %in% names(iv)),
+check(all(c("控制編號", "訪談問題", "預期佐證_PBC", "受訪者回答",
+            "回答架構_5W1H", "建議串接PBC") %in% names(iv)),
       "訪談工作底稿含標準欄位")
 check(identical(as.character(iv[["控制編號"]][1]), derive_control_id(d1, 1L)),
       "訪談對齊控制編號")
+check(all(grepl("人事時地物|When|Who|What|How|Next", iv[["回答架構_5W1H"]])),
+      "訪談題含 5W1H 回答架構")
+check(all(grepl("答案必含|人事時地物", iv[["訪談問題"]])),
+      "每題問項答案須含人事時地物")
+check(any(grepl("預期|實際|現況|走查|誰", iv[["訪談問題"]])),
+      "訪談問題導向預期風險／目標／活動與實際執行現況")
+iv_mod <- control_to_interview(d1, elements = c("iuc"), modules = c("what", "who"))
+check(grepl("What", iv_mod[["回答架構_5W1H"]][1]) && grepl("Who", iv_mod[["回答架構_5W1H"]][1]),
+      "5W1H 模組可拼湊組建")
+check(grepl("使用者權限清冊", suggest_interview_pbc(d1)),
+      "建議串接 PBC 帶出 IUC")
+lib_iv <- library_items_as_interview_controls(list(
+  list(library_id = "LIB-T", cycle = "資訊循環",
+       control = list(cycle = "資訊循環", sub_process = "存取管理作業",
+                      risk_factor = "未授權存取", control_objective = "確保授權",
+                      control_activity = "定期覆核權限", iuc_or_system = "使用者權限清冊",
+                      control_id = "LIB-T"))
+))
+check(length(lib_iv) == 1L && grepl("LIB", lib_iv[[1]]$control_id),
+      "範本庫可轉為訪談預期控制點")
+filt <- filter_controls_by_cycle_sub(lib_iv, cycle = "資訊循環", sub_key = "")
+check(length(filt) == 1L, "訪談可依循環篩選")
+check(length(filter_controls_by_cycle_sub(lib_iv, cycle = "銷售循環")) == 0L,
+      "訪談循環篩選排除不符列")
+check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
+      "訪談焦點含預期風險／目標／活動")
+check(grepl("基本資料", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        grepl("interview_cycle", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
+      "訪談版面含基本資料／循環選取（對齊風險控制點設計）")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))

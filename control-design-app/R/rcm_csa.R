@@ -3,8 +3,9 @@
 # 完成一筆控制點設計 = 完成 RCM 一列（設計欄位；現況／分析評估留空）
 
 # ---- Selectable design elements ----
-# Three workflow tabs: 訪談問項設計 → 控制點設計 → 自我評估測試步驟設計
-# Priority: 控制點設計（RCM 列）→ 訪談問項 → 自我評估測試步驟
+# Three workflow tabs: 訪談問項設計 → 風險控制點設計 → 控制點測試設計
+# Priority: 風險控制點設計（RCM 列）→ 訪談問項 → 控制點測試
+# Supporting: 範本庫／參數庫（側邊欄最下方）→ PBC資料庫 → RCM
 DESIGN_ELEMENTS <- c(
   risk = "循環／風險",
   risk_attributes = "風險三大屬性／類別",
@@ -29,7 +30,7 @@ DEFAULT_INTERVIEW_ELEMENTS <- c(
   "control_types", "frequency_owner", "iuc", "outputs"
 )
 
-# 自我評估測試步驟設計（控制點定稿後）
+# 自我評估／控制點測試設計（控制點定稿後）
 DEFAULT_CSA_ELEMENTS <- c(
   "control_objective", "control_activity", "steps",
   "iuc", "outputs", "exception", "frequency_owner"

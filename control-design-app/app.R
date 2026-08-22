@@ -44,6 +44,7 @@ fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL) {
 }
 
 ui <- page_navbar(
+  id = "main_nav",
   title = "尬電SOX",
   window_title = "尬電SOX",
   theme = bs_theme(
@@ -166,15 +167,20 @@ ui <- page_navbar(
       div(
         class = "mt-auto pt-2 sidebar-lib-block",
         tags$hr(class = "my-2"),
+        tags$div(class = "small fw-bold mb-1", "範本庫"),
         textInput("lib_query", NULL, placeholder = "搜尋範本庫…"),
         selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
         div(
           class = "d-flex gap-1 flex-wrap mb-2",
           actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
-          actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
+          actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success"),
+          actionButton("goto_lib_tab", "開啟範本庫", class = "btn-sm btn-outline-secondary")
         ),
         checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
-        uiOutput("lib_count_badge")
+        uiOutput("lib_count_badge"),
+        tags$hr(class = "my-2"),
+        tags$div(class = "small fw-bold mb-1", "參數庫"),
+        actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100")
       )
     )
   ),
@@ -194,7 +200,7 @@ ui <- page_navbar(
         tags$ol(
           class = "home-steps mb-0",
           tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱並套用範本庫。"),
-          tags$li(tags$strong("控制點設計"), "：依序選取 ",
+          tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
                   strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
                   "（", tags$span(class = "text-danger", "須依序選取"),
                   "：未選上一層時，下一層沒有候選）。"),
@@ -205,7 +211,7 @@ ui <- page_navbar(
           tags$li(strong("完成設計＝寫入 RCM 一列"),
                   "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
           tags$li(tags$strong("訪談問項設計"), "：對齊已定稿 RCM，勾選元素後預覽／下載題綱。"),
-          tags$li(tags$strong("自我評估測試步驟設計"),
+          tags$li(tags$strong("控制點測試設計"),
                   "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
         )
       ),
@@ -237,22 +243,22 @@ ui <- page_navbar(
       div(
         class = "home-tabs-grid",
         div(class = "home-tab-card",
-            strong("控制點設計"),
+            strong("訪談問項設計"),
+            "對齊已定稿 RCM 產出訪談題綱；請先完成風險控制點定稿。"),
+        div(class = "home-tab-card",
+            strong("風險控制點設計"),
             "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
         div(class = "home-tab-card",
-            strong("訪談問項設計"),
-            "對齊已定稿 RCM 產出訪談題綱；請先完成控制點定稿。"),
-        div(class = "home-tab-card",
-            strong("自我評估測試步驟設計"),
+            strong("控制點測試設計"),
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "累積制通用範本：設計就緒入庫、CSV／JSON／RCM xlsx 匯入、自訂引導項；同 ID 覆寫累積。"),
+            "累積制通用範本（側邊欄最下方可快速套用／存入）；CSV／JSON／RCM xlsx 匯入。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項，可套用回表單。"),
+            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項（側邊欄最下方可開啟）。"),
         div(class = "home-tab-card",
-            strong("PBC"),
+            strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
         div(class = "home-tab-card",
             strong("RCM"),
@@ -264,12 +270,12 @@ ui <- page_navbar(
       card_header("建議操作順序"),
       p(class = "mb-1",
         "① 首頁了解流程 → ② ",
-        strong("基本資料"), "（循環／子作業）→ ③ 引導選取風險～IUC → ④ ",
-        strong("風險辨識"), "／", strong("控制設計"), " → ⑤ 定稿 → ⑥ ",
-        strong("訪談問項"), "／", strong("自我評估測試步驟"),
-        " → ⑦ 需要時維護 ", strong("範本庫"), "／", strong("PBC"), "／", strong("參數庫"), "。"),
+        strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
+        strong("訪談問項設計"), "／", strong("控制點測試設計"),
+        " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
+        " → ⑥ 需要時於側邊欄最下方維護 ", strong("範本庫"), "／", strong("參數庫"), "。"),
       p(class = "small text-muted mb-0",
-        "測試步驟欄位填於「自我評估測試步驟設計」，定稿時會一併寫入控制點草稿。")
+        "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
   ),
   nav_panel(
@@ -294,7 +300,7 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "控制點設計",
+    "風險控制點設計",
     layout_columns(
       col_widths = c(7, 5),
       card(
@@ -446,11 +452,11 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "自我評估測試步驟設計",
+    "控制點測試設計",
     layout_columns(
       col_widths = c(4, 8),
       card(
-        card_header("自我評估測試步驟設計"),
+        card_header("控制點測試設計"),
         selectizeInput(
           "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
@@ -467,7 +473,7 @@ ui <- page_navbar(
         textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
         textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
         textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻"),
-        checkboxInput("pbc_also_inputs", "於「控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
+        checkboxInput("pbc_also_inputs", "於「風險控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
       ),
       card(
         DTOutput("csa_table"),
@@ -543,11 +549,11 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "PBC",
+    "PBC資料庫",
     layout_columns(
       col_widths = c(4, 8),
       card(
-        card_header("PBC 命名整理"),
+        card_header("PBC 資料庫"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
@@ -575,7 +581,7 @@ ui <- page_navbar(
       tags$strong("缺漏／缺文件／控制缺失"),
       DTOutput("gap_table")
     )
-  )
+  ),
 )
 
 server <- function(input, output, session) {
@@ -916,6 +922,13 @@ server <- function(input, output, session) {
     if (is.null(item)) return()
     fill_inputs_from_ctrl(session, item$control, lib_items = lib())
     showNotification(paste("已套用範本：", item$title), type = "message")
+  })
+
+  observeEvent(input$goto_lib_tab, {
+    bslib::nav_select("main_nav", selected = "範本庫", session = session)
+  })
+  observeEvent(input$goto_param_tab, {
+    bslib::nav_select("main_nav", selected = "參數庫", session = session)
   })
 
   observeEvent(input$save_to_lib, {

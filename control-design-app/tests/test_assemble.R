@@ -143,6 +143,23 @@ fin_rep <- finalize_control_as_rcm_row(modifyList(d1, list(
 )), existing_ids = character())
 check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺科目不可定稿")
 
+# 遵循面相關法令必填；其它類別不可填
+comp_ok <- design_required_check(modifyList(d1, list(
+  risk_category = "遵循面", related_law = "證券交易法", significant_account = ""
+)))
+check(isTRUE(comp_ok$ok), "遵循面＋法令＝必填通過")
+comp_bad <- design_required_check(modifyList(d1, list(
+  risk_category = "遵循面", related_law = "", significant_account = ""
+)))
+check(!isTRUE(comp_bad$ok) && any(grepl("相關法令", comp_bad$missing)), "遵循面缺法令不可過")
+comp_lock <- design_required_check(modifyList(d1, list(
+  risk_category = "營運面", related_law = "SOX", significant_account = ""
+)))
+check(!isTRUE(comp_lock$ok) && any(grepl("法令", comp_lock$missing)), "營運面填法令應擋下")
+check(length(RELATED_LAW_CHOICES) >= 20, "相關法令預設清單含台美常見法規")
+pcat <- parameter_catalog(list(), list(), list(), presets = list("相關法令" = unname(RELATED_LAW_CHOICES)))
+check(nrow(pcat) >= 20 && any(pcat$參數 == "相關法令"), "參數庫可查詢預設法令")
+
 # 空表單不可因 gaps 崩潰（曾導致引導選單無法更新）
 empty_draft <- list(cycle = "電腦化資訊系統循環", frequency = "每季")
 gaps_empty <- tryCatch(detect_design_gaps(empty_draft), error = function(e) e)

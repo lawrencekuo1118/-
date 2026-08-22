@@ -635,3 +635,55 @@ library_summary_df <- function(library) {
     stringsAsFactors = FALSE
   )
 }
+
+# ---- 參數後台：彙整 APP 已存選項供查詢 ----
+parameter_catalog <- function(library = list(), drafts = list(), controls = list(),
+                              presets = list()) {
+  rows <- list()
+  add_vals <- function(param, values, source) {
+    values <- unique(trimws(as.character(unlist(values, use.names = FALSE))))
+    values <- values[nzchar(values) & !identical(values, "NA")]
+    for (v in values) {
+      rows[[length(rows) + 1]] <<- data.frame(
+        參數 = param, 選項值 = v, 來源 = source,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  # presets (static app choices)
+  if (length(presets)) {
+    for (nm in names(presets)) add_vals(nm, presets[[nm]], "預設清單")
+  }
+  collect_ctrl <- function(ctrl, source) {
+    if (is.null(ctrl)) return()
+    c <- if (!is.null(ctrl$control)) ctrl$control else ctrl
+    add_vals("循環", c$cycle %||% ctrl$cycle, source)
+    add_vals("子作業編號", c$sub_process_id, source)
+    add_vals("子作業名稱", c$sub_process, source)
+    add_vals("風險因素", c$risk_factor %||% c$risk_name, source)
+    add_vals("風險類別", c$risk_category, source)
+    add_vals("會計科目", c$significant_account, source)
+    add_vals("控制類型", c$nature %||% c$control_type, source)
+    add_vals("控制活動類型", c$approach %||% c$control_activity_type, source)
+    add_vals("控制頻率", c$frequency, source)
+    add_vals("流程負責單位", c$responsible_unit, source)
+    add_vals("相關系統／IUC", c$iuc_or_system %||% c$related_system, source)
+    add_vals("相關法令", unlist(strsplit(as.character(c$related_law %||% ""), "[;；|/]+")), source)
+    add_vals("相關政策或程序", c$related_policy, source)
+    add_vals("相關文件", c$related_document %||% c$outputs, source)
+  }
+  for (it in library) collect_ctrl(it, "範本庫")
+  for (it in drafts) collect_ctrl(it, "暫存佇列")
+  for (it in controls) collect_ctrl(it, "已定稿RCM")
+  if (!length(rows)) {
+    return(data.frame(參數 = character(), 選項值 = character(), 來源 = character(),
+                      出現次數 = integer(), stringsAsFactors = FALSE))
+  }
+  df <- do.call(rbind, rows)
+  agg <- aggregate(來源 ~ 參數 + 選項值, data = df, FUN = function(x) length(x))
+  names(agg)[3] <- "出現次數"
+  src <- aggregate(來源 ~ 參數 + 選項值, data = df, FUN = function(x) paste(unique(x), collapse = "＋"))
+  names(src)[3] <- "來源"
+  out <- merge(agg, src, by = c("參數", "選項值"))
+  out[order(out$參數, -out$出現次數, out$選項值), , drop = FALSE]
+}

@@ -639,10 +639,10 @@ DESIGN_REQUIRED_FIELDS <- c(
 
 DESIGN_OPTIONAL_FIELDS <- c(
   significant_account = "會計科目（僅報導面必填；其它類別不可填）",
+  related_law = "相關法令（僅遵循面必填；其它類別不可填）",
   company_status = "控制現況描述（六大就緒後書寫；定稿時可自動帶入）",
   design_gap_note = "控制設計差異說明",
   related_policy = "相關政策或程序",
-  related_law = "相關法令",
   related_document = "相關文件",
   effectiveness = "控制有效性評估",
   residual_risk = "可能潛在風險",
@@ -653,10 +653,22 @@ is_reporting_risk_category <- function(cat) {
   grepl("^報導", trimws(as.character(cat %||% "")))
 }
 
+is_compliance_risk_category <- function(cat) {
+  grepl("^遵循", trimws(as.character(cat %||% "")))
+}
+
 # TRUE if account is considered "filled" for 報導面
 account_is_filled <- function(x) {
   v <- trimws(as.character(x %||% ""))
   nzchar(v) && !identical(toupper(v), "NA") && !identical(v, "—") && !identical(v, "-")
+}
+
+law_is_filled <- function(x) {
+  v <- trimws(as.character(x %||% ""))
+  # allow multi values joined by ； or ;
+  vals <- unlist(strsplit(v, "[;；|/]+"))
+  vals <- trimws(vals)
+  any(nzchar(vals))
 }
 
 # Resolve field value with aliases used across cascade / RCM / Form 4120SR
@@ -712,7 +724,6 @@ design_required_check <- function(ctrl) {
       missing <- c(missing, "會計科目（報導面必填）")
     }
   } else if (nzchar(cat)) {
-    # non-reporting: account must not be filled
     filled$significant_account <- !account_is_filled(acct)
     if (account_is_filled(acct)) {
       missing <- c(missing, "會計科目僅報導面可填（請清空）")
@@ -720,13 +731,29 @@ design_required_check <- function(ctrl) {
   } else {
     filled$significant_account <- TRUE
   }
+  # 相關法令：遵循面必填；其它類別不得填入
+  law <- trimws(as.character(ctrl$related_law %||% ""))
+  if (is_compliance_risk_category(cat)) {
+    filled$related_law <- law_is_filled(law)
+    if (!law_is_filled(law)) {
+      missing <- c(missing, "相關法令（遵循面必填）")
+    }
+  } else if (nzchar(cat)) {
+    filled$related_law <- !law_is_filled(law)
+    if (law_is_filled(law)) {
+      missing <- c(missing, "相關法令僅遵循面可填（請清空）")
+    }
+  } else {
+    filled$related_law <- TRUE
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
     filled = filled,
     required = DESIGN_REQUIRED_FIELDS,
     optional = DESIGN_OPTIONAL_FIELDS,
-    account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending"
+    account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
+    law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending"
   )
 }
 
@@ -843,6 +870,10 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
     }
   } else {
     ctrl$significant_account <- ""
+  }
+  # 相關法令：遵循面保留；其它類別強制清空
+  if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
+    ctrl$related_law <- ""
   }
   if (is_blank(ctrl$risk_name) && !is_blank(ctrl$risk_factor)) {
     ctrl$risk_name <- ctrl$risk_factor

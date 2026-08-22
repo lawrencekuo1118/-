@@ -85,6 +85,50 @@ ASSERTION_CHOICES <- c(
   "其他／自訂"
 )
 
+# 相關法規預設（台灣＋美國財務報導／商業常見）
+RELATED_LAW_CHOICES_TW <- c(
+  "證券交易法",
+  "公司法",
+  "商業會計法",
+  "企業會計準則公報",
+  "國際財務報導準則（IFRS）／IAS",
+  "公開發行公司建立內部控制制度處理準則",
+  "公開發行公司年報應行記載事項準則",
+  "會計師查核簽證財務報表規則",
+  "金融控股公司法",
+  "銀行法",
+  "保險法",
+  "個人資料保護法",
+  "資通安全管理法",
+  "營業秘密法",
+  "公平交易法",
+  "勞動基準法",
+  "所得稅法",
+  "加值型及非加值型營業稅法"
+)
+
+RELATED_LAW_CHOICES_US <- c(
+  "Securities Act of 1933",
+  "Securities Exchange Act of 1934",
+  "Sarbanes-Oxley Act (SOX)",
+  "Dodd-Frank Act",
+  "PCAOB Auditing Standards",
+  "US GAAP (FASB ASC)",
+  "SEC Regulation S-X",
+  "SEC Regulation S-K",
+  "Internal Control over Financial Reporting (ICFR)",
+  "COSO Internal Control — Integrated Framework",
+  "Foreign Corrupt Practices Act (FCPA)",
+  "HIPAA",
+  "GLBA",
+  "CCPA / CPRA"
+)
+
+RELATED_LAW_CHOICES <- c(
+  stats::setNames(RELATED_LAW_CHOICES_TW, paste0("台灣｜", RELATED_LAW_CHOICES_TW)),
+  stats::setNames(RELATED_LAW_CHOICES_US, paste0("美國｜", RELATED_LAW_CHOICES_US))
+)
+
 # Required Form 4120SR design-description elements (Note 1 + design factors used in narrative)
 REQUIRED_DESIGN_ELEMENTS <- c(
   "cycle",

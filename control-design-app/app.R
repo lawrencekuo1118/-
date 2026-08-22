@@ -81,7 +81,11 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
                       value = ctrl$company_status %||% ctrl$detailed_description %||% "")
   updateTextAreaInput(session, "design_gap_note", value = ctrl$design_gap_note %||% "")
   updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
-  updateTextInput(session, "related_law", value = ctrl$related_law %||% "")
+  updateSelectizeInput(session, "related_law",
+                       selected = {
+                         raw <- trimws(as.character(ctrl$related_law %||% ""))
+                         if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
+                       })
   updateTextInput(session, "related_document",
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
   # ④ 控制分析與評估
@@ -116,6 +120,18 @@ ui <- page_navbar(
       el.disabled = !msg.enabled;
       el.readOnly = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
+    });
+    Shiny.addCustomMessageHandler('toggleLaw', function(msg) {
+      var el = document.getElementById('related_law');
+      if (!el) return;
+      // selectize
+      var $el = $('#related_law');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+      }
     });
   ")),
   fillable = TRUE,
@@ -296,11 +312,14 @@ ui <- page_navbar(
               helpText(class = "text-muted small", "（公司現況欄位將於引導＋六大就緒後顯示）")
             ),
             textAreaInput("design_gap_note", lab_opt("控制設計差異說明"), rows = 2),
-            layout_columns(
-              col_widths = c(6, 6),
-              textInput("related_policy", lab_opt("相關政策或程序")),
-              textInput("related_law", lab_opt("相關法令"))
+            textInput("related_policy", lab_opt("相關政策或程序")),
+            selectizeInput(
+              "related_law", "相關法令",
+              choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
+              multiple = TRUE,
+              options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
             ),
+            uiOutput("related_law_hint"),
             textInput("related_document", lab_opt("相關文件"))
           ),
           accordion_panel(
@@ -402,6 +421,25 @@ ui <- page_navbar(
       card(
         DTOutput("lib_table"),
         verbatimTextOutput("lib_preview")
+      )
+    )
+  ),
+  nav_panel(
+    "參數庫",
+    layout_columns(
+      col_widths = c(3, 9),
+      card(
+        card_header("後台參數查詢"),
+        p(class = "small text-muted",
+          "彙整範本庫／佇列／已定稿 RCM 與系統預設清單中目前已存的參數選項。"),
+        selectInput("param_filter", "參數類型", choices = c("全部" = "")),
+        textInput("param_query", NULL, placeholder = "搜尋選項值…"),
+        actionButton("param_refresh", "重新整理", class = "btn-sm btn-primary"),
+        downloadButton("download_params", "下載參數清單 CSV", class = "btn-sm mt-2")
+      ),
+      card(
+        uiOutput("param_stats"),
+        DTOutput("param_table")
       )
     )
   ),
@@ -631,6 +669,50 @@ server <- function(input, output, session) {
     )
   })
 
+  param_catalog_df <- reactive({
+    input$param_refresh
+    parameter_catalog(
+      library = lib(), drafts = drafts(), controls = controls(),
+      presets = list(
+        "循環" = unname(CYCLES_NINE_CHOICES),
+        "風險類別" = RISK_CATEGORY_CHOICES,
+        "控制類型" = CONTROL_TYPE_MANUAL_AUTO,
+        "控制活動類型" = CONTROL_ACTIVITY_TYPE_PD,
+        "控制頻率" = FREQUENCY_CHOICES,
+        "相關法令" = unname(RELATED_LAW_CHOICES)
+      )
+    )
+  })
+
+  observe({
+    df <- param_catalog_df()
+    params <- sort(unique(df$參數))
+    updateSelectInput(session, "param_filter",
+                      choices = c("全部" = "", stats::setNames(params, params)),
+                      selected = input$param_filter %||% "")
+  })
+
+  output$param_stats <- renderUI({
+    df <- param_catalog_df()
+    tags$p(class = "small text-muted",
+           sprintf("共 %d 筆參數選項（%d 類）", nrow(df), length(unique(df$參數))))
+  })
+
+  output$param_table <- renderDT({
+    df <- param_catalog_df()
+    f <- input$param_filter %||% ""
+    q <- trimws(input$param_query %||% "")
+    if (nzchar(f)) df <- df[df$參數 == f, , drop = FALSE]
+    if (nzchar(q)) df <- df[grepl(q, df$選項值, fixed = TRUE) | grepl(q, df$參數, fixed = TRUE), , drop = FALSE]
+    datatable(df, rownames = FALSE, filter = "top",
+              options = list(pageLength = 25, scrollX = TRUE))
+  })
+
+  output$download_params <- downloadHandler(
+    filename = function() sprintf("param_catalog_%s.csv", format(Sys.Date(), "%Y%m%d")),
+    content = function(file) utils::write.csv(param_catalog_df(), file, row.names = FALSE, fileEncoding = "UTF-8")
+  )
+
   add_ctrl_to_library <- function(ctrl, title = NULL, tags = character(), source = "manual") {
     if (!is.null(title) && nzchar(trimws(title))) ctrl$title <- trimws(title)
     tag_vec <- unlist(strsplit(as.character(tags %||% ""), "[;；,，|/]+"))
@@ -820,7 +902,10 @@ server <- function(input, output, session) {
       iuc_or_system = input$iuc_or_system %||% "",
       related_system = input$iuc_or_system %||% "",
       related_policy = input$related_policy %||% "",
-      related_law = input$related_law %||% "",
+      related_law = {
+        v <- input$related_law %||% character(0)
+        paste(unique(trimws(as.character(v))), collapse = "；")
+      },
       related_document = input$related_document %||% "",
       effectiveness = input$effectiveness %||% "",
       residual_risk = input$residual_risk %||% "",
@@ -1042,15 +1127,37 @@ server <- function(input, output, session) {
     }
   })
 
+  output$related_law_hint <- renderUI({
+    cat <- input$risk_category %||% ""
+    if (is_compliance_risk_category(cat)) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          lab_req("遵循面"), " — 相關法令為必填（可多選台灣／美國預設或自訂）。")
+    } else if (nzchar(cat)) {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          "非遵循面：相關法令已鎖定不可填（將自動清空）。")
+    } else {
+      helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法令。")
+    }
+  })
+
   observe({
     cat <- input$risk_category %||% ""
     session$sendCustomMessage(
       "toggleAccount",
       list(enabled = is_reporting_risk_category(cat))
     )
+    session$sendCustomMessage(
+      "toggleLaw",
+      list(enabled = is_compliance_risk_category(cat))
+    )
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
       if (nzchar(trimws(input$significant_account %||% ""))) {
         updateTextInput(session, "significant_account", value = "")
+      }
+    }
+    if (nzchar(cat) && !is_compliance_risk_category(cat)) {
+      if (length(input$related_law)) {
+        updateSelectizeInput(session, "related_law", selected = character(0))
       }
     }
   })
@@ -1197,12 +1304,6 @@ server <- function(input, output, session) {
   output$design_required_checklist <- renderUI({
     d <- current_draft_from_inputs()
     req <- design_required_check(d)
-    # Count core required + conditional account rule
-    core_n <- length(req$required)
-    acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
-    n_all <- core_n + if (acct_needed) 1L else 0L
-    n_ok <- sum(unlist(req$filled[names(req$required)])) +
-      if (acct_needed && isTRUE(req$filled$significant_account)) 1L else 0L
     items <- lapply(names(req$required), function(f) {
       ok <- isTRUE(req$filled[[f]])
       tags$li(
@@ -1224,8 +1325,27 @@ server <- function(input, output, session) {
         if (ok_a) "✓ " else "○ ", "會計科目已鎖定（非報導面不可填）"
       )))
     }
+    if (identical(req$law_mode, "required")) {
+      ok_l <- isTRUE(req$filled$related_law)
+      items <- c(items, list(tags$li(
+        class = if (ok_l) "text-success" else "text-danger",
+        if (ok_l) "✓ " else "○ ", "相關法令（遵循面必填）"
+      )))
+    } else if (identical(req$law_mode, "locked")) {
+      ok_l <- isTRUE(req$filled$related_law)
+      items <- c(items, list(tags$li(
+        class = if (ok_l) "text-success" else "text-danger",
+        if (ok_l) "✓ " else "○ ", "相關法令已鎖定（非遵循面不可填）"
+      )))
+    }
     cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
     n_cascade <- length(cascade_rows())
+    acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
+    law_needed <- identical(req$law_mode, "required") || identical(req$law_mode, "locked")
+    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed)
+    n_ok <- sum(unlist(req$filled[names(req$required)])) +
+      as.integer(acct_needed && isTRUE(req$filled$significant_account)) +
+      as.integer(law_needed && isTRUE(req$filled$related_law))
     div(
       class = cls,
       tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),

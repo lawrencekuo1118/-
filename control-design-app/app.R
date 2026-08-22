@@ -436,31 +436,33 @@ ui <- page_navbar(
   ),
   nav_panel(
     "參數庫",
-    layout_columns(
-      col_widths = c(3, 9),
-      card(
-        card_header("後台參數資料庫"),
-        p(class = "small text-muted",
-          "查詢 APP 目前已存的全部參數選項（系統預設、範本庫、佇列、已定稿 RCM、PBC）。",
-          "可累積儲存於本機資料庫，供後續設計選用。"),
+    # 上：選項／篩選面板；下：即時結果
+    card(
+      card_header("後台參數資料庫 — 選項"),
+      p(class = "small text-muted mb-2",
+        "查詢 APP 目前已存的全部參數選項（系統預設、範本庫、佇列、已定稿 RCM、PBC）。",
+        "可累積儲存於本機資料庫，供後續設計選用。"),
+      layout_columns(
+        col_widths = c(4, 4, 4),
         selectInput("param_filter", "參數類型", choices = c("全部" = "")),
         selectInput("param_source", "來源",
                     choices = c("全部" = "", "系統預設" = "系統預設",
                                 "範本庫" = "範本庫", "暫存佇列" = "暫存佇列",
                                 "已定稿RCM" = "已定稿RCM", "PBC命名庫" = "PBC命名庫")),
-        textInput("param_query", NULL, placeholder = "搜尋參數或選項值…"),
-        div(
-          class = "d-flex gap-1 flex-wrap",
-          actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary"),
-          actionButton("param_apply_row", "套用選取列至表單", class = "btn-sm btn-outline-success")
-        ),
-        downloadButton("download_params", "下載 CSV", class = "btn-sm mt-2"),
-        downloadButton("download_params_json", "下載 JSON", class = "btn-sm mt-2")
+        textInput("param_query", "搜尋", placeholder = "搜尋參數或選項值…")
       ),
-      card(
-        uiOutput("param_stats"),
-        DTOutput("param_table")
+      div(
+        class = "d-flex gap-1 flex-wrap",
+        actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary"),
+        actionButton("param_apply_row", "套用選取列至表單", class = "btn-sm btn-outline-success"),
+        downloadButton("download_params", "下載 CSV", class = "btn-sm"),
+        downloadButton("download_params_json", "下載 JSON", class = "btn-sm")
       )
+    ),
+    card(
+      card_header("即時顯示"),
+      uiOutput("param_stats"),
+      DTOutput("param_table")
     )
   ),
   nav_panel(

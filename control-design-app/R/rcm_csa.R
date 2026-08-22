@@ -99,6 +99,13 @@ normalize_control_type_manual_auto <- function(x) {
   ""
 }
 
+# 自動控制 → 頻率固定為持續
+resolve_control_frequency <- function(nature, frequency) {
+  ct <- normalize_control_type_manual_auto(nature)
+  if (identical(ct, "自動")) return("持續")
+  trimws(as.character(frequency %||% ""))
+}
+
 normalize_control_activity_type_pd <- function(x) {
   x <- trimws(as.character(x %||% ""))
   if (!nzchar(x)) return("")
@@ -208,7 +215,10 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     `控制活動` = trimws(ctrl$control_activity %||% ""),
     `控制類型` = tchk$control_type,
     `控制活動類型` = tchk$activity_type,
-    `控制頻率` = ctrl$frequency %||% "",
+    `控制頻率` = resolve_control_frequency(
+      tchk$control_type,
+      ctrl$frequency
+    ),
     `控制現況描述` = status_desc,
     `控制設計差異說明` = design_gap,
     `相關系統` = ctrl$related_system %||% ctrl$iuc_or_system %||% "",
@@ -681,6 +691,12 @@ design_field_value <- function(ctrl, field) {
       normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
     )))
   }
+  if (identical(field, "frequency")) {
+    return(resolve_control_frequency(
+      ctrl$nature %||% ctrl$control_type,
+      ctrl$frequency
+    ))
+  }
   if (identical(field, "approach")) {
     at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
     if (exists("normalize_single_activity_type", mode = "function")) {
@@ -882,6 +898,10 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (is_blank(ctrl$related_system) && !is_blank(ctrl$iuc_or_system)) {
     ctrl$related_system <- ctrl$iuc_or_system
   }
+  ctrl$frequency <- resolve_control_frequency(
+    ctrl$nature %||% ctrl$control_type,
+    ctrl$frequency
+  )
 
   req <- design_required_check(ctrl)
   if (!isTRUE(req$ok)) {

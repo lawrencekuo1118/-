@@ -66,12 +66,13 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
   updateSelectInput(session, "nature", selected = if (nzchar(ct)) ct else "")
   updateSelectInput(session, "approach", selected = if (nzchar(at)) at else "")
-  freq <- ctrl$frequency %||% ""
+  freq <- resolve_control_frequency(ct, ctrl$frequency %||% "")
   if (nzchar(freq) && !(freq %in% FREQUENCY_CHOICES)) {
     updateSelectInput(session, "frequency", choices = unique(c(FREQUENCY_CHOICES, freq)), selected = freq)
   } else if (nzchar(freq)) {
     updateSelectInput(session, "frequency", selected = freq)
   }
+  session$sendCustomMessage("toggleFrequency", list(enabled = !identical(ct, "自動")))
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
   updateTextAreaInput(session, "iuc_or_system",
                       value = ctrl$related_system %||% ctrl$iuc_or_system %||% "")
@@ -124,6 +125,12 @@ ui <- page_navbar(
       } else {
         el.disabled = !msg.enabled;
       }
+    });
+    Shiny.addCustomMessageHandler('toggleFrequency', function(msg) {
+      var el = document.getElementById('frequency');
+      if (!el) return;
+      el.disabled = !msg.enabled;
+      el.classList.toggle('bg-light', !msg.enabled);
     });
   ")),
   fillable = TRUE,
@@ -936,7 +943,7 @@ server <- function(input, output, session) {
       assertions = paste(input$assertions %||% character(), collapse = "；"),
       control_objective = input$control_objective %||% "",
       control_activity = input$control_activity %||% "",
-      frequency = input$frequency %||% "",
+      frequency = resolve_control_frequency(input$nature, input$frequency),
       responsible_unit = input$responsible_unit %||% "",
       iuc_or_system = input$iuc_or_system %||% "",
       related_system = input$iuc_or_system %||% "",
@@ -1058,7 +1065,7 @@ server <- function(input, output, session) {
       control_activity = activity,
       approach = approach,
       nature = nature,
-      frequency = frequency,
+      frequency = resolve_control_frequency(nature, frequency),
       responsible_unit = owner,
       iuc_or_system = iuc,
       related_system = iuc
@@ -1113,6 +1120,16 @@ server <- function(input, output, session) {
       }
     }
   })
+
+  # 自動控制 → 頻率固定持續
+  observeEvent(input$nature, {
+    if (identical(input$nature, "自動")) {
+      updateSelectInput(session, "frequency", selected = "持續")
+      session$sendCustomMessage("toggleFrequency", list(enabled = FALSE))
+    } else {
+      session$sendCustomMessage("toggleFrequency", list(enabled = TRUE))
+    }
+  }, ignoreNULL = FALSE)
 
   observe({
     rows <- cascade_rows()
@@ -1378,10 +1395,14 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "control_activity", value = sel$control_activity)
     if (nzchar(sel$approach)) updateSelectInput(session, "approach", selected = sel$approach)
     if (nzchar(sel$nature)) updateSelectInput(session, "nature", selected = sel$nature)
-    if (nzchar(sel$frequency)) {
-      updateSelectInput(session, "frequency",
-                        choices = unique(c(FREQUENCY_CHOICES, sel$frequency)),
-                        selected = sel$frequency)
+    freq <- resolve_control_frequency(sel$nature, sel$frequency)
+    updateSelectInput(session, "frequency",
+                      choices = unique(c(FREQUENCY_CHOICES, freq)),
+                      selected = freq)
+    if (identical(normalize_control_type_manual_auto(sel$nature), "自動")) {
+      session$sendCustomMessage("toggleFrequency", list(enabled = FALSE))
+    } else {
+      session$sendCustomMessage("toggleFrequency", list(enabled = TRUE))
     }
     if (nzchar(sel$responsible_unit)) {
       updateTextInput(session, "responsible_unit", value = sel$responsible_unit)

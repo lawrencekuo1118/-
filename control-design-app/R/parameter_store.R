@@ -1,5 +1,5 @@
 # Persistent backend catalog of all stored parameter options in the app.
-# Sources: 系統預設清單 + 範本庫 + 暫存佇列 + 已定稿 RCM + PBC 命名庫
+# Sources: 系統預設清單 + 範本庫 + 已定稿 RCM + PBC 命名庫
 
 
 empty_parameter_store <- function() {
@@ -35,7 +35,7 @@ app_preset_parameters <- function() {
   unique(v[nzchar(v) & !identical(v, "NA") & !identical(v, "—") & !identical(v, "-")])
 }
 
-parameter_catalog <- function(library = list(), drafts = list(), controls = list(),
+parameter_catalog <- function(library = list(), controls = list(),
                               pbc = NULL, presets = NULL) {
   if (is.null(presets)) presets <- app_preset_parameters()
   rows <- list()
@@ -84,7 +84,6 @@ parameter_catalog <- function(library = list(), drafts = list(), controls = list
     add_vals("控制編號", c$control_id, source)
   }
   for (it in library) collect_ctrl(it, "範本庫")
-  for (it in drafts) collect_ctrl(it, "暫存佇列")
   for (it in controls) collect_ctrl(it, "已定稿RCM")
   if (is.data.frame(pbc) && nrow(pbc)) {
     add_vals("PBC 客戶原名", pbc$client_pbc_name, "PBC命名庫")
@@ -161,9 +160,9 @@ load_parameter_store <- function(path) {
   merge_parameter_store(empty_parameter_store(), df)
 }
 
-rebuild_parameter_store <- function(library = list(), drafts = list(), controls = list(),
+rebuild_parameter_store <- function(library = list(), controls = list(),
                                     pbc = NULL, existing = NULL) {
-  live <- parameter_catalog(library, drafts, controls, pbc = pbc)
+  live <- parameter_catalog(library, controls, pbc = pbc)
   if (is.null(existing) || !nrow(existing)) return(live)
   merge_parameter_store(existing, live)
 }

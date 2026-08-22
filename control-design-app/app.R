@@ -1,11 +1,9 @@
-# Control Design Assistant — compact UI + named drafts
+# Control Design Assistant — compact UI
 # Run: shiny::runApp("control-design-app")
 
 library(shiny)
 library(bslib)
 library(DT)
-write_json <- jsonlite::write_json
-read_json <- jsonlite::read_json
 
 .source_root <- local({
   cmd <- commandArgs(trailingOnly = FALSE)
@@ -29,7 +27,6 @@ source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
-source(file.path(root, "R", "draft_store.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 
 # UI label with required asterisk
@@ -146,20 +143,7 @@ ui <- page_navbar(
     checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
     uiOutput("lib_count_badge"),
     tags$hr(class = "my-2"),
-    textInput("company", NULL, placeholder = "公司名稱"),
-    tags$hr(class = "my-2"),
-    tags$strong("草稿"),
-    textInput("draft_name", NULL, placeholder = "草稿名稱"),
-    selectInput("draft_pick", NULL, choices = c("已存草稿…" = "")),
-    div(
-      class = "d-flex gap-1 flex-wrap",
-      actionButton("save_draft_file", "儲存", class = "btn-sm btn-primary"),
-      actionButton("load_draft_file", "載入", class = "btn-sm btn-outline-secondary"),
-      actionButton("delete_draft_file", "刪除", class = "btn-sm btn-outline-danger")
-    ),
-    checkboxInput("autosave_draft", "自動儲存", TRUE),
-    uiOutput("draft_status"),
-    downloadButton("download_json", "匯出 JSON", class = "btn-sm w-100 mt-1")
+    textInput("company", NULL, placeholder = "公司名稱")
   ),
   nav_panel(
     "訪談問項設計",
@@ -365,10 +349,6 @@ ui <- page_navbar(
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
           actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
-          actionButton("add_draft", "暫存佇列（未定稿）", class = "btn-outline-primary btn-sm"),
-          actionButton("update_draft", "更新佇列", class = "btn-sm"),
-          actionButton("remove_draft", "刪除佇列", class = "btn-sm btn-outline-danger"),
-          actionButton("generate_controls", "佇列批次定稿→RCM", class = "btn-outline-success btn-sm"),
           actionButton("collect_ready_to_lib", "RCM列→累積範本庫", class = "btn-outline-success btn-sm")
         )
       ),
@@ -376,10 +356,8 @@ ui <- page_navbar(
         uiOutput("live_validation"),
         uiOutput("rcm_parity_box"),
         verbatimTextOutput("live_preview"),
-        navset_underline(
-          nav_panel("RCM 列", DTOutput("control_table"), verbatimTextOutput("control_paragraph")),
-          nav_panel("暫存佇列", DTOutput("draft_table"))
-        )
+        DTOutput("control_table"),
+        verbatimTextOutput("control_paragraph")
       )
     )
   ),
@@ -434,8 +412,7 @@ ui <- page_navbar(
           class = "d-flex gap-1 flex-wrap",
           actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
           actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success"),
-          actionButton("lib_add_all_drafts", "佇列→庫", class = "btn-sm btn-outline-success")
+          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
         ),
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
@@ -456,15 +433,15 @@ ui <- page_navbar(
     card(
       card_header("後台參數資料庫 — 選項"),
       p(class = "small text-muted mb-2",
-        "查詢 APP 目前已存的全部參數選項（系統預設、範本庫、佇列、已定稿 RCM、PBC）。",
+        "查詢 APP 目前已存的全部參數選項（系統預設、範本庫、已定稿 RCM、PBC）。",
         "可累積儲存於本機資料庫，供後續設計選用。"),
       layout_columns(
         col_widths = c(4, 4, 4),
         selectInput("param_filter", "參數類型", choices = c("全部" = "")),
         selectInput("param_source", "來源",
                     choices = c("全部" = "", "系統預設" = "系統預設",
-                                "範本庫" = "範本庫", "暫存佇列" = "暫存佇列",
-                                "已定稿RCM" = "已定稿RCM", "PBC命名庫" = "PBC命名庫")),
+                                "範本庫" = "範本庫", "已定稿RCM" = "已定稿RCM",
+                                "PBC命名庫" = "PBC命名庫")),
         textInput("param_query", "搜尋", placeholder = "搜尋參數或選項值…")
       ),
       div(
@@ -523,7 +500,6 @@ ui <- page_navbar(
 )
 
 server <- function(input, output, session) {
-  drafts <- reactiveVal(list())
   controls <- reactiveVal(list())
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
@@ -567,9 +543,6 @@ server <- function(input, output, session) {
       lib(persist_lib(merged))
     }
   }, once = TRUE)
-  next_id <- reactiveVal(1L)
-  last_saved_at <- reactiveVal(NULL)
-  draft_tick <- reactiveVal(0L)
 
   persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
   persist_lib <- function(library) {
@@ -580,7 +553,7 @@ server <- function(input, output, session) {
   param_store <- reactiveVal(load_parameter_store(param_path_json))
   persist_params <- function() {
     df <- parameter_catalog(
-      library = lib(), drafts = drafts(), controls = controls(),
+      library = lib(), controls = controls(),
       pbc = pbc_reg()
     )
     save_parameter_store(df, param_path_json)
@@ -629,18 +602,6 @@ server <- function(input, output, session) {
     )
   }
 
-  refresh_draft_list <- function(selected = NULL) {
-    df <- list_saved_drafts(data_dir)
-    draft_tick(draft_tick() + 1L)
-    ch <- c("已存草稿…" = "")
-    if (nrow(df)) {
-      labels <- sprintf("%s（%s｜Q%d／C%d）", df$name, df$saved_at, df$n_drafts, df$n_controls)
-      ch <- c(ch, stats::setNames(df$path, labels))
-    }
-    updateSelectInput(session, "draft_pick", choices = ch,
-                      selected = if (!is.null(selected) && selected %in% ch) selected else "")
-  }
-
   refresh_pbc_choices <- function() {
     ch <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
     updateSelectizeInput(
@@ -658,17 +619,9 @@ server <- function(input, output, session) {
     input$cycle
     refresh_pbc_choices()
   })
-  observe({
-    refresh_draft_list()
-  })
 
-  # Auto-resume last session on start（循環維持未選，需使用者主動選擇）
+  # 啟動時循環維持未選，需使用者主動選擇
   observeEvent(TRUE, {
-    legacy <- file.path(data_dir, "session_draft.json")
-    if (file.exists(legacy)) {
-      try(apply_payload(load_draft_payload(legacy), notify = FALSE, restore_cycle = FALSE),
-          silent = TRUE)
-    }
     updateSelectInput(session, "cycle", selected = "")
   }, once = TRUE)
 
@@ -870,15 +823,6 @@ server <- function(input, output, session) {
       type = "message", duration = 8
     )
   })
-  observeEvent(input$lib_add_all_drafts, {
-    ds <- drafts()
-    if (!length(ds)) return(showNotification("佇列為空", type = "warning"))
-    res <- collect_many_to_lib(ds, source = "draft_queue", quality_gate = TRUE)
-    showNotification(
-      sprintf("佇列入庫：新增 %d／更新 %d／略過 %d", res$added, res$updated, res$skipped),
-      type = "message", duration = 8
-    )
-  })
   observeEvent(input$collect_ready_to_lib, {
     cs <- controls()
     if (!length(cs)) {
@@ -960,7 +904,6 @@ server <- function(input, output, session) {
 
   current_draft_from_inputs <- function() {
     list(
-      draft_id = next_id(),
       control_id = input$control_id %||% "",
       company = input$company %||% "",
       cycle = input$cycle %||% "",
@@ -1007,93 +950,6 @@ server <- function(input, output, session) {
       key_control = "Y"
     )
   }
-
-  form_snapshot <- function() {
-    list(
-      company = input$company, cycle = input$cycle,
-      sub_process_id = input$sub_process_id, sub_process = input$sub_process,
-      risk_factor = input$risk_factor, risk_name = input$risk_name,
-      risk_description = input$risk_description, risk_category = input$risk_category,
-      control_id = input$control_id, control_objective = input$control_objective,
-      control_activity = input$control_activity, frequency = input$frequency,
-      responsible_unit = input$responsible_unit, iuc_or_system = input$iuc_or_system,
-      nature = input$nature, approach = input$approach
-    )
-  }
-
-  make_payload <- function(name = NULL) {
-    build_draft_payload(
-      drafts = drafts(), controls = controls(), pbc = pbc_reg(),
-      interview_elements = input$interview_elements,
-      csa_elements = input$csa_elements,
-      form_snapshot = form_snapshot(),
-      name = name
-    )
-  }
-
-  apply_payload <- function(payload, notify = TRUE, restore_cycle = TRUE) {
-    if (!is.null(payload$drafts)) drafts(payload$drafts)
-    if (!is.null(payload$controls)) controls(payload$controls)
-    if (!is.null(payload$pbc) && length(payload$pbc)) {
-      pbc_reg(normalize_pbc_df(as.data.frame(payload$pbc, stringsAsFactors = FALSE)))
-      persist_pbc(pbc_reg())
-      refresh_pbc_choices()
-    }
-    if (!is.null(payload$interview_elements)) {
-      updateCheckboxGroupInput(session, "interview_elements",
-                               selected = unlist(payload$interview_elements))
-    }
-    if (!is.null(payload$csa_elements)) {
-      updateCheckboxGroupInput(session, "csa_elements",
-                               selected = unlist(payload$csa_elements))
-    }
-    snap <- payload$form_snapshot
-    if (!is.null(snap)) {
-      if (!is.null(snap$company)) updateTextInput(session, "company", value = snap$company)
-      if (isTRUE(restore_cycle) && !is.null(snap$cycle) && nzchar(snap$cycle)) {
-        updateSelectInput(session, "cycle", selected = snap$cycle)
-      }
-      if (!is.null(snap$risk_name)) updateTextInput(session, "risk_name", value = snap$risk_name)
-      if (!is.null(snap$risk_description)) {
-        updateTextAreaInput(session, "risk_description", value = snap$risk_description)
-      }
-      if (!is.null(snap$control_objective)) {
-        updateTextAreaInput(session, "control_objective", value = snap$control_objective)
-      }
-      if (!is.null(snap$control_activity)) {
-        updateTextAreaInput(session, "control_activity", value = snap$control_activity)
-      }
-      if (!is.null(snap$iuc_or_system)) {
-        updateTextAreaInput(session, "iuc_or_system", value = snap$iuc_or_system)
-      }
-    }
-    if (!is.null(payload$name) && nzchar(payload$name)) {
-      updateTextInput(session, "draft_name", value = payload$name)
-    }
-    last_saved_at(payload$saved_at %||% format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
-    if (notify) showNotification("草稿已載入", type = "message")
-  }
-
-  do_save_draft <- function(name = NULL, quiet = FALSE) {
-    nm <- name %||% input$draft_name
-    if (!nzchar(trimws(nm %||% ""))) nm <- format(Sys.time(), "草稿_%Y%m%d_%H%M%S")
-    path <- save_named_draft(data_dir, nm, make_payload(nm))
-    updateTextInput(session, "draft_name", value = sanitize_draft_name(nm))
-    last_saved_at(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
-    refresh_draft_list(selected = path)
-    if (!quiet) showNotification(paste("已儲存", basename(path)), type = "message")
-    path
-  }
-
-  output$draft_status <- renderUI({
-    draft_tick()
-    ts <- last_saved_at()
-    nq <- length(drafts())
-    nc <- length(controls())
-    txt <- if (is.null(ts)) sprintf("未儲存｜佇列 %d／控制點 %d", nq, nc)
-    else sprintf("已存 %s｜佇列 %d／控制點 %d", ts, nq, nc)
-    tags$small(class = "text-muted", txt)
-  })
 
   output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
   output$oa_live_check <- renderUI({
@@ -1458,7 +1314,7 @@ server <- function(input, output, session) {
     sel <- resolve_cascade_selection()
     spid <- sel$sub_process_id
     if (!nzchar(spid)) return(NULL)
-    ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    ids <- collect_existing_control_ids(lists = list(lib(), controls()))
     nid <- next_rcm_control_id(spid, ids)
     div(class = "small text-muted mb-2",
         "自動控制編號預覽：", tags$code(nid),
@@ -1521,7 +1377,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "iuc_or_system", value = sel$iuc_or_system)
 
     # Auto RCM control id
-    ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    ids <- collect_existing_control_ids(lists = list(lib(), controls()))
     nid <- next_rcm_control_id(sel$sub_process_id, ids)
     updateTextInput(session, "control_id", value = nid)
 
@@ -1636,7 +1492,7 @@ server <- function(input, output, session) {
   # Primary path: 設計完成 → 直接寫入一筆控制點／RCM 列（1:1）
   observeEvent(input$finalize_rcm_row, {
     d <- current_draft_from_inputs()
-    ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+    ids <- collect_existing_control_ids(lists = list(lib(), controls()))
     fin <- finalize_control_as_rcm_row(d, existing_ids = ids, seq_hint = length(controls()) + 1L)
     if (!isTRUE(fin$ok)) {
       return(showNotification(
@@ -1645,20 +1501,14 @@ server <- function(input, output, session) {
       ))
     }
     pt <- fin$control
-    # upsert by control_id into controls()
     cs <- controls()
     idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
     if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
     controls(cs)
-    # also keep a draft snapshot for edit history
-    d$control_id <- pt$control_id
-    d$draft_id <- next_id()
-    drafts(c(drafts(), list(d)))
-    next_id(next_id() + 1L)
     updateTextInput(session, "control_id",
                     value = next_rcm_control_id(
                       pt$sub_process_id,
-                      collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
+                      collect_existing_control_ids(lists = list(lib(), controls()))
                     ))
     if (isTRUE(input$auto_collect_lib)) {
       res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)
@@ -1669,117 +1519,6 @@ server <- function(input, output, session) {
     } else {
       showNotification(fin$msg, type = "message", duration = 8)
     }
-    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
-  })
-
-  observeEvent(input$add_draft, {
-    d <- current_draft_from_inputs()
-    chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
-    if (!isTRUE(chk$ok)) {
-      return(showNotification(
-        paste0("目標／活動未分開，無法暫存：", chk$msg),
-        type = "error", duration = 8
-      ))
-    }
-    d$draft_id <- next_id()
-    if (!nzchar(trimws(d$control_id))) {
-      ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
-      d$control_id <- next_rcm_control_id(d$sub_process_id %||% derive_sub_process_id(d, 1L), ids)
-    }
-    drafts(c(drafts(), list(d)))
-    next_id(next_id() + 1L)
-    showNotification("已暫存佇列（尚未定稿為 RCM 列；就緒後請按「完成設計＝寫入 RCM 一列」）",
-                     type = "message")
-    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
-  })
-
-  drafts_df <- reactive({
-    ds <- drafts()
-    if (!length(ds)) {
-      return(data.frame(ID = character(), 風險 = character(), 目標 = character(),
-                        活動 = character(), IUC = character(), stringsAsFactors = FALSE))
-    }
-    data.frame(
-      ID = vapply(ds, function(x) x$control_id, ""),
-      風險 = vapply(ds, function(x) x$risk_name, ""),
-      目標 = vapply(ds, function(x) x$control_objective, ""),
-      活動 = vapply(ds, function(x) x$control_activity, ""),
-      IUC = vapply(ds, function(x) x$iuc_or_system, ""),
-      stringsAsFactors = FALSE
-    )
-  })
-  output$draft_table <- renderDT({
-    datatable(drafts_df(), selection = "single", rownames = FALSE,
-              options = list(dom = "t", pageLength = 6, scrollX = TRUE, ordering = FALSE))
-  })
-
-  selected_draft_index <- reactive({
-    s <- input$draft_table_rows_selected
-    if (is.null(s) || !length(drafts())) NULL else s
-  })
-
-  observeEvent(input$update_draft, {
-    idx <- selected_draft_index()
-    if (is.null(idx)) return(showNotification("請選佇列列", type = "warning"))
-    new_d <- current_draft_from_inputs()
-    chk <- rcm_objective_activity_check(new_d$control_objective, new_d$control_activity)
-    if (!isTRUE(chk$ok)) {
-      return(showNotification(paste0("目標／活動未分開：", chk$msg), type = "error", duration = 8))
-    }
-    ds <- drafts()
-    new_d$draft_id <- ds[[idx]]$draft_id
-    ds[[idx]] <- new_d
-    drafts(ds)
-    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
-  })
-  observeEvent(input$remove_draft, {
-    idx <- selected_draft_index()
-    if (is.null(idx)) return()
-    drafts(drafts()[-idx])
-    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
-  })
-
-  observeEvent(input$generate_controls, {
-    ds <- drafts()
-    if (!length(ds)) return(showNotification("無暫存佇列可批次定稿", type = "warning"))
-    # Also split by IUC within same risk
-    risk_keys <- vapply(ds, function(d) paste(d$cycle, d$risk_name, sep = "||"), "")
-    groups <- split(seq_along(ds), risk_keys)
-    result <- controls()
-    used_ids <- collect_existing_control_ids(lists = list(lib(), drafts(), controls()))
-    n_ok <- 0L
-    n_fail <- 0L
-    for (gk in names(groups)) {
-      for (pt0 in split_controls_by_iuc(ds[groups[[gk]]])) {
-        fin <- finalize_control_as_rcm_row(pt0, existing_ids = used_ids,
-                                          seq_hint = length(result) + 1L)
-        if (!isTRUE(fin$ok)) {
-          n_fail <- n_fail + 1L
-          next
-        }
-        pt <- fin$control
-        used_ids <- c(used_ids, pt$control_id)
-        idx <- which(vapply(result, function(x) identical(x$control_id, pt$control_id), logical(1)))
-        if (length(idx)) result[[idx[[1]]]] <- pt else result[[length(result) + 1]] <- pt
-        n_ok <- n_ok + 1L
-      }
-    }
-    controls(result)
-    parity <- assert_design_rcm_parity(result)
-    showNotification(
-      sprintf("批次定稿：成功 %d 列 RCM／未就緒 %d｜不變條件 控制點%d＝RCM%d",
-              n_ok, n_fail, parity$n_controls, parity$n_rcm_rows),
-      type = if (n_ok) "message" else "warning", duration = 10
-    )
-    if (isTRUE(input$auto_collect_lib) && n_ok > 0) {
-      ready <- Filter(function(x) isTRUE(x$rcm_ready$ready), result)
-      res <- collect_many_to_lib(ready, source = "auto_rcm", quality_gate = TRUE)
-      showNotification(
-        sprintf("自動累積入庫：+%d／覆寫 %d／略過 %d", res$added, res$updated, res$skipped),
-        type = "message"
-      )
-    }
-    if (isTRUE(input$autosave_draft)) do_save_draft(quiet = TRUE)
   })
 
   controls_df <- reactive({
@@ -1938,41 +1677,6 @@ server <- function(input, output, session) {
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
 
-  # Named drafts
-  observeEvent(input$save_draft_file, do_save_draft())
-  observeEvent(input$load_draft_file, {
-    path <- input$draft_pick
-    if (!nzchar(path %||% "")) {
-      path <- file.path(data_dir, "session_draft.json")
-    }
-    if (!file.exists(path)) return(showNotification("尚無草稿", type = "warning"))
-    apply_payload(load_draft_payload(path))
-  })
-  observeEvent(input$delete_draft_file, {
-    nm <- input$draft_name
-    path <- input$draft_pick
-    if (nzchar(path %||% "") && basename(path) != "session_draft.json") {
-      file.remove(path)
-    } else if (nzchar(trimws(nm %||% ""))) {
-      delete_named_draft(data_dir, nm)
-    } else {
-      return(showNotification("請選擇或輸入要刪除的草稿", type = "warning"))
-    }
-    refresh_draft_list()
-    showNotification("草稿已刪除", type = "message")
-  })
-  observeEvent(input$draft_pick, {
-    path <- input$draft_pick
-    if (!nzchar(path %||% "")) return()
-    nm <- if (basename(path) == "session_draft.json") "（自動／預設）" else sub("\\.json$", "", basename(path))
-    updateTextInput(session, "draft_name", value = nm)
-  }, ignoreInit = TRUE)
-
-  output$download_json <- downloadHandler(
-    filename = function() sprintf("control-pack-%s.json", format(Sys.time(), "%Y%m%d-%H%M%S")),
-    content = function(file) write_json(make_payload(input$draft_name), file,
-                                        auto_unbox = TRUE, pretty = TRUE, force = TRUE)
-  )
   output$download_rcm <- downloadHandler(
     filename = function() "rcm.csv",
     content = function(file) write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")

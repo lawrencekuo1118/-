@@ -389,7 +389,10 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
     iuc_or_system = sel$iuc_or_system %||% "",
     related_system = sel$iuc_or_system %||% "",
     control_id = sel$control_id %||% "",
-    significant_account = sel$significant_account %||% "NA"
+    significant_account = {
+      ac <- nzchar_trim(sel$significant_account)
+      if (is_reporting_risk_category(sel$risk_category %||% "")) ac else ""
+    }
   )
   if (exists("library_item_from_control", mode = "function")) {
     library_item_from_control(ctrl, tags = tags)

@@ -318,7 +318,12 @@ ui <- page_navbar(
   ),
   nav_panel(
     "範本庫",
-    # 上：控制面板；下：範本庫表格
+    # 上：即時顯示；下：控制面板
+    card(
+      card_header("即時顯示"),
+      DTOutput("lib_table"),
+      verbatimTextOutput("lib_preview")
+    ),
     card(
       card_header("累積制通用範本庫 — 選項"),
       p(
@@ -356,11 +361,6 @@ ui <- page_navbar(
         downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
         downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
       )
-    ),
-    card(
-      card_header("即時顯示"),
-      DTOutput("lib_table"),
-      verbatimTextOutput("lib_preview")
     )
   ),
   nav_panel(

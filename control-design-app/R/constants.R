@@ -42,7 +42,7 @@ RISK_ATTR_DEFAULTS <- list(
   )
 )
 
-NATURE_CHOICES <- c("人工 (Manual)", "自動化 (Automated)", "人工＋自動化混合")
+NATURE_CHOICES <- c("人工 (Manual)", "自動化 (Automated)")
 APPROACH_CHOICES <- c("預防性 (Preventive)", "偵測性 (Detective)", "預防＋偵測")
 TYPE_CHOICES <- c(
   "核對驗證 (Verifications)",

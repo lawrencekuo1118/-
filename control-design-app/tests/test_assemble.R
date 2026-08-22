@@ -38,7 +38,7 @@ base <- list(
   assertions = "存在／發生 (Existence/Occurrence)",
   control_objective = "確保系統使用者權限與現職一致",
   control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
-  responsible_unit = "資訊部", nature = "人工＋自動",
+  responsible_unit = "資訊部", nature = "人工",
   approach = "偵測性控制", type = TYPE_CHOICES[[6]],
   inputs = "在職名單、權限清冊", review_steps = "產製清冊\n主管覆核\n完成異動",
   outputs = "簽回清冊、異動 log", investigation_threshold = "任何不當權限均須異動",
@@ -58,7 +58,9 @@ check(identical(as.character(rcm[["控制目標"]]), "確保系統使用者權�
 check(identical(as.character(rcm[["控制活動"]]), "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
 check(!identical(as.character(rcm[["控制目標"]]), as.character(rcm[["控制活動"]])), "目標≠活動")
 check(grepl("^EC-101-", as.character(rcm[["控制編號"]])), "資訊循環控制編號格式 EC-101-##")
-check(identical(as.character(rcm[["控制類型"]]), "人工＋自動"), "控制類型＝人工/自動")
+check(identical(as.character(rcm[["控制類型"]]), "人工"), "控制類型＝人工/自動")
+check(!nzchar(normalize_control_type_manual_auto("人工＋自動")), "混合控制類型不允許")
+check(!nzchar(normalize_control_type_manual_auto("人工＋自動化混合")), "混合控制類型不允許")
 check(identical(as.character(rcm[["控制活動類型"]]), "偵測性控制"), "控制活動類型＝預防/偵測")
 check(identical(as.character(rcm[["風險類別"]]), "營運面"), "風險類別映射")
 check(grepl("^通過", as.character(rcm[["設計檢核"]])), "設計檢核通過")

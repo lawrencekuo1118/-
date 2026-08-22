@@ -79,7 +79,7 @@ RCM_HEADER_LABELS <- c(
 )
 
 RISK_CATEGORY_CHOICES <- c("報導面", "營運面", "遵循面")
-CONTROL_TYPE_MANUAL_AUTO <- c("人工", "自動", "人工＋自動")
+CONTROL_TYPE_MANUAL_AUTO <- c("人工", "自動")
 CONTROL_ACTIVITY_TYPE_PD <- c("預防性控制", "偵測性控制")
 
 strip_attr_label <- function(x) {
@@ -92,12 +92,11 @@ is_blank <- function(x) !nzchar(trimws(as.character(x %||% "")))
 normalize_control_type_manual_auto <- function(x) {
   x <- trimws(as.character(x %||% ""))
   if (!nzchar(x)) return("")
-  if (grepl("自動|Automated|系統", x, ignore.case = TRUE) &&
-      grepl("人工|Manual|混合", x, ignore.case = TRUE)) return("人工＋自動")
+  if (grepl("人工.*[＋\\+].*自動|自動.*[＋\\+].*人工|混合", x)) return("")
+  if (x %in% CONTROL_TYPE_MANUAL_AUTO) return(x)
   if (grepl("自動|Automated", x, ignore.case = TRUE)) return("自動")
   if (grepl("人工|Manual", x, ignore.case = TRUE)) return("人工")
-  if (x %in% CONTROL_TYPE_MANUAL_AUTO) return(x)
-  x
+  ""
 }
 
 normalize_control_activity_type_pd <- function(x) {
@@ -156,7 +155,7 @@ rcm_type_fields_check <- function(control_type, activity_type) {
   at <- normalize_control_activity_type_pd(activity_type)
   issues <- character()
   if (nzchar(as.character(control_type %||% "")) && !nzchar(ct)) {
-    issues <- c(issues, "控制類型應為：人工／自動／人工＋自動")
+    issues <- c(issues, "控制類型應為：人工／自動（不可混用）")
   }
   if (nzchar(as.character(activity_type %||% "")) && !nzchar(at)) {
     issues <- c(issues, "控制活動類型應為：預防性控制／偵測性控制")
@@ -701,6 +700,13 @@ design_required_check <- function(ctrl) {
     val <- design_field_value(ctrl, f)
     filled[[f]] <- nzchar(val)
     if (!nzchar(val)) missing <- c(missing, DESIGN_REQUIRED_FIELDS[[f]])
+  }
+  # Extra rule: nature must be exactly one 人工/自動
+  raw_nature <- trimws(as.character(ctrl$nature %||% ctrl$control_type %||% ""))
+  norm_nature <- normalize_control_type_manual_auto(raw_nature)
+  if (nzchar(raw_nature) && !nzchar(norm_nature)) {
+    missing <- c(missing, "控制類型須為單一人工或自動（不可混用）")
+    filled$nature <- FALSE
   }
   # Extra rule: approach must be exactly one 預防/偵測
   if (isTRUE(filled$approach) && exists("activity_type_ok", mode = "function") &&

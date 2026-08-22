@@ -895,7 +895,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$related_system)) {
     ctrl$iuc_or_system <- ctrl$related_system
   }
-  if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$related_system)) {
+  if (is_blank(ctrl$related_system) && !is_blank(ctrl$iuc_or_system)) {
     ctrl$related_system <- ctrl$iuc_or_system
   }
   if (!is_blank(ctrl$risk_factor) || !is_blank(ctrl$risk_name)) {

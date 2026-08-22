@@ -167,12 +167,78 @@ cascade_sub_process_choices <- function(rows) {
 risk_factor_tag <- function(x) {
   x <- trimws(as.character(x %||% ""))
   if (!nzchar(x)) return("")
-  x <- gsub("[\\[\\]]", "", x)
+  x <- gsub("\\[|\\]", "", x)
   parts <- trimws(strsplit(x, "\\s*/\\s*")[[1]])
   parts <- parts[nzchar(parts)]
   if (!length(parts)) return("")
   tag <- parts[[1]]
   if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
+}
+
+# Apply library / RCM control into cascade wizard (single source for core design fields)
+apply_ctrl_to_cascade <- function(session, ctrl) {
+  ctrl <- as.list(ctrl)
+  if (nzchar(ctrl$cycle %||% "")) {
+    updateSelectInput(session, "cycle", selected = ctrl$cycle)
+  }
+  spid <- ctrl$sub_process_id %||% ""
+  spn <- ctrl$sub_process %||% ""
+  if (nzchar(spid) || nzchar(spn)) {
+    updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
+  }
+  rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+  if (nzchar(rf)) {
+    updateSelectInput(session, "cascade_risk", selected = rf)
+  }
+  if (nzchar(ctrl$control_objective %||% "")) {
+    updateSelectInput(session, "cascade_objective", selected = ctrl$control_objective)
+  }
+  act <- ctrl$control_activity %||% ""
+  if (nzchar(act)) {
+    updateSelectInput(
+      session, "cascade_activity",
+      selected = activity_key(act, ctrl$approach %||% ctrl$control_activity_type)
+    )
+  }
+  iuc <- trimws(ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+  if (nzchar(iuc)) {
+    updateSelectInput(session, "cascade_iuc", selected = iuc)
+  }
+  invisible(ctrl)
+}
+
+apply_supplement_from_ctrl <- function(session, ctrl) {
+  ctrl <- as.list(ctrl)
+  updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
+  updateTextInput(session, "significant_account",
+                  value = {
+                    ac <- trimws(as.character(ctrl$significant_account %||% ""))
+                    if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
+                      if (!nzchar(ac) || identical(toupper(ac), "NA")) "" else ac
+                    } else {
+                      ""
+                    }
+                  })
+  updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
+  updateSelectizeInput(session, "related_law",
+                       selected = {
+                         raw <- trimws(as.character(ctrl$related_law %||% ""))
+                         if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
+                       })
+  updateTextInput(session, "related_document",
+                  value = ctrl$related_document %||% ctrl$outputs %||% "")
+  strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
+  updateTextAreaInput(session, "risk_attr_financial", value = strip(ctrl$risk_attr_financial))
+  updateTextAreaInput(session, "risk_attr_operations", value = strip(ctrl$risk_attr_operations))
+  updateTextAreaInput(session, "risk_attr_compliance", value = strip(ctrl$risk_attr_compliance))
+  if (nzchar(ctrl$type %||% "")) {
+    updateSelectizeInput(session, "type", selected = ctrl$type)
+  }
+  updateTextAreaInput(session, "inputs", value = ctrl$inputs %||% "")
+  updateTextAreaInput(session, "review_steps", value = ctrl$review_steps %||% "")
+  updateTextAreaInput(session, "outputs", value = ctrl$outputs %||% ctrl$related_document %||% "")
+  updateTextAreaInput(session, "investigation_threshold", value = ctrl$investigation_threshold %||% "")
+  invisible(ctrl)
 }
 
 build_risk_factor_choices <- function(rows,
@@ -236,7 +302,7 @@ cascade_risk_choices <- function(rows) {
   if (length(dup)) {
     for (i in seq_along(factors)) {
       if (tags[i] %in% dup) {
-        alt <- gsub("[\\[\\]]", "", factors[i])
+        alt <- gsub("\\[|\\]", "", factors[i])
         labels[i] <- if (nchar(alt) > 28) paste0(substr(alt, 1, 27), "…") else alt
       }
     }

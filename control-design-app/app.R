@@ -379,7 +379,8 @@ ui <- page_navbar(
               textInput("sub_process_id", lab_req("子作業編號"), value = "",
                         placeholder = "例：EC-101"),
               textInput("sub_process", lab_req("子作業名稱"), value = "",
-                        placeholder = "例：存取管理")
+                        placeholder = "例：存取管理作業"),
+              uiOutput("sub_process_format_hint")
             ),
             textInput("control_id", "控制編號", value = "",
                       placeholder = "自動順編（可覆寫）")
@@ -1349,7 +1350,8 @@ server <- function(input, output, session) {
       },
       sub_process = {
         spn <- trimws(input$sub_process %||% "")
-        if (nzchar(spn)) spn else sel$sub_process
+        if (!nzchar(spn)) spn <- sel$sub_process
+        normalize_sub_process_name(spn)
       },
       risk_factor = rf_tag,
       risk_name = rf_tag,
@@ -1422,6 +1424,7 @@ server <- function(input, output, session) {
       if (!nzchar(sp_id)) sp_id <- sp$id
       if (!nzchar(sp_name)) sp_name <- sp$name
     }
+    sp_name <- normalize_sub_process_name(sp_name)
 
     # 風險辨識為風險欄位來源；引導選取會回填這些欄位
     risk_factor <- trimws(input$risk_factor %||% "")
@@ -1516,6 +1519,16 @@ server <- function(input, output, session) {
     } else {
       helpText(class = "text-muted small", "請先選擇風險類別；僅報導面可填會計科目。")
     }
+  })
+
+  output$sub_process_format_hint <- renderUI({
+    raw <- trimws(input$sub_process %||% "")
+    if (!nzchar(raw)) {
+      return(helpText(class = "text-muted small", "格式：以「作業」結尾（例：存取管理作業）。"))
+    }
+    if (sub_process_name_ok(raw)) return(NULL)
+    div(class = "alert alert-warning py-1 mb-2 small",
+        "定稿時將自動補上「作業」→ ", strong(normalize_sub_process_name(raw)))
   })
 
   # 「全部適用」：按鈕或選項 → 勾選全部常見科目

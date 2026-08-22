@@ -439,6 +439,10 @@ check(identical(nav_titles, expect_nav),
       sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
 check(grepl("goto_lib_tab|開啟範本庫", app_src) && grepl("goto_param_tab|開啟參數庫", app_src),
       "側邊欄最下方含範本庫／參數庫入口")
+check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
+check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
+      "範本庫頁籤含可跳過套用設定")
+check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
 
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")

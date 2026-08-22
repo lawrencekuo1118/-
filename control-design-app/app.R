@@ -168,16 +168,8 @@ ui <- page_navbar(
         class = "mt-auto pt-2 sidebar-lib-block",
         tags$hr(class = "my-2"),
         tags$div(class = "small fw-bold mb-1", "範本庫"),
-        textInput("lib_query", NULL, placeholder = "搜尋範本庫…"),
-        selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
-          actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success"),
-          actionButton("goto_lib_tab", "開啟範本庫", class = "btn-sm btn-outline-secondary")
-        ),
-        checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
         uiOutput("lib_count_badge"),
+        actionButton("goto_lib_tab", "開啟範本庫", class = "btn-sm btn-outline-secondary w-100 mb-2"),
         tags$hr(class = "my-2"),
         tags$div(class = "small fw-bold mb-1", "參數庫"),
         actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100")
@@ -199,7 +191,7 @@ ui <- page_navbar(
         card_header("整體設計流程"),
         tags$ol(
           class = "home-steps mb-0",
-          tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱並套用範本庫。"),
+          tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱。"),
           tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
                   strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
                   "（", tags$span(class = "text-danger", "須依序選取"),
@@ -253,10 +245,10 @@ ui <- page_navbar(
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "累積制通用範本（側邊欄最下方可快速套用／存入）；CSV／JSON／RCM xlsx 匯入。"),
+            "可跳過：搜尋／選擇範本套用至設計表單；亦可匯入 CSV／JSON／RCM xlsx、收集入庫（側邊欄可開啟本頁）。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項（側邊欄最下方可開啟）。"),
+            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項（側邊欄可開啟）。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
@@ -273,7 +265,7 @@ ui <- page_navbar(
         strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
         strong("訪談問項設計"), "／", strong("控制點測試設計"),
         " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
-        " → ⑥ 需要時於側邊欄最下方維護 ", strong("範本庫"), "／", strong("參數庫"), "。"),
+        " → ⑥ 需要時開啟 ", strong("範本庫"), "／", strong("參數庫"), "（側邊欄入口；範本套用可跳過）。"),
       p(class = "small text-muted mb-0",
         "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
@@ -483,7 +475,26 @@ ui <- page_navbar(
   ),
   nav_panel(
     "範本庫",
-    # 上：即時顯示；下：控制面板
+    card(
+      card_header("從範本庫套用（可跳過）"),
+      p(class = "small text-muted mb-2",
+        "選用既有範本填入「風險控制點設計」表單；不選亦可直接於設計頁從頭建立。"),
+      layout_columns(
+        col_widths = c(5, 7),
+        textInput("lib_query", "搜尋", value = "", placeholder = "搜尋標題／風險／控制編號…"),
+        selectInput(
+          "lib_pick", "選擇範本",
+          choices = c("（可跳過）未套用範本…" = "")
+        )
+      ),
+      div(
+        class = "d-flex gap-1 flex-wrap mb-2",
+        actionButton("apply_lib", "套用至設計表單", class = "btn-sm btn-primary"),
+        actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary"),
+        actionButton("save_to_lib", "目前表單存入庫", class = "btn-sm btn-outline-success")
+      ),
+      checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE)
+    ),
     card(
       card_header("即時顯示"),
       DTOutput("lib_table"),
@@ -671,7 +682,7 @@ server <- function(input, output, session) {
       div(class = "alert alert-danger py-2 mb-2 small",
           tags$strong("目前沒有引導候選。"),
           sprintf("（循環＝%s，範本庫＝%d 筆）", cy, n_lib),
-          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或套用左側範本。")
+          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或於該頁套用範本（可跳過）。")
     }
   })
 
@@ -679,10 +690,10 @@ server <- function(input, output, session) {
     ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
     updateSelectInput(
       session, "lib_pick",
-      choices = c("① 優先：從範本庫套用…" = "", ch),
+      choices = c("（可跳過）未套用範本…" = "", ch),
       selected = {
         cur <- input$lib_pick %||% ""
-        if (nzchar(cur) && cur %in% ch) cur else ""
+        if (nzchar(cur) && cur %in% unname(ch)) cur else ""
       }
     )
   }
@@ -917,10 +928,23 @@ server <- function(input, output, session) {
 
   observeEvent(input$apply_lib, {
     id <- input$lib_pick
-    if (!nzchar(id %||% "")) return(showNotification("請先從範本庫選擇", type = "warning"))
+    if (!nzchar(id %||% "")) return(showNotification("請先選擇範本（或跳過此步驟）", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
     fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
+    showNotification(paste("已套用範本：", item$title), type = "message")
+  })
+
+  observeEvent(input$apply_lib_selected_row, {
+    s <- input$lib_table_rows_selected
+    items <- filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    if (is.null(s) || !length(items)) {
+      return(showNotification("請先在表格選取一列範本", type = "warning"))
+    }
+    item <- items[[s[[1]]]]
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
 

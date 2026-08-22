@@ -111,7 +111,8 @@ ui <- page_navbar(
   title = "控制設計",
   theme = bs_theme(
     version = 5, bootswatch = "flatly", primary = "#1B4F72",
-    base_font = font_google("Noto Sans TC"),
+    # Do not use font_google() — it stalls shinyapps cold start (shiny-busy / disconnect)
+    base_font = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Segoe UI", sans-serif',
     "font-size-base" = "0.9rem"
   ),
   header = tags$script(HTML("
@@ -176,12 +177,20 @@ ui <- page_navbar(
         p(
           class = "small text-muted mb-2",
           "流程：", strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防/偵測）→ IUC"),
-          "；", tags$span(class = "text-danger", "*"), "為", strong("設計必填"),
+          "（", tags$span(class = "text-danger", "須依序選取"),
+          "：未選上一層時，下一層本來就沒有候選）。",
+          tags$span(class = "text-danger", "*"), "為", strong("設計必填"),
           "；六大就緒後才可書寫", strong("公司現況"),
           "。控制編號自動順編（如 EC-101-01）。"
         ),
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
+        uiOutput("cascade_candidate_banner"),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("reload_cascade_lib", "重新載入資訊循環候選",
+                       class = "btn-sm btn-outline-primary")
+        ),
         # Step 2: 子作業
         selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
         conditionalPanel(
@@ -602,10 +611,68 @@ server <- function(input, output, session) {
     df
   }
 
-  # Seed empty parameter DB from current library + presets
-  observeEvent(TRUE, {
-    if (!nrow(param_store())) persist_params()
+  # Seed empty parameter DB after UI is ready (avoid blocking cascade updates)
+  session$onFlushed(function() {
+    if (!nrow(isolate(param_store()))) {
+      try(persist_params(), silent = TRUE)
+    }
   }, once = TRUE)
+
+  ensure_cascade_library <- function(notify = FALSE) {
+    cur <- lib()
+    jl_ids <- sum(vapply(cur, function(x) grepl("^JL-", x$library_id %||% ""), logical(1)))
+    rows_n <- length(library_controls_flat(cur, cycle = isolate(input$cycle %||% "電腦化資訊系統循環")))
+    if (jl_ids >= 20 && rows_n >= 10) {
+      if (notify) showNotification(sprintf("引導候選就緒：庫 %d／JL %d／本循環 %d",
+                                           length(cur), jl_ids, rows_n), type = "message")
+      return(invisible(cur))
+    }
+    batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
+    seeded <- seed_control_library(TRUE)
+    if (file.exists(batch)) {
+      seeded <- tryCatch(
+        merge_libraries(seeded, load_control_library(batch, fallback_seed = FALSE), overwrite = TRUE),
+        error = function(e) seeded
+      )
+    }
+    merged <- merge_libraries(cur, seeded, overwrite = FALSE)
+    if (!length(merged)) merged <- seeded
+    lib(persist_lib(merged))
+    refresh_lib_choices()
+    rows_n2 <- length(library_controls_flat(merged, cycle = isolate(input$cycle %||% "電腦化資訊系統循環")))
+    if (notify) {
+      showNotification(
+        sprintf("已載入資訊循環候選：庫 %d 筆／本循環 %d 筆", length(merged), rows_n2),
+        type = "message", duration = 8
+      )
+    }
+    invisible(merged)
+  }
+
+  observeEvent(TRUE, {
+    ensure_cascade_library(notify = FALSE)
+  }, once = TRUE)
+
+  observeEvent(input$reload_cascade_lib, {
+    ensure_cascade_library(notify = TRUE)
+  })
+
+  output$cascade_candidate_banner <- renderUI({
+    cy <- input$cycle %||% ""
+    n_lib <- length(lib())
+    rows <- cascade_rows()
+    n_sub <- length(cascade_sub_process_choices(rows))
+    if (n_sub > 0) {
+      div(class = "alert alert-success py-1 mb-2 small",
+          sprintf("引導候選已載入：本循環「%s」有 %d 個子作業選項（範本庫 %d 筆）。請先選②子作業，③～⑥才會依序出現。",
+                  cy, n_sub, n_lib))
+    } else {
+      div(class = "alert alert-danger py-2 mb-2 small",
+          tags$strong("目前沒有引導候選。"),
+          sprintf("（循環＝%s，庫＝%d）", cy, n_lib),
+          "請確認循環為「資訊循環」，或按「重新載入資訊循環候選」。")
+    }
+  })
 
   refresh_lib_choices <- function() {
     ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
@@ -1259,11 +1326,16 @@ server <- function(input, output, session) {
     sub_key <- input$cascade_sub %||% ""
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
-    } else if (!nzchar(sub_key)) {
-      rows <- list()
+      ch_risk <- cascade_risk_choices(rows)
+      label0 <- sprintf("③ 選擇風險因素…（%d）", length(ch_risk))
+    } else if (identical(sub_key, "__custom__")) {
+      ch_risk <- character()
+      label0 <- "③ 自訂子作業下請自訂風險或稍後套用"
+    } else {
+      ch_risk <- character()
+      label0 <- "③ 請先選擇②子作業…"
     }
-    ch_risk <- cascade_risk_choices(rows)
-    ch <- c("③ 選擇風險因素…" = "", ch_risk, "＋自訂新增風險" = "__custom__")
+    ch <- c(stats::setNames("", label0), ch_risk, "＋自訂新增風險" = "__custom__")
     cur <- input$cascade_risk %||% ""
     updateSelectInput(session, "cascade_risk", choices = ch,
                       selected = if (cur %in% unname(ch)) cur else "")
@@ -1292,7 +1364,7 @@ server <- function(input, output, session) {
     rk <- input$cascade_risk %||% ""
     if (!nzchar(rk)) {
       updateSelectInput(session, "cascade_objective",
-                        choices = c("④ 選擇控制目標…" = ""), selected = "")
+                        choices = c("④ 請先選擇③風險…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -1302,7 +1374,8 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, risk_factor = rk)
     }
     ch_obj <- cascade_objective_choices(rows)
-    ch <- c("④ 選擇控制目標…" = "", ch_obj, "＋自訂新增目標" = "__custom__")
+    ch <- c(stats::setNames("", sprintf("④ 選擇控制目標…（%d）", length(ch_obj))),
+            ch_obj, "＋自訂新增目標" = "__custom__")
     cur <- input$cascade_objective %||% ""
     updateSelectInput(session, "cascade_objective", choices = ch,
                       selected = if (cur %in% unname(ch)) cur else "")
@@ -1315,7 +1388,7 @@ server <- function(input, output, session) {
     obj <- input$cascade_objective %||% ""
     if (!nzchar(obj)) {
       updateSelectInput(session, "cascade_activity",
-                        choices = c("⑤ 選擇控制活動…" = ""), selected = "")
+                        choices = c("⑤ 請先選擇④控制目標…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -1328,8 +1401,8 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, objective = obj)
     }
     ch_act <- cascade_activity_choices(rows)
-    ch <- c("⑤ 選擇控制活動（標示單一預防/偵測）…" = "", ch_act,
-            "＋自訂新增活動" = "__custom__")
+    ch <- c(stats::setNames("", sprintf("⑤ 選擇控制活動…（%d）", length(ch_act))),
+            ch_act, "＋自訂新增活動" = "__custom__")
     cur <- input$cascade_activity %||% ""
     updateSelectInput(session, "cascade_activity", choices = ch,
                       selected = if (cur %in% unname(ch)) cur else "")
@@ -1338,10 +1411,14 @@ server <- function(input, output, session) {
   observe({
     rows <- cascade_rows()
     act <- input$cascade_activity %||% ""
-    # IUC choices: filter by prior selection when possible
     sub_key <- input$cascade_sub %||% ""
     rk <- input$cascade_risk %||% ""
     obj <- input$cascade_objective %||% ""
+    if (!nzchar(act)) {
+      updateSelectInput(session, "cascade_iuc",
+                        choices = c("⑥ 請先選擇⑤控制活動…" = ""), selected = "")
+      return()
+    }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
     }
@@ -1351,11 +1428,12 @@ server <- function(input, output, session) {
     if (nzchar(obj) && !identical(obj, "__custom__")) {
       rows <- filter_cascade_rows(rows, objective = obj)
     }
-    if (nzchar(act) && !identical(act, "__custom__")) {
+    if (!identical(act, "__custom__")) {
       rows <- filter_cascade_rows(rows, activity_key_sel = act)
     }
     ch_iuc <- cascade_iuc_choices(rows, pbc_df = pbc_reg())
-    ch <- c("⑥ 選擇 IUC／相關系統…" = "", ch_iuc, "＋自訂新增 IUC" = "__custom__")
+    ch <- c(stats::setNames("", sprintf("⑥ 選擇 IUC／相關系統…（%d）", length(ch_iuc))),
+            ch_iuc, "＋自訂新增 IUC" = "__custom__")
     cur <- input$cascade_iuc %||% ""
     updateSelectInput(session, "cascade_iuc", choices = ch,
                       selected = if (cur %in% unname(ch)) cur else "")

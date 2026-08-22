@@ -339,5 +339,22 @@ if (length(jl)) {
   check(grepl("六大控制項目", scaffold), "現況草稿含六大規則")
 }
 
+# 按鈕／下載皆須有對應 handler（防呆回歸）
+app_src <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+btn_ids <- unique(regmatches(app_src, gregexpr('actionButton\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]])
+btn_ids <- sub('actionButton\\(\\s*"([^"]+)".*', "\\1", btn_ids, perl = TRUE)
+dl_ids <- unique(regmatches(app_src, gregexpr('downloadButton\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]])
+dl_ids <- sub('downloadButton\\(\\s*"([^"]+)".*', "\\1", dl_ids, perl = TRUE)
+obs_ids <- unique(regmatches(app_src, gregexpr('observeEvent\\(\\s*input\\$([A-Za-z0-9_]+)', app_src, perl = TRUE))[[1]])
+obs_ids <- sub('observeEvent\\(\\s*input\\$', "", obs_ids, perl = TRUE)
+dlh_ids <- unique(regmatches(app_src, gregexpr('output\\$([A-Za-z0-9_]+)\\s*<-\\s*downloadHandler', app_src, perl = TRUE))[[1]])
+dlh_ids <- sub('output\\$', "", sub('\\s*<-\\s*downloadHandler', "", dlh_ids, perl = TRUE), perl = TRUE)
+miss_btn <- setdiff(btn_ids, obs_ids)
+miss_dl <- setdiff(dl_ids, dlh_ids)
+check(!length(miss_btn), sprintf("全部 actionButton 有 observeEvent（缺：%s）", paste(miss_btn, collapse = ",")))
+check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺：%s）", paste(miss_dl, collapse = ",")))
+check(length(btn_ids) >= 20, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
+check(length(dl_ids) >= 6, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
+
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

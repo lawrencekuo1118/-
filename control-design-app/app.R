@@ -713,6 +713,12 @@ server <- function(input, output, session) {
     content = function(file) utils::write.csv(param_catalog_df(), file, row.names = FALSE, fileEncoding = "UTF-8")
   )
 
+  observeEvent(input$param_refresh, {
+    # Invalidate catalog reactive via input$param_refresh dependency; confirm to user
+    n <- nrow(param_catalog_df())
+    showNotification(sprintf("參數庫已重新整理（%d 筆選項）", n), type = "message")
+  })
+
   add_ctrl_to_library <- function(ctrl, title = NULL, tags = character(), source = "manual") {
     if (!is.null(title) && nzchar(trimws(title))) ctrl$title <- trimws(title)
     tag_vec <- unlist(strsplit(as.character(tags %||% ""), "[;；,，|/]+"))

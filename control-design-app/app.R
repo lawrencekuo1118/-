@@ -94,7 +94,7 @@ ui <- page_navbar(
       div(
         class = "mt-auto pt-2",
         tags$hr(class = "my-2"),
-        textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
+        textInput("lib_query", NULL, placeholder = "搜尋範本庫…"),
         selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
         div(
           class = "d-flex gap-1 flex-wrap",

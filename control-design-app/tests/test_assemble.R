@@ -17,6 +17,7 @@ source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
+source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -162,6 +163,15 @@ check(any(grepl("證券交易法", RELATED_LAW_CHOICES_TW)) && any(grepl("Sarban
       "預設含證交法與 SOX")
 pcat <- parameter_catalog(list(), list(), list(), presets = list("相關法令" = unname(RELATED_LAW_CHOICES)))
 check(nrow(pcat) >= 20 && any(pcat$參數 == "相關法令"), "參數庫可查詢預設法令")
+seeded <- seed_control_library(TRUE)
+pcat2 <- parameter_catalog(seeded, list(), list())
+check(any(pcat2$參數 == "子作業編號") && any(grepl("EC-101", pcat2$選項值)), "參數庫含資訊循環子作業")
+check(any(pcat2$參數 == "控制目標"), "參數庫含控制目標選項")
+tmp_ps <- tempfile(fileext = ".json")
+save_parameter_store(pcat2, tmp_ps)
+reloaded <- load_parameter_store(tmp_ps)
+check(nrow(reloaded) == nrow(pcat2), "參數資料庫 JSON 可持久化")
+check(nrow(filter_parameter_store(reloaded, param = "風險類別")) >= 1, "參數庫可依類型篩選")
 
 # 空表單不可因 gaps 崩潰（曾導致引導選單無法更新）
 empty_draft <- list(cycle = "電腦化資訊系統循環", frequency = "每季")

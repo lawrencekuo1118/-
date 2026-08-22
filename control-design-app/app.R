@@ -30,6 +30,7 @@ source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "draft_store.R"), local = TRUE)
+source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -429,13 +430,23 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(3, 9),
       card(
-        card_header("後台參數查詢"),
+        card_header("後台參數資料庫"),
         p(class = "small text-muted",
-          "彙整範本庫／佇列／已定稿 RCM 與系統預設清單中目前已存的參數選項。"),
+          "查詢 APP 目前已存的全部參數選項（系統預設、範本庫、佇列、已定稿 RCM、PBC）。",
+          "可累積儲存於本機資料庫，供後續設計選用。"),
         selectInput("param_filter", "參數類型", choices = c("全部" = "")),
-        textInput("param_query", NULL, placeholder = "搜尋選項值…"),
-        actionButton("param_refresh", "重新整理", class = "btn-sm btn-primary"),
-        downloadButton("download_params", "下載參數清單 CSV", class = "btn-sm mt-2")
+        selectInput("param_source", "來源",
+                    choices = c("全部" = "", "系統預設" = "系統預設",
+                                "範本庫" = "範本庫", "暫存佇列" = "暫存佇列",
+                                "已定稿RCM" = "已定稿RCM", "PBC命名庫" = "PBC命名庫")),
+        textInput("param_query", NULL, placeholder = "搜尋參數或選項值…"),
+        div(
+          class = "d-flex gap-1 flex-wrap",
+          actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary"),
+          actionButton("param_apply_row", "套用選取列至表單", class = "btn-sm btn-outline-success")
+        ),
+        downloadButton("download_params", "下載 CSV", class = "btn-sm mt-2"),
+        downloadButton("download_params_json", "下載 JSON", class = "btn-sm mt-2")
       ),
       card(
         uiOutput("param_stats"),
@@ -530,6 +541,7 @@ server <- function(input, output, session) {
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
   lib_path_json <- file.path(data_dir, "control_library.json")
   lib_path_csv <- file.path(data_dir, "control_library.csv")
+  param_path_json <- file.path(data_dir, "parameter_store.json")
   # Seed once if missing, then always load persisted (accumulative)
   if (!file.exists(lib_path_json)) {
     seed <- seed_control_library()
@@ -578,6 +590,22 @@ server <- function(input, output, session) {
     save_control_library(library, lib_path_json, lib_path_csv)
     library
   }
+
+  param_store <- reactiveVal(load_parameter_store(param_path_json))
+  persist_params <- function() {
+    df <- parameter_catalog(
+      library = lib(), drafts = drafts(), controls = controls(),
+      pbc = pbc_reg()
+    )
+    save_parameter_store(df, param_path_json)
+    param_store(df)
+    df
+  }
+
+  # Seed empty parameter DB from current library + presets
+  observeEvent(TRUE, {
+    if (!nrow(param_store())) persist_params()
+  }, once = TRUE)
 
   refresh_lib_choices <- function() {
     ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
@@ -671,52 +699,94 @@ server <- function(input, output, session) {
 
   param_catalog_df <- reactive({
     input$param_refresh
-    parameter_catalog(
-      library = lib(), drafts = drafts(), controls = controls(),
-      presets = list(
-        "循環" = unname(CYCLES_NINE_CHOICES),
-        "風險類別" = RISK_CATEGORY_CHOICES,
-        "控制類型" = CONTROL_TYPE_MANUAL_AUTO,
-        "控制活動類型" = CONTROL_ACTIVITY_TYPE_PD,
-        "控制頻率" = FREQUENCY_CHOICES,
-        "相關法令" = unname(RELATED_LAW_CHOICES)
-      )
+    df <- param_store()
+    if (!nrow(df)) df <- persist_params()
+    filter_parameter_store(
+      df,
+      param = input$param_filter,
+      query = input$param_query,
+      source = input$param_source
     )
   })
 
   observe({
-    df <- param_catalog_df()
-    params <- sort(unique(df$參數))
+    st <- parameter_store_stats(param_store())
     updateSelectInput(session, "param_filter",
-                      choices = c("全部" = "", stats::setNames(params, params)),
+                      choices = c("全部" = "", stats::setNames(st$params, st$params)),
                       selected = input$param_filter %||% "")
   })
 
   output$param_stats <- renderUI({
-    df <- param_catalog_df()
-    tags$p(class = "small text-muted",
-           sprintf("共 %d 筆參數選項（%d 類）", nrow(df), length(unique(df$參數))))
+    st <- parameter_store_stats(param_store())
+    vis <- param_catalog_df()
+    tags$p(
+      class = "small text-muted",
+      sprintf("資料庫 %d 筆／%d 類參數；目前篩選顯示 %d 筆。來源：%s",
+              st$n, st$n_params, nrow(vis),
+              paste(st$sources, collapse = "、"))
+    )
   })
 
   output$param_table <- renderDT({
     df <- param_catalog_df()
-    f <- input$param_filter %||% ""
-    q <- trimws(input$param_query %||% "")
-    if (nzchar(f)) df <- df[df$參數 == f, , drop = FALSE]
-    if (nzchar(q)) df <- df[grepl(q, df$選項值, fixed = TRUE) | grepl(q, df$參數, fixed = TRUE), , drop = FALSE]
-    datatable(df, rownames = FALSE, filter = "top",
-              options = list(pageLength = 25, scrollX = TRUE))
+    datatable(
+      df, rownames = FALSE, selection = "single", filter = "top",
+      options = list(pageLength = 25, scrollX = TRUE)
+    )
   })
 
   output$download_params <- downloadHandler(
     filename = function() sprintf("param_catalog_%s.csv", format(Sys.Date(), "%Y%m%d")),
-    content = function(file) utils::write.csv(param_catalog_df(), file, row.names = FALSE, fileEncoding = "UTF-8")
+    content = function(file) utils::write.csv(param_store(), file, row.names = FALSE, fileEncoding = "UTF-8")
+  )
+  output$download_params_json <- downloadHandler(
+    filename = function() sprintf("param_catalog_%s.json", format(Sys.Date(), "%Y%m%d")),
+    content = function(file) save_parameter_store(param_store(), file)
   )
 
   observeEvent(input$param_refresh, {
-    # Invalidate catalog reactive via input$param_refresh dependency; confirm to user
-    n <- nrow(param_catalog_df())
-    showNotification(sprintf("參數庫已重新整理（%d 筆選項）", n), type = "message")
+    df <- persist_params()
+    showNotification(sprintf("參數資料庫已從現況重建並儲存（%d 筆）", nrow(df)),
+                     type = "message")
+  })
+
+  observeEvent(input$param_apply_row, {
+    sel <- input$param_table_rows_selected
+    df <- param_catalog_df()
+    if (!length(sel) || !nrow(df)) {
+      return(showNotification("請先在表格選取一列", type = "warning"))
+    }
+    row <- df[sel[[1]], , drop = FALSE]
+    param <- as.character(row$參數[[1]])
+    val <- as.character(row$選項值[[1]])
+    mapped <- list(
+      "循環" = function() updateSelectInput(session, "cycle", selected = val),
+      "子作業編號" = function() updateTextInput(session, "sub_process_id", value = val),
+      "子作業名稱" = function() updateTextInput(session, "sub_process", value = val),
+      "風險因素" = function() updateTextInput(session, "risk_factor", value = val),
+      "風險描述" = function() updateTextAreaInput(session, "risk_description", value = val),
+      "風險類別" = function() updateSelectInput(session, "risk_category", selected = val),
+      "會計科目" = function() updateTextInput(session, "significant_account", value = val),
+      "控制目標" = function() updateTextAreaInput(session, "control_objective", value = val),
+      "控制活動" = function() updateTextAreaInput(session, "control_activity", value = val),
+      "控制類型" = function() updateSelectInput(session, "nature", selected = val),
+      "控制活動類型" = function() updateSelectInput(session, "approach", selected = val),
+      "控制頻率" = function() updateSelectInput(session, "frequency", selected = val),
+      "流程負責單位" = function() updateTextInput(session, "responsible_unit", value = val),
+      "相關系統／IUC" = function() updateTextAreaInput(session, "iuc_or_system", value = val),
+      "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
+      "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
+      "相關文件" = function() updateTextInput(session, "related_document", value = val),
+      "控制現況描述" = function() updateTextAreaInput(session, "company_status", value = val),
+      "控制有效性評估" = function() updateSelectInput(session, "effectiveness", selected = val)
+    )
+    fn <- mapped[[param]]
+    if (is.null(fn)) {
+      return(showNotification(sprintf("「%s」無對應表單欄（已複製概念：%s）", param, val),
+                              type = "message"))
+    }
+    fn()
+    showNotification(sprintf("已套用 %s＝%s", param, val), type = "message")
   })
 
   add_ctrl_to_library <- function(ctrl, title = NULL, tags = character(), source = "manual") {

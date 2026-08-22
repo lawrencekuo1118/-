@@ -388,43 +388,49 @@ ui <- page_navbar(
   ),
   nav_panel(
     "範本庫",
-    layout_columns(
-      col_widths = c(4, 8),
-      card(
-        card_header("累積制通用範本庫"),
-        p(
-          class = "text-muted small mb-1",
-          "管道：", strong("設計／RCM 就緒列 → 入庫"), "｜",
-          strong("CSV／JSON／RCM xlsx 匯入"), "｜",
-          strong("自訂引導項"), "。入庫後設計時", strong("優先套用"), "，完善後可覆寫同 ID（累積）。"
-        ),
-        verbatimTextOutput("lib_stats_text"),
-        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
-                  accept = c(".csv", ".json", ".xlsx", ".xls")),
-        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
-                     class = "btn-sm btn-outline-primary w-100 mb-2"),
-        tags$hr(class = "my-2"),
-        tags$strong(class = "small", "收集入庫"),
-        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
-        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
+    # 上：控制面板；下：範本庫表格
+    card(
+      card_header("累積制通用範本庫 — 選項"),
+      p(
+        class = "text-muted small mb-2",
+        "管道：", strong("設計／RCM 就緒列 → 入庫"), "｜",
+        strong("CSV／JSON／RCM xlsx 匯入"), "｜",
+        strong("自訂引導項"), "。入庫後設計時", strong("優先套用"), "，完善後可覆寫同 ID（累積）。"
+      ),
+      verbatimTextOutput("lib_stats_text"),
+      layout_columns(
+        col_widths = c(6, 6),
         div(
-          class = "d-flex gap-1 flex-wrap",
-          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
+          tags$strong(class = "small", "匯入"),
+          fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
+                    accept = c(".csv", ".json", ".xlsx", ".xls")),
+          checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
+          actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
+                       class = "btn-sm btn-outline-primary w-100")
         ),
         div(
-          class = "d-flex gap-1 flex-wrap mt-2",
-          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
-          downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
-          downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
+          tags$strong(class = "small", "收集入庫"),
+          textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
+          textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
+          div(
+            class = "d-flex gap-1 flex-wrap",
+            actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
+            actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
+            actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
+          )
         )
       ),
-      card(
-        DTOutput("lib_table"),
-        verbatimTextOutput("lib_preview")
+      div(
+        class = "d-flex gap-1 flex-wrap mt-2",
+        actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
+        downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
+        downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
       )
+    ),
+    card(
+      card_header("即時顯示"),
+      DTOutput("lib_table"),
+      verbatimTextOutput("lib_preview")
     )
   ),
   nav_panel(
@@ -866,7 +872,7 @@ server <- function(input, output, session) {
     datatable(
       library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)),
       selection = "single", rownames = FALSE,
-      options = list(pageLength = 10, scrollX = TRUE, dom = "ftip")
+      options = list(pageLength = 15, scrollX = TRUE, dom = "ftip")
     )
   })
   output$lib_preview <- renderText({

@@ -42,7 +42,7 @@ lab_opt <- function(txt) {
 
 fill_inputs_from_ctrl <- function(session, ctrl) {
   if (is.null(ctrl)) return()
-  updateSelectInput(session, "cycle", selected = ctrl$cycle %||% CYCLES_NINE[[1]])
+  updateSelectInput(session, "cycle", selected = ctrl$cycle %||% "")
   # ① 流程資訊
   updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
   updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
@@ -140,8 +140,9 @@ ui <- page_navbar(
   sidebar = sidebar(
     width = 280,
     open = "desktop",
-    selectInput("cycle", "循環", choices = CYCLES_NINE_CHOICES,
-                selected = "電腦化資訊系統循環"),
+    selectInput("cycle", "循環",
+                choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
+                selected = ""),
     textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
     selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
     div(
@@ -662,6 +663,11 @@ server <- function(input, output, session) {
   output$cascade_candidate_banner <- renderUI({
     cy <- input$cycle %||% ""
     n_lib <- length(lib())
+    if (!nzchar(cy)) {
+      return(div(class = "alert alert-warning py-2 mb-2 small",
+                 tags$strong("請先在左側選擇循環。"),
+                 "選定後才會載入該循環的子作業／風險／目標／活動候選。"))
+    }
     rows <- cascade_rows()
     n_sub <- length(cascade_sub_process_choices(rows))
     if (n_sub > 0) {
@@ -672,7 +678,7 @@ server <- function(input, output, session) {
       div(class = "alert alert-danger py-2 mb-2 small",
           tags$strong("目前沒有引導候選。"),
           sprintf("（循環＝%s，庫＝%d）", cy, n_lib),
-          "請確認循環為「資訊循環」，或按「重新載入資訊循環候選」。")
+          "若為資訊循環，請按「重新載入資訊循環候選」。")
     }
   })
 
@@ -1172,7 +1178,9 @@ server <- function(input, output, session) {
 
   # ---- Forced cascade: cycle → 子作業 → 風險 → 目標 → 活動(單一PD) → IUC ----
   cascade_rows <- reactive({
-    library_controls_flat(lib(), cycle = input$cycle)
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) return(list())
+    library_controls_flat(lib(), cycle = cy)
   })
 
   resolve_cascade_selection <- function() {

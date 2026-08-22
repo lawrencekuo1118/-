@@ -199,8 +199,12 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     },
     `風險類別` = normalize_risk_category(ctrl),
     `會計科目` = {
-      ac <- ctrl$significant_account %||% ""
-      if (!nzchar(ac)) "NA" else ac
+      ac <- trimws(as.character(ctrl$significant_account %||% ""))
+      if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
+        if (!nzchar(ac)) "" else ac
+      } else {
+        ""
+      }
     },
     `控制目標` = trimws(ctrl$control_objective %||% ""),
     `控制編號` = derive_control_id(ctrl, seq_no),

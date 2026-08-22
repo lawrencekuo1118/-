@@ -87,40 +87,53 @@ ASSERTION_CHOICES <- c(
 
 # 相關法規預設（台灣＋美國財務報導／商業常見）
 RELATED_LAW_CHOICES_TW <- c(
+  # 財務報導／資本市場核心
   "證券交易法",
-  "公司法",
+  "證券發行人財務報告編製準則",
+  "公開發行公司年報應行記載事項準則",
+  "公開發行公司建立內部控制制度處理準則",
+  "公開發行公司取得或處分資產處理準則",
+  "公開發行公司資金貸與及背書保證處理準則",
+  "會計師查核簽證財務報表規則",
   "商業會計法",
   "企業會計準則公報",
   "國際財務報導準則（IFRS）／IAS",
-  "公開發行公司建立內部控制制度處理準則",
-  "公開發行公司年報應行記載事項準則",
-  "會計師查核簽證財務報表規則",
+  "公司法",
+  # 產業／金融監理
   "金融控股公司法",
   "銀行法",
   "保險法",
+  "洗錢防制法",
+  # 治理／稅務／其他常見商業法
+  "企業併購法",
+  "公平交易法",
+  "營業秘密法",
   "個人資料保護法",
   "資通安全管理法",
-  "營業秘密法",
-  "公平交易法",
-  "勞動基準法",
   "所得稅法",
-  "加值型及非加值型營業稅法"
+  "加值型及非加值型營業稅法",
+  "勞動基準法"
 )
 
 RELATED_LAW_CHOICES_US <- c(
+  # Financial reporting / securities
   "Securities Act of 1933",
   "Securities Exchange Act of 1934",
   "Sarbanes-Oxley Act (SOX)",
+  "SOX Section 302 / 404 (ICFR)",
   "Dodd-Frank Act",
+  "Investment Company Act of 1940",
   "PCAOB Auditing Standards",
   "US GAAP (FASB ASC)",
   "SEC Regulation S-X",
   "SEC Regulation S-K",
   "Internal Control over Financial Reporting (ICFR)",
   "COSO Internal Control — Integrated Framework",
+  # Related commercial / compliance often cited with FR
   "Foreign Corrupt Practices Act (FCPA)",
-  "HIPAA",
+  "Bank Secrecy Act / AML",
   "GLBA",
+  "HIPAA",
   "CCPA / CPRA"
 )
 

@@ -156,7 +156,10 @@ comp_lock <- design_required_check(modifyList(d1, list(
   risk_category = "營運面", related_law = "SOX", significant_account = ""
 )))
 check(!isTRUE(comp_lock$ok) && any(grepl("法令", comp_lock$missing)), "營運面填法令應擋下")
-check(length(RELATED_LAW_CHOICES) >= 20, "相關法令預設清單含台美常見法規")
+check(length(RELATED_LAW_CHOICES_TW) >= 15 && length(RELATED_LAW_CHOICES_US) >= 10,
+      sprintf("相關法令預設含台美（台%d／美%d）", length(RELATED_LAW_CHOICES_TW), length(RELATED_LAW_CHOICES_US)))
+check(any(grepl("證券交易法", RELATED_LAW_CHOICES_TW)) && any(grepl("Sarbanes-Oxley", RELATED_LAW_CHOICES_US)),
+      "預設含證交法與 SOX")
 pcat <- parameter_catalog(list(), list(), list(), presets = list("相關法令" = unname(RELATED_LAW_CHOICES)))
 check(nrow(pcat) >= 20 && any(pcat$參數 == "相關法令"), "參數庫可查詢預設法令")
 

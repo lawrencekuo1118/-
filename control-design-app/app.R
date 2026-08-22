@@ -76,9 +76,15 @@ ui <- page_navbar(
     Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
       var el = document.getElementById('significant_account');
       if (!el) return;
-      el.disabled = !msg.enabled;
-      el.readOnly = !msg.enabled;
-      el.classList.toggle('bg-light', !msg.enabled);
+      var $el = $('#significant_account');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+        el.readOnly = !msg.enabled;
+        el.classList.toggle('bg-light', !msg.enabled);
+      }
     });
     Shiny.addCustomMessageHandler('toggleLaw', function(msg) {
       var el = document.getElementById('related_law');
@@ -222,7 +228,8 @@ ui <- page_navbar(
           tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
           tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
                   strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
-          tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
+          tags$li(strong("會計科目"), "僅報導面可填且必填（常見科目複選，含「全部適用」）；",
+                  strong("相關法令"), "僅遵循面可填且必填。"),
           tags$li(strong("聲明（Assertions）"), "：報導面可複選 Thomson Reuters／AICPA 八種；",
                   "營運面僅完整性／正確性／即時性；遵循面不可選。"),
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
@@ -392,8 +399,17 @@ ui <- page_navbar(
             ),
             selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
             uiOutput("significant_account_hint"),
-            textInput("significant_account", "會計科目", value = "",
-                      placeholder = "僅報導面可填且必填"),
+            selectizeInput(
+              "significant_account", "會計科目",
+              choices = account_select_choices(),
+              multiple = TRUE,
+              selected = character(0),
+              options = list(
+                create = TRUE,
+                placeholder = "報導面必填：可複選常見科目，或選「全部適用」"
+              )
+            ),
+            actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
             textAreaInput(
               "risk_attr_detail", lab_opt("風險屬性細節"), rows = 2,
               placeholder = "對應所選風險類別之細節（可空）"
@@ -452,17 +468,65 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(4, 8),
       card(
-        card_header("控制點測試設計"),
+        card_header("控制點測試設計（CSA）"),
+        p(class = "small text-muted mb-2",
+          "僅能選取「風險控制點設計」已定版並寫入 RCM 之控制點。",
+          "同一控制點可因不同控制現況情境維護多組測試步驟。",
+          "抽樣樣本數依該控制實際發生頻率訂定（PCAOB AS 2301／AS 2315；Deloitte 頻率對應表）；",
+          "Higher RoMM／Fraud 時上調。"),
         selectizeInput(
           "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
+          options = list(placeholder = "已定版風險控制點（空＝全部已定版）")
         ),
         checkboxGroupInput("csa_elements", "測試步驟元素",
                            choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
         actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
         uiOutput("csa_status"),
         tags$hr(),
-        tags$strong(class = "small", "Form 4120SR 測試步驟設定"),
+        tags$strong(class = "small", "頻率 → 建議最低樣本數（基準／高風險）"),
+        tags$div(
+          class = "small text-muted mb-2",
+          tags$table(
+            class = "table table-sm table-borderless mb-0",
+            tags$thead(tags$tr(
+              tags$th("頻率"), tags$th("基準"), tags$th("Higher／Fraud")
+            )),
+            tags$tbody(
+              tags$tr(tags$td("每年"), tags$td("1"), tags$td("1")),
+              tags$tr(tags$td("每半年"), tags$td("2"), tags$td("2")),
+              tags$tr(tags$td("每季"), tags$td("2"), tags$td("3")),
+              tags$tr(tags$td("每月"), tags$td("3"), tags$td("5")),
+              tags$tr(tags$td("每週"), tags$td("10"), tags$td("15")),
+              tags$tr(tags$td("每日／每筆交易"), tags$td("25"), tags$td("40")),
+              tags$tr(tags$td("持續／自動"), tags$td("To1＋再執行1"), tags$td("To1＋再執行2")),
+              tags$tr(tags$td("事件觸發／其他"), tags$td(colspan = 2, "依期間發生次數／母體"))
+            )
+          )
+        ),
+        tags$hr(),
+        tags$strong(class = "small", "控制現況情境組（同一控制點可多組）"),
+        p(class = "small text-muted mb-2",
+          "同一已定版控制點可因不同控制現況情境，各自維護一組測試步驟（Type／Inputs／Steps／Outputs）。"),
+        selectizeInput(
+          "csa_edit_control", "編輯控制點", choices = NULL,
+          options = list(placeholder = "選擇已定版控制點以編輯情境組")
+        ),
+        selectizeInput(
+          "csa_scenario_pick", "情境組", choices = NULL,
+          options = list(placeholder = "選擇或新增情境組")
+        ),
+        textInput("csa_scenario_name", "控制現況情境名稱",
+                  placeholder = "例：電子簽核路徑／口頭核准路徑"),
+        textAreaInput("csa_scenario_status", "該情境之控制現況說明", rows = 2,
+                      placeholder = "描述此情境下公司實際怎麼做"),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
+          actionButton("csa_scenario_save", "儲存此情境組", class = "btn-sm btn-primary"),
+          actionButton("csa_scenario_dup", "複製情境組", class = "btn-sm btn-outline-secondary"),
+          actionButton("csa_scenario_del", "刪除此情境組", class = "btn-sm btn-outline-danger")
+        ),
+        tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
         selectizeInput("type", "Type", choices = TYPE_CHOICES,
                        options = list(create = TRUE, placeholder = "Form 4120SR Type")),
         textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
@@ -956,7 +1020,13 @@ server <- function(input, output, session) {
       "聲明" = function() {
         updateSelectizeInput(session, "assertions", selected = val)
       },
-      "會計科目" = function() updateTextInput(session, "significant_account", value = val),
+      "會計科目" = function() {
+        updateSelectizeInput(
+          session, "significant_account",
+          choices = account_select_choices(),
+          selected = expand_account_selection(val)
+        )
+      },
       "控制目標" = function() {
         updateTextAreaInput(session, "custom_objective", value = val)
         updateSelectInput(session, "cascade_objective", selected = "__custom__")
@@ -1289,7 +1359,7 @@ server <- function(input, output, session) {
       risk_attr_operations = attr_ctrl$risk_attr_operations,
       risk_attr_compliance = attr_ctrl$risk_attr_compliance,
       romm_classification = input$romm_classification %||% "",
-      significant_account = input$significant_account %||% "",
+      significant_account = join_significant_accounts(input$significant_account),
       assertions = paste(input$assertions %||% character(), collapse = "；"),
       control_objective = sel$control_objective,
       control_activity = sel$control_activity,
@@ -1439,7 +1509,7 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_reporting_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("報導面"), " — 會計科目為必填，請填財務報表科目。")
+          lab_req("報導面"), " — 會計科目為必填；可複選常見財務報表科目，或按「全部適用」。")
     } else if (nzchar(cat)) {
       div(class = "alert alert-secondary py-1 mb-2 small",
           "非報導面：會計科目已鎖定不可填（將自動清空）。")
@@ -1447,6 +1517,34 @@ server <- function(input, output, session) {
       helpText(class = "text-muted small", "請先選擇風險類別；僅報導面可填會計科目。")
     }
   })
+
+  # 「全部適用」：按鈕或選項 → 勾選全部常見科目
+  observeEvent(input$account_select_all, {
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
+    if (!is_reporting_risk_category(cat)) {
+      return(showNotification("僅報導面可選會計科目", type = "warning"))
+    }
+    updateSelectizeInput(
+      session, "significant_account",
+      choices = account_select_choices(),
+      selected = expand_account_selection(ACCOUNT_ALL_OPTION)
+    )
+  })
+  observeEvent(input$significant_account, {
+    cat <- trimws(input$risk_category %||% "")
+    if (!is_reporting_risk_category(cat)) return()
+    sel <- parse_account_values(input$significant_account)
+    if (!(ACCOUNT_ALL_OPTION %in% sel)) return()
+    # 選到「全部適用」時展開為全科目（避免只留標籤卻漏存）
+    desired <- expand_account_selection(ACCOUNT_ALL_OPTION)
+    if (!setequal(sel, desired)) {
+      updateSelectizeInput(
+        session, "significant_account",
+        choices = account_select_choices(),
+        selected = desired
+      )
+    }
+  }, ignoreInit = TRUE)
 
   output$related_law_hint <- renderUI({
     cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
@@ -1549,8 +1647,8 @@ server <- function(input, output, session) {
       list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
-      if (nzchar(trimws(input$significant_account %||% ""))) {
-        updateTextInput(session, "significant_account", value = "")
+      if (length(parse_account_values(input$significant_account))) {
+        updateSelectizeInput(session, "significant_account", selected = character(0))
       }
     }
     if (nzchar(cat) && !is_compliance_risk_category(cat)) {
@@ -2123,25 +2221,195 @@ server <- function(input, output, session) {
     Filter(function(c) c$control_id %in% ids, cs)
   })
   selected_worksheet_controls_sa <- reactive({
-    cs <- controls()
+    cs <- Filter(is_control_finalized_for_rcm, controls())
     if (!length(cs)) return(list())
     ids <- input$worksheet_controls_sa
     if (!length(ids) || all(!nzchar(ids))) return(cs)
     Filter(function(c) c$control_id %in% ids, cs)
   })
+  csa_edit_ctrl <- reactive({
+    cs <- Filter(is_control_finalized_for_rcm, controls())
+    if (!length(cs)) return(NULL)
+    id <- input$csa_edit_control
+    if (!nzchar(id %||% "")) return(cs[[1]])
+    hit <- Filter(function(c) identical(c$control_id, id), cs)
+    if (length(hit)) hit[[1]] else cs[[1]]
+  })
+  fill_csa_scenario_form <- function(sc) {
+    updateTextInput(session, "csa_scenario_name", value = sc$scenario_name %||% "")
+    updateTextAreaInput(session, "csa_scenario_status", value = sc$company_status %||% "")
+    if (nzchar(trimws(sc$type %||% ""))) {
+      updateSelectizeInput(session, "type", selected = sc$type)
+    }
+    updateTextAreaInput(session, "inputs", value = sc$inputs %||% "")
+    updateTextAreaInput(session, "review_steps", value = sc$review_steps %||% "")
+    updateTextAreaInput(session, "outputs", value = sc$outputs %||% "")
+    updateTextAreaInput(session, "investigation_threshold",
+                        value = sc$investigation_threshold %||% "")
+  }
   observe({
     cs <- controls()
     if (!length(cs)) {
       updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
       updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_edit_control", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
       return()
     }
-    ch <- stats::setNames(
+    ch_all <- stats::setNames(
       vapply(cs, function(x) x$control_id, ""),
       vapply(cs, function(x) sprintf("%s｜%s", x$control_id, x$risk_name %||% ""), "")
     )
-    updateSelectizeInput(session, "worksheet_controls", choices = ch, server = TRUE)
-    updateSelectizeInput(session, "worksheet_controls_sa", choices = ch, server = TRUE)
+    updateSelectizeInput(session, "worksheet_controls", choices = ch_all, server = TRUE)
+    cs_fin <- Filter(is_control_finalized_for_rcm, cs)
+    if (!length(cs_fin)) {
+      updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_edit_control", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
+    } else {
+      ch_fin <- stats::setNames(
+        vapply(cs_fin, function(x) x$control_id, ""),
+        vapply(cs_fin, function(x) {
+          plan <- control_test_sample_plan(x)
+          n_sc <- length(control_csa_scenarios(x))
+          sprintf("%s｜%s｜%s→%s｜%d組",
+                  x$control_id,
+                  x$risk_name %||% "",
+                  plan$frequency,
+                  plan$sample_size_label,
+                  n_sc)
+        }, "")
+      )
+      updateSelectizeInput(session, "worksheet_controls_sa", choices = ch_fin, server = TRUE)
+      updateSelectizeInput(session, "csa_edit_control", choices = ch_fin, server = TRUE)
+    }
+  })
+  observe({
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) {
+      updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
+      return()
+    }
+    ch <- csa_scenario_choices(ctrl)
+    cur <- input$csa_scenario_pick
+    sel <- if (nzchar(cur %||% "") && cur %in% unname(ch)) cur else unname(ch)[[1]]
+    updateSelectizeInput(session, "csa_scenario_pick", choices = ch, selected = sel, server = TRUE)
+  })
+  observeEvent(list(input$csa_edit_control, input$csa_scenario_pick), {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) return()
+    scs <- control_csa_scenarios(ctrl)
+    sid <- input$csa_scenario_pick
+    hit <- Filter(function(x) identical(x$scenario_id, sid), scs)
+    sc <- if (length(hit)) hit[[1]] else scs[[1]]
+    fill_csa_scenario_form(sc)
+  }, ignoreInit = FALSE)
+  read_csa_scenario_from_inputs <- function(scenario_id = NULL) {
+    new_csa_scenario(
+      scenario_name = input$csa_scenario_name %||% "",
+      company_status = input$csa_scenario_status %||% "",
+      type = input$type %||% "",
+      inputs = input$inputs %||% "",
+      review_steps = input$review_steps %||% "",
+      outputs = input$outputs %||% "",
+      investigation_threshold = input$investigation_threshold %||% "",
+      scenario_id = scenario_id
+    )
+  }
+  patch_control_in_store <- function(ctrl) {
+    cs <- controls()
+    idx <- which(vapply(cs, function(x) identical(x$control_id, ctrl$control_id), logical(1)))
+    if (!length(idx)) return(FALSE)
+    cs[[idx[[1]]]] <- ctrl
+    controls(cs)
+    TRUE
+  }
+  observeEvent(input$csa_scenario_save, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) {
+      return(showNotification("請先選擇已定版控制點", type = "warning"))
+    }
+    sid <- input$csa_scenario_pick
+    if (!nzchar(sid %||% "") || identical(sid, "S1")) {
+      # First explicit save: if only synthetic, create stored S1
+      if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+        sid <- "S1"
+      }
+    }
+    sc <- read_csa_scenario_from_inputs(scenario_id = sid %||% "S1")
+    if (!nzchar(trimws(sc$scenario_name))) {
+      return(showNotification("請填寫控制現況情境名稱", type = "warning"))
+    }
+    ctrl2 <- upsert_control_csa_scenario(ctrl, sc)
+    patch_control_in_store(ctrl2)
+    showNotification(sprintf("已儲存情境組「%s」", sc$scenario_name), type = "message")
+  })
+  observeEvent(input$csa_scenario_add, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) {
+      return(showNotification("請先選擇已定版控制點", type = "warning"))
+    }
+    # Persist current form first if named
+    cur_name <- trimws(input$csa_scenario_name %||% "")
+    if (nzchar(cur_name) && nzchar(input$csa_scenario_pick %||% "")) {
+      ctrl <- upsert_control_csa_scenario(
+        ctrl, read_csa_scenario_from_inputs(scenario_id = input$csa_scenario_pick)
+      )
+    } else if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+      # Seed default before adding second
+      ctrl <- upsert_control_csa_scenario(ctrl, synthetic_default_csa_scenario(ctrl))
+    }
+    n <- length(ctrl$csa_scenarios %||% list()) + 1L
+    sc_new <- new_csa_scenario(
+      scenario_name = sprintf("現況情境 %d", n),
+      company_status = "",
+      type = ctrl$type %||% "",
+      inputs = "",
+      review_steps = "",
+      outputs = "",
+      investigation_threshold = ""
+    )
+    ctrl2 <- upsert_control_csa_scenario(ctrl, sc_new)
+    patch_control_in_store(ctrl2)
+    updateSelectizeInput(session, "csa_scenario_pick",
+                         choices = csa_scenario_choices(ctrl2),
+                         selected = sc_new$scenario_id, server = TRUE)
+    fill_csa_scenario_form(sc_new)
+    showNotification(sprintf("已新增情境組「%s」", sc_new$scenario_name), type = "message")
+  })
+  observeEvent(input$csa_scenario_dup, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
+    sc <- read_csa_scenario_from_inputs(scenario_id = NULL)
+    sc$scenario_name <- paste0(sc$scenario_name, "（複本）")
+    if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+      ctrl <- upsert_control_csa_scenario(ctrl, synthetic_default_csa_scenario(ctrl))
+    }
+    ctrl2 <- upsert_control_csa_scenario(ctrl, sc)
+    patch_control_in_store(ctrl2)
+    updateSelectizeInput(session, "csa_scenario_pick",
+                         choices = csa_scenario_choices(ctrl2),
+                         selected = sc$scenario_id, server = TRUE)
+    fill_csa_scenario_form(sc)
+    showNotification(sprintf("已複製為「%s」", sc$scenario_name), type = "message")
+  })
+  observeEvent(input$csa_scenario_del, {
+    ctrl <- csa_edit_ctrl()
+    if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
+    sid <- input$csa_scenario_pick
+    if (!nzchar(sid %||% "")) return()
+    if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
+      return(showNotification("目前僅有預設情境組，無需刪除", type = "warning"))
+    }
+    if (length(ctrl$csa_scenarios) <= 1L) {
+      return(showNotification("至少保留一組情境", type = "warning"))
+    }
+    ctrl2 <- remove_control_csa_scenario(ctrl, sid)
+    patch_control_in_store(ctrl2)
+    ch <- csa_scenario_choices(ctrl2)
+    updateSelectizeInput(session, "csa_scenario_pick", choices = ch,
+                         selected = unname(ch)[[1]], server = TRUE)
+    showNotification("已刪除情境組", type = "message")
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
@@ -2151,7 +2419,7 @@ server <- function(input, output, session) {
   })
   output$interview_status <- renderUI({
     cs <- selected_worksheet_controls()
-    n <- length(Filter(function(c) isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready), cs))
+    n <- length(Filter(is_control_finalized_for_rcm, cs))
     iv <- controls_to_interview(cs, input$interview_elements, finalized_only = TRUE)
     tags$small(class = "text-muted",
                sprintf("已定稿 RCM %d 列 → 訪談問項 %d 則", n, nrow(iv)))
@@ -2159,8 +2427,27 @@ server <- function(input, output, session) {
   output$csa_status <- renderUI({
     cs <- selected_worksheet_controls_sa()
     csa <- controls_to_csa(cs, input$csa_elements, finalized_only = TRUE)
-    tags$small(class = "text-muted",
-               sprintf("自我評估測試步驟 %d 列（僅已定稿 RCM）", nrow(csa)))
+    if (!length(cs)) {
+      return(tags$small(class = "text-warning",
+                        "尚無已定版風險控制點；請先於「風險控制點設計」完成設計並寫入 RCM。"))
+    }
+    n_sc <- sum(vapply(cs, function(x) length(control_csa_scenarios(x)), integer(1)))
+    plans <- lapply(cs, control_test_sample_plan)
+    summary_bits <- vapply(seq_along(cs), function(i) {
+      sprintf("%s：%s→%s（%d組）",
+              cs[[i]]$control_id %||% "—",
+              plans[[i]]$frequency,
+              plans[[i]]$sample_size_label,
+              length(control_csa_scenarios(cs[[i]])))
+    }, character(1))
+    tagList(
+      tags$small(
+        class = "text-muted",
+        sprintf("已定版 %d 點／情境組 %d → 測試步驟 %d 列", length(cs), n_sc, nrow(csa))
+      ),
+      tags$br(),
+      tags$small(class = "text-muted", paste(summary_bits, collapse = "；"))
+    )
   })
   output$interview_table <- renderDT({
     datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements,

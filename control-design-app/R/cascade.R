@@ -232,15 +232,18 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
   if (nzchar(trimws(ctrl$romm_classification %||% ""))) {
     updateSelectInput(session, "romm_classification", selected = ctrl$romm_classification)
   }
-  updateTextInput(session, "significant_account",
-                  value = {
-                    ac <- trimws(as.character(ctrl$significant_account %||% ""))
-                    if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
-                      if (!nzchar(ac) || identical(toupper(ac), "NA")) "" else ac
-                    } else {
-                      ""
-                    }
-                  })
+  updateSelectizeInput(
+    session, "significant_account",
+    choices = account_select_choices(),
+    selected = {
+      ac <- trimws(as.character(ctrl$significant_account %||% ""))
+      if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
+        expand_account_selection(ac)
+      } else {
+        character(0)
+      }
+    }
+  )
   updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
   updateSelectizeInput(session, "related_law",
                        selected = {

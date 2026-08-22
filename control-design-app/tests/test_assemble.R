@@ -174,6 +174,33 @@ fin_rep <- finalize_control_as_rcm_row(modifyList(d1, list(
   risk_category = "報導面", significant_account = ""
 )), existing_ids = character())
 check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺科目不可定稿")
+check(length(ACCOUNT_CHOICES) >= 40L, "常見會計科目清單足夠")
+check(ACCOUNT_ALL_OPTION %in% account_select_choices(), "選單含全部適用")
+check(identical(join_significant_accounts(c("全部適用", "應收帳款")), "全部適用"),
+      "含全部適用則正規化為全部適用")
+check(identical(join_significant_accounts(c("應收帳款", "存貨")), "應收帳款；存貨"),
+      "複選科目以分號接合")
+check(ACCOUNT_ALL_OPTION %in% expand_account_selection("全部適用") &&
+        length(expand_account_selection("全部適用")) > 10L,
+      "全部適用展開為全科目選取")
+rep_all <- design_required_check(modifyList(d1, list(
+  risk_category = "報導面", significant_account = "全部適用"
+)))
+check(isTRUE(rep_all$ok) && isTRUE(rep_all$filled$significant_account), "報導面全部適用可過")
+fin_rep_all <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "報導面", significant_account = "全部適用",
+  assertions = "完整性 (Completeness)"
+)), existing_ids = character())
+check(isTRUE(fin_rep_all$ok) && identical(fin_rep_all$control$significant_account, "全部適用"),
+      "報導面全部適用可定稿")
+fin_rep_multi <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "報導面",
+  significant_account = "應收帳款；營業收入",
+  assertions = "完整性 (Completeness)"
+)), existing_ids = character())
+check(isTRUE(fin_rep_multi$ok) && grepl("應收帳款", fin_rep_multi$control$significant_account) &&
+        grepl("營業收入", fin_rep_multi$control$significant_account),
+      "報導面複選科目可定稿")
 
 # 遵循面相關法令必填；其他類別不可填
 comp_ok <- design_required_check(modifyList(d1, list(
@@ -265,12 +292,82 @@ iv_multi <- controls_to_interview(list(fin_ok, not_ready), finalized_only = TRUE
 check(all(iv_multi[["控制編號"]] == fin_ok$control_id), "訪談僅取已定稿 RCM 列")
 
 csa <- control_to_csa(d1, elements = c("steps", "iuc", "outputs"))
-check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號") %in% names(csa)),
+check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號",
+            "控制頻率", "建議樣本數", "抽樣方法論", "抽樣或範圍") %in% names(csa)),
       "CSA 含測試步驟設計欄位")
 check(nrow(csa) >= 3, "CSA 依元素產製多個測試步驟")
 check(any(csa[["元素"]] == "IUC／相關系統"), "CSA 含 IUC 測試步驟")
 csa_multi <- controls_to_csa(list(fin_ok, not_ready), finalized_only = TRUE)
 check(all(csa_multi[["控制編號"]] == fin_ok$control_id), "CSA 僅取已定稿 RCM 列")
+
+# CSA 抽樣：依頻率（PCAOB／Deloitte）
+romm_base <- "Significant Risk — Not higher risk associated with the control"
+romm_hi <- "Significant Risk — Higher risk associated with the control"
+plan_q <- control_test_sample_plan(modifyList(d1, list(frequency = "每季", nature = "人工",
+  romm_classification = romm_base)))
+check(identical(plan_q$sample_size, 2L) && identical(plan_q$sample_size_label, "2"),
+      "每季基準樣本數＝2")
+plan_m_hi <- control_test_sample_plan(modifyList(d1, list(frequency = "每月", nature = "人工",
+  romm_classification = romm_hi)))
+check(identical(plan_m_hi$sample_size, 5L), "每月 Higher RoMM 樣本數＝5")
+plan_day <- control_test_sample_plan(modifyList(d1, list(frequency = "每日", nature = "人工",
+  romm_classification = romm_base)))
+check(identical(plan_day$sample_size, 25L), "每日基準樣本數＝25")
+plan_auto <- control_test_sample_plan(modifyList(d1, list(nature = "自動", frequency = "每季")))
+check(isTRUE(plan_auto$automated) && grepl("Test of one", plan_auto$sample_size_label),
+      "自動控制＝持續／Test of one")
+csa_freq <- control_to_csa(modifyList(d1, list(frequency = "每月", romm_classification = romm_base)),
+                           elements = c("control_activity", "outputs"))
+check(all(csa_freq[["建議樣本數"]] == "3"), "CSA 每月建議樣本數寫入")
+check(all(grepl("每月|樣本數 3", csa_freq[["抽樣或範圍"]])), "CSA 抽樣或範圍含頻率樣本說明")
+check(nrow(controls_to_csa(list(not_ready), finalized_only = TRUE)) == 0L,
+      "未定版控制點不產出 CSA")
+
+# CSA 多情境組：同一控制點不同現況 → 多組測試步驟
+ctrl_sc <- fin_ok
+ctrl_sc$csa_scenarios <- list(
+  new_csa_scenario(
+    scenario_name = "電子簽核路徑",
+    company_status = "經 EasyFlow 申請後主管核准",
+    review_steps = "抽核電子簽核單\n核對核准層級",
+    outputs = "EasyFlow 簽核紀錄",
+    scenario_id = "S1"
+  ),
+  new_csa_scenario(
+    scenario_name = "紙本／口頭路徑",
+    company_status = "會議口頭討論後執行，無正式簽核",
+    review_steps = "訪談執行人\n取得會議紀錄或郵件",
+    outputs = "會議紀錄／郵件",
+    scenario_id = "S2"
+  )
+)
+csa_sc <- control_to_csa(ctrl_sc, elements = c("steps", "outputs"))
+check(length(unique(csa_sc[["情境組號"]])) == 2L, "CSA 兩情境組各一組號")
+check(all(c("電子簽核路徑", "紙本／口頭路徑") %in% unique(csa_sc[["控制現況情境"]])),
+      "CSA 含兩種控制現況情境名稱")
+check(any(grepl("電子簽核", csa_sc[["測試程序"]])) && any(grepl("訪談執行人", csa_sc[["測試程序"]])),
+      "各情境組測試步驟內容不同")
+check(all(c("情境組號", "控制現況情境", "情境現況說明") %in% names(csa_sc)),
+      "CSA 含情境組欄位")
+ctrl_up <- upsert_control_csa_scenario(fin_ok, new_csa_scenario(
+  scenario_name = "唯一情境", review_steps = "一步", scenario_id = "S9"
+))
+check(length(ctrl_up$csa_scenarios) == 1L &&
+        identical(ctrl_up$csa_scenarios[[1]]$scenario_name, "唯一情境"),
+      "upsert 可寫入 csa_scenarios")
+ctrl_up2 <- upsert_control_csa_scenario(ctrl_up, new_csa_scenario(
+  scenario_name = "第二情境", review_steps = "另一步", scenario_id = "S10"
+))
+check(length(control_csa_scenarios(ctrl_up2)) == 2L, "同一控制可累積兩情境組")
+ctrl_rm <- remove_control_csa_scenario(ctrl_up2, "S9")
+check(length(ctrl_rm$csa_scenarios) == 1L &&
+        identical(ctrl_rm$csa_scenarios[[1]]$scenario_id, "S10"),
+      "可刪除指定情境組")
+# 無自訂情境時仍產出一組預設
+csa_default <- control_to_csa(fin_ok, elements = c("control_activity"))
+check(nrow(csa_default) >= 1L && identical(as.character(csa_default[["控制現況情境"]][1]), "預設現況"),
+      "無自訂情境時使用預設現況一組")
+
 # Phase order evidence: interview columns ready independently of CSA
 check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) >= 5,
       "訪談核心元素可產出完整題綱")

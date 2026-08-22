@@ -634,3 +634,36 @@ library_summary_df <- function(library) {
     stringsAsFactors = FALSE
   )
 }
+
+# Patch selected library item control fields (admin direct edit)
+patch_library_item_fields <- function(library, library_id, fields = list(),
+                                      title = NULL, tags = NULL) {
+  id <- trimws(as.character(library_id %||% ""))
+  if (!nzchar(id) || !length(library)) return(library)
+  idx <- which(vapply(library, function(x) identical(x$library_id, id), logical(1)))
+  if (!length(idx)) return(library)
+  i <- idx[[1]]
+  item <- library[[i]]
+  ctrl <- as.list(item$control %||% list())
+  for (nm in names(fields)) {
+    ctrl[[nm]] <- fields[[nm]]
+  }
+  if (!is.null(title) && nzchar(trimws(as.character(title)))) {
+    item$title <- trimws(as.character(title))
+  }
+  if (!is.null(tags)) {
+    tag_vec <- if (is.character(tags) && length(tags) == 1L) {
+      trimws(unlist(strsplit(as.character(tags), "[;；,，|/]+")))
+    } else {
+      trimws(as.character(tags))
+    }
+    tag_vec <- tag_vec[nzchar(tag_vec)]
+    item$tags <- tag_vec
+  }
+  item$control <- ctrl
+  item$cycle <- ctrl$cycle %||% item$cycle %||% ""
+  item$updated_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  item$source <- "高權維護"
+  library[[i]] <- item
+  library
+}

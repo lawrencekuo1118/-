@@ -28,6 +28,7 @@ source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
+source(file.path(root, "R", "privilege.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -162,7 +163,10 @@ ui <- page_navbar(
     div(
       class = "d-flex flex-column h-100",
       div(
-        textInput("company", NULL, placeholder = "公司名稱")
+        textInput("company", NULL, placeholder = "公司名稱"),
+        tags$hr(class = "my-2"),
+        tags$div(class = "small fw-bold mb-1", "高權存取"),
+        uiOutput("admin_auth_box")
       ),
       div(
         class = "mt-auto pt-2 sidebar-lib-block",
@@ -245,10 +249,10 @@ ui <- page_navbar(
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "可跳過：搜尋／選擇範本套用至設計表單；亦可匯入 CSV／JSON／RCM xlsx、收集入庫（側邊欄可開啟本頁）。"),
+            "可跳過套用；寫入／直接編輯需左側高權登入。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項（側邊欄可開啟）。"),
+            "查詢／套用表單；新增刪除／重建需高權登入。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
@@ -490,44 +494,24 @@ ui <- page_navbar(
       div(
         class = "d-flex gap-1 flex-wrap mb-2",
         actionButton("apply_lib", "套用至設計表單", class = "btn-sm btn-primary"),
-        actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary"),
-        actionButton("save_to_lib", "目前表單存入庫", class = "btn-sm btn-outline-success")
+        actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary")
       ),
-      checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE)
+      p(class = "small text-muted mb-0",
+        "寫入／匯入／刪除／直接編輯需於左側「高權存取」登入後操作。")
     ),
+    uiOutput("admin_lib_edit_panel"),
     card(
       card_header("即時顯示"),
       DTOutput("lib_table"),
       verbatimTextOutput("lib_preview")
     ),
+    uiOutput("admin_lib_mutate_panel"),
     card(
-      card_header("累積制通用範本庫 — 選項"),
+      card_header("匯出（唯讀可用）"),
       div(
-        class = "lib-options-section",
-        uiOutput("lib_stats_box"),
-        tags$hr(class = "my-2"),
-        tags$h6(class = "small fw-bold mb-2", "匯入"),
-        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
-                  accept = c(".csv", ".json", ".xlsx", ".xls")),
-        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
-                     class = "btn-sm btn-outline-primary mb-3"),
-        tags$hr(class = "my-2"),
-        tags$h6(class = "small fw-bold mb-2", "收集入庫"),
-        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
-        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
-        ),
-        div(
-          class = "lib-options-actions d-flex gap-2 flex-wrap",
-          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
-          downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
-          downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
-        )
+        class = "d-flex gap-2 flex-wrap",
+        downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
+        downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
       )
     )
   ),
@@ -535,24 +519,24 @@ ui <- page_navbar(
     "參數庫",
     # 上：選項／篩選面板；下：即時結果
     card(
-      card_header("後台參數資料庫 — 選項"),
+      card_header("後台參數資料庫 — 查詢"),
       layout_columns(
         col_widths = c(4, 4, 4),
         selectInput("param_filter", "參數類型", choices = c("全部" = "")),
         selectInput("param_source", "來源",
                     choices = c("全部" = "", "系統預設" = "系統預設",
                                 "範本庫" = "範本庫", "已定稿RCM" = "已定稿RCM",
-                                "PBC命名庫" = "PBC命名庫")),
+                                "PBC命名庫" = "PBC命名庫", "高權維護" = "高權維護")),
         textInput("param_query", "搜尋", placeholder = "搜尋參數或選項值…")
       ),
       div(
         class = "d-flex gap-1 flex-wrap",
-        actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary"),
         actionButton("param_apply_row", "套用選取列至表單", class = "btn-sm btn-outline-success"),
         downloadButton("download_params", "下載 CSV", class = "btn-sm"),
         downloadButton("download_params_json", "下載 JSON", class = "btn-sm")
       )
     ),
+    uiOutput("admin_param_edit_panel"),
     card(
       card_header("即時顯示"),
       uiOutput("param_stats"),
@@ -597,6 +581,114 @@ ui <- page_navbar(
 
 server <- function(input, output, session) {
   controls <- reactiveVal(list())
+  is_admin <- reactiveVal(FALSE)
+
+  output$admin_auth_box <- renderUI({
+    if (isTRUE(is_admin())) {
+      tagList(
+        div(class = "alert alert-success py-1 mb-2 small", "已登入高權（可改範本庫／參數庫）"),
+        actionButton("admin_logout", "登出高權", class = "btn-sm btn-outline-danger w-100")
+      )
+    } else {
+      tagList(
+        div(class = "alert alert-secondary py-1 mb-2 small", "未登入：範本庫／參數庫唯讀"),
+        passwordInput("admin_password", NULL, placeholder = "高權密碼"),
+        actionButton("admin_login", "登入", class = "btn-sm btn-primary w-100")
+      )
+    }
+  })
+
+  observeEvent(input$admin_login, {
+    if (verify_admin_password(input$admin_password)) {
+      is_admin(TRUE)
+      updateTextInput(session, "admin_password", value = "")
+      showNotification("高權登入成功", type = "message")
+    } else {
+      is_admin(FALSE)
+      showNotification("密碼錯誤", type = "error")
+    }
+  })
+  observeEvent(input$admin_logout, {
+    is_admin(FALSE)
+    showNotification("已登出高權", type = "message")
+  })
+
+  output$admin_lib_edit_panel <- renderUI({
+    if (!isTRUE(is_admin())) return(NULL)
+    card(
+      card_header("高權：直接編輯選取範本"),
+      p(class = "small text-muted mb-2", "先於下方表格選取一列，載入後修改並儲存。"),
+      actionButton("admin_lib_load_row", "載入選取列", class = "btn-sm btn-outline-primary mb-2"),
+      textInput("admin_lib_id", "library_id", value = ""),
+      textInput("admin_lib_title", "標題", value = ""),
+      textInput("admin_lib_tags", "標籤（;分隔）", value = ""),
+      textInput("admin_lib_risk", "風險因素", value = ""),
+      textAreaInput("admin_lib_risk_desc", "風險描述", rows = 2, value = ""),
+      selectInput("admin_lib_risk_cat", "風險類別",
+                  choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES)),
+      textAreaInput("admin_lib_objective", "控制目標", rows = 2, value = ""),
+      textAreaInput("admin_lib_activity", "控制活動", rows = 2, value = ""),
+      textInput("admin_lib_iuc", "IUC／相關系統", value = ""),
+      actionButton("admin_lib_save_fields", "儲存範本變更", class = "btn-sm btn-success")
+    )
+  })
+
+  output$admin_lib_mutate_panel <- renderUI({
+    if (!isTRUE(is_admin())) {
+      return(div(class = "alert alert-secondary py-2 small",
+                 "匯入／刪除／收集入庫：請先於左側登入高權。"))
+    }
+    card(
+      card_header("高權：累積制通用範本庫 — 寫入"),
+      div(
+        class = "lib-options-section",
+        uiOutput("lib_stats_box"),
+        tags$hr(class = "my-2"),
+        tags$h6(class = "small fw-bold mb-2", "匯入"),
+        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
+                  accept = c(".csv", ".json", ".xlsx", ".xls")),
+        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
+        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
+                     class = "btn-sm btn-outline-primary mb-3"),
+        tags$hr(class = "my-2"),
+        tags$h6(class = "small fw-bold mb-2", "收集入庫"),
+        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
+        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
+        checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("save_to_lib", "目前表單存入庫", class = "btn-sm btn-outline-success"),
+          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
+          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
+          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
+        ),
+        actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger")
+      )
+    )
+  })
+
+  output$admin_param_edit_panel <- renderUI({
+    if (!isTRUE(is_admin())) {
+      return(div(class = "alert alert-secondary py-2 small",
+                 "新增／刪除／重建參數：請先於左側登入高權。"))
+    }
+    card(
+      card_header("高權：直接維護參數列"),
+      layout_columns(
+        col_widths = c(4, 4, 4),
+        textInput("admin_param_name", "參數", placeholder = "例：風險類別"),
+        textInput("admin_param_value", "選項值", placeholder = "例：營運面"),
+        textInput("admin_param_source", "來源", value = "高權維護")
+      ),
+      div(
+        class = "d-flex gap-1 flex-wrap",
+        actionButton("admin_param_upsert", "新增／更新列", class = "btn-sm btn-success"),
+        actionButton("admin_param_delete", "刪除選取列", class = "btn-sm btn-outline-danger"),
+        actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary")
+      )
+    )
+  })
+
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
@@ -636,18 +728,24 @@ server <- function(input, output, session) {
       )
     }
     if (length(merged) > length(cur)) {
-      lib(persist_lib(merged))
+      lib(persist_lib(merged, force = TRUE))
     }
   }, once = TRUE)
 
   persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
-  persist_lib <- function(library) {
+  persist_lib <- function(library, force = FALSE) {
+    if (!isTRUE(force) && !require_admin(is_admin(), session)) {
+      return(isolate(lib()))
+    }
     save_control_library(library, lib_path_json, lib_path_csv)
     library
   }
 
   param_store <- reactiveVal(load_parameter_store(param_path_json))
-  persist_params <- function() {
+  persist_params <- function(force = FALSE) {
+    if (!isTRUE(force) && !require_admin(is_admin(), session)) {
+      return(isolate(param_store()))
+    }
     df <- parameter_catalog(
       library = lib(), controls = controls(),
       pbc = pbc_reg()
@@ -656,11 +754,17 @@ server <- function(input, output, session) {
     param_store(df)
     df
   }
+  persist_params_df <- function(df) {
+    if (!require_admin(is_admin(), session)) return(isolate(param_store()))
+    save_parameter_store(df, param_path_json)
+    param_store(df)
+    df
+  }
 
   # Seed empty parameter DB after UI is ready (avoid blocking cascade updates)
   session$onFlushed(function() {
     if (!nrow(isolate(param_store()))) {
-      try(persist_params(), silent = TRUE)
+      try(persist_params(force = TRUE), silent = TRUE)
     }
   }, once = TRUE)
 
@@ -761,7 +865,7 @@ server <- function(input, output, session) {
   param_catalog_df <- reactive({
     input$param_refresh
     df <- param_store()
-    if (!nrow(df)) df <- persist_params()
+    if (!nrow(df)) df <- persist_params(force = TRUE)
     filter_parameter_store(
       df,
       param = input$param_filter,
@@ -806,6 +910,7 @@ server <- function(input, output, session) {
   )
 
   observeEvent(input$param_refresh, {
+    if (!require_admin(is_admin(), session)) return()
     df <- persist_params()
     showNotification(sprintf("參數資料庫已從現況重建並儲存（%d 筆）", nrow(df)),
                      type = "message")
@@ -956,16 +1061,19 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$save_to_lib, {
+    if (!require_admin(is_admin(), session)) return()
     d <- current_draft_from_inputs()
     item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入範本庫", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_current, {
+    if (!require_admin(is_admin(), session)) return()
     d <- current_draft_from_inputs()
     item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_selected_control, {
+    if (!require_admin(is_admin(), session)) return()
     s <- input$control_table_rows_selected
     cs <- controls()
     if (is.null(s) || !length(cs)) return(showNotification("請先在設計頁選取控制點", type = "warning"))
@@ -973,6 +1081,7 @@ server <- function(input, output, session) {
     showNotification(paste("控制點已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_all_ready, {
+    if (!require_admin(is_admin(), session)) return()
     cs <- controls()
     if (!length(cs)) return(showNotification("尚無已產生控制點", type = "warning"))
     ready <- Filter(function(c) isTRUE((c$rcm_ready$ready %||% is_rcm_row_ready(c)$ready)), cs)
@@ -985,6 +1094,7 @@ server <- function(input, output, session) {
     )
   })
   observeEvent(input$collect_ready_to_lib, {
+    if (!require_admin(is_admin(), session)) return()
     cs <- controls()
     if (!length(cs)) {
       d <- current_draft_from_inputs()
@@ -1000,6 +1110,7 @@ server <- function(input, output, session) {
     )
   })
   observeEvent(input$upload_lib, {
+    if (!require_admin(is_admin(), session)) return()
     f <- input$upload_lib
     if (is.null(f)) return()
     tryCatch({
@@ -1016,13 +1127,91 @@ server <- function(input, output, session) {
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
   observeEvent(input$lib_delete, {
+    if (!require_admin(is_admin(), session)) return()
     s <- input$lib_table_rows_selected
     if (is.null(s)) return(showNotification("請選取範本列", type = "warning"))
-    df <- library_summary_df(lib())
-    id <- df$library_id[s]
+    df <- library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query))
+    id <- df$library_id[s[[1]]]
     lib(persist_lib(delete_library_item(lib(), id)))
     refresh_lib_choices()
+    showNotification("已刪除選取範本", type = "message")
   })
+
+  observeEvent(input$admin_lib_load_row, {
+    if (!require_admin(is_admin(), session)) return()
+    s <- input$lib_table_rows_selected
+    items <- filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    if (is.null(s) || !length(items)) {
+      return(showNotification("請先選取範本列", type = "warning"))
+    }
+    item <- items[[s[[1]]]]
+    ctrl <- item$control %||% list()
+    updateTextInput(session, "admin_lib_id", value = item$library_id %||% "")
+    updateTextInput(session, "admin_lib_title", value = item$title %||% "")
+    updateTextInput(session, "admin_lib_tags",
+                    value = paste(item$tags %||% character(), collapse = "；"))
+    updateTextInput(session, "admin_lib_risk",
+                    value = ctrl$risk_factor %||% ctrl$risk_name %||% "")
+    updateTextAreaInput(session, "admin_lib_risk_desc", value = ctrl$risk_description %||% "")
+    updateSelectInput(session, "admin_lib_risk_cat", selected = ctrl$risk_category %||% "")
+    updateTextAreaInput(session, "admin_lib_objective", value = ctrl$control_objective %||% "")
+    updateTextAreaInput(session, "admin_lib_activity", value = ctrl$control_activity %||% "")
+    updateTextInput(session, "admin_lib_iuc",
+                    value = ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+  })
+
+  observeEvent(input$admin_lib_save_fields, {
+    if (!require_admin(is_admin(), session)) return()
+    id <- trimws(input$admin_lib_id %||% "")
+    if (!nzchar(id)) return(showNotification("請先載入選取列", type = "warning"))
+    rf <- trimws(input$admin_lib_risk %||% "")
+    patched <- patch_library_item_fields(
+      lib(), id,
+      title = input$admin_lib_title,
+      tags = input$admin_lib_tags,
+      fields = list(
+        risk_factor = rf,
+        risk_name = rf,
+        risk_description = trimws(input$admin_lib_risk_desc %||% ""),
+        risk_category = trimws(input$admin_lib_risk_cat %||% ""),
+        control_objective = trimws(input$admin_lib_objective %||% ""),
+        control_activity = trimws(input$admin_lib_activity %||% ""),
+        iuc_or_system = trimws(input$admin_lib_iuc %||% ""),
+        related_system = trimws(input$admin_lib_iuc %||% "")
+      )
+    )
+    lib(persist_lib(patched))
+    refresh_lib_choices()
+    showNotification(paste("已更新範本", id), type = "message")
+  })
+
+  observeEvent(input$admin_param_upsert, {
+    if (!require_admin(is_admin(), session)) return()
+    df <- upsert_parameter_row(
+      param_store(),
+      param = input$admin_param_name,
+      value = input$admin_param_value,
+      source = input$admin_param_source %||% "高權維護"
+    )
+    persist_params_df(df)
+    showNotification("已寫入參數列", type = "message")
+  })
+
+  observeEvent(input$admin_param_delete, {
+    if (!require_admin(is_admin(), session)) return()
+    s <- input$param_table_rows_selected
+    df_view <- param_catalog_df()
+    if (!length(s) || !nrow(df_view)) {
+      return(showNotification("請先選取參數列", type = "warning"))
+    }
+    row <- df_view[s[[1]], , drop = FALSE]
+    store <- param_store()
+    hit <- which(store$參數 == row$參數[[1]] & store$選項值 == row$選項值[[1]])
+    if (!length(hit)) return(showNotification("找不到對應列", type = "warning"))
+    persist_params_df(delete_parameter_rows(store, hit))
+    showNotification("已刪除參數列", type = "message")
+  })
+
   output$lib_table <- renderDT({
     datatable(
       library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)),
@@ -1636,6 +1825,7 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$save_custom_cascade, {
+    if (!require_admin(is_admin(), session)) return()
     sel <- resolve_cascade_selection()
     if (!nzchar(sel$control_objective) || !nzchar(sel$control_activity)) {
       return(showNotification("請至少具備控制目標與控制活動再存庫", type = "warning"))
@@ -1650,6 +1840,7 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$import_jinglian_seed, {
+    if (!require_admin(is_admin(), session)) return()
     path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
     if (!file.exists(path)) {
       return(showNotification("找不到內建 RCM 範本檔", type = "error"))
@@ -1765,7 +1956,7 @@ server <- function(input, output, session) {
                       pt$sub_process_id,
                       collect_existing_control_ids(lists = list(lib(), controls()))
                     ))
-    if (isTRUE(input$auto_collect_lib)) {
+    if (isTRUE(input$auto_collect_lib) && isTRUE(is_admin())) {
       res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)
       showNotification(
         sprintf("%s｜已累積入庫 +%d／覆寫 %d", fin$msg, res$added, res$updated),

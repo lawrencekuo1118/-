@@ -198,3 +198,37 @@ filter_parameter_store <- function(df, param = NULL, query = NULL, source = NULL
   }
   out
 }
+
+# Direct admin edit: upsert one option row (參數 + 選項值 key)
+upsert_parameter_row <- function(df, param, value, source = "高權維護") {
+  if (!is.data.frame(df)) df <- empty_parameter_store()
+  param <- trimws(as.character(param %||% ""))
+  value <- trimws(as.character(value %||% ""))
+  source <- trimws(as.character(source %||% "高權維護"))
+  if (!nzchar(param) || !nzchar(value)) return(df)
+  ts <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  key_match <- which(df$參數 == param & df$選項值 == value)
+  if (length(key_match)) {
+    i <- key_match[[1]]
+    df$來源[[i]] <- source
+    df$出現次數[[i]] <- max(1L, as.integer(df$出現次數[[i]] %||% 1L))
+    df$最近更新[[i]] <- ts
+  } else {
+    df <- rbind(df, data.frame(
+      參數 = param, 選項值 = value, 來源 = source,
+      出現次數 = 1L, 最近更新 = ts, stringsAsFactors = FALSE
+    ))
+  }
+  rownames(df) <- NULL
+  df[order(df$參數, df$選項值), , drop = FALSE]
+}
+
+delete_parameter_rows <- function(df, indices) {
+  if (!is.data.frame(df) || !nrow(df)) return(empty_parameter_store())
+  indices <- as.integer(indices)
+  indices <- indices[indices >= 1L & indices <= nrow(df)]
+  if (!length(indices)) return(df)
+  df <- df[-indices, , drop = FALSE]
+  rownames(df) <- NULL
+  df
+}

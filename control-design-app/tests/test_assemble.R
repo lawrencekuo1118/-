@@ -18,6 +18,7 @@ source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
+source(file.path(root, "R", "privilege.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -443,6 +444,8 @@ check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強
 check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
       "範本庫頁籤含可跳過套用設定")
 check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
+check(grepl("高權存取|admin_login|verify_admin_password", app_src), "含高權登入機制")
+check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直接改範本庫／參數庫")
 
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
@@ -492,6 +495,30 @@ check(identical(
 ), "營運面三種可保留")
 check(identical(normalize_assertions_for_category("完整性 (Completeness)", "遵循面"), ""),
       "遵循面定稿清空聲明")
+
+# 高權密碼與直接維護
+check(isTRUE(verify_admin_password("尬電SOX#Admin")), "預設高權密碼可驗證")
+check(!isTRUE(verify_admin_password("wrong")), "錯誤密碼拒絕")
+check(!isTRUE(verify_admin_password("")), "空密碼拒絕")
+ps0 <- empty_parameter_store()
+ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
+check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")
+ps2 <- upsert_parameter_row(ps1, "風險類別", "測試面", "高權維護")
+check(nrow(ps2) == 1L, "參數庫同鍵更新不重複")
+ps3 <- delete_parameter_rows(ps2, 1L)
+check(nrow(ps3) == 0L, "參數庫可刪除列")
+lib0 <- list(list(
+  library_id = "LIB-TEST", title = "舊標題", tags = c("a"),
+  cycle = "電腦化資訊系統循環", source = "seed",
+  control = list(risk_factor = "舊", control_objective = "舊目標", control_activity = "舊活動")
+))
+lib1 <- patch_library_item_fields(
+  lib0, "LIB-TEST", title = "新標題", tags = "x;y",
+  fields = list(risk_factor = "新風險", control_objective = "新目標")
+)
+check(identical(lib1[[1]]$title, "新標題") && identical(lib1[[1]]$control$risk_factor, "新風險"),
+      "範本庫可高權直接改欄位")
+
 fin_as <- finalize_control_as_rcm_row(modifyList(base, list(
   assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"
 )))

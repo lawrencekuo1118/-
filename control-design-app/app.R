@@ -37,7 +37,7 @@ lab_opt <- function(txt) {
   tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
 }
 
-fill_inputs_from_ctrl <- function(session, ctrl) {
+fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL) {
   if (is.null(ctrl)) return()
   updateSelectInput(session, "cycle", selected = ctrl$cycle %||% "")
   # ① 流程資訊
@@ -45,7 +45,23 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
   updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
   updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
   # ② 風險資訊
-  updateTextInput(session, "risk_factor", value = ctrl$risk_factor %||% ctrl$risk_name %||% "")
+  cycle <- ctrl$cycle %||% ""
+  rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+  rows <- if (nzchar(cycle) && !is.null(lib_items) && length(lib_items)) {
+    cycle_risk_rows(lib_items, cycle)
+  } else {
+    list()
+  }
+  label0 <- if (!nzchar(cycle)) {
+    "請先選擇循環…"
+  } else {
+    sprintf("請選擇風險因素…（本循環 %d）", length(cascade_risk_choices(rows)))
+  }
+  ch <- build_risk_factor_choices(rows, empty_label = label0, extra_selected = rf)
+  updateSelectInput(
+    session, "risk_factor", choices = ch,
+    selected = if (nzchar(rf) && rf %in% unname(ch)) rf else ""
+  )
   updateTextInput(session, "risk_name", value = ctrl$risk_name %||% ctrl$risk_factor %||% "")
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
   rc <- normalize_risk_category(ctrl)
@@ -267,7 +283,13 @@ ui <- page_navbar(
           ),
           accordion_panel(
             "② 風險資訊",
-            textInput("risk_factor", lab_req("風險因素"), placeholder = "Risk Factor"),
+            selectInput("risk_factor", lab_req("風險因素"),
+                        choices = c("請先選擇循環…" = "")),
+            uiOutput("form_risk_detail"),
+            conditionalPanel(
+              "input.risk_factor == '__custom__'",
+              textInput("custom_form_risk_factor", NULL, placeholder = "自訂風險因素")
+            ),
             textInput("risk_name", "風險簡稱", placeholder = "可同因素；亦可自訂"),
             textAreaInput("risk_description", lab_req("風險描述"), rows = 2,
                           placeholder = "Risk Description"),
@@ -747,7 +769,17 @@ server <- function(input, output, session) {
       "循環" = function() updateSelectInput(session, "cycle", selected = val),
       "子作業編號" = function() updateTextInput(session, "sub_process_id", value = val),
       "子作業名稱" = function() updateTextInput(session, "sub_process", value = val),
-      "風險因素" = function() updateTextInput(session, "risk_factor", value = val),
+      "風險因素" = function() {
+        rows <- cycle_risk_rows(lib(), input$cycle %||% "")
+        ch <- build_risk_factor_choices(
+          rows,
+          empty_label = sprintf("請選擇風險因素…（本循環 %d）", length(cascade_risk_choices(rows))),
+          extra_selected = val
+        )
+        updateSelectInput(session, "risk_factor", choices = ch,
+                          selected = if (val %in% unname(ch)) val else val)
+        apply_risk_detail_to_inputs(session, rows, val)
+      },
       "風險描述" = function() updateTextAreaInput(session, "risk_description", value = val),
       "風險類別" = function() updateSelectInput(session, "risk_category", selected = val),
       "會計科目" = function() updateTextInput(session, "significant_account", value = val),
@@ -809,7 +841,7 @@ server <- function(input, output, session) {
     if (!nzchar(id %||% "")) return(showNotification("請先從範本庫選擇", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
-    fill_inputs_from_ctrl(session, item$control)
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
 
@@ -928,10 +960,17 @@ server <- function(input, output, session) {
       cycle = input$cycle %||% "",
       sub_process_id = input$sub_process_id %||% "",
       sub_process = input$sub_process %||% "",
-      risk_factor = input$risk_factor %||% "",
+      risk_factor = {
+        rf <- input$risk_factor %||% ""
+        if (identical(rf, "__custom__")) trimws(input$custom_form_risk_factor %||% "")
+        else trimws(rf)
+      },
       risk_name = {
         rn <- trimws(input$risk_name %||% "")
-        if (nzchar(rn)) rn else trimws(input$risk_factor %||% "")
+        rf <- input$risk_factor %||% ""
+        if (nzchar(rn)) rn else if (identical(rf, "__custom__")) {
+          trimws(input$custom_form_risk_factor %||% "")
+        } else trimws(rf)
       },
       risk_description = input$risk_description %||% "",
       risk_category = input$risk_category %||% "",
@@ -1121,6 +1160,49 @@ server <- function(input, output, session) {
     }
   })
 
+  observe({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "risk_factor",
+                        choices = c("請先選擇循環…" = "", "＋自訂新增風險" = "__custom__"),
+                        selected = "")
+      return()
+    }
+    rows <- cycle_risk_rows(lib(), cy)
+    ch_risk <- cascade_risk_choices(rows)
+    label0 <- if (length(ch_risk)) {
+      sprintf("請選擇風險因素…（本循環 %d）", length(ch_risk))
+    } else {
+      sprintf("本循環尚無風險候選（範本庫 %d 筆 — 可自訂或匯入）", length(lib()))
+    }
+    cur <- input$risk_factor %||% ""
+    extra <- if (identical(cur, "__custom__")) NULL else cur
+    ch <- build_risk_factor_choices(rows, empty_label = label0, extra_selected = extra)
+    updateSelectInput(session, "risk_factor", choices = ch,
+                      selected = if (cur %in% unname(ch)) cur else "")
+  })
+
+  observeEvent(input$risk_factor, {
+    rf <- input$risk_factor %||% ""
+    if (!nzchar(rf) || identical(rf, "__custom__")) return()
+    rows <- cycle_risk_rows(lib(), input$cycle %||% "")
+    apply_risk_detail_to_inputs(session, rows, rf)
+  }, ignoreInit = TRUE)
+
+  output$form_risk_detail <- renderUI({
+    rf <- input$risk_factor %||% ""
+    if (!nzchar(rf) || identical(rf, "__custom__")) return(NULL)
+    rows <- cycle_risk_rows(lib(), input$cycle %||% "")
+    det <- cascade_risk_detail(rows, rf)
+    if (!nzchar(det$risk_description) && !length(det$attrs)) return(NULL)
+    div(
+      class = "alert alert-info py-2 mb-2 small",
+      tags$strong("風險屬性／描述："),
+      if (length(det$attrs)) tags$ul(lapply(det$attrs, tags$li)) else tags$span("（無屬性細節）"),
+      if (nzchar(det$risk_description)) tags$div(tags$em(det$risk_description))
+    )
+  })
+
   # 自動控制 → 頻率固定持續
   observeEvent(input$nature, {
     if (identical(input$nature, "自動")) {
@@ -1148,18 +1230,24 @@ server <- function(input, output, session) {
   })
 
   observe({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "cascade_risk",
+                        choices = c("③ 請先選擇循環…" = ""), selected = "")
+      return()
+    }
     rows <- cascade_rows()
     sub_key <- input$cascade_sub %||% ""
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
       ch_risk <- cascade_risk_choices(rows)
-      label0 <- sprintf("③ 選擇風險因素…（%d）", length(ch_risk))
+      label0 <- sprintf("③ 選擇風險因素…（本子作業 %d）", length(ch_risk))
     } else if (identical(sub_key, "__custom__")) {
       ch_risk <- character()
       label0 <- "③ 自訂子作業下請自訂風險或稍後套用"
     } else {
-      ch_risk <- character()
-      label0 <- "③ 請先選擇②子作業…"
+      ch_risk <- cascade_risk_choices(rows)
+      label0 <- sprintf("③ 選擇風險因素…（本循環 %d）", length(ch_risk))
     }
     ch <- c(stats::setNames("", label0), ch_risk, "＋自訂新增風險" = "__custom__")
     cur <- input$cascade_risk %||% ""
@@ -1377,19 +1465,30 @@ server <- function(input, output, session) {
       # matched may be flat row or raw control
       ctrl <- if (!is.null(matched$raw)) matched$raw else matched
       if (!is.null(ctrl$control_objective) || !is.null(ctrl$risk_name) || !is.null(ctrl$cycle)) {
-        fill_inputs_from_ctrl(session, ctrl)
+        fill_inputs_from_ctrl(session, ctrl, lib_items = lib())
       }
     }
 
     updateTextInput(session, "sub_process_id", value = sel$sub_process_id)
     updateTextInput(session, "sub_process", value = sel$sub_process)
-    updateTextInput(session, "risk_factor", value = sel$risk_factor)
-    updateTextInput(session, "risk_name", value = sel$risk_name)
-    if (nzchar(sel$risk_description)) {
-      updateTextAreaInput(session, "risk_description", value = sel$risk_description)
-    }
-    if (nzchar(sel$risk_category)) {
-      updateSelectInput(session, "risk_category", selected = sel$risk_category)
+    rows <- cycle_risk_rows(lib(), sel$cycle %||% input$cycle %||% "", input$cascade_sub)
+    rf <- sel$risk_factor %||% ""
+    ch <- build_risk_factor_choices(
+      rows,
+      empty_label = sprintf("請選擇風險因素…（本循環 %d）", length(cascade_risk_choices(rows))),
+      extra_selected = rf
+    )
+    updateSelectInput(session, "risk_factor", choices = ch,
+                      selected = if (nzchar(rf) && rf %in% unname(ch)) rf else "")
+    if (nzchar(rf)) apply_risk_detail_to_inputs(session, rows, rf)
+    else {
+      updateTextInput(session, "risk_name", value = sel$risk_name)
+      if (nzchar(sel$risk_description)) {
+        updateTextAreaInput(session, "risk_description", value = sel$risk_description)
+      }
+      if (nzchar(sel$risk_category)) {
+        updateSelectInput(session, "risk_category", selected = sel$risk_category)
+      }
     }
     updateTextAreaInput(session, "control_objective", value = sel$control_objective)
     updateTextAreaInput(session, "control_activity", value = sel$control_activity)

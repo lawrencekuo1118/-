@@ -163,6 +163,57 @@ cascade_sub_process_choices <- function(rows) {
   stats::setNames(keys, labels)
 }
 
+build_risk_factor_choices <- function(rows,
+                                      empty_label = "請選擇風險因素…",
+                                      include_custom = TRUE,
+                                      extra_selected = NULL) {
+  ch_risk <- if (length(rows)) cascade_risk_choices(rows) else character()
+  extra <- trimws(as.character(extra_selected %||% ""))
+  if (nzchar(extra) && !(extra %in% unname(ch_risk))) {
+    ch_risk <- c(stats::setNames(extra, extra), ch_risk)
+  }
+  ch <- c(stats::setNames("", empty_label), ch_risk)
+  if (isTRUE(include_custom)) ch <- c(ch, "＋自訂新增風險" = "__custom__")
+  ch
+}
+
+cycle_risk_rows <- function(lib, cycle, sub_key = NULL) {
+  if (!nzchar(trimws(cycle %||% ""))) return(list())
+  rows <- library_controls_flat(lib, cycle = cycle)
+  if (!is.null(sub_key) && nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+    rows <- filter_cascade_rows(rows, sub_key = sub_key)
+  }
+  rows
+}
+
+apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
+  if (!nzchar(risk_factor) || identical(risk_factor, "__custom__")) {
+    return(invisible(NULL))
+  }
+  det <- cascade_risk_detail(rows, risk_factor)
+  if (nzchar(det$risk_description)) {
+    updateTextAreaInput(session, "risk_description", value = det$risk_description)
+  }
+  if (nzchar(det$risk_category)) {
+    updateSelectInput(session, "risk_category", selected = det$risk_category)
+  }
+  updateTextInput(session, "risk_name", value = risk_factor)
+  r <- det$sample
+  if (is.list(r) && length(r)) {
+    strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
+    if (nzchar(r$risk_attr_financial)) {
+      updateTextAreaInput(session, "risk_attr_financial", value = strip(r$risk_attr_financial))
+    }
+    if (nzchar(r$risk_attr_operations)) {
+      updateTextAreaInput(session, "risk_attr_operations", value = strip(r$risk_attr_operations))
+    }
+    if (nzchar(r$risk_attr_compliance)) {
+      updateTextAreaInput(session, "risk_attr_compliance", value = strip(r$risk_attr_compliance))
+    }
+  }
+  invisible(det)
+}
+
 cascade_risk_choices <- function(rows) {
   # value = risk_factor; label includes category + short description
   factors <- unique(vapply(rows, function(r) r$risk_factor, character(1)))

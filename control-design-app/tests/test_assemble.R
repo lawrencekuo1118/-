@@ -317,6 +317,15 @@ check(identical(next_rcm_control_id("EC-101", c("EC-101-01", "EC-101-03")), "EC-
       "控制編號自動順編")
 check(identical(next_rcm_control_id("EC-102", character()), "EC-102-01"), "空庫從 01 起編")
 
+seeded <- seed_control_library(TRUE)
+it_rows <- cycle_risk_rows(seeded, "電腦化資訊系統循環")
+check(length(it_rows) >= 20, sprintf("資訊循環風險列至少 20（實際 %d）", length(it_rows)))
+it_risks <- cascade_risk_choices(it_rows)
+check(length(it_risks) >= 10, sprintf("資訊循環風險因素候選至少 10（實際 %d）", length(it_risks)))
+ch <- build_risk_factor_choices(it_rows, extra_selected = "不存在風險")
+check("不存在風險" %in% unname(ch), "自訂/額外風險可併入選單")
+check("__custom__" %in% unname(ch), "風險選單含自訂選項")
+
 if (length(jl)) {
   rows <- library_controls_flat(jl, cycle = "電腦化資訊系統循環")
   check(length(rows) >= 20, "cascade flat 列來自鯨鏈庫")

@@ -265,12 +265,36 @@ iv_multi <- controls_to_interview(list(fin_ok, not_ready), finalized_only = TRUE
 check(all(iv_multi[["控制編號"]] == fin_ok$control_id), "訪談僅取已定稿 RCM 列")
 
 csa <- control_to_csa(d1, elements = c("steps", "iuc", "outputs"))
-check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號") %in% names(csa)),
+check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號",
+            "控制頻率", "建議樣本數", "抽樣方法論", "抽樣或範圍") %in% names(csa)),
       "CSA 含測試步驟設計欄位")
 check(nrow(csa) >= 3, "CSA 依元素產製多個測試步驟")
 check(any(csa[["元素"]] == "IUC／相關系統"), "CSA 含 IUC 測試步驟")
 csa_multi <- controls_to_csa(list(fin_ok, not_ready), finalized_only = TRUE)
 check(all(csa_multi[["控制編號"]] == fin_ok$control_id), "CSA 僅取已定稿 RCM 列")
+
+# CSA 抽樣：依頻率（PCAOB／Deloitte）
+romm_base <- "Significant Risk — Not higher risk associated with the control"
+romm_hi <- "Significant Risk — Higher risk associated with the control"
+plan_q <- control_test_sample_plan(modifyList(d1, list(frequency = "每季", nature = "人工",
+  romm_classification = romm_base)))
+check(identical(plan_q$sample_size, 2L) && identical(plan_q$sample_size_label, "2"),
+      "每季基準樣本數＝2")
+plan_m_hi <- control_test_sample_plan(modifyList(d1, list(frequency = "每月", nature = "人工",
+  romm_classification = romm_hi)))
+check(identical(plan_m_hi$sample_size, 5L), "每月 Higher RoMM 樣本數＝5")
+plan_day <- control_test_sample_plan(modifyList(d1, list(frequency = "每日", nature = "人工",
+  romm_classification = romm_base)))
+check(identical(plan_day$sample_size, 25L), "每日基準樣本數＝25")
+plan_auto <- control_test_sample_plan(modifyList(d1, list(nature = "自動", frequency = "每季")))
+check(isTRUE(plan_auto$automated) && grepl("Test of one", plan_auto$sample_size_label),
+      "自動控制＝持續／Test of one")
+csa_freq <- control_to_csa(modifyList(d1, list(frequency = "每月", romm_classification = romm_base)),
+                           elements = c("control_activity", "outputs"))
+check(all(csa_freq[["建議樣本數"]] == "3"), "CSA 每月建議樣本數寫入")
+check(all(grepl("每月|樣本數 3", csa_freq[["抽樣或範圍"]])), "CSA 抽樣或範圍含頻率樣本說明")
+check(nrow(controls_to_csa(list(not_ready), finalized_only = TRUE)) == 0L,
+      "未定版控制點不產出 CSA")
 # Phase order evidence: interview columns ready independently of CSA
 check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) >= 5,
       "訪談核心元素可產出完整題綱")

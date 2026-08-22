@@ -107,6 +107,153 @@ resolve_control_frequency <- function(nature, frequency) {
   trimws(as.character(frequency %||% ""))
 }
 
+# ---------------------------------------------------------------------------
+# 控制測試抽樣（CSA）— PCAOB AS 2301／AS 2315 ＋ Deloitte 頻率對應表
+# ---------------------------------------------------------------------------
+# PCAOB：測試性質／時間／範圍須回應 RoMM（AS 2301）；屬性抽樣樣本數考量
+# 可容忍偏差、預期偏差與過度依賴風險，控制發生頻率決定期間內母體（AS 2315）。
+# Deloitte 實務（營運有效性、預期偏差≈0、計畫依賴）：以控制頻率對應最低樣本數；
+# Higher RoMM／Fraud／估計高風險時上調。
+
+CONTROL_TEST_SAMPLE_BASE <- c(
+  "每年" = 1L,
+  "每半年" = 2L,
+  "每季" = 2L,
+  "每月" = 3L,
+  "每週" = 10L,
+  "每日" = 25L,
+  "即時／每筆交易" = 25L,
+  "持續" = 1L,
+  "事件觸發（自訂）" = NA_integer_,
+  "其他（自訂）" = NA_integer_
+)
+
+CONTROL_TEST_SAMPLE_HIGHER <- c(
+  "每年" = 1L,
+  "每半年" = 2L,
+  "每季" = 3L,
+  "每月" = 5L,
+  "每週" = 15L,
+  "每日" = 40L,
+  "即時／每筆交易" = 40L,
+  "持續" = 2L,
+  "事件觸發（自訂）" = NA_integer_,
+  "其他（自訂）" = NA_integer_
+)
+
+is_higher_control_romm <- function(romm) {
+  x <- trimws(as.character(romm %||% ""))
+  if (!nzchar(x)) return(FALSE)
+  # 「Not higher risk…」不得視為高風險
+  if (grepl("Not higher risk", x, ignore.case = TRUE)) return(FALSE)
+  grepl("Higher risk associated|Fraud risk|estimate\\s*—\\s*higher|估計.*高風險",
+        x, ignore.case = TRUE)
+}
+
+normalize_sample_frequency_key <- function(frequency) {
+  f <- trimws(as.character(frequency %||% ""))
+  if (!nzchar(f)) return("")
+  if (f %in% names(CONTROL_TEST_SAMPLE_BASE)) return(f)
+  if (grepl("持續|連續|自動", f)) return("持續")
+  if (grepl("每筆|即時|多次|交易", f)) return("即時／每筆交易")
+  if (grepl("每日|天天|日結", f)) return("每日")
+  if (grepl("每週|週", f)) return("每週")
+  if (grepl("每月|月結", f)) return("每月")
+  if (grepl("每季|季", f)) return("每季")
+  if (grepl("半年|半年度", f)) return("每半年")
+  if (grepl("每年|年度|年結", f)) return("每年")
+  if (grepl("事件|觸發", f)) return("事件觸發（自訂）")
+  "其他（自訂）"
+}
+
+#' 依控制實際頻率（及 RoMM）產出控制測試建議樣本數與抽樣範圍說明
+control_test_sample_plan <- function(ctrl) {
+  freq_raw <- resolve_control_frequency(
+    ctrl$nature %||% "",
+    ctrl$frequency %||% ""
+  )
+  freq_key <- normalize_sample_frequency_key(freq_raw)
+  if (!nzchar(freq_key) && nzchar(freq_raw)) freq_key <- "其他（自訂）"
+  higher <- is_higher_control_romm(ctrl$romm_classification)
+  nature <- normalize_control_type_manual_auto(ctrl$nature)
+  automated <- identical(nature, "自動") || identical(freq_key, "持續")
+
+  tbl <- if (isTRUE(higher)) CONTROL_TEST_SAMPLE_HIGHER else CONTROL_TEST_SAMPLE_BASE
+  n <- if (nzchar(freq_key) && freq_key %in% names(tbl)) unname(tbl[[freq_key]]) else NA_integer_
+
+  methodology <- paste0(
+    "PCAOB AS 2301／AS 2315；Deloitte 控制頻率樣本表",
+    if (isTRUE(higher)) "（Higher RoMM／Fraud 上調）" else "（基準）"
+  )
+
+  if (isTRUE(automated)) {
+    n_rep <- if (is.na(n)) 1L else as.integer(n)
+    sample_label <- sprintf("Test of one＋再執行 %d 筆", n_rep)
+    approach <- "自動化／持續：系統邏輯 Test of one＋ITGC；再執行驗證"
+    scope <- sprintf(
+      "控制頻率「%s」（自動／持續）。建議：測試應用系統設定／邏輯（Test of one）並依賴相關 ITGC；另再執行至少 %d 筆以驗證營運有效性。%s",
+      if (nzchar(freq_raw)) freq_raw else "持續",
+      n_rep,
+      methodology
+    )
+  } else if (identical(freq_key, "事件觸發（自訂）") || identical(freq_key, "其他（自訂）") ||
+             is.na(n)) {
+    sample_label <- "依期間發生次數／母體"
+    approach <- "依實際發生次數全數或屬性抽樣"
+    scope <- sprintf(
+      "控制頻率「%s」。建議：先確定測試期間內實際發生次數（母體）；發生次數少則全數測試，否則依屬性抽樣（可容忍／預期偏差、過度依賴風險）訂定樣本。%s",
+      if (nzchar(freq_raw)) freq_raw else "（未訂）",
+      methodology
+    )
+    n <- NA_integer_
+  } else if (identical(freq_key, "即時／每筆交易")) {
+    sample_label <- as.character(as.integer(n))
+    approach <- "屬性抽樣（高頻／每筆交易；可視母體擴大）"
+    scope <- sprintf(
+      "控制頻率「%s」。建議最低樣本數 %d 筆（屬性抽樣）；母體很大或風險較高時可擴大至 40–60 筆。選樣應涵蓋期間並可追溯至完整母體。%s",
+      freq_raw, as.integer(n), methodology
+    )
+  } else {
+    sample_label <- as.character(as.integer(n))
+    approach <- "屬性抽樣（依控制發生頻率）"
+    scope <- sprintf(
+      "控制頻率「%s」。建議最低樣本數 %d 筆（測試期間內控制發生之屬性抽樣；預期偏差≈0）。選樣應涵蓋期間並可追溯至完整母體。%s",
+      freq_raw, as.integer(n), methodology
+    )
+  }
+
+  list(
+    frequency = if (nzchar(freq_raw)) freq_raw else freq_key,
+    frequency_key = freq_key,
+    sample_size = if (is.na(n)) NA_integer_ else as.integer(n),
+    sample_size_label = sample_label,
+    higher_risk = isTRUE(higher),
+    automated = isTRUE(automated),
+    approach = approach,
+    methodology = methodology,
+    scope_text = scope
+  )
+}
+
+empty_csa_frame <- function() {
+  data.frame(
+    `控制編號` = character(), `循環` = character(), `子作業` = character(),
+    `控制目標` = character(), `控制活動` = character(),
+    `控制頻率` = character(), `建議樣本數` = character(),
+    `抽樣方法論` = character(),
+    `元素` = character(), element_key = character(), `測試步驟序號` = integer(),
+    `測試目的` = character(), `測試程序` = character(), `抽樣或範圍` = character(),
+    `所需文件_PBC` = character(), `預期結果` = character(), `實際結果` = character(),
+    `例外說明` = character(), `步驟結論` = character(),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+}
+
+is_control_finalized_for_rcm <- function(ctrl) {
+  isTRUE(ctrl$rcm_ready$ready) || isTRUE(is_rcm_row_ready(ctrl)$ready)
+}
+
 normalize_control_activity_type_pd <- function(x) {
   x <- trimws(as.character(x %||% ""))
   if (!nzchar(x)) return("")
@@ -543,9 +690,7 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
                                   finalized_only = TRUE) {
   if (!length(controls)) return(empty_interview_df())
   if (isTRUE(finalized_only)) {
-    controls <- Filter(function(c) {
-      isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready)
-    }, controls)
+    controls <- Filter(is_control_finalized_for_rcm, controls)
   }
   if (!length(controls)) return(empty_interview_df())
   do.call(rbind, lapply(controls, control_to_interview, elements = elements))
@@ -554,6 +699,12 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
 # ---- CSA test-step worksheet (Phase-2: after interview + RCM) ----
 # Not only self-check slogans: concrete test procedures, evidence, expected result
 control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
+  if (!length(ctrl) || (!is.list(ctrl) && !is.environment(ctrl))) {
+    return(empty_csa_frame())
+  }
+  # bare empty list from controls_to_csa when no finalized rows
+  if (!length(names(ctrl)) && !length(ctrl)) return(empty_csa_frame())
+
   cid <- derive_control_id(ctrl, 1L)
   obj <- nzchar_or(ctrl$control_objective, "（待補控制目標）")
   act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
@@ -565,21 +716,21 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
     # derive crude steps from activity for CSA when Steps blank
     steps <- act
   }
+  plan <- control_test_sample_plan(ctrl)
 
   rows <- list()
   add_row <- function(element_key, element, purpose, procedure, evidence, expected,
                       sample = NULL) {
-    if (is.null(sample)) {
-      sample <- sprintf("依頻率「%s」與風險「%s」訂定樣本",
-                        nzchar_or(ctrl$frequency, "—"),
-                        nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "—"))
-    }
+    if (is.null(sample)) sample <- plan$scope_text
     rows[[length(rows) + 1]] <<- data.frame(
       `控制編號` = cid,
       `循環` = ctrl$cycle %||% "",
       `子作業` = paste(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "", sep = " "),
       `控制目標` = obj,
       `控制活動` = act,
+      `控制頻率` = plan$frequency,
+      `建議樣本數` = plan$sample_size_label,
+      `抽樣方法論` = plan$methodology,
       `元素` = element,
       `element_key` = element_key,
       `測試步驟序號` = length(rows) + 1L,
@@ -598,15 +749,7 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
 
   elements <- intersect(as.character(elements %||% character()), names(DESIGN_ELEMENTS))
   if (!length(elements)) {
-    return(data.frame(
-      `控制編號` = character(), `循環` = character(), `子作業` = character(),
-      `控制目標` = character(), `控制活動` = character(),
-      `元素` = character(), element_key = character(), `測試步驟序號` = integer(),
-      `測試目的` = character(), `測試程序` = character(), `抽樣或範圍` = character(),
-      `所需文件_PBC` = character(), `預期結果` = character(), `實際結果` = character(),
-      `例外說明` = character(), `步驟結論` = character(),
-      check.names = FALSE, stringsAsFactors = FALSE
-    ))
+    return(empty_csa_frame())
   }
 
   for (key in elements) {
@@ -616,7 +759,8 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
               sprintf("訪談／檢視制度，確認目標「%s」未被改寫成活動步驟，並對應風險「%s」",
                       obj, nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "—")),
               "風險矩陣／制度文件／RCM",
-              "目標清楚、可對應風險與聲明，且與活動文字不同")
+              "目標清楚、可對應風險與聲明，且與活動文字不同",
+              sample = "設計有效性／文件檢視（不依頻率抽樣）")
     } else if (identical(key, "control_activity")) {
       add_row(key, "控制活動",
               "驗證控制活動實際執行方式與 RCM 設計一致",
@@ -636,7 +780,8 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
               "確認 IUC／PBC 完整正確且與控制依賴一致",
               sprintf("取得「%s」，核對來源、參數、邏輯或產生流程；比對客戶原名與檢視後命名", iuc),
               iuc,
-              "IUC 完整正確，足以支撐控制結論")
+              "IUC 完整正確，足以支撐控制結論",
+              sample = "依 IUC 依賴範圍；與控制抽樣樣本勾稽")
     } else if (identical(key, "outputs")) {
       add_row(key, "Outputs／相關文件",
               "確認產出證據足以證明控制已發生",
@@ -648,26 +793,30 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
               "確認例外辨識與追蹤有效",
               sprintf("依門檻「%s」選取例外案件，追蹤至結案", nzchar_or(ctrl$investigation_threshold, "（未訂）")),
               paste(outp, "例外追蹤清單", sep = "；"),
-              "例外均被辨識且追蹤結案，門檻合理")
+              "例外均被辨識且追蹤結案，門檻合理",
+              sample = "期間內例外案件全數或重大項目")
     } else if (identical(key, "frequency_owner")) {
       add_row(key, "頻率／負責單位",
               "確認執行頻率與權責符合設計",
               sprintf("檢查「%s」是否由「%s」依設計頻率執行", act, nzchar_or(ctrl$responsible_unit, "負責單位")),
               "權責表／出勤或系統 log／簽核紀錄",
-              sprintf("頻率為「%s」且執行者具權限", nzchar_or(ctrl$frequency, "—")))
+              sprintf("頻率為「%s」且執行者具權限；建議樣本數 %s",
+                      plan$frequency, plan$sample_size_label))
     } else if (identical(key, "risk")) {
       add_row(key, "循環／風險",
               "確認風險仍適用",
               sprintf("與管理階層確認「%s」風險情境與現行流程", nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")),
               "流程說明／系統架構／前一年度缺失",
-              "風險描述與現況一致")
+              "風險描述與現況一致",
+              sample = "設計有效性／詢問與觀察（不依頻率抽樣）")
     } else if (identical(key, "risk_attributes")) {
       add_row(key, "風險三大屬性／類別",
               "確認風險類別與三大屬性評估仍妥適",
               sprintf("覆核風險類別「%s」及財務報導／營運／法令遵循屬性是否需更新",
                       nzchar_or(normalize_risk_category(ctrl), "—")),
               "風險評估底稿／RCM",
-              "類別與屬性完整且與控制對應")
+              "類別與屬性完整且與控制對應",
+              sample = "設計有效性／文件檢視（不依頻率抽樣）")
     } else if (identical(key, "inputs")) {
       add_row(key, "Inputs（投入）",
               "確認投入資訊來源可靠",
@@ -681,7 +830,8 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
                       nzchar_or(normalize_control_type_manual_auto(ctrl$nature), "—"),
                       nzchar_or(normalize_control_activity_type_pd(ctrl$approach), "—")),
               "控制說明／系統設定截圖／RCM",
-              "分類正確，測試性質與範圍與之匹配")
+              "分類正確，測試性質與範圍與之匹配",
+              sample = "設計有效性／分類覆核（不依頻率抽樣）")
     } else if (identical(key, "assertion_account")) {
       add_row(key, "科目／聲明",
               "確認科目與聲明涵蓋完整",
@@ -689,33 +839,35 @@ control_to_csa <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS) {
                       nzchar_or(ctrl$significant_account, "—"),
                       nzchar_or(ctrl$assertions, "—")),
               "財務報表科目映射／前一年度 RCM",
-              "科目與聲明無遺漏")
+              "科目與聲明無遺漏",
+              sample = "設計有效性／對照表檢視（不依頻率抽樣）")
     } else if (identical(key, "company_status")) {
       add_row(key, "控制現況描述",
               "確認現況與設計一致或差異已記錄",
               sprintf("比對現況描述與實地觀察：%s", nzchar_or(ctrl$company_status, "（未填）")),
               "訪談紀錄／現場觀察",
-              "現況可驗證；差異已於 RCM 設計差異欄揭露")
+              "現況可驗證；差異已於 RCM 設計差異欄揭露",
+              sample = "詢問與觀察（不依頻率抽樣）")
     } else if (identical(key, "design_gap")) {
       add_row(key, "控制設計差異",
               "確認設計差異改善追蹤",
               sprintf("追蹤差異「%s」之改善狀態", nzchar_or(ctrl$design_gap_note, "（無）")),
               "改善計畫",
-              "差異有負責人與時程，或已關閉")
+              "差異有負責人與時程，或已關閉",
+              sample = "差異項目追蹤（不依頻率抽樣）")
     }
   }
+  if (!length(rows)) return(empty_csa_frame())
   do.call(rbind, rows)
 }
 
 controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
                             finalized_only = TRUE) {
-  if (!length(controls)) return(control_to_csa(list(), elements))
+  if (!length(controls)) return(empty_csa_frame())
   if (isTRUE(finalized_only)) {
-    controls <- Filter(function(c) {
-      isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready)
-    }, controls)
+    controls <- Filter(is_control_finalized_for_rcm, controls)
   }
-  if (!length(controls)) return(control_to_csa(list(), elements))
+  if (!length(controls)) return(empty_csa_frame())
   do.call(rbind, lapply(controls, control_to_csa, elements = elements))
 }
 

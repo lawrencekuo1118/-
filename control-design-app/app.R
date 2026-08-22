@@ -452,15 +452,40 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(4, 8),
       card(
-        card_header("控制點測試設計"),
+        card_header("控制點測試設計（CSA）"),
+        p(class = "small text-muted mb-2",
+          "僅能選取「風險控制點設計」已定版並寫入 RCM 之控制點。",
+          "抽樣樣本數依該控制實際發生頻率訂定（PCAOB AS 2301／AS 2315；Deloitte 頻率對應表）；",
+          "Higher RoMM／Fraud 時上調。"),
         selectizeInput(
           "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
+          options = list(placeholder = "已定版風險控制點（空＝全部已定版）")
         ),
         checkboxGroupInput("csa_elements", "測試步驟元素",
                            choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
         actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
         uiOutput("csa_status"),
+        tags$hr(),
+        tags$strong(class = "small", "頻率 → 建議最低樣本數（基準／高風險）"),
+        tags$div(
+          class = "small text-muted mb-2",
+          tags$table(
+            class = "table table-sm table-borderless mb-0",
+            tags$thead(tags$tr(
+              tags$th("頻率"), tags$th("基準"), tags$th("Higher／Fraud")
+            )),
+            tags$tbody(
+              tags$tr(tags$td("每年"), tags$td("1"), tags$td("1")),
+              tags$tr(tags$td("每半年"), tags$td("2"), tags$td("2")),
+              tags$tr(tags$td("每季"), tags$td("2"), tags$td("3")),
+              tags$tr(tags$td("每月"), tags$td("3"), tags$td("5")),
+              tags$tr(tags$td("每週"), tags$td("10"), tags$td("15")),
+              tags$tr(tags$td("每日／每筆交易"), tags$td("25"), tags$td("40")),
+              tags$tr(tags$td("持續／自動"), tags$td("To1＋再執行1"), tags$td("To1＋再執行2")),
+              tags$tr(tags$td("事件觸發／其他"), tags$td(colspan = 2, "依期間發生次數／母體"))
+            )
+          )
+        ),
         tags$hr(),
         tags$strong(class = "small", "Form 4120SR 測試步驟設定"),
         selectizeInput("type", "Type", choices = TYPE_CHOICES,
@@ -2123,7 +2148,7 @@ server <- function(input, output, session) {
     Filter(function(c) c$control_id %in% ids, cs)
   })
   selected_worksheet_controls_sa <- reactive({
-    cs <- controls()
+    cs <- Filter(is_control_finalized_for_rcm, controls())
     if (!length(cs)) return(list())
     ids <- input$worksheet_controls_sa
     if (!length(ids) || all(!nzchar(ids))) return(cs)
@@ -2136,12 +2161,28 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
       return()
     }
-    ch <- stats::setNames(
+    ch_all <- stats::setNames(
       vapply(cs, function(x) x$control_id, ""),
       vapply(cs, function(x) sprintf("%s｜%s", x$control_id, x$risk_name %||% ""), "")
     )
-    updateSelectizeInput(session, "worksheet_controls", choices = ch, server = TRUE)
-    updateSelectizeInput(session, "worksheet_controls_sa", choices = ch, server = TRUE)
+    updateSelectizeInput(session, "worksheet_controls", choices = ch_all, server = TRUE)
+    cs_fin <- Filter(is_control_finalized_for_rcm, cs)
+    if (!length(cs_fin)) {
+      updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
+    } else {
+      ch_fin <- stats::setNames(
+        vapply(cs_fin, function(x) x$control_id, ""),
+        vapply(cs_fin, function(x) {
+          plan <- control_test_sample_plan(x)
+          sprintf("%s｜%s｜%s→%s",
+                  x$control_id,
+                  x$risk_name %||% "",
+                  plan$frequency,
+                  plan$sample_size_label)
+        }, "")
+      )
+      updateSelectizeInput(session, "worksheet_controls_sa", choices = ch_fin, server = TRUE)
+    }
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
@@ -2151,7 +2192,7 @@ server <- function(input, output, session) {
   })
   output$interview_status <- renderUI({
     cs <- selected_worksheet_controls()
-    n <- length(Filter(function(c) isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready), cs))
+    n <- length(Filter(is_control_finalized_for_rcm, cs))
     iv <- controls_to_interview(cs, input$interview_elements, finalized_only = TRUE)
     tags$small(class = "text-muted",
                sprintf("已定稿 RCM %d 列 → 訪談問項 %d 則", n, nrow(iv)))
@@ -2159,8 +2200,25 @@ server <- function(input, output, session) {
   output$csa_status <- renderUI({
     cs <- selected_worksheet_controls_sa()
     csa <- controls_to_csa(cs, input$csa_elements, finalized_only = TRUE)
-    tags$small(class = "text-muted",
-               sprintf("自我評估測試步驟 %d 列（僅已定稿 RCM）", nrow(csa)))
+    if (!length(cs)) {
+      return(tags$small(class = "text-warning",
+                        "尚無已定版風險控制點；請先於「風險控制點設計」完成設計並寫入 RCM。"))
+    }
+    plans <- lapply(cs, control_test_sample_plan)
+    summary_bits <- vapply(seq_along(cs), function(i) {
+      sprintf("%s：%s→%s",
+              cs[[i]]$control_id %||% "—",
+              plans[[i]]$frequency,
+              plans[[i]]$sample_size_label)
+    }, character(1))
+    tagList(
+      tags$small(
+        class = "text-muted",
+        sprintf("已定版風險控制點 %d 點 → 測試步驟 %d 列", length(cs), nrow(csa))
+      ),
+      tags$br(),
+      tags$small(class = "text-muted", paste(summary_bits, collapse = "；"))
+    )
   })
   output$interview_table <- renderDT({
     datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements,

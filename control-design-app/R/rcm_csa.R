@@ -1093,7 +1093,7 @@ DESIGN_REQUIRED_FIELDS <- c(
 )
 
 DESIGN_OPTIONAL_FIELDS <- c(
-  significant_account = "會計科目（僅報導面必填；其他類別不可填）",
+  significant_account = "會計科目（僅報導面必填；常見科目複選／全部適用；其他類別不可填）",
   related_law = "相關法令（僅遵循面必填；其他類別不可填）",
   assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",

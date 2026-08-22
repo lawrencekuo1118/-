@@ -83,19 +83,28 @@ ui <- page_navbar(
   sidebar = sidebar(
     width = 280,
     open = "desktop",
-    textInput("company", NULL, placeholder = "公司名稱"),
-    selectInput("cycle", "循環",
-                choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                selected = ""),
-    textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
-    selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
     div(
-      class = "d-flex gap-1 flex-wrap",
-      actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
-      actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
-    ),
-    checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
-    uiOutput("lib_count_badge")
+      class = "d-flex flex-column h-100",
+      div(
+        textInput("company", NULL, placeholder = "公司名稱"),
+        selectInput("cycle", "循環",
+                    choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
+                    selected = "")
+      ),
+      div(
+        class = "mt-auto pt-2",
+        tags$hr(class = "my-2"),
+        textInput("lib_query", NULL, placeholder = "搜尋完美範本…"),
+        selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
+        div(
+          class = "d-flex gap-1 flex-wrap",
+          actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
+          actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
+        ),
+        checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
+        uiOutput("lib_count_badge")
+      )
+    )
   ),
   nav_panel(
     "訪談問項設計",

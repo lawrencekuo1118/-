@@ -128,7 +128,17 @@ ui <- page_navbar(
         '.lib-options-section .form-check { margin-bottom: 0.75rem; }',
         '.lib-options-actions { clear: both; width: 100%%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
         '.sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }',
-        '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }'
+        '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }',
+        '.home-hero { background: linear-gradient(135deg, #000000 0%%, #002E82 70%%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); }',
+        '.home-hero h2 { color: #fff; font-weight: 700; margin: 0 0 0.5rem 0; }',
+        '.home-hero p { color: rgba(255,255,255,0.88); margin: 0; }',
+        '.home-section h5 { color: var(--brand-blue); font-weight: 700; border-left: 4px solid var(--brand-green); padding-left: 0.6rem; margin-bottom: 0.75rem; }',
+        '.home-steps { list-style: none; padding-left: 0; counter-reset: step; }',
+        '.home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }',
+        '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
+        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }',
+        '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
+        '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }'
       ].join('\\n');
       document.head.appendChild(style);
     });
@@ -161,14 +171,96 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
+    "首頁",
+    div(
+      class = "home-hero",
+      tags$h2("尬電SOX"),
+      p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。",
+        " RCM 標題列對齊鯨鏈資訊循環格式；設計採強制引導流程。")
+    ),
+    layout_columns(
+      col_widths = c(7, 5),
+      card(
+        class = "home-section",
+        card_header("整體設計流程"),
+        tags$ol(
+          class = "home-steps mb-0",
+          tags$li(tags$strong("左側選循環"), "（與公司名稱）→ 範本庫可搜尋／套用既有控制點。"),
+          tags$li(tags$strong("控制點設計"), "：依序選取 ",
+                  strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
+                  "（", tags$span(class = "text-danger", "須依序選取"),
+                  "：未選上一層時，下一層沒有候選）。"),
+          tags$li("補齊 ", strong("基本資料 → 風險辨識 → 控制設計"),
+                  "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
+          tags$li(strong("完成設計＝寫入 RCM 一列"),
+                  "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
+          tags$li(tags$strong("訪談問項設計"), "：對齊已定稿 RCM，勾選元素後預覽／下載題綱。"),
+          tags$li(tags$strong("自我評估測試步驟設計"),
+                  "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
+        )
+      ),
+      card(
+        class = "home-section",
+        card_header("設計必填與防呆"),
+        tags$ul(
+          class = "mb-2 ps-3",
+          tags$li(strong("六大控制項目"), "：控制類型、控制活動類型、頻率、負責單位、IUC、控制活動。"),
+          tags$li(strong("控制目標 ≠ 控制活動"), "（Why／How 分欄；可拆分建議或對調）。"),
+          tags$li(strong("控制類型"), "僅人工／自動；", strong("自動"), "時頻率強制「持續」。"),
+          tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
+          tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
+          tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
+        ),
+        p(class = "small text-muted mb-0",
+          "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。")
+      )
+    ),
+    card(
+      class = "home-section",
+      card_header("各頁籤用途"),
+      div(
+        class = "home-tabs-grid",
+        div(class = "home-tab-card",
+            strong("控制點設計"),
+            "引導選取＋基本資料／風險辨識／控制設計；定稿寫入 RCM。"),
+        div(class = "home-tab-card",
+            strong("訪談問項設計"),
+            "對齊已定稿 RCM 產出訪談題綱；請先完成控制點定稿。"),
+        div(class = "home-tab-card",
+            strong("自我評估測試步驟設計"),
+            "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
+        div(class = "home-tab-card",
+            strong("範本庫"),
+            "累積制通用範本：設計就緒入庫、CSV／JSON／RCM xlsx 匯入、自訂引導項；同 ID 覆寫累積。"),
+        div(class = "home-tab-card",
+            strong("參數庫"),
+            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項，可套用回表單。"),
+        div(class = "home-tab-card",
+            strong("PBC"),
+            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
+        div(class = "home-tab-card",
+            strong("RCM"),
+            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
+      )
+    ),
+    card(
+      class = "home-section",
+      card_header("建議操作順序"),
+      p(class = "mb-1",
+        "① 首頁了解流程 → ② 左側選循環（可套用範本）→ ③ ",
+        strong("控制點設計"), " 引導＋定稿 → ④ ",
+        strong("訪談問項"), "／", strong("自我評估測試步驟"),
+        " → ⑤ 需要時維護 ", strong("範本庫"), "／", strong("PBC"), "／", strong("參數庫"), "。"),
+      p(class = "small text-muted mb-0",
+        "測試步驟欄位填於「自我評估測試步驟設計」，定稿時會一併寫入控制點草稿。")
+    )
+  ),
+  nav_panel(
     "訪談問項設計",
     layout_columns(
       col_widths = c(3, 9),
       card(
         card_header("訪談問項設計"),
-        p(class = "small text-muted mb-2",
-          strong("對齊已定稿 RCM 控制點"),
-          "產出訪談題綱。請先在「控制點設計」完成定稿；勾選元素後預覽並下載。"),
         selectizeInput(
           "worksheet_controls", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
@@ -191,15 +283,6 @@ ui <- page_navbar(
       card(
         full_screen = TRUE,
         card_header("引導設計（依序選取）"),
-        p(
-          class = "small text-muted mb-2",
-          "流程：", strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防/偵測）→ IUC"),
-          "（", tags$span(class = "text-danger", "須依序選取"),
-          "：未選上一層時，下一層本來就沒有候選）。",
-          tags$span(class = "text-danger", "*"), "為", strong("設計必填"),
-          "；", strong("完成設計＝RCM 一列"),
-          "。定稿後可至「訪談問項設計」「自我評估測試步驟設計」分頁產出工作底稿。控制編號自動順編（如 EC-101-01）。"
-        ),
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
         uiOutput("cascade_candidate_banner"),
@@ -255,13 +338,6 @@ ui <- page_navbar(
         ),
         uiOutput("auto_control_id_box"),
         tags$hr(),
-        p(
-          class = "small text-muted mb-2",
-          strong("控制點設計欄位"),
-          "：引導已涵蓋子作業／風險／目標／活動／IUC／類型／頻率；以下依",
-          strong("基本資料 → 風險辨識 → 控制設計"),
-          "補齊。測試步驟（4120SR Inputs／Steps／Outputs）請至「自我評估測試步驟設計」填寫。"
-        ),
         accordion(
           id = "rcm_design_groups",
           open = c("基本資料", "風險辨識", "控制設計"),
@@ -319,9 +395,7 @@ ui <- page_navbar(
             selectizeInput(
               "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
               options = list(placeholder = "原名→新名")
-            ),
-            p(class = "small text-muted mb-0",
-              "控制目標／活動／類型／頻率／負責單位／IUC 由上方引導選取；此處可對調或拆分自訂目標／活動，並套用 PBC 命名。")
+            )
           )
         ),
         div(
@@ -345,10 +419,6 @@ ui <- page_navbar(
       col_widths = c(4, 8),
       card(
         card_header("自我評估測試步驟設計"),
-        p(class = "small text-muted mb-2",
-          "在控制點定稿後，依 RCM 列設計",
-          strong("自我評估（CSA）測試步驟"),
-          "：測試程序／PBC／預期結果。亦可先填寫下方 Form 4120SR 測試步驟欄位，再回「控制點設計」定稿。"),
         selectizeInput(
           "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
@@ -359,8 +429,6 @@ ui <- page_navbar(
         uiOutput("csa_status"),
         tags$hr(),
         tags$strong(class = "small", "Form 4120SR 測試步驟設定"),
-        p(class = "small text-muted mb-2",
-          "Inputs／Steps／Outputs／調查門檻會一併寫入控制點草稿（定稿時帶入 RCM）。"),
         selectizeInput("type", "Type", choices = TYPE_CHOICES,
                        options = list(create = TRUE, placeholder = "Form 4120SR Type")),
         textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
@@ -387,12 +455,6 @@ ui <- page_navbar(
       card_header("累積制通用範本庫 — 選項"),
       div(
         class = "lib-options-section",
-        p(
-          class = "text-muted small mb-3 mt-0",
-          "管道：", strong("設計／RCM 就緒列 → 入庫"), "｜",
-          strong("CSV／JSON／RCM xlsx 匯入"), "｜",
-          strong("自訂引導項"), "。入庫後設計時", strong("優先套用"), "，完善後可覆寫同 ID（累積）。"
-        ),
         uiOutput("lib_stats_box"),
         tags$hr(class = "my-2"),
         tags$h6(class = "small fw-bold mb-2", "匯入"),
@@ -425,9 +487,6 @@ ui <- page_navbar(
     # 上：選項／篩選面板；下：即時結果
     card(
       card_header("後台參數資料庫 — 選項"),
-      p(class = "small text-muted mb-2",
-        "查詢 APP 目前已存的全部參數選項（系統預設、範本庫、已定稿 RCM、PBC）。",
-        "可累積儲存於本機資料庫，供後續設計選用。"),
       layout_columns(
         col_widths = c(4, 4, 4),
         selectInput("param_filter", "參數類型", choices = c("全部" = "")),
@@ -457,10 +516,6 @@ ui <- page_navbar(
       col_widths = c(4, 8),
       card(
         card_header("PBC 命名整理"),
-        p(class = "small text-muted mb-2",
-          "登錄客戶取得原名 → 檢視後標準命名。",
-          strong("證據類型"),
-          "請特別標示：螢幕截圖、EMAIL、系統表單、政策制度（套用時以【類型】前綴顯示）。"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
@@ -481,13 +536,6 @@ ui <- page_navbar(
   nav_panel(
     "RCM",
     card(
-      p(class = "text-muted small mb-1",
-        strong("設計控制點完成＝RCM 一列"),
-        "（1 控制點 ↔ 1 RCM 列）。本 APP 僅產出設計欄位；",
-        strong("控制現況描述／分析評估"),
-        "等後續欄位留空。欄位群組：",
-        paste(names(RCM_HEADER_GROUPS), collapse = " ｜ "),
-        "。", strong("控制目標≠控制活動"), "；類型欄防呆見「設計檢核」。"),
       uiOutput("rcm_count_box"),
       DTOutput("rcm_table"),
       downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),

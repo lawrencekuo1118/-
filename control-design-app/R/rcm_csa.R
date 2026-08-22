@@ -24,10 +24,57 @@ DESIGN_ELEMENTS <- c(
   assertion_account = "科目／聲明"
 )
 
-# 訪談問項設計（對齊已定稿 RCM 列）
+# 訪談問項設計
+# 主目標：促進有效訪談，完整了解公司流程與內部控制實際執行現況
+# 核心：針對循環／子作業下「預期風險」與「預期控制目標／活動」深入且快速了解
+# 每題答案須含人事時地物：以何頻率、誰、取得什麼文件／IUC、做什麼、下一步
 DEFAULT_INTERVIEW_ELEMENTS <- c(
-  "risk", "risk_attributes", "control_objective", "control_activity",
-  "control_types", "frequency_owner", "iuc", "outputs"
+  "risk", "control_objective", "control_activity",
+  "frequency_owner", "iuc", "steps", "outputs", "exception"
+)
+
+# 訪談焦點勾選標籤（強調預期風險／目標／活動）
+INTERVIEW_ELEMENTS <- c(
+  risk = "預期風險（循環／子作業）",
+  risk_attributes = "風險類別／屬性",
+  control_objective = "預期控制目標",
+  control_activity = "預期控制活動（走查）",
+  control_types = "控制類型／活動類型",
+  frequency_owner = "頻率／權責（When／Who）",
+  iuc = "IUC／PBC（What）",
+  company_status = "控制現況描述",
+  design_gap = "控制設計差異",
+  nature_approach_type = "Nature／Approach／Type",
+  inputs = "Inputs（投入）",
+  steps = "Steps（逐步現況）",
+  outputs = "Outputs／產出（Next）",
+  exception = "例外／門檻（Next）",
+  assertion_account = "科目／聲明"
+)
+
+INTERVIEW_ANSWER_SCAFFOLD <- paste0(
+  "請以人事時地物回答：",
+  "①以何頻率（When）",
+  "②誰執行／誰覆核（Who）",
+  "③取得什麼文件或資訊／IUC（What）",
+  "④做什麼具體控制行為（How）",
+  "⑤完成後下一步或產出／例外如何處理（Next）"
+)
+
+# 可勾選之 5W1H 模組（拼湊組建回答架構；可串 PBC）
+INTERVIEW_5W1H_MODULES <- c(
+  when = "When｜以何頻率／何時執行",
+  who = "Who｜誰執行／誰覆核",
+  what = "What｜取得什麼文件或 IUC（可串 PBC）",
+  how = "How｜具體控制行為",
+  next_step = "Next｜下一步／產出／例外處理"
+)
+
+DEFAULT_INTERVIEW_5W1H <- names(INTERVIEW_5W1H_MODULES)
+
+INTERVIEW_SOURCE_CHOICES <- c(
+  "已定稿 RCM（實際設計列）" = "rcm",
+  "範本庫預期（風險／目標／活動）" = "library"
 )
 
 # 自我評估／控制點測試設計（控制點定稿後）
@@ -667,8 +714,85 @@ rcm_group_for_column <- function(col) {
   "其他"
 }
 
-# ---- Interview (Phase-1: prioritize with RCM) ----
-interview_element_bank <- function(ctrl) {
+# ---- Interview：了解流程與內控實際執行現況（5W1H）----
+interview_answer_scaffold <- function(modules = DEFAULT_INTERVIEW_5W1H) {
+  mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
+  if (!length(mods)) return(INTERVIEW_ANSWER_SCAFFOLD)
+  bits <- unname(INTERVIEW_5W1H_MODULES[mods])
+  paste0("請依下列模組回答（人事時地物）：", paste(bits, collapse = "；"))
+}
+
+# 題幹尾綴：強制每題答案含人事時地物
+interview_people_place_suffix <- function(modules = DEFAULT_INTERVIEW_5W1H) {
+  paste0("（答案必含：", interview_answer_scaffold(modules), "）")
+}
+
+suggest_interview_pbc <- function(ctrl, pbc_reg = NULL) {
+  iuc <- trimws(as.character(ctrl$related_system %||% ctrl$iuc_or_system %||% ""))
+  inputs <- trimws(as.character(ctrl$inputs %||% ""))
+  outp <- trimws(as.character(ctrl$related_document %||% ctrl$outputs %||% ""))
+  base <- unique(c(iuc, inputs, outp))
+  base <- base[nzchar(base)]
+  if (!length(base)) return("（待對照 PBC 資料庫）")
+  label <- paste(base, collapse = "；")
+  if (is.null(pbc_reg) || !is.data.frame(pbc_reg) || !nrow(pbc_reg)) {
+    return(label)
+  }
+  # Match reviewed_name / client_pbc_name / iuc_or_system
+  hits <- character()
+  for (nm in base) {
+    rows <- pbc_reg[
+      grepl(nm, as.character(pbc_reg$reviewed_name %||% ""), fixed = TRUE) |
+        grepl(nm, as.character(pbc_reg$client_pbc_name %||% ""), fixed = TRUE) |
+        grepl(nm, as.character(pbc_reg$iuc_or_system %||% ""), fixed = TRUE),
+      ,
+      drop = FALSE
+    ]
+    if (nrow(rows)) {
+      hits <- c(hits, sprintf(
+        "%s→%s",
+        as.character(rows$client_pbc_name[[1]] %||% ""),
+        as.character(rows$reviewed_name[[1]] %||% nm)
+      ))
+    }
+  }
+  if (length(hits)) paste(unique(c(label, hits)), collapse = "｜") else label
+}
+
+# 依循環／子作業篩選（深入且快速鎖定範圍）
+filter_controls_by_cycle_sub <- function(controls, cycle = "", sub_key = "") {
+  if (!length(controls)) return(list())
+  cy <- trimws(as.character(cycle %||% ""))
+  sk <- trimws(as.character(sub_key %||% ""))
+  out <- controls
+  if (nzchar(cy)) {
+    out <- Filter(function(c) identical(trimws(as.character(c$cycle %||% "")), cy), out)
+  }
+  if (nzchar(sk) && !identical(sk, "__all__")) {
+    out <- Filter(function(c) {
+      identical(sub_process_key(c$sub_process_id %||% "", c$sub_process %||% ""), sk)
+    }, out)
+  }
+  out
+}
+
+# 範本庫 → 訪談用控制點（預期風險／目標／活動）
+library_items_as_interview_controls <- function(library) {
+  if (!length(library)) return(list())
+  lapply(library, function(item) {
+    ctrl <- item$control %||% item
+    if (is.null(ctrl$control_id) || !nzchar(as.character(ctrl$control_id %||% ""))) {
+      ctrl$control_id <- item$library_id %||% ctrl$library_id %||% "LIB"
+    }
+    if (is.null(ctrl$cycle) || !nzchar(as.character(ctrl$cycle %||% ""))) {
+      ctrl$cycle <- item$cycle %||% ""
+    }
+    ctrl$rcm_ready <- list(ready = TRUE)
+    ctrl
+  })
+}
+
+interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
   risk_label <- nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")
   risk_desc <- nzchar_or(ctrl$risk_description, "（設計尚未填風險描述）")
   risk_cat <- nzchar_or(normalize_risk_category(ctrl), "（未填類別）")
@@ -680,130 +804,137 @@ interview_element_bank <- function(ctrl) {
   status <- nzchar_or(ctrl$company_status, "（尚未書寫現況）")
   gap <- nzchar_or(ctrl$design_gap_note, "（無設計差異說明）")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡文件")
+  freq <- nzchar_or(resolve_control_frequency(ctrl$nature, ctrl$frequency), "所訂頻率")
+  owner <- nzchar_or(ctrl$responsible_unit, "負責單位")
+  cycle_nm <- nzchar_or(ctrl$cycle, "本循環")
+  sub_nm <- nzchar_or(ctrl$sub_process, "（子作業）")
+  suffix <- interview_people_place_suffix(modules)
   list(
     risk = list(
-      element = "循環／風險",
-      question = sprintf(
-        "請說明「%s」下子作業「%s」中，風險因素「%s」如何發生？近期實例？設計描述：%s",
-        nzchar_or(ctrl$cycle, "本循環"),
-        nzchar_or(ctrl$sub_process, "（子作業）"),
-        risk_label, risk_desc
-      ),
-      evidence = "流程說明／系統架構／前一年度缺失或事件"
+      element = unname(INTERVIEW_ELEMENTS[["risk"]]),
+      question = paste0(sprintf(
+        "就「%s／%s」預期風險「%s」（設計：%s）：實務上如何發生、如何被偵知／防範？",
+        cycle_nm, sub_nm, risk_label, risk_desc
+      ), suffix),
+      evidence = "流程說明／事件紀錄／前一年度缺失"
     ),
     risk_attributes = list(
-      element = "風險三大屬性／類別",
-      question = sprintf(
-        "此風險類別是否為「%s」？財務報導／營運／法令遵循屬性分別為何？設計：%s｜%s｜%s",
-        risk_cat,
-        nzchar_or(ctrl$risk_attr_financial, "（未填）"),
-        nzchar_or(ctrl$risk_attr_operations, "（未填）"),
-        nzchar_or(ctrl$risk_attr_compliance, "（未填）")
-      ),
-      evidence = "風險評估底稿／RCM 風險資訊欄"
+      element = unname(INTERVIEW_ELEMENTS[["risk_attributes"]]),
+      question = paste0(sprintf(
+        "此風險實務上是否屬「%s」？對財務報導／營運／法令遵循的影響各為何？",
+        risk_cat
+      ), suffix),
+      evidence = "風險評估底稿／RCM"
     ),
     control_objective = list(
-      element = "控制目標",
-      question = sprintf(
-        "如何確保達成控制目標「%s」？該目標對應哪些風險與聲明？（請勿用活動步驟回答）",
-        obj
-      ),
-      evidence = "制度／政策／前一年度 RCM 控制目標欄"
+      element = unname(INTERVIEW_ELEMENTS[["control_objective"]]),
+      question = paste0(sprintf(
+        "就「%s／%s」預期控制目標「%s」：實務上如何衡量／確認已達成？請勿只複述活動步驟。",
+        cycle_nm, sub_nm, obj
+      ), suffix),
+      evidence = "制度／KPI／管理報表"
     ),
     control_activity = list(
-      element = "控制活動",
-      question = sprintf(
-        "請示範控制活動「%s」：誰執行、誰覆核、用什麼表單／系統？實際步驟為何？",
-        act
-      ),
-      evidence = "操作示範／螢幕錄影或逐步說明"
+      element = unname(INTERVIEW_ELEMENTS[["control_activity"]]),
+      question = paste0(sprintf(
+        "就「%s／%s」預期控制活動「%s」：請快速走查實際執行現況。",
+        cycle_nm, sub_nm, act
+      ), suffix),
+      evidence = "現場示範／螢幕錄影／逐步說明"
     ),
     control_types = list(
-      element = "控制類型／活動類型",
-      question = sprintf(
-        "實務上此控制類型是否為「%s」（人工/自動），活動類型是否為「%s」（預防/偵測，僅一種）？",
+      element = unname(INTERVIEW_ELEMENTS[["control_types"]]),
+      question = paste0(sprintf(
+        "實務上是否為「%s」控制、且屬「%s」？與設計不一致時請說明現況。",
         nzchar_or(ct, "（未填）"), nzchar_or(at, "（未填）")
-      ),
-      evidence = "系統設定截圖／職責說明"
+      ), suffix),
+      evidence = "系統設定／職責說明"
     ),
     frequency_owner = list(
-      element = "頻率／負責單位",
-      question = sprintf(
-        "實際執行頻率是否為「%s」？流程負責單位「%s」是否具備權限與能力？有無代理機制？",
-        nzchar_or(ctrl$frequency, "所訂頻率"),
-        nzchar_or(ctrl$responsible_unit, "負責單位")
-      ),
-      evidence = "權責表／簽核紀錄／出勤或系統 log"
+      element = unname(INTERVIEW_ELEMENTS[["frequency_owner"]]),
+      question = paste0(sprintf(
+        "實際執行頻率是否為「%s」？由「%s」的誰執行、誰覆核？有無代理／交接？",
+        freq, owner
+      ), suffix),
+      evidence = "權責表／簽核紀錄／系統 log"
     ),
     iuc = list(
-      element = "IUC／相關系統",
-      question = sprintf(
-        "執行時使用哪些相關系統／IUC（設計：%s）？如何確保完整性與正確性？可否提供 PBC？",
+      element = unname(INTERVIEW_ELEMENTS[["iuc"]]),
+      question = paste0(sprintf(
+        "執行時取得哪些文件或系統資訊（設計 IUC：%s）？誰提供、如何確保完整正確？請指出可作為 PBC 的項目。",
         iuc
-      ),
+      ), suffix),
       evidence = paste(iuc, "PBC 命名對照", sep = "；")
     ),
     company_status = list(
-      element = "控制現況描述",
-      question = sprintf(
-        "請對照設計之控制現況「%s」，說明公司目前實際怎麼做？與設計差異為何？",
+      element = unname(INTERVIEW_ELEMENTS[["company_status"]]),
+      question = paste0(sprintf(
+        "請完整描述目前實際怎麼做（可對照設計現況「%s」），並標出與設計之差異。",
         status
-      ),
-      evidence = "訪談紀錄／現場觀察／現況文件"
+      ), suffix),
+      evidence = "訪談紀錄／現場觀察"
     ),
     design_gap = list(
-      element = "控制設計差異",
-      question = sprintf(
-        "設計差異說明記載「%s」。管理階層是否同意？改善時程與負責人？",
+      element = unname(INTERVIEW_ELEMENTS[["design_gap"]]),
+      question = paste0(sprintf(
+        "設計差異「%s」在實務是否仍存在？改善負責人與時程？",
         gap
-      ),
+      ), suffix),
       evidence = "改善計畫／會議紀錄"
     ),
     nature_approach_type = list(
-      element = "Nature／Approach／Type（4120SR）",
-      question = sprintf(
-        "Form 4120SR 記載性質／取向／類型為「%s／%s／%s」，實務是否一致？",
+      element = unname(INTERVIEW_ELEMENTS[["nature_approach_type"]]),
+      question = paste0(sprintf(
+        "Form 4120SR「%s／%s／%s」與實務是否一致？",
         nzchar_or(ctrl$nature, "—"), nzchar_or(ctrl$approach, "—"), nzchar_or(ctrl$type, "—")
-      ),
+      ), suffix),
       evidence = "控制說明／系統設定"
     ),
     inputs = list(
-      element = "Inputs（投入）",
-      question = sprintf("執行控制的投入資訊為何（設計：%s）？由誰提供、如何確保完整？",
-                        nzchar_or(ctrl$inputs, "待補 Inputs")),
+      element = unname(INTERVIEW_ELEMENTS[["inputs"]]),
+      question = paste0(sprintf(
+        "控制投入資訊為何（設計：%s）？誰提供、何時取得、如何核對完整？",
+        nzchar_or(ctrl$inputs, "待補 Inputs")
+      ), suffix),
       evidence = nzchar_or(ctrl$inputs, iuc)
     ),
     steps = list(
-      element = "Steps（執行步驟）",
-      question = sprintf("請依序說明執行步驟：%s", {
-        st <- trimws(unlist(strsplit(as.character(ctrl$review_steps %||% ""), "\n")))
-        st <- st[nzchar(st)]
-        if (!length(st)) "（尚未拆分步驟，請依控制活動說明）"
-        else paste(paste0(seq_along(st), ".", st), collapse = "；")
-      }),
-      evidence = "逐步操作軌跡"
+      element = unname(INTERVIEW_ELEMENTS[["steps"]]),
+      question = paste0(sprintf(
+        "請依實際順序說明每一步：誰做、用什麼、留下什麼證據。設計步驟：%s",
+        {
+          st <- trimws(unlist(strsplit(as.character(ctrl$review_steps %||% ""), "\n")))
+          st <- st[nzchar(st)]
+          if (!length(st)) "（尚未拆分；請依控制活動說明）"
+          else paste(paste0(seq_along(st), ".", st), collapse = "；")
+        }
+      ), suffix),
+      evidence = "逐步操作軌跡／PBC"
     ),
     outputs = list(
-      element = "Outputs／相關文件",
-      question = sprintf("控制產出／相關文件為何（預期：%s）？何處可取得？留存多久？", outp),
+      element = unname(INTERVIEW_ELEMENTS[["outputs"]]),
+      question = paste0(sprintf(
+        "控制產出／相關文件為何（預期：%s）？誰簽核、留存何處、留存多久？下一步給誰？",
+        outp
+      ), suffix),
       evidence = outp
     ),
     exception = list(
-      element = "例外／調查門檻",
-      question = sprintf(
-        "若發現差異，調查門檻與追蹤方式為何%s？",
-        if (!is_blank(ctrl$investigation_threshold)) paste0("（設計：", ctrl$investigation_threshold, "）")
-        else "（設計尚未訂門檻）"
-      ),
+      element = unname(INTERVIEW_ELEMENTS[["exception"]]),
+      question = paste0(sprintf(
+        "發現差異時如何辨識、調查與結案%s？請舉一例說明誰處理、用什麼文件、何時關閉。",
+        if (!is_blank(ctrl$investigation_threshold)) paste0("（設計門檻：", ctrl$investigation_threshold, "）")
+        else ""
+      ), suffix),
       evidence = "例外追蹤清單／結案紀錄"
     ),
     assertion_account = list(
-      element = "科目／聲明",
-      question = sprintf(
-        "此控制涵蓋會計科目「%s」與聲明「%s」是否完整？",
-        nzchar_or(ctrl$significant_account, "（未填／NA）"),
+      element = unname(INTERVIEW_ELEMENTS[["assertion_account"]]),
+      question = paste0(sprintf(
+        "此控制涵蓋科目「%s」、聲明「%s」在實務是否完整？有無遺漏路徑？",
+        nzchar_or(ctrl$significant_account, "（未填）"),
         nzchar_or(ctrl$assertions, "（未填）")
-      ),
+      ), suffix),
       evidence = "科目映射／前一年度 RCM"
     )
   )
@@ -812,19 +943,26 @@ interview_element_bank <- function(ctrl) {
 empty_interview_df <- function() {
   data.frame(
     `控制編號` = character(), `循環` = character(), `子作業` = character(),
-    `控制目標` = character(), `題號` = integer(), `元素` = character(),
+    `風險因素` = character(), `控制目標` = character(), `控制活動` = character(),
+    `題號` = integer(), `元素` = character(),
     element_key = character(), `訪談問題` = character(),
+    `回答架構_5W1H` = character(),
     `設計摘要` = character(), `預期佐證_PBC` = character(),
+    `建議串接PBC` = character(),
     `受訪者回答` = character(), `佐證取得` = character(), `結論` = character(),
     check.names = FALSE, stringsAsFactors = FALSE
   )
 }
 
-control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS) {
-  bank <- interview_element_bank(ctrl)
+control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
+                                 modules = DEFAULT_INTERVIEW_5W1H,
+                                 pbc_reg = NULL) {
+  bank <- interview_element_bank(ctrl, modules = modules)
   elements <- intersect(as.character(elements %||% character()), names(bank))
   if (!length(elements)) return(empty_interview_df())
   cid <- derive_control_id(ctrl, 1L)
+  scaffold <- interview_answer_scaffold(modules)
+  pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg)
   do.call(rbind, lapply(seq_along(elements), function(i) {
     key <- elements[[i]]
     item <- bank[[key]]
@@ -832,23 +970,27 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS) {
       `控制編號` = cid,
       `循環` = ctrl$cycle %||% "",
       `子作業` = paste(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "", sep = " "),
+      `風險因素` = nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, ""),
       `控制目標` = trimws(ctrl$control_objective %||% ""),
+      `控制活動` = trimws(ctrl$control_activity %||% ""),
       `題號` = i,
       `元素` = item$element,
       element_key = key,
       `訪談問題` = item$question,
+      `回答架構_5W1H` = scaffold,
       `設計摘要` = {
-        # short design cue for interviewer
         switch(key,
           risk = nzchar_or(ctrl$risk_description, ctrl$risk_factor %||% ""),
           control_objective = ctrl$control_objective %||% "",
           control_activity = ctrl$control_activity %||% "",
           company_status = ctrl$company_status %||% "",
           iuc = ctrl$iuc_or_system %||% "",
+          steps = ctrl$review_steps %||% "",
           nzchar_or(item$evidence, "")
         )
       },
       `預期佐證_PBC` = item$evidence %||% "",
+      `建議串接PBC` = pbc_hint,
       `受訪者回答` = "",
       `佐證取得` = "",
       `結論` = "",
@@ -860,13 +1002,16 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS) {
 
 # Only finalized RCM rows (設計完成＝RCM一列) feed interview by default
 controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENTS,
-                                  finalized_only = TRUE) {
+                                  finalized_only = TRUE,
+                                  modules = DEFAULT_INTERVIEW_5W1H,
+                                  pbc_reg = NULL) {
   if (!length(controls)) return(empty_interview_df())
   if (isTRUE(finalized_only)) {
     controls <- Filter(is_control_finalized_for_rcm, controls)
   }
   if (!length(controls)) return(empty_interview_df())
-  do.call(rbind, lapply(controls, control_to_interview, elements = elements))
+  do.call(rbind, lapply(controls, control_to_interview,
+                        elements = elements, modules = modules, pbc_reg = pbc_reg))
 }
 
 # ---- CSA test-step worksheet (Phase-2: after interview + RCM) ----

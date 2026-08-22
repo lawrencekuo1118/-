@@ -212,7 +212,8 @@ ui <- page_navbar(
                   "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
           tags$li(strong("完成設計＝寫入 RCM 一列"),
                   "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
-          tags$li(tags$strong("訪談問項設計"), "：對齊已定稿 RCM，勾選元素後預覽／下載題綱。"),
+          tags$li(tags$strong("訪談問項設計"),
+                  "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
           tags$li(tags$strong("控制點測試設計"),
                   "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
         )
@@ -247,7 +248,7 @@ ui <- page_navbar(
         class = "home-tabs-grid",
         div(class = "home-tab-card",
             strong("訪談問項設計"),
-            "對齊已定稿 RCM 產出訪談題綱；請先完成風險控制點定稿。"),
+            "循環／子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
         div(class = "home-tab-card",
             strong("風險控制點設計"),
             "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
@@ -284,19 +285,74 @@ ui <- page_navbar(
   nav_panel(
     "訪談問項設計",
     layout_columns(
-      col_widths = c(3, 9),
+      col_widths = c(7, 5),
       card(
+        full_screen = TRUE,
         card_header("訪談問項設計"),
-        selectizeInput(
-          "worksheet_controls", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
+        uiOutput("interview_status"),
+        p(class = "small text-muted mb-2",
+          "深入且快速了解各循環／子作業之預期風險與預期控制目標／活動，",
+          "並對照內部控制實際執行現況。每題答案須含人事時地物",
+          "（頻率／誰／IUC／具體行為／下一步）。"),
+        radioButtons(
+          "interview_source", NULL,
+          choices = INTERVIEW_SOURCE_CHOICES,
+          selected = "rcm", inline = TRUE
         ),
-        checkboxGroupInput("interview_elements", "訪談元素",
-                           choices = DESIGN_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS),
-        actionButton("ws_select_core_iv", "訪談核心元素", class = "btn-sm btn-primary"),
-        uiOutput("interview_status")
+        accordion(
+          id = "interview_design_groups",
+          open = c("基本資料", "訪談焦點", "5W1H／PBC"),
+          accordion_panel(
+            "基本資料",
+            p(class = "small text-muted mb-2",
+              "與「風險控制點設計」相同：先鎖定循環／子作業，再選控制點（可空＝範圍內全部）。"),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput(
+                "interview_cycle", "循環名稱",
+                choices = c("全部循環…" = "", CYCLES_NINE_CHOICES),
+                selected = ""
+              ),
+              selectInput(
+                "interview_sub", "子作業",
+                choices = c("全部子作業…" = ""),
+                selected = ""
+              )
+            ),
+            selectizeInput(
+              "worksheet_controls", "控制點",
+              choices = NULL, multiple = TRUE,
+              options = list(placeholder = "空＝目前範圍內全部")
+            )
+          ),
+          accordion_panel(
+            "訪談焦點",
+            p(class = "small text-muted mb-2",
+              "勾選要深挖的預期風險／目標／活動等元素。"),
+            checkboxGroupInput(
+              "interview_elements", NULL,
+              choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
+            ),
+            actionButton("ws_select_core_iv", "現況走查核心題", class = "btn-sm btn-primary")
+          ),
+          accordion_panel(
+            "5W1H／PBC",
+            p(class = "small text-muted mb-2",
+              "模組化拼湊回答架構；What 可串接 PBC 資料庫。"),
+            checkboxGroupInput(
+              "interview_5w1h", NULL,
+              choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
+            ),
+            selectizeInput(
+              "interview_pbc_link", "串接 PBC（選填）",
+              choices = NULL, multiple = TRUE,
+              options = list(placeholder = "從 PBC 資料庫選取預期佐證")
+            )
+          )
+        )
       ),
       card(
+        card_header("訪談題綱預覽"),
         DTOutput("interview_table"),
         downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-sm")
       )
@@ -872,7 +928,101 @@ server <- function(input, output, session) {
       session, "pbc_apply", choices = ch, server = TRUE,
       selected = intersect(input$pbc_apply %||% character(), unname(ch))
     )
+    updateSelectizeInput(
+      session, "interview_pbc_link", choices = ch, server = TRUE,
+      selected = intersect(input$interview_pbc_link %||% character(), unname(ch))
+    )
   }
+
+  interview_worksheet <- function() {
+    src <- input$interview_source %||% "rcm"
+    if (identical(src, "library")) {
+      cs <- library_items_as_interview_controls(lib())
+      finalized_only <- FALSE
+    } else {
+      cs <- Filter(is_control_finalized_for_rcm, controls())
+      finalized_only <- TRUE
+    }
+    cs <- filter_controls_by_cycle_sub(
+      cs,
+      cycle = input$interview_cycle %||% "",
+      sub_key = input$interview_sub %||% ""
+    )
+    ids <- input$worksheet_controls
+    if (length(ids) && any(nzchar(ids))) {
+      cs <- Filter(function(c) c$control_id %in% ids, cs)
+    }
+    mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
+    iv <- controls_to_interview(
+      cs, input$interview_elements,
+      finalized_only = finalized_only,
+      modules = mods,
+      pbc_reg = pbc_reg()
+    )
+    # Overlay explicit PBC picks onto 建議串接PBC
+    pbc_ids <- input$interview_pbc_link %||% character()
+    if (length(pbc_ids) && nrow(iv)) {
+      linked <- tryCatch(format_pbc_for_inputs(pbc_reg(), pbc_ids), error = function(e) "")
+      if (nzchar(trimws(linked))) {
+        iv[["建議串接PBC"]] <- vapply(iv[["建議串接PBC"]], function(x) {
+          x <- as.character(x %||% "")
+          if (!nzchar(x) || identical(x, "（待對照 PBC 資料庫）")) linked
+          else paste(x, linked, sep = "｜")
+        }, character(1))
+      }
+    }
+    iv
+  }
+
+  interview_pool_controls <- reactive({
+    src <- input$interview_source %||% "rcm"
+    if (identical(src, "library")) {
+      library_items_as_interview_controls(lib())
+    } else {
+      Filter(is_control_finalized_for_rcm, controls())
+    }
+  })
+
+  observe({
+    pool <- interview_pool_controls()
+    cy <- input$interview_cycle %||% ""
+    scoped <- filter_controls_by_cycle_sub(pool, cycle = cy, sub_key = "")
+    ch_sub <- if (length(scoped)) cascade_sub_process_choices(scoped) else character()
+    updateSelectInput(
+      session, "interview_sub",
+      choices = c("全部子作業…" = "", ch_sub),
+      selected = {
+        cur <- input$interview_sub %||% ""
+        if (nzchar(cur) && cur %in% ch_sub) cur else ""
+      }
+    )
+  })
+
+  observe({
+    pool <- interview_pool_controls()
+    scoped <- filter_controls_by_cycle_sub(
+      pool,
+      cycle = input$interview_cycle %||% "",
+      sub_key = input$interview_sub %||% ""
+    )
+    if (!length(scoped)) {
+      updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
+      return()
+    }
+    ch <- stats::setNames(
+      vapply(scoped, function(x) x$control_id, ""),
+      vapply(scoped, function(x) {
+        sprintf("%s｜%s｜%s",
+                x$control_id,
+                x$risk_factor %||% x$risk_name %||% "",
+                substr(x$control_objective %||% "", 1, 24))
+      }, "")
+    )
+    updateSelectizeInput(
+      session, "worksheet_controls", choices = ch, server = TRUE,
+      selected = intersect(input$worksheet_controls %||% character(), unname(ch))
+    )
+  })
 
   observe({
     input$cycle
@@ -2213,13 +2363,6 @@ server <- function(input, output, session) {
     datatable(controls_to_rcm(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })
-  selected_worksheet_controls <- reactive({
-    cs <- controls()
-    if (!length(cs)) return(list())
-    ids <- input$worksheet_controls
-    if (!length(ids) || all(!nzchar(ids))) return(cs)
-    Filter(function(c) c$control_id %in% ids, cs)
-  })
   selected_worksheet_controls_sa <- reactive({
     cs <- Filter(is_control_finalized_for_rcm, controls())
     if (!length(cs)) return(list())
@@ -2250,17 +2393,11 @@ server <- function(input, output, session) {
   observe({
     cs <- controls()
     if (!length(cs)) {
-      updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
       updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
       updateSelectizeInput(session, "csa_edit_control", choices = character(), server = TRUE)
       updateSelectizeInput(session, "csa_scenario_pick", choices = character(), server = TRUE)
       return()
     }
-    ch_all <- stats::setNames(
-      vapply(cs, function(x) x$control_id, ""),
-      vapply(cs, function(x) sprintf("%s｜%s", x$control_id, x$risk_name %||% ""), "")
-    )
-    updateSelectizeInput(session, "worksheet_controls", choices = ch_all, server = TRUE)
     cs_fin <- Filter(is_control_finalized_for_rcm, cs)
     if (!length(cs_fin)) {
       updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
@@ -2413,16 +2550,36 @@ server <- function(input, output, session) {
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
+    updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
   })
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
   })
   output$interview_status <- renderUI({
-    cs <- selected_worksheet_controls()
-    n <- length(Filter(is_control_finalized_for_rcm, cs))
-    iv <- controls_to_interview(cs, input$interview_elements, finalized_only = TRUE)
-    tags$small(class = "text-muted",
-               sprintf("已定稿 RCM %d 列 → 訪談問項 %d 則", n, nrow(iv)))
+    src <- input$interview_source %||% "rcm"
+    pool <- interview_pool_controls()
+    scoped <- filter_controls_by_cycle_sub(
+      pool,
+      cycle = input$interview_cycle %||% "",
+      sub_key = input$interview_sub %||% ""
+    )
+    iv <- interview_worksheet()
+    if (!length(scoped)) {
+      msg <- if (identical(src, "library")) {
+        "範本庫尚無列；請先匯入或於風險控制點定稿後累積範本。"
+      } else {
+        "尚無已定稿控制點；請先完成「風險控制點設計」定稿，或改選「範本庫預期」。"
+      }
+      return(tags$small(class = "text-warning", msg))
+    }
+    tags$small(
+      class = "text-muted",
+      sprintf(
+        "%s %d 點（循環／子作業範圍）→ 訪談問項 %d 則｜每題含人事時地物回答架構",
+        if (identical(src, "library")) "範本庫預期" else "已定稿 RCM",
+        length(scoped), nrow(iv)
+      )
+    )
   })
   output$csa_status <- renderUI({
     cs <- selected_worksheet_controls_sa()
@@ -2450,8 +2607,7 @@ server <- function(input, output, session) {
     )
   })
   output$interview_table <- renderDT({
-    datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
-                                    finalized_only = TRUE),
+    datatable(interview_worksheet(),
               rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$csa_table <- renderDT({
@@ -2471,8 +2627,7 @@ server <- function(input, output, session) {
   output$download_interview <- downloadHandler(
     filename = function() sprintf("interview-%s.csv", format(Sys.time(), "%Y%m%d")),
     content = function(file) {
-      write.csv(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
-                                      finalized_only = TRUE),
+      write.csv(interview_worksheet(),
                 file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )

@@ -1167,8 +1167,52 @@ assertions_allowed_ok <- function(assertions, cat) {
 
 # TRUE if account is considered "filled" for 報導面
 account_is_filled <- function(x) {
-  v <- trimws(as.character(x %||% ""))
-  nzchar(v) && !identical(toupper(v), "NA") && !identical(v, "—") && !identical(v, "-")
+  vals <- parse_account_values(x)
+  length(vals) > 0L
+}
+
+parse_account_values <- function(x) {
+  if (is.null(x)) return(character(0))
+  if (is.character(x) && length(x) > 1L) {
+    vals <- trimws(as.character(x))
+  } else {
+    raw <- trimws(as.character(x %||% ""))
+    if (!nzchar(raw)) return(character(0))
+    vals <- trimws(unlist(strsplit(raw, "[;；|/、,，]+")))
+  }
+  vals <- vals[nzchar(vals)]
+  vals <- vals[!toupper(vals) %in% c("NA", "—", "-")]
+  unique(vals)
+}
+
+#' 正規化會計科目選取：含「全部適用」或已勾選全部常見科目 → 存「全部適用」
+join_significant_accounts <- function(vals) {
+  vals <- parse_account_values(vals)
+  if (!length(vals)) return("")
+  all_opt <- if (exists("ACCOUNT_ALL_OPTION")) ACCOUNT_ALL_OPTION else "全部適用"
+  std <- if (exists("ACCOUNT_CHOICES")) ACCOUNT_CHOICES else character(0)
+  if (all_opt %in% vals) return(all_opt)
+  extras <- setdiff(vals, std)
+  if (length(std) && !length(extras) && all(std %in% vals)) return(all_opt)
+  paste(vals, collapse = "；")
+}
+
+#' UI／回填用：將存檔值展開為 selectize selected 向量
+expand_account_selection <- function(x) {
+  vals <- parse_account_values(x)
+  if (!length(vals)) return(character(0))
+  all_opt <- if (exists("ACCOUNT_ALL_OPTION")) ACCOUNT_ALL_OPTION else "全部適用"
+  std <- if (exists("ACCOUNT_CHOICES")) ACCOUNT_CHOICES else character(0)
+  if (all_opt %in% vals) {
+    return(c(all_opt, std))
+  }
+  vals
+}
+
+account_select_choices <- function() {
+  all_opt <- if (exists("ACCOUNT_ALL_OPTION")) ACCOUNT_ALL_OPTION else "全部適用"
+  std <- if (exists("ACCOUNT_CHOICES")) ACCOUNT_CHOICES else character(0)
+  c(all_opt, std)
 }
 
 law_is_filled <- function(x) {
@@ -1417,11 +1461,9 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   ctrl <- as.list(ctrl)
   # 三大風險屬性三擇一（定稿前強制清空非選項）
   ctrl <- enforce_single_risk_attr(ctrl)
-  # 會計科目：報導面保留；其他類別強制清空
+  # 會計科目：報導面保留並正規化複選；其他類別強制清空
   if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
-    if (identical(toupper(trimws(ctrl$significant_account %||% "")), "NA")) {
-      ctrl$significant_account <- ""
-    }
+    ctrl$significant_account <- join_significant_accounts(ctrl$significant_account)
   } else {
     ctrl$significant_account <- ""
   }

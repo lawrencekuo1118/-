@@ -26,6 +26,11 @@ app_preset_parameters <- function() {
       ops <- if (exists("ASSERTION_CHOICES_OPERATIONS")) ASSERTION_CHOICES_OPERATIONS else character()
       unique(c(rep, ops))
     },
+    "會計科目" = {
+      all_opt <- if (exists("ACCOUNT_ALL_OPTION")) ACCOUNT_ALL_OPTION else "全部適用"
+      std <- if (exists("ACCOUNT_CHOICES")) ACCOUNT_CHOICES else character()
+      c(all_opt, std)
+    },
     "Form 4120SR Type" = if (exists("TYPE_CHOICES")) TYPE_CHOICES else character(),
     "RoMM 分類" = if (exists("ROMM_CLASS_CHOICES")) ROMM_CLASS_CHOICES else character(),
     "控制有效性評估" = c("有效", "無效"),

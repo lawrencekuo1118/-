@@ -174,6 +174,33 @@ fin_rep <- finalize_control_as_rcm_row(modifyList(d1, list(
   risk_category = "報導面", significant_account = ""
 )), existing_ids = character())
 check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺科目不可定稿")
+check(length(ACCOUNT_CHOICES) >= 40L, "常見會計科目清單足夠")
+check(ACCOUNT_ALL_OPTION %in% account_select_choices(), "選單含全部適用")
+check(identical(join_significant_accounts(c("全部適用", "應收帳款")), "全部適用"),
+      "含全部適用則正規化為全部適用")
+check(identical(join_significant_accounts(c("應收帳款", "存貨")), "應收帳款；存貨"),
+      "複選科目以分號接合")
+check(ACCOUNT_ALL_OPTION %in% expand_account_selection("全部適用") &&
+        length(expand_account_selection("全部適用")) > 10L,
+      "全部適用展開為全科目選取")
+rep_all <- design_required_check(modifyList(d1, list(
+  risk_category = "報導面", significant_account = "全部適用"
+)))
+check(isTRUE(rep_all$ok) && isTRUE(rep_all$filled$significant_account), "報導面全部適用可過")
+fin_rep_all <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "報導面", significant_account = "全部適用",
+  assertions = "完整性 (Completeness)"
+)), existing_ids = character())
+check(isTRUE(fin_rep_all$ok) && identical(fin_rep_all$control$significant_account, "全部適用"),
+      "報導面全部適用可定稿")
+fin_rep_multi <- finalize_control_as_rcm_row(modifyList(d1, list(
+  risk_category = "報導面",
+  significant_account = "應收帳款；營業收入",
+  assertions = "完整性 (Completeness)"
+)), existing_ids = character())
+check(isTRUE(fin_rep_multi$ok) && grepl("應收帳款", fin_rep_multi$control$significant_account) &&
+        grepl("營業收入", fin_rep_multi$control$significant_account),
+      "報導面複選科目可定稿")
 
 # 遵循面相關法令必填；其他類別不可填
 comp_ok <- design_required_check(modifyList(d1, list(

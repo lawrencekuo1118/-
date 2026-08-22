@@ -76,9 +76,15 @@ ui <- page_navbar(
     Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
       var el = document.getElementById('significant_account');
       if (!el) return;
-      el.disabled = !msg.enabled;
-      el.readOnly = !msg.enabled;
-      el.classList.toggle('bg-light', !msg.enabled);
+      var $el = $('#significant_account');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+        el.readOnly = !msg.enabled;
+        el.classList.toggle('bg-light', !msg.enabled);
+      }
     });
     Shiny.addCustomMessageHandler('toggleLaw', function(msg) {
       var el = document.getElementById('related_law');
@@ -222,7 +228,8 @@ ui <- page_navbar(
           tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
           tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
                   strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
-          tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
+          tags$li(strong("會計科目"), "僅報導面可填且必填（常見科目複選，含「全部適用」）；",
+                  strong("相關法令"), "僅遵循面可填且必填。"),
           tags$li(strong("聲明（Assertions）"), "：報導面可複選 Thomson Reuters／AICPA 八種；",
                   "營運面僅完整性／正確性／即時性；遵循面不可選。"),
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
@@ -392,8 +399,17 @@ ui <- page_navbar(
             ),
             selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
             uiOutput("significant_account_hint"),
-            textInput("significant_account", "會計科目", value = "",
-                      placeholder = "僅報導面可填且必填"),
+            selectizeInput(
+              "significant_account", "會計科目",
+              choices = account_select_choices(),
+              multiple = TRUE,
+              selected = character(0),
+              options = list(
+                create = TRUE,
+                placeholder = "報導面必填：可複選常見科目，或選「全部適用」"
+              )
+            ),
+            actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
             textAreaInput(
               "risk_attr_detail", lab_opt("風險屬性細節"), rows = 2,
               placeholder = "對應所選風險類別之細節（可空）"
@@ -1004,7 +1020,13 @@ server <- function(input, output, session) {
       "聲明" = function() {
         updateSelectizeInput(session, "assertions", selected = val)
       },
-      "會計科目" = function() updateTextInput(session, "significant_account", value = val),
+      "會計科目" = function() {
+        updateSelectizeInput(
+          session, "significant_account",
+          choices = account_select_choices(),
+          selected = expand_account_selection(val)
+        )
+      },
       "控制目標" = function() {
         updateTextAreaInput(session, "custom_objective", value = val)
         updateSelectInput(session, "cascade_objective", selected = "__custom__")
@@ -1337,7 +1359,7 @@ server <- function(input, output, session) {
       risk_attr_operations = attr_ctrl$risk_attr_operations,
       risk_attr_compliance = attr_ctrl$risk_attr_compliance,
       romm_classification = input$romm_classification %||% "",
-      significant_account = input$significant_account %||% "",
+      significant_account = join_significant_accounts(input$significant_account),
       assertions = paste(input$assertions %||% character(), collapse = "；"),
       control_objective = sel$control_objective,
       control_activity = sel$control_activity,
@@ -1487,7 +1509,7 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_reporting_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("報導面"), " — 會計科目為必填，請填財務報表科目。")
+          lab_req("報導面"), " — 會計科目為必填；可複選常見財務報表科目，或按「全部適用」。")
     } else if (nzchar(cat)) {
       div(class = "alert alert-secondary py-1 mb-2 small",
           "非報導面：會計科目已鎖定不可填（將自動清空）。")
@@ -1495,6 +1517,34 @@ server <- function(input, output, session) {
       helpText(class = "text-muted small", "請先選擇風險類別；僅報導面可填會計科目。")
     }
   })
+
+  # 「全部適用」：按鈕或選項 → 勾選全部常見科目
+  observeEvent(input$account_select_all, {
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
+    if (!is_reporting_risk_category(cat)) {
+      return(showNotification("僅報導面可選會計科目", type = "warning"))
+    }
+    updateSelectizeInput(
+      session, "significant_account",
+      choices = account_select_choices(),
+      selected = expand_account_selection(ACCOUNT_ALL_OPTION)
+    )
+  })
+  observeEvent(input$significant_account, {
+    cat <- trimws(input$risk_category %||% "")
+    if (!is_reporting_risk_category(cat)) return()
+    sel <- parse_account_values(input$significant_account)
+    if (!(ACCOUNT_ALL_OPTION %in% sel)) return()
+    # 選到「全部適用」時展開為全科目（避免只留標籤卻漏存）
+    desired <- expand_account_selection(ACCOUNT_ALL_OPTION)
+    if (!setequal(sel, desired)) {
+      updateSelectizeInput(
+        session, "significant_account",
+        choices = account_select_choices(),
+        selected = desired
+      )
+    }
+  }, ignoreInit = TRUE)
 
   output$related_law_hint <- renderUI({
     cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
@@ -1597,8 +1647,8 @@ server <- function(input, output, session) {
       list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
-      if (nzchar(trimws(input$significant_account %||% ""))) {
-        updateTextInput(session, "significant_account", value = "")
+      if (length(parse_account_values(input$significant_account))) {
+        updateSelectizeInput(session, "significant_account", selected = character(0))
       }
     }
     if (nzchar(cat) && !is_compliance_risk_category(cat)) {

@@ -31,6 +31,14 @@ source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "draft_store.R"), local = TRUE)
 
+# UI label with required asterisk
+lab_req <- function(txt) {
+  tagList(txt, tags$span("*", class = "text-danger ms-1", title = "設計必填"))
+}
+lab_opt <- function(txt) {
+  tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
+}
+
 fill_inputs_from_ctrl <- function(session, ctrl) {
   if (is.null(ctrl)) return()
   updateSelectInput(session, "cycle", selected = ctrl$cycle %||% CYCLES_NINE[[1]])
@@ -46,8 +54,8 @@ fill_inputs_from_ctrl <- function(session, ctrl) {
   updateSelectInput(session, "risk_category", selected = if (nzchar(rc)) rc else "")
   updateTextInput(session, "significant_account",
                   value = {
-                    ac <- ctrl$significant_account %||% ""
-                    if (identical(ac, "NA")) "" else ac
+                    ac <- trimws(as.character(ctrl$significant_account %||% ""))
+                    if (!nzchar(ac)) "NA" else ac
                   })
   # ③ 控制資訊
   updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
@@ -137,10 +145,12 @@ ui <- page_navbar(
         p(
           class = "small text-muted mb-2",
           "流程：", strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防/偵測）→ IUC"),
-          "；全部選定且六大控制項目就緒後，才可書寫", strong("公司現況"),
+          "；", tags$span(class = "text-danger", "*"), "為", strong("設計必填"),
+          "；六大就緒後才可書寫", strong("公司現況"),
           "。控制編號自動順編（如 EC-101-01）。"
         ),
         uiOutput("cascade_step_status"),
+        uiOutput("design_required_checklist"),
         # Step 2: 子作業
         selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
         conditionalPanel(
@@ -206,24 +216,28 @@ ui <- page_navbar(
           open = c("① 流程資訊", "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）"),
           accordion_panel(
             "① 流程資訊",
-            textInput("sub_process_id", NULL, placeholder = "子作業編號（例：EC-101）"),
-            textInput("sub_process", NULL, placeholder = "子作業名稱"),
-            textInput("control_id", NULL, value = "", placeholder = "控制編號（自動順編，可覆寫）")
+            textInput("sub_process_id", lab_req("子作業編號"), placeholder = "例：EC-101"),
+            textInput("sub_process", lab_req("子作業名稱"), placeholder = "子作業名稱"),
+            textInput("control_id", "控制編號", value = "",
+                      placeholder = "自動順編（可覆寫）")
           ),
           accordion_panel(
             "② 風險資訊",
-            textInput("risk_factor", NULL, placeholder = "風險因素（Risk Factor）"),
-            textInput("risk_name", NULL, placeholder = "風險簡稱（可同因素；亦可自訂）"),
-            textAreaInput("risk_description", NULL, rows = 2, placeholder = "風險描述（Risk Description）"),
-            selectInput("risk_category", NULL, choices = c("風險類別（報導面／營運面／遵循面）…" = "", RISK_CATEGORY_CHOICES)),
-            textInput("significant_account", NULL, placeholder = "會計科目（無則 NA）")
+            textInput("risk_factor", lab_req("風險因素"), placeholder = "Risk Factor"),
+            textInput("risk_name", "風險簡稱", placeholder = "可同因素；亦可自訂"),
+            textAreaInput("risk_description", lab_req("風險描述"), rows = 2,
+                          placeholder = "Risk Description"),
+            selectInput("risk_category", lab_req("風險類別"),
+                        choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES)),
+            textInput("significant_account", lab_req("會計科目"), value = "NA",
+                      placeholder = "無則填 NA")
           ),
           accordion_panel(
             "③ 控制資訊（目標 ≠ 活動；類型欄勿對調）",
-            textAreaInput("control_objective", NULL, rows = 2,
-                          placeholder = "控制目標 Why：確保／防止…（結果，勿寫步驟）"),
-            textAreaInput("control_activity", NULL, rows = 2,
-                          placeholder = "控制活動 How：誰＋動作＋表單／系統（單一活動僅對應一種預防/偵測）"),
+            textAreaInput("control_objective", lab_req("控制目標"), rows = 2,
+                          placeholder = "Why：確保／防止…（結果，勿寫步驟）"),
+            textAreaInput("control_activity", lab_req("控制活動"), rows = 2,
+                          placeholder = "How：誰＋動作＋表單／系統（單一活動僅一種預防/偵測）"),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
@@ -233,48 +247,53 @@ ui <- page_navbar(
             ),
             layout_columns(
               col_widths = c(6, 6),
-              selectInput("nature", NULL, choices = c("控制類型（人工/自動）…" = "", CONTROL_TYPE_MANUAL_AUTO)),
-              selectInput("approach", NULL, choices = c("控制活動類型（預防/偵測）…" = "", CONTROL_ACTIVITY_TYPE_PD))
+              selectInput("nature", lab_req("控制類型"),
+                          choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO)),
+              selectInput("approach", lab_req("控制活動類型"),
+                          choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD))
             ),
             layout_columns(
               col_widths = c(6, 6),
-              selectInput("frequency", NULL,
+              selectInput("frequency", lab_req("控制頻率"),
                           choices = unique(c(FREQUENCY_CHOICES, "持續")),
                           selected = "每季"),
-              textInput("responsible_unit", NULL, placeholder = "流程負責單位")
+              textInput("responsible_unit", lab_req("流程負責單位"),
+                        placeholder = "Control Owner")
             ),
             selectizeInput(
-              "pbc_apply", NULL, choices = NULL, multiple = TRUE,
-              options = list(placeholder = "套用 IUC／PBC（原名→新名）")
+              "pbc_apply", "套用 IUC／PBC", choices = NULL, multiple = TRUE,
+              options = list(placeholder = "原名→新名")
             ),
-            textAreaInput("iuc_or_system", NULL, rows = 1, placeholder = "相關系統／IUC（須由引導選擇或自訂入庫）"),
+            textAreaInput("iuc_or_system", lab_req("相關系統／IUC"), rows = 1,
+                          placeholder = "須由引導選擇或自訂入庫"),
             uiOutput("six_rules_box"),
             uiOutput("company_status_lock_msg"),
             # Hidden unlock flag driven by server
             div(style = "display:none;", checkboxInput("status_unlocked", NULL, FALSE)),
             conditionalPanel(
               condition = "input.status_unlocked == true",
-              textAreaInput("company_status", NULL, rows = 5,
-                            placeholder = "控制現況描述（依六大控制項目書寫公司實際作法）"),
+              textAreaInput("company_status", lab_opt("控制現況描述"), rows = 5,
+                            placeholder = "依六大控制項目書寫公司實際作法；定稿可自動帶入"),
               actionButton("fill_status_scaffold", "帶入六大規則草稿", class = "btn-sm btn-outline-primary mb-2")
             ),
             conditionalPanel(
               condition = "input.status_unlocked != true",
               helpText(class = "text-muted small", "（公司現況欄位將於引導＋六大就緒後顯示）")
             ),
-            textAreaInput("design_gap_note", NULL, rows = 2, placeholder = "控制設計差異說明"),
+            textAreaInput("design_gap_note", lab_opt("控制設計差異說明"), rows = 2),
             layout_columns(
               col_widths = c(6, 6),
-              textInput("related_policy", NULL, placeholder = "相關政策或程序"),
-              textInput("related_law", NULL, placeholder = "相關法令")
+              textInput("related_policy", lab_opt("相關政策或程序")),
+              textInput("related_law", lab_opt("相關法令"))
             ),
-            textInput("related_document", NULL, placeholder = "相關文件")
+            textInput("related_document", lab_opt("相關文件"))
           ),
           accordion_panel(
             "④ 控制分析與評估",
-            selectInput("effectiveness", NULL, choices = c("控制有效性評估…" = "", "有效", "無效")),
-            textAreaInput("residual_risk", NULL, rows = 1, placeholder = "可能潛在風險"),
-            textAreaInput("improvement", NULL, rows = 1, placeholder = "建議改善方式")
+            selectInput("effectiveness", lab_opt("控制有效性評估"),
+                        choices = c("…" = "", "有效", "無效")),
+            textAreaInput("residual_risk", lab_opt("可能潛在風險"), rows = 1),
+            textAreaInput("improvement", lab_opt("建議改善方式"), rows = 1)
           ),
           accordion_panel(
             "進階（4120SR／三大屬性細節）",
@@ -1116,6 +1135,30 @@ server <- function(input, output, session) {
         if (!ready$ready) tags$span(class = "text-muted", " — 完成後才可書寫公司現況"))
   })
 
+  output$design_required_checklist <- renderUI({
+    d <- current_draft_from_inputs()
+    # Treat blank 會計科目 as pending NA default for display parity with finalize
+    if (!nzchar(trimws(d$significant_account %||% ""))) d$significant_account <- "NA"
+    req <- design_required_check(d)
+    n_ok <- sum(unlist(req$filled))
+    n_all <- length(req$required)
+    items <- lapply(names(req$required), function(f) {
+      ok <- isTRUE(req$filled[[f]])
+      tags$li(
+        class = if (ok) "text-success" else "text-danger",
+        if (ok) "✓ " else "○ ",
+        req$required[[f]]
+      )
+    })
+    cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
+    div(
+      class = cls,
+      tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),
+      tags$ul(class = "mb-0 ps-3", style = "columns: 2; -webkit-columns: 2;", items),
+      if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、"))
+    )
+  })
+
   output$auto_control_id_box <- renderUI({
     sel <- resolve_cascade_selection()
     spid <- sel$sub_process_id
@@ -1304,16 +1347,19 @@ server <- function(input, output, session) {
 
   output$live_validation <- renderUI({
     d <- current_draft_from_inputs()
+    if (!nzchar(trimws(d$significant_account %||% ""))) d$significant_account <- "NA"
     gaps <- detect_design_gaps(d)
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
     ready <- is_rcm_row_ready(d)
     six <- six_status_rules_check(d)
-    if (isTRUE(ready$ready) && isTRUE(chk$ok) && isTRUE(six$ok)) {
+    req <- design_required_check(d)
+    if (isTRUE(ready$ready) && isTRUE(chk$ok) && isTRUE(req$ok)) {
       div(class = "alert alert-success py-1 mb-2",
-          "設計完成＝可寫入 RCM 一列｜", format_oa_check_html(chk))
+          "設計必填齊全＝可寫入 RCM 一列｜", format_oa_check_html(chk))
     } else {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
-      summary <- if (!isTRUE(chk$ok)) chk$msg
+      summary <- if (!isTRUE(req$ok)) paste0("必填未齊：", paste(req$missing, collapse = "、"))
+      else if (!isTRUE(chk$ok)) chk$msg
       else if (!isTRUE(six$ok)) paste0("六大未齊：", paste(six$missing, collapse = "、"))
       else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
       else paste(gaps$gap_item, collapse = "；")

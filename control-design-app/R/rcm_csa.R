@@ -614,8 +614,92 @@ controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
   do.call(rbind, lapply(controls, control_to_csa, elements = elements))
 }
 
+# ---- 設計必填欄位（對齊鯨鏈 RCM 核心欄；定稿＝RCM 一列前置）----
+# 選填：控制設計差異／相關政策法令文件／有效性評估／4120SR 進階欄
+DESIGN_REQUIRED_FIELDS <- c(
+  cycle = "循環名稱",
+  sub_process_id = "子作業編號",
+  sub_process = "子作業名稱",
+  risk_factor = "風險因素",
+  risk_description = "風險描述",
+  risk_category = "風險類別",
+  significant_account = "會計科目（無則填 NA）",
+  control_objective = "控制目標",
+  control_activity = "控制活動",
+  nature = "控制類型（人工／自動）",
+  approach = "控制活動類型（預防／偵測）",
+  frequency = "控制頻率",
+  responsible_unit = "流程負責單位",
+  iuc_or_system = "相關系統／IUC"
+)
+
+DESIGN_OPTIONAL_FIELDS <- c(
+  company_status = "控制現況描述（六大就緒後書寫；定稿時可自動帶入）",
+  design_gap_note = "控制設計差異說明",
+  related_policy = "相關政策或程序",
+  related_law = "相關法令",
+  related_document = "相關文件",
+  effectiveness = "控制有效性評估",
+  residual_risk = "可能潛在風險",
+  improvement = "建議改善方式"
+)
+
+# Resolve field value with aliases used across cascade / RCM / Form 4120SR
+design_field_value <- function(ctrl, field) {
+  ctrl <- as.list(ctrl)
+  if (identical(field, "risk_factor")) {
+    return(trimws(as.character(
+      ctrl$risk_factor %||% ctrl$risk_name %||% ""
+    )))
+  }
+  if (identical(field, "iuc_or_system")) {
+    return(trimws(as.character(
+      ctrl$iuc_or_system %||% ctrl$related_system %||% ""
+    )))
+  }
+  if (identical(field, "nature")) {
+    return(trimws(as.character(
+      normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+    )))
+  }
+  if (identical(field, "approach")) {
+    at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
+    if (exists("normalize_single_activity_type", mode = "function")) {
+      at2 <- normalize_single_activity_type(ctrl$approach %||% ctrl$control_activity_type)
+      if (nzchar(at2)) at <- at2
+    }
+    return(trimws(as.character(at %||% "")))
+  }
+  trimws(as.character(ctrl[[field]] %||% ""))
+}
+
+# Returns ok + missing Chinese labels for 設計必填欄位
+design_required_check <- function(ctrl) {
+  missing <- character()
+  filled <- list()
+  for (f in names(DESIGN_REQUIRED_FIELDS)) {
+    val <- design_field_value(ctrl, f)
+    filled[[f]] <- nzchar(val)
+    if (!nzchar(val)) missing <- c(missing, DESIGN_REQUIRED_FIELDS[[f]])
+  }
+  # Extra rule: approach must be exactly one 預防/偵測
+  if (isTRUE(filled$approach) && exists("activity_type_ok", mode = "function") &&
+      !activity_type_ok(ctrl$approach %||% ctrl$control_activity_type)) {
+    missing <- c(missing, "控制活動類型須為單一預防／偵測（不可混用）")
+    filled$approach <- FALSE
+  }
+  list(
+    ok = !length(missing),
+    missing = unique(missing),
+    filled = filled,
+    required = DESIGN_REQUIRED_FIELDS,
+    optional = DESIGN_OPTIONAL_FIELDS
+  )
+}
+
 # ---- Gap / deficiency detection ----
 # Categories: 缺資訊 | 缺文件 | 控制缺失
+# 必填缺漏 → 高（阻擋定稿）；選填／4120SR 輔助 → 中／低
 detect_design_gaps <- function(ctrl) {
   gaps <- list()
   add <- function(category, severity, item, action) {
@@ -629,32 +713,30 @@ detect_design_gaps <- function(ctrl) {
     )
   }
 
-  if (is_blank(ctrl$cycle)) add("缺資訊", "高", "未選九大循環", "先選定循環以帶出子作業／範本")
-  if (is_blank(ctrl$risk_name) && is_blank(ctrl$risk_description)) {
+  req <- design_required_check(ctrl)
+  if (!isTRUE(req$ok)) {
+    for (lab in req$missing) {
+      add("缺資訊", "高", paste0("必填未填：", lab), "補齊設計必填欄位後才可定稿為 RCM 一列")
+    }
+  }
+
+  if (is_blank(ctrl$risk_name) && is_blank(ctrl$risk_description) &&
+      is_blank(ctrl$risk_factor)) {
     add("缺資訊", "高", "缺少風險名稱／描述", "補 RoMM 全文，勿只填編號")
   }
   if (is_blank(ctrl$risk_category) &&
       (is_blank(ctrl$risk_attr_financial) || is_blank(ctrl$risk_attr_operations) ||
        is_blank(ctrl$risk_attr_compliance))) {
-    add("缺資訊", "中", "風險類別／三大屬性不完整",
-        "補風險類別（報導面／營運面／遵循面）或三大屬性細節")
+    add("缺資訊", "中", "風險三大屬性細節不完整（類別已另列必填）",
+        "可於進階區補財務報導／營運／遵循細節")
   }
-  if (is_blank(ctrl$control_objective)) add("缺資訊", "高", "缺少控制目標", "以 Why／對應風險與聲明撰寫")
-  if (is_blank(ctrl$control_activity)) add("缺資訊", "高", "缺少控制活動", "以 How／執行作為撰寫，勿重述目標")
-  if (is_blank(ctrl$frequency)) add("缺資訊", "中", "缺少控制頻率", "補頻率以決定 CSA 抽樣")
-  if (is_blank(ctrl$responsible_unit)) add("缺資訊", "中", "缺少負責單位", "指定 Control Owner")
-  if (is_blank(ctrl$approach) && is_blank(ctrl$control_activity_type)) {
-    add("缺資訊", "中", "缺少控制活動類型（預防性／偵測性）", "每個活動僅對應一種控制屬性")
-  }
-  if (is_blank(ctrl$nature) && is_blank(ctrl$control_type)) {
-    add("缺資訊", "低", "缺少控制類型（人工／自動）", "補控制類型欄（勿與預防/偵測對調）")
-  }
-  tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type, ctrl$approach %||% ctrl$control_activity_type)
+
+  tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type,
+                                ctrl$approach %||% ctrl$control_activity_type)
   if (!isTRUE(tchk$ok)) {
     add("控制缺失", "高", tchk$msg, "控制類型＝人工/自動；控制活動類型＝預防/偵測，勿對調")
   }
-  if (is_blank(ctrl$significant_account)) add("缺資訊", "中", "缺少相關科目", "對應財務報表科目（無則填 NA）")
-  if (is_blank(ctrl$assertions)) add("缺資訊", "中", "缺少相關聲明", "對應 assertion")
+  if (is_blank(ctrl$assertions)) add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助）")
 
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   if (!isTRUE(chk$ok)) {
@@ -662,24 +744,21 @@ detect_design_gaps <- function(ctrl) {
         paste(c("重寫使目標＝Why、活動＝How", chk$hints), collapse = "；"))
   }
 
-  if (is_blank(ctrl$iuc_or_system) && is_blank(ctrl$related_system)) {
-    add("缺文件", "高", "未指定相關系統／IUC／PBC", "從候選選擇或自訂後存入範本庫／PBC 命名庫")
-  }
   if (is_blank(ctrl$inputs)) {
     add("缺文件", "中", "缺少 Inputs 說明", "補投入報表／資料來源（可附 PBC 對照）")
   }
   if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document)) {
-    add("缺文件", "高", "缺少產出／相關文件", "確認可驗證證據（簽核、log、調節表）作為 CSA PBC")
+    add("缺文件", "中", "缺少產出／相關文件（選填）",
+        "建議補可驗證證據（簽核、log、調節表）供 CSA／PBC")
   }
   if (is_blank(ctrl$review_steps) && is_blank(ctrl$company_status)) {
-    add("缺資訊", "中", "缺少控制現況描述或可測試步驟", "選定目標／活動／IUC 後書寫現況，或拆成 Steps")
+    add("缺資訊", "中", "缺少控制現況描述或可測試步驟",
+        "六大就緒後書寫現況；定稿時可自動帶入草稿")
   }
   if (is_blank(ctrl$investigation_threshold) &&
-      grepl("覆核|Review|調節|Reconcili|偵測", paste(ctrl$type, ctrl$approach, ctrl$control_activity), ignore.case = TRUE)) {
+      grepl("覆核|Review|調節|Reconcili|偵測",
+            paste(ctrl$type, ctrl$approach, ctrl$control_activity), ignore.case = TRUE)) {
     add("控制缺失", "中", "含覆核／偵測性質但未訂調查門檻", "補門檻與追蹤，否則控制精度不足")
-  }
-  if (is_blank(ctrl$sub_process) && grepl("資訊|電腦", ctrl$cycle %||% "")) {
-    add("缺資訊", "低", "資訊循環未填子作業", "例：存取管理／變更管理／營運／開發")
   }
 
   if (!length(gaps)) {
@@ -697,17 +776,46 @@ detect_gaps_many <- function(controls) {
   do.call(rbind, lapply(controls, detect_design_gaps))
 }
 
-# Ready-for-RCM? design complete iff no 高 severity gaps and objective/activity split OK
+# Ready-for-RCM? 必填齊＋無高嚴重度缺漏＋目標/活動分欄 OK
 is_rcm_row_ready <- function(ctrl) {
   gaps <- detect_design_gaps(ctrl)
   high <- gaps[gaps$severity == "高", , drop = FALSE]
-  list(ready = nrow(high) == 0, gaps = gaps)
+  req <- design_required_check(ctrl)
+  list(
+    ready = isTRUE(req$ok) && nrow(high) == 0,
+    gaps = gaps,
+    required = req
+  )
 }
 
 # Invariant: 設計控制點階段完成 ＝ 完成 RCM 其中一列
 # Finalize a designed control into a single RCM-row-ready control object.
 finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hint = 1L) {
   ctrl <- as.list(ctrl)
+  # 會計科目無對應時允許 NA
+  if (is_blank(ctrl$significant_account)) ctrl$significant_account <- "NA"
+  if (is_blank(ctrl$risk_name) && !is_blank(ctrl$risk_factor)) {
+    ctrl$risk_name <- ctrl$risk_factor
+  }
+  if (is_blank(ctrl$risk_factor) && !is_blank(ctrl$risk_name)) {
+    ctrl$risk_factor <- ctrl$risk_name
+  }
+  if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$related_system)) {
+    ctrl$iuc_or_system <- ctrl$related_system
+  }
+  if (is_blank(ctrl$related_system) && !is_blank(ctrl$iuc_or_system)) {
+    ctrl$related_system <- ctrl$iuc_or_system
+  }
+
+  req <- design_required_check(ctrl)
+  if (!isTRUE(req$ok)) {
+    return(list(
+      ok = FALSE, ready = FALSE, gaps = detect_design_gaps(ctrl),
+      control = NULL, rcm_row = NULL, required = req,
+      msg = paste0("必填未齊：", paste(req$missing, collapse = "、"))
+    ))
+  }
+
   ready <- is_rcm_row_ready(ctrl)
   if (!isTRUE(ready$ready)) {
     return(list(
@@ -716,6 +824,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
       gaps = ready$gaps,
       control = NULL,
       rcm_row = NULL,
+      required = req,
       msg = paste(
         ready$gaps$gap_item[ready$gaps$severity == "高"],
         collapse = "；"
@@ -725,11 +834,12 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   oa <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   if (!isTRUE(oa$ok)) {
     return(list(ok = FALSE, ready = FALSE, gaps = ready$gaps, control = NULL,
-                rcm_row = NULL, msg = oa$msg))
+                rcm_row = NULL, required = req, msg = oa$msg))
   }
   if (exists("activity_type_ok", mode = "function") && !activity_type_ok(ctrl$approach)) {
     return(list(ok = FALSE, ready = FALSE, gaps = ready$gaps, control = NULL,
-                rcm_row = NULL, msg = "控制活動須對應單一預防／偵測屬性"))
+                rcm_row = NULL, required = req,
+                msg = "控制活動須對應單一預防／偵測屬性"))
   }
 
   spid <- ctrl$sub_process_id %||% ""

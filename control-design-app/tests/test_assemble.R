@@ -95,7 +95,25 @@ check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")
 check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
 
 gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", related_system = "", outputs = "", related_document = "")))
-check(any(gaps2$category == "缺文件"), "缺 IUC／產出歸類為缺文件")
+check(any(gaps2$severity == "高" & grepl("IUC|相關系統|必填", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
+check(any(gaps2$severity == "中" & grepl("產出|相關文件", gaps2$gap_item)), "缺產出改為選填中嚴重度")
+
+# 設計必填欄位
+req_ok <- design_required_check(d1)
+check(isTRUE(req_ok$ok), "完整控制點必填齊全")
+req_bad <- design_required_check(modifyList(d1, list(
+  frequency = "", responsible_unit = "", nature = "", risk_category = ""
+)))
+check(!isTRUE(req_bad$ok), "缺頻率／單位／類型／類別＝必填未齊")
+check(any(grepl("控制頻率", req_bad$missing)), "必填清單含控制頻率")
+check(any(grepl("流程負責單位", req_bad$missing)), "必填清單含負責單位")
+check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別")
+fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
+check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
+fin_na <- finalize_control_as_rcm_row(modifyList(d1, list(significant_account = "")),
+                                     existing_ids = character())
+check(isTRUE(fin_na$ok) && identical(fin_na$control$significant_account, "NA"),
+      "空白會計科目定稿時自動填 NA")
 
 ready <- is_rcm_row_ready(d1)
 check(isTRUE(ready$ready), "完整控制點可視為 RCM 列就緒")

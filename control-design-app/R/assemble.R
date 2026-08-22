@@ -180,28 +180,27 @@ assemble_summary_description <- function(ctrl) {
   )
 }
 
-# Completeness check vs Form 4120SR design narrative elements
+# Completeness check：優先使用鯨鏈 RCM 設計必填；否則回退列舉
 validate_control_design <- function(ctrl) {
+  if (exists("design_required_check", mode = "function")) {
+    return(design_required_check(ctrl)[c("ok", "missing")])
+  }
   missing <- character()
   req <- list(
-    cycle = "九大循環",
-    risk_name = "風險名稱",
-    risk_attr_financial = "風險屬性—財務報導",
-    risk_attr_operations = "風險屬性—營運",
-    risk_attr_compliance = "風險屬性—法令遵循",
+    cycle = "循環名稱",
+    sub_process_id = "子作業編號",
+    sub_process = "子作業名稱",
+    risk_factor = "風險因素",
+    risk_description = "風險描述",
+    risk_category = "風險類別",
+    significant_account = "會計科目",
     control_objective = "控制目標",
     control_activity = "控制活動",
     frequency = "控制頻率",
-    responsible_unit = "負責單位",
-    iuc_or_system = "IUC／制度",
-    nature = "Nature",
-    approach = "Approach",
-    type = "Type",
-    inputs = "Inputs Used by Reviewer",
-    review_steps = "Specific Activities / Steps",
-    outputs = "Outputs of the Control",
-    significant_account = "Significant Account(s)",
-    assertions = "Related Assertion(s)"
+    responsible_unit = "流程負責單位",
+    iuc_or_system = "相關系統／IUC",
+    nature = "控制類型",
+    approach = "控制活動類型"
   )
   for (nm in names(req)) {
     if (!nzchar(trimws(as.character(ctrl[[nm]] %||% "")))) {

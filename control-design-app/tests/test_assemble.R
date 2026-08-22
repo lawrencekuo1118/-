@@ -18,6 +18,7 @@ source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
+source(file.path(root, "R", "privilege.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -32,10 +33,11 @@ base <- list(
   sub_process_id = "EC-101", sub_process = "存取管理",
   risk_factor = "不當權限", risk_name = "不當權限", risk_description = "離職未停權",
   risk_category = "營運面",
-  risk_attr_financial = "[財務報導] 未授權交易", risk_attr_operations = "[營運] 權限不一致",
-  risk_attr_compliance = "[法令遵循] 資安政策",
+  risk_attr_financial = "",
+  risk_attr_operations = "[營運] 權限不一致",
+  risk_attr_compliance = "",
   romm_classification = ROMM_CLASS_CHOICES[[1]], significant_account = "",
-  assertions = "存在／發生 (Existence/Occurrence)",
+  assertions = "完整性 (Completeness)",
   control_objective = "確保系統使用者權限與現職一致",
   control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
   responsible_unit = "資訊部", nature = "人工",
@@ -72,6 +74,25 @@ check(identical(fin_auto$control$frequency, "持續"), "定稿後頻率強制持
 check(identical(as.character(rcm[["控制活動類型"]]), "偵測性控制"), "控制活動類型＝預防/偵測")
 check(identical(as.character(rcm[["風險類別"]]), "營運面"), "風險類別映射")
 check(grepl("^通過", as.character(rcm[["設計檢核"]])), "設計檢核通過")
+
+# 風險屬性三擇一
+multi_attr <- modifyList(d1, list(
+  risk_attr_financial = "[財務報導] A",
+  risk_attr_operations = "[營運] B",
+  risk_attr_compliance = "[法令遵循] C"
+))
+check(count_filled_risk_attrs(multi_attr) == 3L, "複數屬性可計數")
+gaps_multi <- detect_design_gaps(multi_attr)
+check(any(grepl("三擇一|不可複選", gaps_multi$gap_item)), "複數屬性設計缺漏")
+check(!isTRUE(is_rcm_row_ready(multi_attr)$ready), "複數屬性不可就緒")
+one <- enforce_single_risk_attr(multi_attr, kind = "operations", detail = "僅營運")
+check(count_filled_risk_attrs(one) == 1L, "強制三擇一後僅一項")
+check(identical(one$risk_category, "營運面"), "屬性對應風險類別")
+check(!nzchar(strip_attr_label(one$risk_attr_financial)), "清空財務報導屬性")
+check(!nzchar(strip_attr_label(one$risk_attr_compliance)), "清空法令遵循屬性")
+fin_one <- finalize_control_as_rcm_row(multi_attr)
+check(isTRUE(fin_one$ok), "定稿強制三擇一後可成功")
+check(count_filled_risk_attrs(fin_one$control) == 1L, "定稿後僅保留一種屬性")
 
 # Type field 防呆：對調應失敗
 swapped <- modifyList(d1, list(nature = "預防性控制", approach = "人工"))
@@ -122,7 +143,7 @@ check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別"
 fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
 check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
 
-# 報導面會計科目必填；其它類別不可填
+# 報導面會計科目必填；其他類別不可填
 rep_ok <- design_required_check(modifyList(d1, list(
   risk_category = "報導面", significant_account = "應收帳款"
 )))
@@ -154,15 +175,23 @@ fin_rep <- finalize_control_as_rcm_row(modifyList(d1, list(
 )), existing_ids = character())
 check(!isTRUE(fin_rep$ok) && grepl("會計科目", fin_rep$msg), "報導面缺科目不可定稿")
 
-# 遵循面相關法令必填；其它類別不可填
+# 遵循面相關法令必填；其他類別不可填
 comp_ok <- design_required_check(modifyList(d1, list(
-  risk_category = "遵循面", related_law = "證券交易法", significant_account = ""
+  risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
+  assertions = ""
 )))
 check(isTRUE(comp_ok$ok), "遵循面＋法令＝必填通過")
 comp_bad <- design_required_check(modifyList(d1, list(
-  risk_category = "遵循面", related_law = "", significant_account = ""
+  risk_category = "遵循面", related_law = "", significant_account = "",
+  assertions = ""
 )))
 check(!isTRUE(comp_bad$ok) && any(grepl("相關法令", comp_bad$missing)), "遵循面缺法令不可過")
+comp_as_bad <- design_required_check(modifyList(d1, list(
+  risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
+  assertions = "完整性 (Completeness)"
+)))
+check(!isTRUE(comp_as_bad$ok) && any(grepl("聲明", comp_as_bad$missing)),
+      "遵循面填聲明應擋下")
 comp_lock <- design_required_check(modifyList(d1, list(
   risk_category = "營運面", related_law = "SOX", significant_account = ""
 )))
@@ -401,6 +430,133 @@ check(!length(miss_btn), sprintf("全部 actionButton 有 observeEvent（缺：%
 check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺：%s）", paste(miss_dl, collapse = ",")))
 check(length(btn_ids) >= 16, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
 check(length(dl_ids) >= 5, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
+
+# 選項列順序與名稱
+nav_titles <- regmatches(app_src, gregexpr('nav_panel\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]]
+nav_titles <- sub('nav_panel\\(\\s*"([^"]+)".*', "\\1", nav_titles, perl = TRUE)
+expect_nav <- c("首頁", "訪談問項設計", "風險控制點設計", "控制點測試設計",
+                "範本庫", "參數庫", "PBC資料庫", "RCM")
+check(identical(nav_titles, expect_nav),
+      sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
+check(grepl("goto_lib_tab|開啟範本庫", app_src) && grepl("goto_param_tab|開啟參數庫", app_src),
+      "側邊欄最下方含範本庫／參數庫入口")
+check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
+check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
+      "範本庫頁籤含可跳過套用設定")
+check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
+check(grepl("高權存取|admin_login|verify_admin_password", app_src), "含高權登入機制")
+check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直接改範本庫／參數庫")
+
+check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
+check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
+
+# 風險辨識區塊：風險因素、風險描述、風險類別、RoMM 分類
+check(grepl('accordion_panel\\(\\s*"風險辨識"', app_src), "有風險辨識 accordion")
+check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
+check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
+check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
+check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
+check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),
+      "已移除自訂風險獨立輸入（改由風險辨識）")
+check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),
+      "已移除風險屬性 radio（改由風險類別）")
+
+# 聲明（Assertions）依風險類別
+check(length(ASSERTION_CHOICES_REPORTING) == 8L, "報導面 Assertions 為 Thomson Reuters 八種")
+check(all(c(
+  "存在或發生 (Existence or Occurrence)", "完整性 (Completeness)",
+  "權利與義務 (Rights and Obligations)", "評價或分攤 (Valuation or Allocation)",
+  "正確性 (Accuracy)", "截止 (Cutoff)", "分類 (Classification)", "表達 (Presentation)"
+) %in% ASSERTION_CHOICES_REPORTING), "報導面含八種英文對照")
+check(identical(ASSERTION_CHOICES_OPERATIONS, c(
+  "完整性 (Completeness)", "正確性 (Accuracy)", "即時性 (Timeliness)"
+)), "營運面僅完整性／正確性／即時性")
+check(identical(assertion_mode_for_category("報導面"), "reporting"), "報導面 assertion mode")
+check(identical(assertion_mode_for_category("營運面"), "operations"), "營運面 assertion mode")
+check(identical(assertion_mode_for_category("遵循面"), "locked"), "遵循面 assertion 鎖定")
+check(!length(assertion_choices_for_category("遵循面")), "遵循面無可選 Assertions")
+check(identical(
+  normalize_assertions_for_category(
+    "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)", "營運面"
+  ),
+  "即時性 (Timeliness)"
+), "營運面過濾掉非允許聲明、保留即時性")
+check(identical(
+  normalize_assertions_for_category(
+    "存在或發生 (Existence or Occurrence)", "營運面"
+  ),
+  ""
+), "營運面僅報導面聲明時清空")
+check(identical(
+  normalize_assertions_for_category(
+    paste(ASSERTION_CHOICES_OPERATIONS, collapse = "；"), "營運面"
+  ),
+  paste(ASSERTION_CHOICES_OPERATIONS, collapse = "；")
+), "營運面三種可保留")
+check(identical(normalize_assertions_for_category("完整性 (Completeness)", "遵循面"), ""),
+      "遵循面定稿清空聲明")
+
+# 高權密碼與直接維護
+check(isTRUE(verify_admin_password("尬電SOX#Admin")), "預設高權密碼可驗證")
+check(!isTRUE(verify_admin_password("wrong")), "錯誤密碼拒絕")
+check(!isTRUE(verify_admin_password("")), "空密碼拒絕")
+ps0 <- empty_parameter_store()
+ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
+check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")
+ps2 <- upsert_parameter_row(ps1, "風險類別", "測試面", "高權維護")
+check(nrow(ps2) == 1L, "參數庫同鍵更新不重複")
+ps3 <- delete_parameter_rows(ps2, 1L)
+check(nrow(ps3) == 0L, "參數庫可刪除列")
+lib0 <- list(list(
+  library_id = "LIB-TEST", title = "舊標題", tags = c("a"),
+  cycle = "電腦化資訊系統循環", source = "seed",
+  control = list(risk_factor = "舊", control_objective = "舊目標", control_activity = "舊活動")
+))
+lib1 <- patch_library_item_fields(
+  lib0, "LIB-TEST", title = "新標題", tags = "x;y",
+  fields = list(risk_factor = "新風險", control_objective = "新目標")
+)
+check(identical(lib1[[1]]$title, "新標題") && identical(lib1[[1]]$control$risk_factor, "新風險"),
+      "範本庫可高權直接改欄位")
+
+fin_as <- finalize_control_as_rcm_row(modifyList(base, list(
+  assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"
+)))
+check(isTRUE(fin_as$ok), "營運面含非法聲明仍可定稿（自動過濾）")
+check(!grepl("存在或發生", fin_as$control$assertions %||% ""), "定稿後僅保留營運面允許聲明")
+check(grepl("即時性", fin_as$control$assertions %||% ""), "定稿保留即時性")
+fin_comp <- finalize_control_as_rcm_row(modifyList(base, list(
+  risk_category = "遵循面",
+  risk_attr_operations = "",
+  risk_attr_compliance = "[遵循] 資安政策",
+  significant_account = "",
+  related_law = "證券交易法",
+  assertions = "完整性 (Completeness)"
+)))
+check(isTRUE(fin_comp$ok), "遵循面可定稿")
+check(!nzchar(trimws(fin_comp$control$assertions %||% "")), "遵循面定稿無 Assertions")
+
+# Locale: ban Mainland / HK-Macau terms in UI + committed seed (Taiwan + US proper nouns only)
+banned_locale <- c(
+  "資料數據", "大批量", "重覆", "系統帳戶", "安裝或設置", "應設置密碼",
+  "系統資源配置", "其它類別", "信息系統", "軟件", "網絡", "數據庫", "默認", "登录"
+)
+locale_scan_files <- c(
+  file.path(root, "app.R"),
+  file.path(root, "R", "rcm_csa.R"),
+  file.path(root, "R", "cascade.R"),
+  file.path(root, "R", "constants.R"),
+  file.path(root, "data", "jinglian_it_rcm_batch.json")
+)
+locale_hits <- character()
+for (fp in locale_scan_files) {
+  if (!file.exists(fp)) next
+  txt <- paste(readLines(fp, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  for (b in banned_locale) {
+    if (grepl(b, txt, fixed = TRUE)) locale_hits <- c(locale_hits, paste0(basename(fp), ":", b))
+  }
+}
+check(!length(locale_hits), sprintf("用語僅台灣／美式專有名詞（違規：%s）", paste(locale_hits, collapse = ",")))
 
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

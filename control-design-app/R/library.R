@@ -57,7 +57,7 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
       risk_attr_compliance = "[法令遵循] 核決權限表",
       romm_classification = "Significant Risk — Not higher risk associated with the control",
       significant_account = "應付帳款、存貨／費用",
-      assertions = "存在／發生 (Existence/Occurrence)；正確性 (Accuracy)",
+      assertions = "存在或發生 (Existence or Occurrence)；正確性 (Accuracy)",
       control_objective = "僅對經授權且貨物／勞務已收受之交易認列應付帳款",
       control_activity = "應付帳款人員於入帳前執行採購單、驗收單與發票三方比對，不符者不得付款",
       frequency = "每筆交易",
@@ -84,7 +84,7 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
       risk_attr_compliance = "[法令遵循] 個資／資安政策遵循",
       romm_classification = "Significant Risk — Higher risk associated with the control",
       significant_account = "多科目（視系統涵蓋流程）",
-      assertions = "存在／發生 (Existence/Occurrence)；權利與義務 (Rights and Obligations)",
+      assertions = "存在或發生 (Existence or Occurrence)；權利與義務 (Rights and Obligations)",
       control_objective = "確保系統使用者權限與現職及職責分離原則一致",
       control_activity = "權限管理員每季產出使用者權限清冊，由各單位主管覆核後回簽，並於期限內完成異動",
       frequency = "每季",
@@ -633,4 +633,37 @@ library_summary_df <- function(library) {
     source = vapply(library, function(x) x$source %||% "", ""),
     stringsAsFactors = FALSE
   )
+}
+
+# Patch selected library item control fields (admin direct edit)
+patch_library_item_fields <- function(library, library_id, fields = list(),
+                                      title = NULL, tags = NULL) {
+  id <- trimws(as.character(library_id %||% ""))
+  if (!nzchar(id) || !length(library)) return(library)
+  idx <- which(vapply(library, function(x) identical(x$library_id, id), logical(1)))
+  if (!length(idx)) return(library)
+  i <- idx[[1]]
+  item <- library[[i]]
+  ctrl <- as.list(item$control %||% list())
+  for (nm in names(fields)) {
+    ctrl[[nm]] <- fields[[nm]]
+  }
+  if (!is.null(title) && nzchar(trimws(as.character(title)))) {
+    item$title <- trimws(as.character(title))
+  }
+  if (!is.null(tags)) {
+    tag_vec <- if (is.character(tags) && length(tags) == 1L) {
+      trimws(unlist(strsplit(as.character(tags), "[;；,，|/]+")))
+    } else {
+      trimws(as.character(tags))
+    }
+    tag_vec <- tag_vec[nzchar(tag_vec)]
+    item$tags <- tag_vec
+  }
+  item$control <- ctrl
+  item$cycle <- ctrl$cycle %||% item$cycle %||% ""
+  item$updated_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  item$source <- "高權維護"
+  library[[i]] <- item
+  library
 }

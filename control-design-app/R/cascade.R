@@ -180,11 +180,18 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
   if (nzchar(ctrl$cycle %||% "")) {
     updateSelectInput(session, "cycle", selected = ctrl$cycle)
+    updateTextInput(session, "cycle_code",
+                    value = {
+                      cc <- trimws(ctrl$cycle_code %||% "")
+                      if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle)
+                    })
   }
   spid <- ctrl$sub_process_id %||% ""
   spn <- ctrl$sub_process %||% ""
   if (nzchar(spid) || nzchar(spn)) {
     updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
+    updateTextInput(session, "sub_process_id", value = spid)
+    updateTextInput(session, "sub_process", value = spn)
   }
   rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
   if (nzchar(rf)) {
@@ -210,6 +217,21 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
 apply_supplement_from_ctrl <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
   updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
+  updateTextInput(session, "cycle_code", value = {
+    cc <- trimws(ctrl$cycle_code %||% "")
+    if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
+  })
+  updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
+  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
+  rf <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+  updateTextInput(session, "risk_factor", value = rf)
+  updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
+  if (nzchar(trimws(ctrl$risk_category %||% ""))) {
+    updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
+  }
+  if (nzchar(trimws(ctrl$romm_classification %||% ""))) {
+    updateSelectInput(session, "romm_classification", selected = ctrl$romm_classification)
+  }
   updateTextInput(session, "significant_account",
                   value = {
                     ac <- trimws(as.character(ctrl$significant_account %||% ""))
@@ -227,10 +249,16 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
                        })
   updateTextInput(session, "related_document",
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
-  strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-  updateTextAreaInput(session, "risk_attr_financial", value = strip(ctrl$risk_attr_financial))
-  updateTextAreaInput(session, "risk_attr_operations", value = strip(ctrl$risk_attr_operations))
-  updateTextAreaInput(session, "risk_attr_compliance", value = strip(ctrl$risk_attr_compliance))
+  detail <- risk_attr_detail_from_ctrl(ctrl)
+  updateTextAreaInput(session, "risk_attr_detail", value = detail)
+  as_vals <- parse_assertion_values(normalize_assertions_for_category(
+    ctrl$assertions, ctrl$risk_category %||% ""
+  ))
+  updateSelectizeInput(
+    session, "assertions",
+    choices = assertion_choices_for_category(ctrl$risk_category %||% ""),
+    selected = as_vals
+  )
   if (nzchar(ctrl$type %||% "")) {
     updateSelectizeInput(session, "type", selected = ctrl$type)
   }
@@ -269,26 +297,38 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
     return(invisible(NULL))
   }
   det <- cascade_risk_detail(rows, risk_factor)
+  updateTextInput(session, "risk_factor", value = risk_factor_tag(risk_factor))
   if (nzchar(det$risk_description)) {
     updateTextAreaInput(session, "risk_description", value = det$risk_description)
   }
   if (nzchar(det$risk_category)) {
     updateSelectInput(session, "risk_category", selected = det$risk_category)
   }
-  updateTextInput(session, "risk_name", value = risk_factor_tag(risk_factor))
   r <- det$sample
+  if (is.list(r) && length(r) && nzchar(trimws(r$romm_classification %||% ""))) {
+    updateSelectInput(session, "romm_classification", selected = r$romm_classification)
+  }
+  kind <- risk_attr_kind_from_category(det$risk_category)
+  if (!nzchar(kind) && is.list(r) && length(r)) {
+    kind <- risk_attr_kind_from_ctrl(r)
+  }
+  if (!nzchar(kind)) kind <- "operations"
+  detail <- ""
   if (is.list(r) && length(r)) {
     strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-    if (nzchar(r$risk_attr_financial)) {
-      updateTextAreaInput(session, "risk_attr_financial", value = strip(r$risk_attr_financial))
-    }
-    if (nzchar(r$risk_attr_operations)) {
-      updateTextAreaInput(session, "risk_attr_operations", value = strip(r$risk_attr_operations))
-    }
-    if (nzchar(r$risk_attr_compliance)) {
-      updateTextAreaInput(session, "risk_attr_compliance", value = strip(r$risk_attr_compliance))
+    detail <- switch(kind,
+                     financial = strip(r$risk_attr_financial),
+                     operations = strip(r$risk_attr_operations),
+                     compliance = strip(r$risk_attr_compliance),
+                     "")
+    if (!nzchar(detail)) {
+      for (f in c(r$risk_attr_financial, r$risk_attr_operations, r$risk_attr_compliance)) {
+        d <- strip(f)
+        if (nzchar(d)) { detail <- d; break }
+      }
     }
   }
+  updateTextAreaInput(session, "risk_attr_detail", value = detail)
   invisible(det)
 }
 

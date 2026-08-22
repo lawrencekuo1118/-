@@ -8,6 +8,11 @@ BRAND_BLACK <- "#000000"
 BRAND_WHITE <- "#FFFFFF"
 BRAND_GRAY <- "#F5F5F5"
 
+# Locale policy: Traditional Chinese (Taiwan) + American English proper nouns only.
+# Prefer: 資訊、軟體、網路、資料庫、預設、登入、使用者、資料、大量／批次、設定／組態、帳號、檔案、螢幕、伺服器。
+# Do not use Mainland China / Hong Kong / Macau equivalents of the above.
+# Keep English proper nouns as-is: SOX, RCM, CSA, PBC, IUC, Form 4120SR, RoMM, Assertions, Inputs/Steps/Outputs, Type.
+
 CYCLES_NINE <- c(
   "銷售及收款循環",
   "採購及付款循環",
@@ -33,7 +38,32 @@ CYCLES_NINE_CHOICES <- c(
   "資訊循環（電腦化資訊系統循環）" = "電腦化資訊系統循環"
 )
 
-# 風險三大屬性（COSO 三類目標；使用者可改寫標籤與內容）
+# 循環編號（設計基本資料；資訊循環對齊鯨鏈 EC 前綴）
+CYCLE_CODE_MAP <- c(
+  "銷售及收款循環" = "SC",
+  "採購及付款循環" = "PP",
+  "生產循環" = "PR",
+  "薪工循環" = "PY",
+  "融資循環" = "FN",
+  "固定資產循環" = "FA",
+  "投資循環" = "IV",
+  "研發循環" = "RD",
+  "電腦化資訊系統循環" = "EC"
+)
+
+cycle_code_for <- function(cycle_name) {
+  cy <- trimws(as.character(cycle_name %||% ""))
+  if (!nzchar(cy)) return("")
+  code <- unname(CYCLE_CODE_MAP[cy])
+  if (length(code) && !is.na(code) && nzchar(code)) code else ""
+}
+
+# 風險三大屬性（COSO 三類目標；同一控制點三擇一，不可複選）
+RISK_ATTR_KIND_CHOICES <- c(
+  "財務報導" = "financial",
+  "營運" = "operations",
+  "法令遵循" = "compliance"
+)
 RISK_ATTR_DEFAULTS <- list(
   financial_reporting = list(
     label = "財務報導",
@@ -81,16 +111,28 @@ ROMM_CLASS_CHOICES <- c(
   "其他／自訂"
 )
 
-ASSERTION_CHOICES <- c(
-  "存在／發生 (Existence/Occurrence)",
+# 報導面：Thomson Reuters / AICPA GAAS 八種（可複選）
+# https://tax.thomsonreuters.com/blog/audit-assertions-explained-types-risks-and-best-practices/
+ASSERTION_CHOICES_REPORTING <- c(
+  "存在或發生 (Existence or Occurrence)",
   "完整性 (Completeness)",
   "權利與義務 (Rights and Obligations)",
-  "評價與分攤 (Valuation/Allocation)",
-  "表達與揭露 (Presentation/Disclosure)",
-  "截止 (Cutoff)",
+  "評價或分攤 (Valuation or Allocation)",
   "正確性 (Accuracy)",
-  "其他／自訂"
+  "截止 (Cutoff)",
+  "分類 (Classification)",
+  "表達 (Presentation)"
 )
+
+# 營運面：僅三種可複選
+ASSERTION_CHOICES_OPERATIONS <- c(
+  "完整性 (Completeness)",
+  "正確性 (Accuracy)",
+  "即時性 (Timeliness)"
+)
+
+# 向後相容：預設＝報導面完整清單
+ASSERTION_CHOICES <- ASSERTION_CHOICES_REPORTING
 
 # 相關法規預設（台灣＋美國財務報導／商業常見）
 RELATED_LAW_CHOICES_TW <- c(

@@ -3,8 +3,9 @@
 # 完成一筆控制點設計 = 完成 RCM 一列（設計欄位；現況／分析評估留空）
 
 # ---- Selectable design elements ----
-# Three workflow tabs: 訪談問項設計 → 控制點設計 → 自我評估測試步驟設計
-# Priority: 控制點設計（RCM 列）→ 訪談問項 → 自我評估測試步驟
+# Three workflow tabs: 訪談問項設計 → 風險控制點設計 → 控制點測試設計
+# Priority: 風險控制點設計（RCM 列）→ 訪談問項 → 控制點測試
+# Supporting: 範本庫／參數庫（側邊欄最下方）→ PBC資料庫 → RCM
 DESIGN_ELEMENTS <- c(
   risk = "循環／風險",
   risk_attributes = "風險三大屬性／類別",
@@ -29,7 +30,7 @@ DEFAULT_INTERVIEW_ELEMENTS <- c(
   "control_types", "frequency_owner", "iuc", "outputs"
 )
 
-# 自我評估測試步驟設計（控制點定稿後）
+# 自我評估／控制點測試設計（控制點定稿後）
 DEFAULT_CSA_ELEMENTS <- c(
   "control_objective", "control_activity", "steps",
   "iuc", "outputs", "exception", "frequency_owner"
@@ -127,9 +128,102 @@ normalize_risk_category <- function(ctrl) {
   op <- strip_attr_label(ctrl$risk_attr_operations)
   cp <- strip_attr_label(ctrl$risk_attr_compliance)
   filled <- c(報導面 = nzchar(fr), 營運面 = nzchar(op), 遵循面 = nzchar(cp))
+  # 三擇一：僅在剛好一項有值時推導；複數視為未定（勿逕自改為營運面以掩蓋錯誤）
   if (sum(filled) == 1) return(names(filled)[filled][1])
-  if (sum(filled) > 1) return("營運面")
   ""
+}
+
+# Map 風險類別 ↔ 三大屬性 kind（financial / operations / compliance）
+risk_attr_kind_from_category <- function(cat) {
+  x <- trimws(as.character(cat %||% ""))
+  if (!nzchar(x)) return("")
+  if (grepl("報導|財務", x)) return("financial")
+  if (grepl("遵循|法令|合規", x)) return("compliance")
+  if (grepl("營運|作業", x)) return("operations")
+  ""
+}
+
+risk_attr_kind_label <- function(kind) {
+  switch(as.character(kind %||% ""),
+         financial = "財務報導",
+         operations = "營運",
+         compliance = "法令遵循",
+         "")
+}
+
+risk_attr_kind_from_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  k <- risk_attr_kind_from_category(ctrl$risk_category)
+  if (nzchar(k)) return(k)
+  fr <- nzchar(strip_attr_label(ctrl$risk_attr_financial))
+  op <- nzchar(strip_attr_label(ctrl$risk_attr_operations))
+  cp <- nzchar(strip_attr_label(ctrl$risk_attr_compliance))
+  if (fr + op + cp == 1L) {
+    if (fr) return("financial")
+    if (op) return("operations")
+    return("compliance")
+  }
+  # UI 預設：營運（仍須使用者確認；定稿時會清空非選項）
+  "operations"
+}
+
+risk_attr_detail_from_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  kind <- risk_attr_kind_from_ctrl(ctrl)
+  pick <- function(x) strip_attr_label(x)
+  switch(kind,
+         financial = pick(ctrl$risk_attr_financial),
+         operations = pick(ctrl$risk_attr_operations),
+         compliance = pick(ctrl$risk_attr_compliance),
+         "")
+}
+
+# 同一控制點僅保留一種風險屬性細節；複數屬性應另設控制點
+enforce_single_risk_attr <- function(ctrl, kind = NULL, detail = NULL) {
+  ctrl <- as.list(ctrl)
+  if (is.null(kind) || !nzchar(trimws(as.character(kind)))) {
+    kind <- risk_attr_kind_from_ctrl(ctrl)
+  }
+  kind <- as.character(kind)
+  if (!kind %in% c("financial", "operations", "compliance")) {
+    kind <- "operations"
+  }
+  strip <- function(x) strip_attr_label(x)
+  if (is.null(detail)) {
+    detail <- switch(kind,
+                     financial = strip(ctrl$risk_attr_financial),
+                     operations = strip(ctrl$risk_attr_operations),
+                     compliance = strip(ctrl$risk_attr_compliance),
+                     "")
+    if (!nzchar(detail)) {
+      for (f in c(ctrl$risk_attr_financial, ctrl$risk_attr_operations, ctrl$risk_attr_compliance)) {
+        d <- strip(f)
+        if (nzchar(d)) {
+          detail <- d
+          break
+        }
+      }
+    }
+  } else {
+    detail <- strip(detail)
+  }
+  lab <- risk_attr_kind_label(kind)
+  val <- if (nzchar(detail)) sprintf("[%s] %s", lab, detail) else ""
+  ctrl$risk_attr_financial <- if (identical(kind, "financial")) val else ""
+  ctrl$risk_attr_operations <- if (identical(kind, "operations")) val else ""
+  ctrl$risk_attr_compliance <- if (identical(kind, "compliance")) val else ""
+  cats <- c(financial = "報導面", operations = "營運面", compliance = "遵循面")
+  ctrl$risk_category <- cats[[kind]]
+  ctrl
+}
+
+count_filled_risk_attrs <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  sum(c(
+    nzchar(strip_attr_label(ctrl$risk_attr_financial)),
+    nzchar(strip_attr_label(ctrl$risk_attr_operations)),
+    nzchar(strip_attr_label(ctrl$risk_attr_compliance))
+  ))
 }
 
 # rcm_objective_activity_check() lives in R/objective_activity.R
@@ -645,8 +739,9 @@ DESIGN_REQUIRED_FIELDS <- c(
 )
 
 DESIGN_OPTIONAL_FIELDS <- c(
-  significant_account = "會計科目（僅報導面必填；其它類別不可填）",
-  related_law = "相關法令（僅遵循面必填；其它類別不可填）",
+  significant_account = "會計科目（僅報導面必填；其他類別不可填）",
+  related_law = "相關法令（僅遵循面必填；其他類別不可填）",
+  assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",
   related_document = "相關文件"
 )
@@ -655,8 +750,65 @@ is_reporting_risk_category <- function(cat) {
   grepl("^報導", trimws(as.character(cat %||% "")))
 }
 
+is_operations_risk_category <- function(cat) {
+  grepl("^營運", trimws(as.character(cat %||% "")))
+}
+
 is_compliance_risk_category <- function(cat) {
   grepl("^遵循", trimws(as.character(cat %||% "")))
+}
+
+# 聲明（Assertions）依風險類別：報導面八種／營運面三種／遵循面不可選
+assertion_choices_for_category <- function(cat) {
+  if (is_reporting_risk_category(cat)) {
+    if (exists("ASSERTION_CHOICES_REPORTING")) ASSERTION_CHOICES_REPORTING else character()
+  } else if (is_operations_risk_category(cat)) {
+    if (exists("ASSERTION_CHOICES_OPERATIONS")) ASSERTION_CHOICES_OPERATIONS else character()
+  } else {
+    character()
+  }
+}
+
+assertion_mode_for_category <- function(cat) {
+  if (is_reporting_risk_category(cat)) "reporting"
+  else if (is_operations_risk_category(cat)) "operations"
+  else if (is_compliance_risk_category(cat)) "locked"
+  else "pending"
+}
+
+parse_assertion_values <- function(x) {
+  if (is.null(x)) return(character())
+  if (length(x) > 1L) {
+    vals <- trimws(as.character(x))
+  } else {
+    raw <- trimws(as.character(x %||% ""))
+    if (!nzchar(raw)) return(character())
+    vals <- trimws(unlist(strsplit(raw, "[;；|/]+")))
+  }
+  vals[nzchar(vals)]
+}
+
+assertions_are_filled <- function(x) {
+  length(parse_assertion_values(x)) > 0L
+}
+
+# 依類別過濾／清空聲明；回傳分號連接字串
+normalize_assertions_for_category <- function(assertions, cat) {
+  vals <- parse_assertion_values(assertions)
+  allowed <- assertion_choices_for_category(cat)
+  if (!length(allowed)) return("")
+  keep <- vals[vals %in% allowed]
+  paste(unique(keep), collapse = "；")
+}
+
+assertions_allowed_ok <- function(assertions, cat) {
+  vals <- parse_assertion_values(assertions)
+  mode <- assertion_mode_for_category(cat)
+  if (identical(mode, "locked") || identical(mode, "pending")) {
+    return(!length(vals))
+  }
+  allowed <- assertion_choices_for_category(cat)
+  all(vals %in% allowed)
 }
 
 # TRUE if account is considered "filled" for 報導面
@@ -730,7 +882,7 @@ design_required_check <- function(ctrl) {
     missing <- c(missing, "控制活動類型須為單一預防／偵測（不可混用）")
     filled$approach <- FALSE
   }
-  # 會計科目：報導面必填；其它類別不得填入（僅允許空白／NA）
+  # 會計科目：報導面必填；其他類別不得填入（僅允許空白／NA）
   cat <- design_field_value(ctrl, "risk_category")
   acct <- trimws(as.character(ctrl$significant_account %||% ""))
   if (is_reporting_risk_category(cat)) {
@@ -746,7 +898,7 @@ design_required_check <- function(ctrl) {
   } else {
     filled$significant_account <- TRUE
   }
-  # 相關法令：遵循面必填；其它類別不得填入
+  # 相關法令：遵循面必填；其他類別不得填入
   law <- trimws(as.character(ctrl$related_law %||% ""))
   if (is_compliance_risk_category(cat)) {
     filled$related_law <- law_is_filled(law)
@@ -761,6 +913,27 @@ design_required_check <- function(ctrl) {
   } else {
     filled$related_law <- TRUE
   }
+  # 聲明（Assertions）：報導面八種／營運面三種可複選；遵循面不可填
+  asrt <- parse_assertion_values(ctrl$assertions)
+  mode_as <- assertion_mode_for_category(cat)
+  if (identical(mode_as, "locked")) {
+    filled$assertions <- !length(asrt)
+    if (length(asrt)) {
+      missing <- c(missing, "聲明僅報導面／營運面可填（遵循面請清空）")
+    }
+  } else if (identical(mode_as, "reporting") || identical(mode_as, "operations")) {
+    ok_as <- assertions_allowed_ok(asrt, cat)
+    filled$assertions <- ok_as
+    if (!ok_as) {
+      missing <- c(missing, if (identical(mode_as, "operations")) {
+        "聲明超出營運面可選（完整性／正確性／即時性）"
+      } else {
+        "聲明超出報導面可選（Thomson Reuters／AICPA 八種）"
+      })
+    }
+  } else {
+    filled$assertions <- !length(asrt)
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
@@ -768,7 +941,8 @@ design_required_check <- function(ctrl) {
     required = DESIGN_REQUIRED_FIELDS,
     optional = DESIGN_OPTIONAL_FIELDS,
     account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
-    law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending"
+    law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
+    assertion_mode = mode_as
   )
 }
 
@@ -805,11 +979,13 @@ detect_design_gaps <- function(ctrl) {
       is_blank(ctrl$risk_factor)) {
     add("缺資訊", "高", "缺少風險名稱／描述", "補 RoMM 全文，勿只填編號")
   }
-  if (is_blank(ctrl$risk_category) &&
-      (is_blank(ctrl$risk_attr_financial) || is_blank(ctrl$risk_attr_operations) ||
-       is_blank(ctrl$risk_attr_compliance))) {
-    add("缺資訊", "中", "風險三大屬性細節不完整（類別已另列必填）",
-        "可於進階區補財務報導／營運／遵循細節")
+  n_attr <- count_filled_risk_attrs(ctrl)
+  if (n_attr > 1L) {
+    add("控制缺失", "高", "風險屬性細節不可複選（三擇一）",
+        "同一控制點僅保留一種屬性；若需涵蓋其他屬性請另設新控制點")
+  } else if (n_attr == 0L && is_blank(ctrl$risk_category)) {
+    add("缺資訊", "中", "尚未選擇風險屬性（財務報導／營運／法令遵循三擇一）",
+        "於風險辨識區擇一並可補屬性細節")
   }
 
   tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type,
@@ -818,7 +994,18 @@ detect_design_gaps <- function(ctrl) {
     add("控制缺失", "高", tchk$msg %||% "類型欄錯誤",
         "控制類型＝人工/自動；控制活動類型＝預防/偵測，勿對調")
   }
-  if (is_blank(ctrl$assertions)) add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助）")
+  if (!is_blank(ctrl$assertions) &&
+      (is_reporting_risk_category(ctrl$risk_category %||% "") ||
+       is_operations_risk_category(ctrl$risk_category %||% "")) &&
+      !assertions_allowed_ok(ctrl$assertions, ctrl$risk_category)) {
+    add("缺資訊", "中", "聲明選項與風險類別不符",
+        "報導面用八種 Assertions；營運面僅完整性／正確性／即時性；遵循面不可選")
+  }
+  if (is_blank(ctrl$assertions) &&
+      (is_reporting_risk_category(ctrl$risk_category %||% "") ||
+       is_operations_risk_category(ctrl$risk_category %||% ""))) {
+    add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助；可複選）")
+  }
 
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   if (!isTRUE(chk$ok)) {
@@ -874,7 +1061,9 @@ is_rcm_row_ready <- function(ctrl) {
 # Finalize a designed control into a single RCM-row-ready control object.
 finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hint = 1L) {
   ctrl <- as.list(ctrl)
-  # 會計科目：報導面保留；其它類別強制清空
+  # 三大風險屬性三擇一（定稿前強制清空非選項）
+  ctrl <- enforce_single_risk_attr(ctrl)
+  # 會計科目：報導面保留；其他類別強制清空
   if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
     if (identical(toupper(trimws(ctrl$significant_account %||% "")), "NA")) {
       ctrl$significant_account <- ""
@@ -882,10 +1071,14 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   } else {
     ctrl$significant_account <- ""
   }
-  # 相關法令：遵循面保留；其它類別強制清空
+  # 相關法令：遵循面保留；其他類別強制清空
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
   }
+  # 聲明：依風險類別過濾；遵循面強制清空
+  ctrl$assertions <- normalize_assertions_for_category(
+    ctrl$assertions, ctrl$risk_category %||% ""
+  )
   if (is_blank(ctrl$risk_name) && !is_blank(ctrl$risk_factor)) {
     ctrl$risk_name <- ctrl$risk_factor
   }

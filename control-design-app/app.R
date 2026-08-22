@@ -28,6 +28,7 @@ source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
+source(file.path(root, "R", "privilege.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -44,6 +45,7 @@ fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL) {
 }
 
 ui <- page_navbar(
+  id = "main_nav",
   title = "尬電SOX",
   window_title = "尬電SOX",
   theme = bs_theme(
@@ -83,6 +85,17 @@ ui <- page_navbar(
       if (!el) return;
       // selectize
       var $el = $('#related_law');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+      }
+    });
+    Shiny.addCustomMessageHandler('toggleAssertions', function(msg) {
+      var el = document.getElementById('assertions');
+      if (!el) return;
+      var $el = $('#assertions');
       if ($el.length && $el[0].selectize) {
         if (msg.enabled) $el[0].selectize.enable();
         else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
@@ -151,22 +164,19 @@ ui <- page_navbar(
       class = "d-flex flex-column h-100",
       div(
         textInput("company", NULL, placeholder = "公司名稱"),
-        selectInput("cycle", "循環",
-                    choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                    selected = "")
+        tags$hr(class = "my-2"),
+        tags$div(class = "small fw-bold mb-1", "高權存取"),
+        uiOutput("admin_auth_box")
       ),
       div(
         class = "mt-auto pt-2 sidebar-lib-block",
         tags$hr(class = "my-2"),
-        textInput("lib_query", NULL, placeholder = "搜尋範本庫…"),
-        selectInput("lib_pick", NULL, choices = c("① 優先：從範本庫套用…" = "")),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("apply_lib", "套用", class = "btn-sm btn-primary"),
-          actionButton("save_to_lib", "存入庫", class = "btn-sm btn-outline-success")
-        ),
-        checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
-        uiOutput("lib_count_badge")
+        tags$div(class = "small fw-bold mb-1", "範本庫"),
+        uiOutput("lib_count_badge"),
+        actionButton("goto_lib_tab", "開啟範本庫", class = "btn-sm btn-outline-secondary w-100 mb-2"),
+        tags$hr(class = "my-2"),
+        tags$div(class = "small fw-bold mb-1", "參數庫"),
+        actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100")
       )
     )
   ),
@@ -185,17 +195,19 @@ ui <- page_navbar(
         card_header("整體設計流程"),
         tags$ol(
           class = "home-steps mb-0",
-          tags$li(tags$strong("左側選循環"), "（與公司名稱）→ 範本庫可搜尋／套用既有控制點。"),
-          tags$li(tags$strong("控制點設計"), "：依序選取 ",
+          tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱。"),
+          tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
                   strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
                   "（", tags$span(class = "text-danger", "須依序選取"),
                   "：未選上一層時，下一層沒有候選）。"),
-          tags$li("補齊 ", strong("基本資料 → 風險辨識 → 控制設計"),
+          tags$li("補齊 ", strong("風險辨識"),
+                  "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
+                  strong("控制設計"),
                   "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
           tags$li(strong("完成設計＝寫入 RCM 一列"),
                   "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
           tags$li(tags$strong("訪談問項設計"), "：對齊已定稿 RCM，勾選元素後預覽／下載題綱。"),
-          tags$li(tags$strong("自我評估測試步驟設計"),
+          tags$li(tags$strong("控制點測試設計"),
                   "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
         )
       ),
@@ -208,11 +220,17 @@ ui <- page_navbar(
           tags$li(strong("控制目標 ≠ 控制活動"), "（Why／How 分欄；可拆分建議或對調）。"),
           tags$li(strong("控制類型"), "僅人工／自動；", strong("自動"), "時頻率強制「持續」。"),
           tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
+          tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
+                  strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
           tags$li(strong("會計科目"), "僅報導面可填且必填；", strong("相關法令"), "僅遵循面可填且必填。"),
+          tags$li(strong("聲明（Assertions）"), "：報導面可複選 Thomson Reuters／AICPA 八種；",
+                  "營運面僅完整性／正確性／即時性；遵循面不可選。"),
           tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
         ),
         p(class = "small text-muted mb-0",
-          "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。")
+          "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
+          "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
+          "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
       )
     ),
     card(
@@ -221,22 +239,22 @@ ui <- page_navbar(
       div(
         class = "home-tabs-grid",
         div(class = "home-tab-card",
-            strong("控制點設計"),
-            "引導選取＋基本資料／風險辨識／控制設計；定稿寫入 RCM。"),
-        div(class = "home-tab-card",
             strong("訪談問項設計"),
-            "對齊已定稿 RCM 產出訪談題綱；請先完成控制點定稿。"),
+            "對齊已定稿 RCM 產出訪談題綱；請先完成風險控制點定稿。"),
         div(class = "home-tab-card",
-            strong("自我評估測試步驟設計"),
+            strong("風險控制點設計"),
+            "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
+        div(class = "home-tab-card",
+            strong("控制點測試設計"),
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "累積制通用範本：設計就緒入庫、CSV／JSON／RCM xlsx 匯入、自訂引導項；同 ID 覆寫累積。"),
+            "可跳過套用；寫入／直接編輯需左側高權登入。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢系統預設、範本庫、已定稿 RCM、PBC 全部參數選項，可套用回表單。"),
+            "查詢／套用表單；新增刪除／重建需高權登入。"),
         div(class = "home-tab-card",
-            strong("PBC"),
+            strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
         div(class = "home-tab-card",
             strong("RCM"),
@@ -247,12 +265,13 @@ ui <- page_navbar(
       class = "home-section",
       card_header("建議操作順序"),
       p(class = "mb-1",
-        "① 首頁了解流程 → ② 左側選循環（可套用範本）→ ③ ",
-        strong("控制點設計"), " 引導＋定稿 → ④ ",
-        strong("訪談問項"), "／", strong("自我評估測試步驟"),
-        " → ⑤ 需要時維護 ", strong("範本庫"), "／", strong("PBC"), "／", strong("參數庫"), "。"),
+        "① 首頁了解流程 → ② ",
+        strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
+        strong("訪談問項設計"), "／", strong("控制點測試設計"),
+        " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
+        " → ⑥ 需要時開啟 ", strong("範本庫"), "／", strong("參數庫"), "（側邊欄入口；範本套用可跳過）。"),
       p(class = "small text-muted mb-0",
-        "測試步驟欄位填於「自我評估測試步驟設計」，定稿時會一併寫入控制點草稿。")
+        "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
   ),
   nav_panel(
@@ -277,7 +296,7 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "控制點設計",
+    "風險控制點設計",
     layout_columns(
       col_widths = c(7, 5),
       card(
@@ -290,21 +309,16 @@ ui <- page_navbar(
         selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
         conditionalPanel(
           "input.cascade_sub == '__custom__'",
-          layout_columns(
-            col_widths = c(4, 8),
-            textInput("custom_sub_id", NULL, placeholder = "子作業編號"),
-            textInput("custom_sub_name", NULL, placeholder = "子作業名稱")
-          )
+          p(class = "small text-muted mb-2",
+            "自訂子作業：請於下方「基本資料」填寫子作業編號與名稱。")
         ),
         # Step 3: 風險
         selectInput("cascade_risk", NULL, choices = c("③ 選擇風險因素…" = "")),
         uiOutput("cascade_risk_detail"),
         conditionalPanel(
           "input.cascade_risk == '__custom__'",
-          textInput("custom_risk_factor", NULL, placeholder = "自訂風險 tag（簡短）"),
-          textAreaInput("custom_risk_desc", NULL, rows = 2, placeholder = "自訂風險描述"),
-          selectInput("custom_risk_category", NULL,
-                      choices = c("風險類別…" = "", RISK_CATEGORY_CHOICES))
+          p(class = "small text-muted mb-2",
+            "自訂風險：請於下方「風險辨識」填寫風險因素、風險描述、風險類別與 RoMM 分類。")
         ),
         # Step 4: 目標
         selectInput("cascade_objective", NULL, choices = c("④ 選擇控制目標…" = "")),
@@ -343,45 +357,47 @@ ui <- page_navbar(
           open = c("基本資料", "風險辨識", "控制設計"),
           accordion_panel(
             "基本資料",
-            textInput("control_id", "控制編號", value = "",
-                      placeholder = "自動順編（可覆寫）"),
-            textInput("related_policy", lab_opt("相關政策或程序")),
-            selectizeInput(
-              "related_law", "相關法令",
-              choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
-              multiple = TRUE,
-              options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
+            p(class = "small text-muted mb-2",
+              "此次控制點設計之流程定位：循環與子作業（可與上方引導選取同步，亦可直接覆寫）。"),
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("cycle_code", lab_req("循環編號"), value = "",
+                        placeholder = "例：EC"),
+              selectInput("cycle", lab_req("循環名稱"),
+                          choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
+                          selected = "")
             ),
-            uiOutput("related_law_hint"),
-            textInput("related_document", lab_opt("相關文件"))
+            layout_columns(
+              col_widths = c(4, 8),
+              textInput("sub_process_id", lab_req("子作業編號"), value = "",
+                        placeholder = "例：EC-101"),
+              textInput("sub_process", lab_req("子作業名稱"), value = "",
+                        placeholder = "例：存取管理")
+            ),
+            textInput("control_id", "控制編號", value = "",
+                      placeholder = "自動順編（可覆寫）")
           ),
           accordion_panel(
             "風險辨識",
+            p(class = "small text-muted mb-2",
+              "包含：風險因素、風險描述、風險類別、RoMM 分類（與上方引導選取同步，可覆寫）。同一控制點僅一種風險類別；需其他類別時另設控制點。"),
+            textInput("risk_factor", lab_req("風險因素"), value = "",
+                      placeholder = "簡短風險 tag／因素名稱"),
+            textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
+                          placeholder = "風險情境與影響描述"),
+            selectInput(
+              "risk_category", lab_req("風險類別"),
+              choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
+              selected = ""
+            ),
+            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
+            uiOutput("significant_account_hint"),
             textInput("significant_account", "會計科目", value = "",
                       placeholder = "僅報導面可填且必填"),
-            uiOutput("significant_account_hint"),
-            tags$p(class = "small text-muted mb-1", "三大風險屬性細節"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("attr_label_fr", NULL, value = "財務報導"),
-              textAreaInput("risk_attr_financial", NULL, rows = 1, placeholder = "財務報導屬性細節")
-            ),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("attr_label_op", NULL, value = "營運"),
-              textAreaInput("risk_attr_operations", NULL, rows = 1, placeholder = "營運屬性細節")
-            ),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("attr_label_cp", NULL, value = "法令遵循"),
-              textAreaInput("risk_attr_compliance", NULL, rows = 1, placeholder = "法令遵循屬性細節")
-            ),
-            selectizeInput(
-              "assertions", "聲明（Assertions）", choices = ASSERTION_CHOICES, multiple = TRUE,
-              selected = ASSERTION_CHOICES[1:2],
-              options = list(create = TRUE, placeholder = "聲明（輔助）")
-            ),
-            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES)
+            textAreaInput(
+              "risk_attr_detail", lab_opt("風險屬性細節"), rows = 2,
+              placeholder = "對應所選風險類別之細節（可空）"
+            )
           ),
           accordion_panel(
             "控制設計",
@@ -395,7 +411,25 @@ ui <- page_navbar(
             selectizeInput(
               "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
               options = list(placeholder = "原名→新名")
-            )
+            ),
+            selectizeInput(
+              "assertions", "聲明（Assertions）",
+              choices = character(0), multiple = TRUE, selected = character(0),
+              options = list(
+                create = FALSE,
+                placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+              )
+            ),
+            uiOutput("assertions_hint"),
+            textInput("related_policy", lab_opt("相關政策或程序")),
+            selectizeInput(
+              "related_law", "相關法令",
+              choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
+              multiple = TRUE,
+              options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
+            ),
+            uiOutput("related_law_hint"),
+            textInput("related_document", lab_opt("相關文件"))
           )
         ),
         div(
@@ -414,11 +448,11 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "自我評估測試步驟設計",
+    "控制點測試設計",
     layout_columns(
       col_widths = c(4, 8),
       card(
-        card_header("自我評估測試步驟設計"),
+        card_header("控制點測試設計"),
         selectizeInput(
           "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
@@ -435,7 +469,7 @@ ui <- page_navbar(
         textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
         textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
         textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻"),
-        checkboxInput("pbc_also_inputs", "於「控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
+        checkboxInput("pbc_also_inputs", "於「風險控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
       ),
       card(
         DTOutput("csa_table"),
@@ -445,40 +479,39 @@ ui <- page_navbar(
   ),
   nav_panel(
     "範本庫",
-    # 上：即時顯示；下：控制面板
+    card(
+      card_header("從範本庫套用（可跳過）"),
+      p(class = "small text-muted mb-2",
+        "選用既有範本填入「風險控制點設計」表單；不選亦可直接於設計頁從頭建立。"),
+      layout_columns(
+        col_widths = c(5, 7),
+        textInput("lib_query", "搜尋", value = "", placeholder = "搜尋標題／風險／控制編號…"),
+        selectInput(
+          "lib_pick", "選擇範本",
+          choices = c("（可跳過）未套用範本…" = "")
+        )
+      ),
+      div(
+        class = "d-flex gap-1 flex-wrap mb-2",
+        actionButton("apply_lib", "套用至設計表單", class = "btn-sm btn-primary"),
+        actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary")
+      ),
+      p(class = "small text-muted mb-0",
+        "寫入／匯入／刪除／直接編輯需於左側「高權存取」登入後操作。")
+    ),
+    uiOutput("admin_lib_edit_panel"),
     card(
       card_header("即時顯示"),
       DTOutput("lib_table"),
       verbatimTextOutput("lib_preview")
     ),
+    uiOutput("admin_lib_mutate_panel"),
     card(
-      card_header("累積制通用範本庫 — 選項"),
+      card_header("匯出（唯讀可用）"),
       div(
-        class = "lib-options-section",
-        uiOutput("lib_stats_box"),
-        tags$hr(class = "my-2"),
-        tags$h6(class = "small fw-bold mb-2", "匯入"),
-        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
-                  accept = c(".csv", ".json", ".xlsx", ".xls")),
-        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
-                     class = "btn-sm btn-outline-primary mb-3"),
-        tags$hr(class = "my-2"),
-        tags$h6(class = "small fw-bold mb-2", "收集入庫"),
-        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
-        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
-        ),
-        div(
-          class = "lib-options-actions d-flex gap-2 flex-wrap",
-          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger"),
-          downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
-          downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
-        )
+        class = "d-flex gap-2 flex-wrap",
+        downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
+        downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
       )
     )
   ),
@@ -486,24 +519,24 @@ ui <- page_navbar(
     "參數庫",
     # 上：選項／篩選面板；下：即時結果
     card(
-      card_header("後台參數資料庫 — 選項"),
+      card_header("後台參數資料庫 — 查詢"),
       layout_columns(
         col_widths = c(4, 4, 4),
         selectInput("param_filter", "參數類型", choices = c("全部" = "")),
         selectInput("param_source", "來源",
                     choices = c("全部" = "", "系統預設" = "系統預設",
                                 "範本庫" = "範本庫", "已定稿RCM" = "已定稿RCM",
-                                "PBC命名庫" = "PBC命名庫")),
+                                "PBC命名庫" = "PBC命名庫", "高權維護" = "高權維護")),
         textInput("param_query", "搜尋", placeholder = "搜尋參數或選項值…")
       ),
       div(
         class = "d-flex gap-1 flex-wrap",
-        actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary"),
         actionButton("param_apply_row", "套用選取列至表單", class = "btn-sm btn-outline-success"),
         downloadButton("download_params", "下載 CSV", class = "btn-sm"),
         downloadButton("download_params_json", "下載 JSON", class = "btn-sm")
       )
     ),
+    uiOutput("admin_param_edit_panel"),
     card(
       card_header("即時顯示"),
       uiOutput("param_stats"),
@@ -511,11 +544,11 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
-    "PBC",
+    "PBC資料庫",
     layout_columns(
       col_widths = c(4, 8),
       card(
-        card_header("PBC 命名整理"),
+        card_header("PBC 資料庫"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
@@ -543,11 +576,119 @@ ui <- page_navbar(
       tags$strong("缺漏／缺文件／控制缺失"),
       DTOutput("gap_table")
     )
-  )
+  ),
 )
 
 server <- function(input, output, session) {
   controls <- reactiveVal(list())
+  is_admin <- reactiveVal(FALSE)
+
+  output$admin_auth_box <- renderUI({
+    if (isTRUE(is_admin())) {
+      tagList(
+        div(class = "alert alert-success py-1 mb-2 small", "已登入高權（可改範本庫／參數庫）"),
+        actionButton("admin_logout", "登出高權", class = "btn-sm btn-outline-danger w-100")
+      )
+    } else {
+      tagList(
+        div(class = "alert alert-secondary py-1 mb-2 small", "未登入：範本庫／參數庫唯讀"),
+        passwordInput("admin_password", NULL, placeholder = "高權密碼"),
+        actionButton("admin_login", "登入", class = "btn-sm btn-primary w-100")
+      )
+    }
+  })
+
+  observeEvent(input$admin_login, {
+    if (verify_admin_password(input$admin_password)) {
+      is_admin(TRUE)
+      updateTextInput(session, "admin_password", value = "")
+      showNotification("高權登入成功", type = "message")
+    } else {
+      is_admin(FALSE)
+      showNotification("密碼錯誤", type = "error")
+    }
+  })
+  observeEvent(input$admin_logout, {
+    is_admin(FALSE)
+    showNotification("已登出高權", type = "message")
+  })
+
+  output$admin_lib_edit_panel <- renderUI({
+    if (!isTRUE(is_admin())) return(NULL)
+    card(
+      card_header("高權：直接編輯選取範本"),
+      p(class = "small text-muted mb-2", "先於下方表格選取一列，載入後修改並儲存。"),
+      actionButton("admin_lib_load_row", "載入選取列", class = "btn-sm btn-outline-primary mb-2"),
+      textInput("admin_lib_id", "library_id", value = ""),
+      textInput("admin_lib_title", "標題", value = ""),
+      textInput("admin_lib_tags", "標籤（;分隔）", value = ""),
+      textInput("admin_lib_risk", "風險因素", value = ""),
+      textAreaInput("admin_lib_risk_desc", "風險描述", rows = 2, value = ""),
+      selectInput("admin_lib_risk_cat", "風險類別",
+                  choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES)),
+      textAreaInput("admin_lib_objective", "控制目標", rows = 2, value = ""),
+      textAreaInput("admin_lib_activity", "控制活動", rows = 2, value = ""),
+      textInput("admin_lib_iuc", "IUC／相關系統", value = ""),
+      actionButton("admin_lib_save_fields", "儲存範本變更", class = "btn-sm btn-success")
+    )
+  })
+
+  output$admin_lib_mutate_panel <- renderUI({
+    if (!isTRUE(is_admin())) {
+      return(div(class = "alert alert-secondary py-2 small",
+                 "匯入／刪除／收集入庫：請先於左側登入高權。"))
+    }
+    card(
+      card_header("高權：累積制通用範本庫 — 寫入"),
+      div(
+        class = "lib-options-section",
+        uiOutput("lib_stats_box"),
+        tags$hr(class = "my-2"),
+        tags$h6(class = "small fw-bold mb-2", "匯入"),
+        fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
+                  accept = c(".csv", ".json", ".xlsx", ".xls")),
+        checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
+        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
+                     class = "btn-sm btn-outline-primary mb-3"),
+        tags$hr(class = "my-2"),
+        tags$h6(class = "small fw-bold mb-2", "收集入庫"),
+        textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
+        textInput("lib_tags", NULL, placeholder = "標籤（;分隔）"),
+        checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
+        div(
+          class = "d-flex gap-1 flex-wrap mb-2",
+          actionButton("save_to_lib", "目前表單存入庫", class = "btn-sm btn-outline-success"),
+          actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
+          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
+          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
+        ),
+        actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger")
+      )
+    )
+  })
+
+  output$admin_param_edit_panel <- renderUI({
+    if (!isTRUE(is_admin())) {
+      return(div(class = "alert alert-secondary py-2 small",
+                 "新增／刪除／重建參數：請先於左側登入高權。"))
+    }
+    card(
+      card_header("高權：直接維護參數列"),
+      layout_columns(
+        col_widths = c(4, 4, 4),
+        textInput("admin_param_name", "參數", placeholder = "例：風險類別"),
+        textInput("admin_param_value", "選項值", placeholder = "例：營運面"),
+        textInput("admin_param_source", "來源", value = "高權維護")
+      ),
+      div(
+        class = "d-flex gap-1 flex-wrap",
+        actionButton("admin_param_upsert", "新增／更新列", class = "btn-sm btn-success"),
+        actionButton("admin_param_delete", "刪除選取列", class = "btn-sm btn-outline-danger"),
+        actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary")
+      )
+    )
+  })
+
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
@@ -587,18 +728,24 @@ server <- function(input, output, session) {
       )
     }
     if (length(merged) > length(cur)) {
-      lib(persist_lib(merged))
+      lib(persist_lib(merged, force = TRUE))
     }
   }, once = TRUE)
 
   persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
-  persist_lib <- function(library) {
+  persist_lib <- function(library, force = FALSE) {
+    if (!isTRUE(force) && !require_admin(is_admin(), session)) {
+      return(isolate(lib()))
+    }
     save_control_library(library, lib_path_json, lib_path_csv)
     library
   }
 
   param_store <- reactiveVal(load_parameter_store(param_path_json))
-  persist_params <- function() {
+  persist_params <- function(force = FALSE) {
+    if (!isTRUE(force) && !require_admin(is_admin(), session)) {
+      return(isolate(param_store()))
+    }
     df <- parameter_catalog(
       library = lib(), controls = controls(),
       pbc = pbc_reg()
@@ -607,11 +754,17 @@ server <- function(input, output, session) {
     param_store(df)
     df
   }
+  persist_params_df <- function(df) {
+    if (!require_admin(is_admin(), session)) return(isolate(param_store()))
+    save_parameter_store(df, param_path_json)
+    param_store(df)
+    df
+  }
 
   # Seed empty parameter DB after UI is ready (avoid blocking cascade updates)
   session$onFlushed(function() {
     if (!nrow(isolate(param_store()))) {
-      try(persist_params(), silent = TRUE)
+      try(persist_params(force = TRUE), silent = TRUE)
     }
   }, once = TRUE)
 
@@ -620,7 +773,7 @@ server <- function(input, output, session) {
     n_lib <- length(lib())
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先在左側選擇循環。"),
+                 tags$strong("請先於「基本資料」選擇循環名稱。"),
                  "選定後才會載入該循環的子作業／風險／目標／活動候選。"))
     }
     rows <- cascade_rows()
@@ -633,7 +786,7 @@ server <- function(input, output, session) {
       div(class = "alert alert-danger py-2 mb-2 small",
           tags$strong("目前沒有引導候選。"),
           sprintf("（循環＝%s，範本庫＝%d 筆）", cy, n_lib),
-          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或套用左側範本。")
+          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或於該頁套用範本（可跳過）。")
     }
   })
 
@@ -641,10 +794,10 @@ server <- function(input, output, session) {
     ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
     updateSelectInput(
       session, "lib_pick",
-      choices = c("① 優先：從範本庫套用…" = "", ch),
+      choices = c("（可跳過）未套用範本…" = "", ch),
       selected = {
         cur <- input$lib_pick %||% ""
-        if (nzchar(cur) && cur %in% ch) cur else ""
+        if (nzchar(cur) && cur %in% unname(ch)) cur else ""
       }
     )
   }
@@ -712,7 +865,7 @@ server <- function(input, output, session) {
   param_catalog_df <- reactive({
     input$param_refresh
     df <- param_store()
-    if (!nrow(df)) df <- persist_params()
+    if (!nrow(df)) df <- persist_params(force = TRUE)
     filter_parameter_store(
       df,
       param = input$param_filter,
@@ -757,6 +910,7 @@ server <- function(input, output, session) {
   )
 
   observeEvent(input$param_refresh, {
+    if (!require_admin(is_admin(), session)) return()
     df <- persist_params()
     showNotification(sprintf("參數資料庫已從現況重建並儲存（%d 筆）", nrow(df)),
                      type = "message")
@@ -772,23 +926,35 @@ server <- function(input, output, session) {
     param <- as.character(row$參數[[1]])
     val <- as.character(row$選項值[[1]])
     mapped <- list(
-      "循環" = function() updateSelectInput(session, "cycle", selected = val),
+      "循環" = function() {
+        updateSelectInput(session, "cycle", selected = val)
+        updateTextInput(session, "cycle_code", value = cycle_code_for(val))
+      },
       "子作業編號" = function() {
-        updateTextInput(session, "custom_sub_id", value = val)
+        updateTextInput(session, "sub_process_id", value = val)
         updateSelectInput(session, "cascade_sub", selected = "__custom__")
       },
       "子作業名稱" = function() {
-        updateTextInput(session, "custom_sub_name", value = val)
+        updateTextInput(session, "sub_process", value = val)
         updateSelectInput(session, "cascade_sub", selected = "__custom__")
       },
-      "風險因素" = function() updateSelectInput(session, "cascade_risk", selected = val),
+      "風險因素" = function() {
+        updateTextInput(session, "risk_factor", value = val)
+        updateSelectInput(session, "cascade_risk", selected = "__custom__")
+      },
       "風險描述" = function() {
-        updateTextAreaInput(session, "custom_risk_desc", value = val)
+        updateTextAreaInput(session, "risk_description", value = val)
         updateSelectInput(session, "cascade_risk", selected = "__custom__")
       },
       "風險類別" = function() {
-        updateSelectInput(session, "custom_risk_category", selected = val)
+        updateSelectInput(session, "risk_category", selected = val)
         updateSelectInput(session, "cascade_risk", selected = "__custom__")
+      },
+      "RoMM 分類" = function() {
+        updateSelectInput(session, "romm_classification", selected = val)
+      },
+      "聲明" = function() {
+        updateSelectizeInput(session, "assertions", selected = val)
       },
       "會計科目" = function() updateTextInput(session, "significant_account", value = val),
       "控制目標" = function() {
@@ -867,24 +1033,47 @@ server <- function(input, output, session) {
 
   observeEvent(input$apply_lib, {
     id <- input$lib_pick
-    if (!nzchar(id %||% "")) return(showNotification("請先從範本庫選擇", type = "warning"))
+    if (!nzchar(id %||% "")) return(showNotification("請先選擇範本（或跳過此步驟）", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
     fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
 
+  observeEvent(input$apply_lib_selected_row, {
+    s <- input$lib_table_rows_selected
+    items <- filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    if (is.null(s) || !length(items)) {
+      return(showNotification("請先在表格選取一列範本", type = "warning"))
+    }
+    item <- items[[s[[1]]]]
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
+    showNotification(paste("已套用範本：", item$title), type = "message")
+  })
+
+  observeEvent(input$goto_lib_tab, {
+    bslib::nav_select("main_nav", selected = "範本庫", session = session)
+  })
+  observeEvent(input$goto_param_tab, {
+    bslib::nav_select("main_nav", selected = "參數庫", session = session)
+  })
+
   observeEvent(input$save_to_lib, {
+    if (!require_admin(is_admin(), session)) return()
     d <- current_draft_from_inputs()
     item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入範本庫", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_current, {
+    if (!require_admin(is_admin(), session)) return()
     d <- current_draft_from_inputs()
     item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_selected_control, {
+    if (!require_admin(is_admin(), session)) return()
     s <- input$control_table_rows_selected
     cs <- controls()
     if (is.null(s) || !length(cs)) return(showNotification("請先在設計頁選取控制點", type = "warning"))
@@ -892,6 +1081,7 @@ server <- function(input, output, session) {
     showNotification(paste("控制點已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_all_ready, {
+    if (!require_admin(is_admin(), session)) return()
     cs <- controls()
     if (!length(cs)) return(showNotification("尚無已產生控制點", type = "warning"))
     ready <- Filter(function(c) isTRUE((c$rcm_ready$ready %||% is_rcm_row_ready(c)$ready)), cs)
@@ -904,6 +1094,7 @@ server <- function(input, output, session) {
     )
   })
   observeEvent(input$collect_ready_to_lib, {
+    if (!require_admin(is_admin(), session)) return()
     cs <- controls()
     if (!length(cs)) {
       d <- current_draft_from_inputs()
@@ -919,6 +1110,7 @@ server <- function(input, output, session) {
     )
   })
   observeEvent(input$upload_lib, {
+    if (!require_admin(is_admin(), session)) return()
     f <- input$upload_lib
     if (is.null(f)) return()
     tryCatch({
@@ -935,13 +1127,91 @@ server <- function(input, output, session) {
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
   observeEvent(input$lib_delete, {
+    if (!require_admin(is_admin(), session)) return()
     s <- input$lib_table_rows_selected
     if (is.null(s)) return(showNotification("請選取範本列", type = "warning"))
-    df <- library_summary_df(lib())
-    id <- df$library_id[s]
+    df <- library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query))
+    id <- df$library_id[s[[1]]]
     lib(persist_lib(delete_library_item(lib(), id)))
     refresh_lib_choices()
+    showNotification("已刪除選取範本", type = "message")
   })
+
+  observeEvent(input$admin_lib_load_row, {
+    if (!require_admin(is_admin(), session)) return()
+    s <- input$lib_table_rows_selected
+    items <- filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    if (is.null(s) || !length(items)) {
+      return(showNotification("請先選取範本列", type = "warning"))
+    }
+    item <- items[[s[[1]]]]
+    ctrl <- item$control %||% list()
+    updateTextInput(session, "admin_lib_id", value = item$library_id %||% "")
+    updateTextInput(session, "admin_lib_title", value = item$title %||% "")
+    updateTextInput(session, "admin_lib_tags",
+                    value = paste(item$tags %||% character(), collapse = "；"))
+    updateTextInput(session, "admin_lib_risk",
+                    value = ctrl$risk_factor %||% ctrl$risk_name %||% "")
+    updateTextAreaInput(session, "admin_lib_risk_desc", value = ctrl$risk_description %||% "")
+    updateSelectInput(session, "admin_lib_risk_cat", selected = ctrl$risk_category %||% "")
+    updateTextAreaInput(session, "admin_lib_objective", value = ctrl$control_objective %||% "")
+    updateTextAreaInput(session, "admin_lib_activity", value = ctrl$control_activity %||% "")
+    updateTextInput(session, "admin_lib_iuc",
+                    value = ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+  })
+
+  observeEvent(input$admin_lib_save_fields, {
+    if (!require_admin(is_admin(), session)) return()
+    id <- trimws(input$admin_lib_id %||% "")
+    if (!nzchar(id)) return(showNotification("請先載入選取列", type = "warning"))
+    rf <- trimws(input$admin_lib_risk %||% "")
+    patched <- patch_library_item_fields(
+      lib(), id,
+      title = input$admin_lib_title,
+      tags = input$admin_lib_tags,
+      fields = list(
+        risk_factor = rf,
+        risk_name = rf,
+        risk_description = trimws(input$admin_lib_risk_desc %||% ""),
+        risk_category = trimws(input$admin_lib_risk_cat %||% ""),
+        control_objective = trimws(input$admin_lib_objective %||% ""),
+        control_activity = trimws(input$admin_lib_activity %||% ""),
+        iuc_or_system = trimws(input$admin_lib_iuc %||% ""),
+        related_system = trimws(input$admin_lib_iuc %||% "")
+      )
+    )
+    lib(persist_lib(patched))
+    refresh_lib_choices()
+    showNotification(paste("已更新範本", id), type = "message")
+  })
+
+  observeEvent(input$admin_param_upsert, {
+    if (!require_admin(is_admin(), session)) return()
+    df <- upsert_parameter_row(
+      param_store(),
+      param = input$admin_param_name,
+      value = input$admin_param_value,
+      source = input$admin_param_source %||% "高權維護"
+    )
+    persist_params_df(df)
+    showNotification("已寫入參數列", type = "message")
+  })
+
+  observeEvent(input$admin_param_delete, {
+    if (!require_admin(is_admin(), session)) return()
+    s <- input$param_table_rows_selected
+    df_view <- param_catalog_df()
+    if (!length(s) || !nrow(df_view)) {
+      return(showNotification("請先選取參數列", type = "warning"))
+    }
+    row <- df_view[s[[1]], , drop = FALSE]
+    store <- param_store()
+    hit <- which(store$參數 == row$參數[[1]] & store$選項值 == row$選項值[[1]])
+    if (!length(hit)) return(showNotification("找不到對應列", type = "warning"))
+    persist_params_df(delete_parameter_rows(store, hit))
+    showNotification("已刪除參數列", type = "message")
+  })
+
   output$lib_table <- renderDT({
     datatable(
       library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)),
@@ -984,42 +1254,40 @@ server <- function(input, output, session) {
 
   current_draft_from_inputs <- function() {
     sel <- resolve_cascade_selection()
-    matched <- match_cascade_control(cascade_rows(), sel)
-    lib_ctrl <- if (!is.null(matched) && is.list(matched)) {
-      if (!is.null(matched$raw)) matched$raw else matched
-    } else {
-      NULL
-    }
-    strip_attr <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-    pick_attr <- function(field, supplement) {
-      if (nzchar(supplement)) return(supplement)
-      if (!is.null(lib_ctrl)) strip_attr(lib_ctrl[[field]]) else ""
-    }
     rf_tag <- risk_factor_tag(sel$risk_factor)
     nature <- normalize_control_type_manual_auto(sel$nature)
     approach <- normalize_control_activity_type_pd(sel$approach)
+    # 風險類別決定屬性種類（三擇一）；細節來自風險辨識
+    kind <- risk_attr_kind_from_category(sel$risk_category)
+    if (!nzchar(kind)) kind <- "operations"
+    attr_ctrl <- enforce_single_risk_attr(
+      list(risk_category = sel$risk_category),
+      kind = kind,
+      detail = input$risk_attr_detail %||% ""
+    )
     list(
       control_id = input$control_id %||% "",
       company = input$company %||% "",
       cycle = sel$cycle,
-      sub_process_id = sel$sub_process_id,
-      sub_process = sel$sub_process,
+      cycle_code = {
+        cc <- trimws(input$cycle_code %||% "")
+        if (nzchar(cc)) cc else cycle_code_for(sel$cycle)
+      },
+      sub_process_id = {
+        sp <- trimws(input$sub_process_id %||% "")
+        if (nzchar(sp)) sp else sel$sub_process_id
+      },
+      sub_process = {
+        spn <- trimws(input$sub_process %||% "")
+        if (nzchar(spn)) spn else sel$sub_process
+      },
       risk_factor = rf_tag,
       risk_name = rf_tag,
       risk_description = sel$risk_description,
-      risk_category = sel$risk_category,
-      risk_attr_financial = labelize(
-        input$attr_label_fr,
-        pick_attr("risk_attr_financial", input$risk_attr_financial %||% "")
-      ),
-      risk_attr_operations = labelize(
-        input$attr_label_op,
-        pick_attr("risk_attr_operations", input$risk_attr_operations %||% "")
-      ),
-      risk_attr_compliance = labelize(
-        input$attr_label_cp,
-        pick_attr("risk_attr_compliance", input$risk_attr_compliance %||% "")
-      ),
+      risk_category = attr_ctrl$risk_category,
+      risk_attr_financial = attr_ctrl$risk_attr_financial,
+      risk_attr_operations = attr_ctrl$risk_attr_operations,
+      risk_attr_compliance = attr_ctrl$risk_attr_compliance,
       romm_classification = input$romm_classification %||% "",
       significant_account = input$significant_account %||% "",
       assertions = paste(input$assertions %||% character(), collapse = "；"),
@@ -1075,26 +1343,33 @@ server <- function(input, output, session) {
 
   resolve_cascade_selection <- function() {
     sub_key <- input$cascade_sub %||% ""
-    sp_id <- ""; sp_name <- ""
-    if (identical(sub_key, "__custom__")) {
-      sp_id <- trimws(input$custom_sub_id %||% "")
-      sp_name <- trimws(input$custom_sub_name %||% "")
-    } else if (nzchar(sub_key)) {
+    # 基本資料為子作業編號／名稱的來源；引導選取會回填這些欄位
+    sp_id <- trimws(input$sub_process_id %||% "")
+    sp_name <- trimws(input$sub_process %||% "")
+    if (!identical(sub_key, "__custom__") && nzchar(sub_key) &&
+        (!nzchar(sp_id) || !nzchar(sp_name))) {
       sp <- parse_sub_process_key(sub_key)
-      sp_id <- sp$id; sp_name <- sp$name
+      if (!nzchar(sp_id)) sp_id <- sp$id
+      if (!nzchar(sp_name)) sp_name <- sp$name
     }
 
+    # 風險辨識為風險欄位來源；引導選取會回填這些欄位
+    risk_factor <- trimws(input$risk_factor %||% "")
+    risk_desc <- trimws(input$risk_description %||% "")
+    risk_cat <- trimws(input$risk_category %||% "")
     rk <- input$cascade_risk %||% ""
-    risk_factor <- ""; risk_desc <- ""; risk_cat <- ""
-    if (identical(rk, "__custom__")) {
-      risk_factor <- trimws(input$custom_risk_factor %||% "")
-      risk_desc <- trimws(input$custom_risk_desc %||% "")
-      risk_cat <- input$custom_risk_category %||% ""
-    } else if (nzchar(rk)) {
-      risk_factor <- rk
-      det <- cascade_risk_detail(filter_cascade_rows(cascade_rows(), sub_key = if (!identical(sub_key, "__custom__")) sub_key else NULL), rk)
-      risk_desc <- det$risk_description
-      risk_cat <- det$risk_category
+    if (!identical(rk, "__custom__") && nzchar(rk) &&
+        (!nzchar(risk_factor) || !nzchar(risk_desc) || !nzchar(risk_cat))) {
+      det <- cascade_risk_detail(
+        filter_cascade_rows(
+          cascade_rows(),
+          sub_key = if (!identical(sub_key, "__custom__") && nzchar(sub_key)) sub_key else NULL
+        ),
+        rk
+      )
+      if (!nzchar(risk_factor)) risk_factor <- risk_factor_tag(rk)
+      if (!nzchar(risk_desc)) risk_desc <- det$risk_description %||% ""
+      if (!nzchar(risk_cat)) risk_cat <- det$risk_category %||% ""
     }
 
     obj_sel <- input$cascade_objective %||% ""
@@ -1141,6 +1416,7 @@ server <- function(input, output, session) {
 
     list(
       cycle = input$cycle %||% "",
+      cycle_code = trimws(input$cycle_code %||% ""),
       sub_process_id = sp_id,
       sub_process = sp_name,
       risk_factor = risk_factor,
@@ -1158,9 +1434,9 @@ server <- function(input, output, session) {
     )
   }
 
-  # 會計科目：僅報導面可填且必填；其它類別鎖定並清空
+  # 會計科目：僅報導面可填且必填；其他類別鎖定並清空
   output$significant_account_hint <- renderUI({
-    cat <- resolve_cascade_selection()$risk_category %||% ""
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_reporting_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
           lab_req("報導面"), " — 會計科目為必填，請填財務報表科目。")
@@ -1173,7 +1449,7 @@ server <- function(input, output, session) {
   })
 
   output$related_law_hint <- renderUI({
-    cat <- resolve_cascade_selection()$risk_category %||% ""
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
           lab_req("遵循面"), " — 相關法令為必填（可多選台灣／美國預設或自訂）。")
@@ -1185,9 +1461,62 @@ server <- function(input, output, session) {
     }
   })
 
+  output$assertions_hint <- renderUI({
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
+    mode <- assertion_mode_for_category(cat)
+    if (identical(mode, "reporting")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          "報導面：可複選八種 Assertions（Existence or Occurrence、Completeness、",
+          "Rights and Obligations、Valuation or Allocation、Accuracy、Cutoff、",
+          "Classification、Presentation）。")
+    } else if (identical(mode, "operations")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          "營運面：聲明限縮為三種可複選——完整性、正確性、即時性。")
+    } else if (identical(mode, "locked")) {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          "遵循面：無 Assertions 可選（已鎖定並清空）。")
+    } else {
+      helpText(class = "text-muted small", "請先於風險辨識選擇風險類別，以決定聲明可選範圍。")
+    }
+  })
+
+  # 基本資料：循環名稱 → 自動帶入循環編號（可覆寫）
+  observeEvent(input$cycle, {
+    cy <- input$cycle %||% ""
+    code <- cycle_code_for(cy)
+    cur <- trimws(input$cycle_code %||% "")
+    # 空值或仍為對照表內既有代碼時才覆寫，避免蓋掉使用者自訂編號
+    known <- unname(CYCLE_CODE_MAP)
+    if (!nzchar(cur) || cur %in% known) {
+      updateTextInput(session, "cycle_code", value = code)
+    }
+  }, ignoreInit = TRUE)
+
+  # 引導選子作業 → 回填基本資料子作業編號／名稱
+  observeEvent(input$cascade_sub, {
+    sub_key <- input$cascade_sub %||% ""
+    if (!nzchar(sub_key) || identical(sub_key, "__custom__")) return()
+    sp <- parse_sub_process_key(sub_key)
+    updateTextInput(session, "sub_process_id", value = sp$id)
+    updateTextInput(session, "sub_process", value = sp$name)
+  }, ignoreInit = TRUE)
+
+  # 引導選風險 → 回填風險辨識（因素／描述／類別／RoMM／屬性細節）
+  observeEvent(input$cascade_risk, {
+    rk <- input$cascade_risk %||% ""
+    if (!nzchar(rk) || identical(rk, "__custom__")) return()
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    apply_risk_detail_to_inputs(session, rows, rk)
+  }, ignoreInit = TRUE)
+
+  # 引導完成且未手動填編號 → 自動順編；風險類別驅動會計科目／法令／聲明鎖定
   observe({
     sel <- resolve_cascade_selection()
-    cat <- sel$risk_category %||% ""
+    cat <- trimws(input$risk_category %||% sel$risk_category %||% "")
     session$sendCustomMessage(
       "toggleAccount",
       list(enabled = is_reporting_risk_category(cat))
@@ -1195,6 +1524,29 @@ server <- function(input, output, session) {
     session$sendCustomMessage(
       "toggleLaw",
       list(enabled = is_compliance_risk_category(cat))
+    )
+    as_mode <- assertion_mode_for_category(cat)
+    as_choices <- assertion_choices_for_category(cat)
+    cur_as <- parse_assertion_values(input$assertions)
+    keep_as <- if (length(as_choices)) intersect(cur_as, as_choices) else character(0)
+    updateSelectizeInput(
+      session, "assertions",
+      choices = as_choices,
+      selected = keep_as,
+      options = list(
+        create = FALSE,
+        placeholder = switch(
+          as_mode,
+          reporting = "報導面：可複選八種 Assertions",
+          operations = "營運面：完整性／正確性／即時性",
+          locked = "遵循面：無 Assertions 可選",
+          "請先選擇風險類別"
+        )
+      )
+    )
+    session$sendCustomMessage(
+      "toggleAssertions",
+      list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
       if (nzchar(trimws(input$significant_account %||% ""))) {
@@ -1206,12 +1558,13 @@ server <- function(input, output, session) {
         updateSelectizeInput(session, "related_law", selected = character(0))
       }
     }
-    # 引導完成且未手動填編號 → 自動順編
     ready <- cascade_selection_ready(sel)
-    if (isTRUE(ready$ready) && nzchar(sel$sub_process_id) &&
+    spid <- trimws(input$sub_process_id %||% "")
+    if (!nzchar(spid)) spid <- sel$sub_process_id
+    if (isTRUE(ready$ready) && nzchar(spid) &&
         !nzchar(trimws(input$control_id %||% ""))) {
       ids <- collect_existing_control_ids(lists = list(lib(), controls()))
-      updateTextInput(session, "control_id", value = next_rcm_control_id(sel$sub_process_id, ids))
+      updateTextInput(session, "control_id", value = next_rcm_control_id(spid, ids))
     }
   })
 
@@ -1414,14 +1767,31 @@ server <- function(input, output, session) {
         if (ok_l) "✓ " else "○ ", "相關法令已鎖定（非遵循面不可填）"
       )))
     }
+    if (identical(req$assertion_mode, "reporting")) {
+      items <- c(items, list(tags$li(
+        class = "text-muted", "○ ", "聲明（報導面：八種可複選）"
+      )))
+    } else if (identical(req$assertion_mode, "operations")) {
+      items <- c(items, list(tags$li(
+        class = "text-muted", "○ ", "聲明（營運面：完整性／正確性／即時性）"
+      )))
+    } else if (identical(req$assertion_mode, "locked")) {
+      ok_as <- isTRUE(req$filled$assertions)
+      items <- c(items, list(tags$li(
+        class = if (ok_as) "text-success" else "text-danger",
+        if (ok_as) "✓ " else "○ ", "聲明已鎖定（遵循面不可選）"
+      )))
+    }
     cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
     n_cascade <- length(cascade_rows())
     acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
     law_needed <- identical(req$law_mode, "required") || identical(req$law_mode, "locked")
-    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed)
+    as_needed <- identical(req$assertion_mode, "locked")
+    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed) + as.integer(as_needed)
     n_ok <- sum(unlist(req$filled[names(req$required)])) +
       as.integer(acct_needed && isTRUE(req$filled$significant_account)) +
-      as.integer(law_needed && isTRUE(req$filled$related_law))
+      as.integer(law_needed && isTRUE(req$filled$related_law)) +
+      as.integer(as_needed && isTRUE(req$filled$assertions))
     div(
       class = cls,
       tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),
@@ -1455,6 +1825,7 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$save_custom_cascade, {
+    if (!require_admin(is_admin(), session)) return()
     sel <- resolve_cascade_selection()
     if (!nzchar(sel$control_objective) || !nzchar(sel$control_activity)) {
       return(showNotification("請至少具備控制目標與控制活動再存庫", type = "warning"))
@@ -1469,6 +1840,7 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$import_jinglian_seed, {
+    if (!require_admin(is_admin(), session)) return()
     path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
     if (!file.exists(path)) {
       return(showNotification("找不到內建 RCM 範本檔", type = "error"))
@@ -1584,7 +1956,7 @@ server <- function(input, output, session) {
                       pt$sub_process_id,
                       collect_existing_control_ids(lists = list(lib(), controls()))
                     ))
-    if (isTRUE(input$auto_collect_lib)) {
+    if (isTRUE(input$auto_collect_lib) && isTRUE(is_admin())) {
       res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)
       showNotification(
         sprintf("%s｜已累積入庫 +%d／覆寫 %d", fin$msg, res$added, res$updated),

@@ -204,11 +204,6 @@ ui <- page_navbar(
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
         uiOutput("cascade_candidate_banner"),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("reload_cascade_lib", "重新載入資訊循環候選",
-                       class = "btn-sm btn-outline-primary")
-        ),
         # Step 2: 子作業
         selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
         conditionalPanel(
@@ -429,7 +424,7 @@ ui <- page_navbar(
         fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
                   accept = c(".csv", ".json", ".xlsx", ".xls")),
         checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-        actionButton("import_jinglian_seed", "載入鯨鏈資訊循環 RCM（首批）",
+        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
                      class = "btn-sm btn-outline-primary w-100 mb-2"),
         tags$hr(class = "my-2"),
         tags$strong(class = "small", "收集入庫"),
@@ -549,30 +544,27 @@ server <- function(input, output, session) {
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
-  # Ensure 鯨鏈／資訊循環首批一定在庫（空庫或缺 JL- 時強制合併）
+  # 啟動時若範本庫過少，合併種子／內建批次（背景執行，不依特定循環命名）
   observeEvent(TRUE, {
     cur <- lib()
-    jl_ids <- sum(vapply(cur, function(x) grepl("^JL-", x$library_id %||% ""), logical(1)))
-    need <- length(cur) < 5 || jl_ids < 10
-    if (!need) return()
+    if (length(cur) >= 5) return()
     batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
-    jl_path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-    merged <- cur
+    merged <- merge_libraries(cur, seed_control_library(TRUE), overwrite = FALSE)
     if (file.exists(batch)) {
       merged <- tryCatch(
         merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = FALSE),
         error = function(e) merged
       )
-    } else if (file.exists(jl_path)) {
+    }
+    xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    if (file.exists(xlsx)) {
       merged <- tryCatch(
-        import_control_library_file(jl_path, merged, overwrite = FALSE),
+        import_control_library_file(xlsx, merged, overwrite = FALSE),
         error = function(e) merged
       )
     }
-    if (!length(merged)) merged <- seed_control_library(TRUE)
-    if (length(merged) > length(cur) || jl_ids < 10) {
+    if (length(merged) > length(cur)) {
       lib(persist_lib(merged))
-      refresh_lib_choices()
     }
   }, once = TRUE)
   next_id <- reactiveVal(1L)
@@ -603,45 +595,6 @@ server <- function(input, output, session) {
     }
   }, once = TRUE)
 
-  ensure_cascade_library <- function(notify = FALSE) {
-    cur <- lib()
-    jl_ids <- sum(vapply(cur, function(x) grepl("^JL-", x$library_id %||% ""), logical(1)))
-    rows_n <- length(library_controls_flat(cur, cycle = isolate(input$cycle %||% "電腦化資訊系統循環")))
-    if (jl_ids >= 20 && rows_n >= 10) {
-      if (notify) showNotification(sprintf("引導候選就緒：庫 %d／JL %d／本循環 %d",
-                                           length(cur), jl_ids, rows_n), type = "message")
-      return(invisible(cur))
-    }
-    batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
-    seeded <- seed_control_library(TRUE)
-    if (file.exists(batch)) {
-      seeded <- tryCatch(
-        merge_libraries(seeded, load_control_library(batch, fallback_seed = FALSE), overwrite = TRUE),
-        error = function(e) seeded
-      )
-    }
-    merged <- merge_libraries(cur, seeded, overwrite = FALSE)
-    if (!length(merged)) merged <- seeded
-    lib(persist_lib(merged))
-    refresh_lib_choices()
-    rows_n2 <- length(library_controls_flat(merged, cycle = isolate(input$cycle %||% "電腦化資訊系統循環")))
-    if (notify) {
-      showNotification(
-        sprintf("已載入資訊循環候選：庫 %d 筆／本循環 %d 筆", length(merged), rows_n2),
-        type = "message", duration = 8
-      )
-    }
-    invisible(merged)
-  }
-
-  observeEvent(TRUE, {
-    ensure_cascade_library(notify = FALSE)
-  }, once = TRUE)
-
-  observeEvent(input$reload_cascade_lib, {
-    ensure_cascade_library(notify = TRUE)
-  })
-
   output$cascade_candidate_banner <- renderUI({
     cy <- input$cycle %||% ""
     n_lib <- length(lib())
@@ -659,8 +612,8 @@ server <- function(input, output, session) {
     } else {
       div(class = "alert alert-danger py-2 mb-2 small",
           tags$strong("目前沒有引導候選。"),
-          sprintf("（循環＝%s，庫＝%d）", cy, n_lib),
-          "若為資訊循環，請按「重新載入資訊循環候選」。")
+          sprintf("（循環＝%s，範本庫＝%d 筆）", cy, n_lib),
+          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或套用左側範本。")
     }
   })
 
@@ -1301,7 +1254,7 @@ server <- function(input, output, session) {
     label0 <- if (n_rows) {
       sprintf("② 選擇子作業…（本循環 %d 筆／庫 %d）", n_rows, n_lib)
     } else {
-      sprintf("② 尚無子作業候選（庫 %d 筆 — 請確認循環或載入鯨鏈首批）", n_lib)
+      sprintf("② 尚無子作業候選（範本庫 %d 筆 — 請確認循環或至範本庫匯入）", n_lib)
     }
     ch <- c(stats::setNames("", label0), ch_sub, "＋自訂新增子作業" = "__custom__")
     cur <- input$cascade_sub %||% ""
@@ -1496,7 +1449,7 @@ server <- function(input, output, session) {
       if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、")),
       if (!n_cascade) tags$div(
         class = "mt-1 text-danger",
-        "本循環尚無引導選項 — 請按「載入鯨鏈資訊循環 RCM（首批）」或確認循環為資訊循環。"
+        "本循環尚無引導選項 — 請至「範本庫」匯入 RCM 或確認左側已選循環。"
       )
     )
   })
@@ -1612,13 +1565,13 @@ server <- function(input, output, session) {
   observeEvent(input$import_jinglian_seed, {
     path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
     if (!file.exists(path)) {
-      return(showNotification("找不到鯨鏈 RCM 範本檔", type = "error"))
+      return(showNotification("找不到內建 RCM 範本檔", type = "error"))
     }
     tryCatch({
       new_lib <- import_control_library_file(path, lib(), overwrite = isTRUE(input$lib_overwrite))
       lib(persist_lib(new_lib))
       refresh_lib_choices()
-      showNotification(sprintf("已載入鯨鏈 RCM，範本庫共 %d 筆", length(new_lib)), type = "message")
+      showNotification(sprintf("已載入 RCM 範本庫，共 %d 筆", length(new_lib)), type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
 

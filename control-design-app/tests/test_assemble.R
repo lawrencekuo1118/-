@@ -347,9 +347,20 @@ check(length(filter_controls_by_cycle_sub(lib_iv, cycle = "銷售循環")) == 0L
       "訪談循環篩選排除不符列")
 check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
       "訪談焦點含預期風險／目標／活動")
-check(grepl("基本資料", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
-        grepl("interview_cycle", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
-      "訪談版面含基本資料／循環選取（對齊風險控制點設計）")
+check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
+      "訪談與風險控制點設計皆為「引導（依序選取）」左欄標題")
+app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
+        grepl("interview_design_groups", app_txt) &&
+        grepl("rcm_design_groups", app_txt) &&
+        grepl('accordion_panel\\(\\s*"基本資料"', app_txt) &&
+        grepl("interview_guide_banner", app_txt) &&
+        grepl("interview_live_box", app_txt) &&
+        grepl("interview_paragraph", app_txt),
+      "訪談版面與風險控制點設計趨於一致（7/5、引導、accordion、右側預覽）")
+check(grepl("套用 IUC／PBC 命名", app_txt),
+      "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))

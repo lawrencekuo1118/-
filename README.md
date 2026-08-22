@@ -55,3 +55,10 @@ Chrome `.crdownload` stalls).
 
 See [`law-articles/README.md`](./law-articles/README.md) for CSV/JSON exports of
 `藍絲法律_法條分群(260719更).xlsm` and a small CLI search tool.
+
+## Control design Shiny app (Form 4120SR)
+
+See [`control-design-app/README.md`](./control-design-app/README.md) for a Shiny
+assistant that designs standard internal-control points aligned with Form 4120SR
+(Significant Risk): nine cycles, three risk attributes, objectives/activities/
+frequency/owner/IUC, auto-assembled narratives, and IUC-based control splits.

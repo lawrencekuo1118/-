@@ -162,7 +162,31 @@ ui <- page_navbar(
     downloadButton("download_json", "匯出 JSON", class = "btn-sm w-100 mt-1")
   ),
   nav_panel(
-    "設計",
+    "訪談問項設計",
+    layout_columns(
+      col_widths = c(3, 9),
+      card(
+        card_header("訪談問項設計"),
+        p(class = "small text-muted mb-2",
+          strong("對齊已定稿 RCM 控制點"),
+          "產出訪談題綱。請先在「控制點設計」完成定稿；勾選元素後預覽並下載。"),
+        selectizeInput(
+          "worksheet_controls", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
+        ),
+        checkboxGroupInput("interview_elements", "訪談元素",
+                           choices = DESIGN_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS),
+        actionButton("ws_select_core_iv", "訪談核心元素", class = "btn-sm btn-primary"),
+        uiOutput("interview_status")
+      ),
+      card(
+        DTOutput("interview_table"),
+        downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-sm")
+      )
+    )
+  ),
+  nav_panel(
+    "控制點設計",
     layout_columns(
       col_widths = c(7, 5),
       card(
@@ -175,7 +199,7 @@ ui <- page_navbar(
           "：未選上一層時，下一層本來就沒有候選）。",
           tags$span(class = "text-danger", "*"), "為", strong("設計必填"),
           "；", strong("完成設計＝RCM 一列"),
-          "（公司現況／訪談／CSA 不在本 APP 範圍）。控制編號自動順編（如 EC-101-01）。"
+          "。定稿後可至「訪談問項設計」「自我評估測試步驟設計」分頁產出工作底稿。控制編號自動順編（如 EC-101-01）。"
         ),
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
@@ -361,6 +385,31 @@ ui <- page_navbar(
           nav_panel("RCM 列", DTOutput("control_table"), verbatimTextOutput("control_paragraph")),
           nav_panel("暫存佇列", DTOutput("draft_table"))
         )
+      )
+    )
+  ),
+  nav_panel(
+    "自我評估測試步驟設計",
+    layout_columns(
+      col_widths = c(3, 9),
+      card(
+        card_header("自我評估測試步驟設計"),
+        p(class = "small text-muted mb-2",
+          "在控制點定稿後，依 RCM 列設計",
+          strong("自我評估（CSA）測試步驟"),
+          "：測試程序／PBC／預期結果。"),
+        selectizeInput(
+          "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "RCM 控制點（空＝全部已定稿）")
+        ),
+        checkboxGroupInput("csa_elements", "測試步驟元素",
+                           choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
+        actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
+        uiOutput("csa_status")
+      ),
+      card(
+        DTOutput("csa_table"),
+        downloadButton("download_csa", "下載自我評估測試步驟 CSV", class = "btn-sm")
       )
     )
   ),
@@ -1022,8 +1071,8 @@ server <- function(input, output, session) {
   make_payload <- function(name = NULL) {
     build_draft_payload(
       drafts = drafts(), controls = controls(), pbc = pbc_reg(),
-      interview_elements = NULL,
-      csa_elements = NULL,
+      interview_elements = input$interview_elements,
+      csa_elements = input$csa_elements,
       form_snapshot = form_snapshot(),
       name = name
     )
@@ -1037,11 +1086,13 @@ server <- function(input, output, session) {
       persist_pbc(pbc_reg())
       refresh_pbc_choices()
     }
-    if (!is.null(payload$interview_elements) && length(payload$interview_elements)) {
-      # legacy drafts may include interview settings; ignored in design-only mode
+    if (!is.null(payload$interview_elements)) {
+      updateCheckboxGroupInput(session, "interview_elements",
+                               selected = unlist(payload$interview_elements))
     }
-    if (!is.null(payload$csa_elements) && length(payload$csa_elements)) {
-      # legacy drafts may include CSA settings; ignored in design-only mode
+    if (!is.null(payload$csa_elements)) {
+      updateCheckboxGroupInput(session, "csa_elements",
+                               selected = unlist(payload$csa_elements))
     }
     snap <- payload$form_snapshot
     if (!is.null(snap)) {
@@ -1867,10 +1918,67 @@ server <- function(input, output, session) {
     content = function(file) utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
   )
 
-  # RCM / worksheets
+  # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
     datatable(controls_to_rcm(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+  })
+  selected_worksheet_controls <- reactive({
+    cs <- controls()
+    if (!length(cs)) return(list())
+    ids <- input$worksheet_controls
+    if (!length(ids) || all(!nzchar(ids))) return(cs)
+    Filter(function(c) c$control_id %in% ids, cs)
+  })
+  selected_worksheet_controls_sa <- reactive({
+    cs <- controls()
+    if (!length(cs)) return(list())
+    ids <- input$worksheet_controls_sa
+    if (!length(ids) || all(!nzchar(ids))) return(cs)
+    Filter(function(c) c$control_id %in% ids, cs)
+  })
+  observe({
+    cs <- controls()
+    if (!length(cs)) {
+      updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "worksheet_controls_sa", choices = character(), server = TRUE)
+      return()
+    }
+    ch <- stats::setNames(
+      vapply(cs, function(x) x$control_id, ""),
+      vapply(cs, function(x) sprintf("%s｜%s", x$control_id, x$risk_name %||% ""), "")
+    )
+    updateSelectizeInput(session, "worksheet_controls", choices = ch, server = TRUE)
+    updateSelectizeInput(session, "worksheet_controls_sa", choices = ch, server = TRUE)
+  })
+  observeEvent(input$ws_select_core_iv, {
+    updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
+  })
+  observeEvent(input$ws_select_core_csa, {
+    updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
+  })
+  output$interview_status <- renderUI({
+    cs <- selected_worksheet_controls()
+    n <- length(Filter(function(c) isTRUE(c$rcm_ready$ready) || isTRUE(is_rcm_row_ready(c)$ready), cs))
+    iv <- controls_to_interview(cs, input$interview_elements, finalized_only = TRUE)
+    tags$small(class = "text-muted",
+               sprintf("已定稿 RCM %d 列 → 訪談問項 %d 則", n, nrow(iv)))
+  })
+  output$csa_status <- renderUI({
+    cs <- selected_worksheet_controls_sa()
+    csa <- controls_to_csa(cs, input$csa_elements, finalized_only = TRUE)
+    tags$small(class = "text-muted",
+               sprintf("自我評估測試步驟 %d 列（僅已定稿 RCM）", nrow(csa)))
+  })
+  output$interview_table <- renderDT({
+    datatable(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
+                                    finalized_only = TRUE),
+              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
+  })
+  output$csa_table <- renderDT({
+    datatable(controls_to_csa(selected_worksheet_controls_sa(), input$csa_elements,
+                              finalized_only = TRUE),
+              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$gap_table <- renderDT({
     datatable(detect_gaps_many(controls()), rownames = FALSE,
@@ -1915,6 +2023,22 @@ server <- function(input, output, session) {
   output$download_rcm <- downloadHandler(
     filename = function() "rcm.csv",
     content = function(file) write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")
+  )
+  output$download_interview <- downloadHandler(
+    filename = function() sprintf("interview-%s.csv", format(Sys.time(), "%Y%m%d")),
+    content = function(file) {
+      write.csv(controls_to_interview(selected_worksheet_controls(), input$interview_elements,
+                                      finalized_only = TRUE),
+                file, row.names = FALSE, fileEncoding = "UTF-8")
+    }
+  )
+  output$download_csa <- downloadHandler(
+    filename = function() sprintf("self-assessment-%s.csv", format(Sys.time(), "%Y%m%d")),
+    content = function(file) {
+      write.csv(controls_to_csa(selected_worksheet_controls_sa(), input$csa_elements,
+                                finalized_only = TRUE),
+                file, row.names = FALSE, fileEncoding = "UTF-8")
+    }
   )
 }
 

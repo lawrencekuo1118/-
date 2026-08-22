@@ -273,7 +273,8 @@ check(isTRUE(parity$ok) && parity$n_controls == 2L && parity$n_rcm_rows == 2L,
 fin_bad <- finalize_control_as_rcm_row(modifyList(d1, list(control_activity = d1$control_objective)))
 check(!isTRUE(fin_bad$ok), "未完成設計不可定稿為 RCM 列")
 
-iv <- control_to_interview(d1, elements = c("control_objective", "iuc"))
+iv <- control_to_interview(d1, elements = c("control_objective", "iuc"),
+                           include_module_rows = FALSE)
 check(nrow(iv) == 2L, "訪談可依元素過濾")
 check(all(c("控制編號", "訪談問題", "預期佐證_PBC", "受訪者回答",
             "回答架構_5W1H", "建議串接PBC") %in% names(iv)),
@@ -293,15 +294,44 @@ check(identical(DEFAULT_INTERVIEW_ELEMENTS,
       "預設焦點＝預期風險／目標／活動（深入且快速）")
 check(any(grepl("預期|實際|現況|走查|誰", iv[["訪談問題"]])),
       "訪談問題導向預期風險／目標／活動與實際執行現況")
-iv_act <- control_to_interview(d1, elements = c("control_activity"))
+iv_act <- control_to_interview(d1, elements = c("control_activity"),
+                               include_module_rows = FALSE)
 check(grepl("以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步",
             iv_act[["訪談問題"]][1]),
       "控制活動題明示人事時地物回答鏈")
-iv_mod <- control_to_interview(d1, elements = c("iuc"), modules = c("what", "who"))
+iv_mod <- control_to_interview(d1, elements = c("iuc"), modules = c("what", "who"),
+                               include_module_rows = FALSE)
 check(grepl("誰取得什麼文件或資訊\\(IUC\\)", iv_mod[["回答架構_5W1H"]][1]),
       "5W1H 模組可拼湊組建（who+what 合併）")
 check(grepl("使用者權限清冊", suggest_interview_pbc(d1)),
       "建議串接 PBC 帶出 IUC")
+# 模組化探針題：勾選模組 → 獨立列；What 串 PBC
+iv_probes <- control_to_interview(
+  d1, elements = character(), modules = c("when", "what", "how"),
+  include_module_rows = TRUE
+)
+check(nrow(iv_probes) == 3L, "5W1H 模組可拼湊為獨立探針題")
+check(all(grepl("^5w1h_", iv_probes$element_key)), "探針題 element_key 標示 5w1h_")
+check(any(grepl("PBC", iv_probes[["訪談問題"]])), "What 模組探針可串接 PBC 文案")
+reg_iv <- empty_pbc_registry()
+reg_iv <- upsert_pbc(reg_iv, list(
+  client_pbc_name = "客戶權限報表", reviewed_name = "使用者權限清冊",
+  pbc_kind = "系統表單", iuc_or_system = "使用者權限清冊", cycle = "資訊循環"
+))
+iv_pbc <- control_to_interview(
+  d1, elements = c("iuc"), modules = c("what"),
+  pbc_reg = reg_iv, pbc_ids = reg_iv$pbc_id[[1]],
+  include_module_rows = TRUE
+)
+check(any(grepl("客戶權限報表|使用者權限清冊", iv_pbc[["建議串接PBC"]])),
+      "訪談可串接 PBC 資料庫選取列")
+check(any(grepl("PBC 資料庫|客戶權限報表|使用者權限清冊",
+                iv_pbc[["訪談問題"]][iv_pbc$element_key == "5w1h_what"])),
+      "What 探針題寫入已串接 PBC")
+sc_partial <- interview_answer_scaffold(c("when", "how", "next_step"))
+check(grepl("以何頻率.*做什麼（具體控制行為）.*才會進行什麼下一步", sc_partial) &&
+        grepl("→", sc_partial),
+      "使用者可勾選模組拼湊回答架構")
 lib_iv <- library_items_as_interview_controls(list(
   list(library_id = "LIB-T", cycle = "資訊循環",
        control = list(cycle = "資訊循環", sub_process = "存取管理作業",
@@ -317,9 +347,20 @@ check(length(filter_controls_by_cycle_sub(lib_iv, cycle = "銷售循環")) == 0L
       "訪談循環篩選排除不符列")
 check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
       "訪談焦點含預期風險／目標／活動")
-check(grepl("基本資料", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
-        grepl("interview_cycle", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
-      "訪談版面含基本資料／循環選取（對齊風險控制點設計）")
+check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
+      "訪談與風險控制點設計皆為「引導（依序選取）」左欄標題")
+app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
+        grepl("interview_design_groups", app_txt) &&
+        grepl("rcm_design_groups", app_txt) &&
+        grepl('accordion_panel\\(\\s*"基本資料"', app_txt) &&
+        grepl("interview_guide_banner", app_txt) &&
+        grepl("interview_live_box", app_txt) &&
+        grepl("interview_paragraph", app_txt),
+      "訪談版面與風險控制點設計趨於一致（7/5、引導、accordion、右側預覽）")
+check(grepl("套用 IUC／PBC 命名", app_txt),
+      "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))
@@ -410,12 +451,18 @@ check(nrow(csa_default) >= 1L && identical(as.character(csa_default[["控制現�
       "無自訂情境時使用預設現況一組")
 
 # Phase order evidence: interview columns ready independently of CSA
-check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS)) == 3L,
+check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS,
+                                include_module_rows = FALSE)) == 3L,
       "深入且快速預設產出風險／目標／活動三題")
 check(nrow(control_to_interview(
-  fin_ok, unique(c(DEFAULT_INTERVIEW_ELEMENTS, INTERVIEW_WALKTHROUGH_EXTRA))
+  fin_ok, unique(c(DEFAULT_INTERVIEW_ELEMENTS, INTERVIEW_WALKTHROUGH_EXTRA)),
+  include_module_rows = FALSE
 )) >= 5,
       "完整走查可產出擴充題綱")
+check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS,
+                                modules = DEFAULT_INTERVIEW_5W1H,
+                                include_module_rows = TRUE)) == 8L,
+      "焦點三題＋五個 5W1H 模組探針可拼湊")
 
 # PBC
 reg <- empty_pbc_registry()

@@ -64,7 +64,7 @@ INTERVIEW_ANSWER_SCAFFOLD <- paste0(
   "才會進行什麼下一步"
 )
 
-# 可勾選之 5W1H 模組（拼湊組建；預設組合成上列鏈）
+# 可勾選之 5W1H 模組（拼湊組建；預設組合成上列鏈；What 可串 PBC）
 INTERVIEW_5W1H_MODULES <- c(
   when = "以何頻率",
   who = "誰（執行／覆核）",
@@ -74,6 +74,15 @@ INTERVIEW_5W1H_MODULES <- c(
 )
 
 DEFAULT_INTERVIEW_5W1H <- names(INTERVIEW_5W1H_MODULES)
+
+# 各模組對應之獨立探針題（可依勾選拼湊成題綱列）
+INTERVIEW_5W1H_PROBE_LABELS <- c(
+  when = "模組｜以何頻率",
+  who = "模組｜誰",
+  what = "模組｜IUC／PBC",
+  how = "模組｜具體控制行為",
+  next_step = "模組｜下一步"
+)
 
 INTERVIEW_SOURCE_CHOICES <- c(
   "已定稿 RCM（實際設計列）" = "rcm",
@@ -745,36 +754,99 @@ interview_people_place_suffix <- function(modules = DEFAULT_INTERVIEW_5W1H) {
   paste0("（答案必含：", interview_answer_scaffold(modules), "）")
 }
 
-suggest_interview_pbc <- function(ctrl, pbc_reg = NULL) {
+# 依勾選模組順序拼湊探針題（可串 PBC 於 what）
+interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
+                                      pbc_hint = "") {
+  mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
+  if (!length(mods)) return(list())
+  act <- nzchar_or(ctrl$control_activity, "該控制活動")
+  obj <- nzchar_or(ctrl$control_objective, "該控制目標")
+  risk_label <- nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")
+  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC）")
+  freq <- nzchar_or(resolve_control_frequency(ctrl$nature, ctrl$frequency), "所訂頻率")
+  owner <- nzchar_or(ctrl$responsible_unit, "負責單位")
+  outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡")
+  pbc_txt <- trimws(as.character(pbc_hint %||% ""))
+  if (!nzchar(pbc_txt)) pbc_txt <- "（請自 PBC 資料庫選取）"
+  probes <- list(
+    when = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["when"]]),
+      question = sprintf(
+        "【以何頻率】就預期活動「%s」（對應風險「%s」）：實際以何頻率／何時執行？設計頻率「%s」是否一致？",
+        act, risk_label, freq
+      ),
+      evidence = "簽核紀錄／系統 log／排程"
+    ),
+    who = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["who"]]),
+      question = sprintf(
+        "【誰】「%s」由「%s」的誰執行、誰覆核？有無代理／交接？",
+        act, owner
+      ),
+      evidence = "權責表／簽核軌跡"
+    ),
+    what = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["what"]]),
+      question = sprintf(
+        "【取得什麼文件或資訊(IUC)】執行時取得哪些文件／系統資訊？設計 IUC「%s」。請對照 PBC 資料庫：%s",
+        iuc, pbc_txt
+      ),
+      evidence = paste(iuc, pbc_txt, sep = "；")
+    ),
+    how = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["how"]]),
+      question = sprintf(
+        "【做什麼（具體控制行為）】為達成目標「%s」，實際做哪些具體步驟／判斷／比對？",
+        obj
+      ),
+      evidence = "操作示範／逐步軌跡"
+    ),
+    next_step = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["next_step"]]),
+      question = sprintf(
+        "【才會進行什麼下一步】完成「%s」後產出／交付給誰、例外如何關閉？預期產出「%s」。",
+        act, outp
+      ),
+      evidence = outp
+    )
+  )
+  probes[mods]
+}
+
+suggest_interview_pbc <- function(ctrl, pbc_reg = NULL, pbc_ids = NULL) {
+  linked <- ""
+  if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && length(pbc_ids)) {
+    linked <- tryCatch(format_pbc_for_inputs(pbc_reg, pbc_ids), error = function(e) "")
+  }
   iuc <- trimws(as.character(ctrl$related_system %||% ctrl$iuc_or_system %||% ""))
   inputs <- trimws(as.character(ctrl$inputs %||% ""))
   outp <- trimws(as.character(ctrl$related_document %||% ctrl$outputs %||% ""))
   base <- unique(c(iuc, inputs, outp))
   base <- base[nzchar(base)]
-  if (!length(base)) return("（待對照 PBC 資料庫）")
-  label <- paste(base, collapse = "；")
-  if (is.null(pbc_reg) || !is.data.frame(pbc_reg) || !nrow(pbc_reg)) {
-    return(label)
-  }
-  # Match reviewed_name / client_pbc_name / iuc_or_system
+  if (!length(base) && !nzchar(trimws(linked))) return("（待對照 PBC 資料庫）")
+  label <- if (length(base)) paste(base, collapse = "；") else ""
   hits <- character()
-  for (nm in base) {
-    rows <- pbc_reg[
-      grepl(nm, as.character(pbc_reg$reviewed_name %||% ""), fixed = TRUE) |
-        grepl(nm, as.character(pbc_reg$client_pbc_name %||% ""), fixed = TRUE) |
-        grepl(nm, as.character(pbc_reg$iuc_or_system %||% ""), fixed = TRUE),
-      ,
-      drop = FALSE
-    ]
-    if (nrow(rows)) {
-      hits <- c(hits, sprintf(
-        "%s→%s",
-        as.character(rows$client_pbc_name[[1]] %||% ""),
-        as.character(rows$reviewed_name[[1]] %||% nm)
-      ))
+  if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && nrow(pbc_reg) && length(base)) {
+    for (nm in base) {
+      rows <- pbc_reg[
+        grepl(nm, as.character(pbc_reg$reviewed_name %||% ""), fixed = TRUE) |
+          grepl(nm, as.character(pbc_reg$client_pbc_name %||% ""), fixed = TRUE) |
+          grepl(nm, as.character(pbc_reg$iuc_or_system %||% ""), fixed = TRUE),
+        ,
+        drop = FALSE
+      ]
+      if (nrow(rows)) {
+        hits <- c(hits, sprintf(
+          "%s→%s",
+          as.character(rows$client_pbc_name[[1]] %||% ""),
+          as.character(rows$reviewed_name[[1]] %||% nm)
+        ))
+      }
     }
   }
-  if (length(hits)) paste(unique(c(label, hits)), collapse = "｜") else label
+  parts <- unique(c(label, hits, if (nzchar(trimws(linked))) linked else character()))
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) "（待對照 PBC 資料庫）" else paste(parts, collapse = "｜")
 }
 
 # 依循環／子作業篩選（深入且快速鎖定範圍）
@@ -974,24 +1046,34 @@ empty_interview_df <- function() {
 
 control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
                                  modules = DEFAULT_INTERVIEW_5W1H,
-                                 pbc_reg = NULL) {
+                                 pbc_reg = NULL,
+                                 pbc_ids = NULL,
+                                 include_module_rows = TRUE) {
   bank <- interview_element_bank(ctrl, modules = modules)
   elements <- intersect(as.character(elements %||% character()), names(bank))
-  if (!length(elements)) return(empty_interview_df())
+  mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
   cid <- derive_control_id(ctrl, 1L)
-  scaffold <- interview_answer_scaffold(modules)
-  pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg)
-  do.call(rbind, lapply(seq_along(elements), function(i) {
-    key <- elements[[i]]
+  scaffold <- interview_answer_scaffold(mods)
+  pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg, pbc_ids = pbc_ids)
+  meta <- list(
+    `控制編號` = cid,
+    `循環` = ctrl$cycle %||% "",
+    `子作業` = paste(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "", sep = " "),
+    `風險因素` = nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, ""),
+    `控制目標` = trimws(ctrl$control_objective %||% ""),
+    `控制活動` = trimws(ctrl$control_activity %||% "")
+  )
+  rows <- list()
+  for (key in elements) {
     item <- bank[[key]]
-    data.frame(
-      `控制編號` = cid,
-      `循環` = ctrl$cycle %||% "",
-      `子作業` = paste(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "", sep = " "),
-      `風險因素` = nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, ""),
-      `控制目標` = trimws(ctrl$control_objective %||% ""),
-      `控制活動` = trimws(ctrl$control_activity %||% ""),
-      `題號` = i,
+    rows[[length(rows) + 1L]] <- data.frame(
+      `控制編號` = meta$`控制編號`,
+      `循環` = meta$`循環`,
+      `子作業` = meta$`子作業`,
+      `風險因素` = meta$`風險因素`,
+      `控制目標` = meta$`控制目標`,
+      `控制活動` = meta$`控制活動`,
+      `題號` = length(rows) + 1L,
       `元素` = item$element,
       element_key = key,
       `訪談問題` = item$question,
@@ -1015,21 +1097,54 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
-  }))
+  }
+  if (isTRUE(include_module_rows) && length(mods)) {
+    probes <- interview_5w1h_probe_bank(ctrl, modules = mods, pbc_hint = pbc_hint)
+    for (key in names(probes)) {
+      item <- probes[[key]]
+      rows[[length(rows) + 1L]] <- data.frame(
+        `控制編號` = meta$`控制編號`,
+        `循環` = meta$`循環`,
+        `子作業` = meta$`子作業`,
+        `風險因素` = meta$`風險因素`,
+        `控制目標` = meta$`控制目標`,
+        `控制活動` = meta$`控制活動`,
+        `題號` = length(rows) + 1L,
+        `元素` = item$element,
+        element_key = paste0("5w1h_", key),
+        `訪談問題` = paste0(item$question, interview_people_place_suffix(mods)),
+        `回答架構_5W1H` = scaffold,
+        `設計摘要` = INTERVIEW_5W1H_MODULES[[key]],
+        `預期佐證_PBC` = item$evidence %||% "",
+        `建議串接PBC` = pbc_hint,
+        `受訪者回答` = "",
+        `佐證取得` = "",
+        `結論` = "",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (!length(rows)) return(empty_interview_df())
+  do.call(rbind, rows)
 }
 
 # Only finalized RCM rows (設計完成＝RCM一列) feed interview by default
 controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENTS,
                                   finalized_only = TRUE,
                                   modules = DEFAULT_INTERVIEW_5W1H,
-                                  pbc_reg = NULL) {
+                                  pbc_reg = NULL,
+                                  pbc_ids = NULL,
+                                  include_module_rows = TRUE) {
   if (!length(controls)) return(empty_interview_df())
   if (isTRUE(finalized_only)) {
     controls <- Filter(is_control_finalized_for_rcm, controls)
   }
   if (!length(controls)) return(empty_interview_df())
   do.call(rbind, lapply(controls, control_to_interview,
-                        elements = elements, modules = modules, pbc_reg = pbc_reg))
+                        elements = elements, modules = modules,
+                        pbc_reg = pbc_reg, pbc_ids = pbc_ids,
+                        include_module_rows = include_module_rows))
 }
 
 # ---- CSA test-step worksheet (Phase-2: after interview + RCM) ----

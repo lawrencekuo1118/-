@@ -666,8 +666,10 @@ check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
 check(!grepl('selectInput\\(\\s*"cycle".*基本資料|accordion_panel\\(\\s*"基本資料"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
       "基本資料 accordion 內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
-check(grepl("範本套用", app_src) && grepl("未套用範本", app_src),
-      "範本庫頁籤含可跳過套用設定")
+check(grepl("範本套用", app_src) && grepl("未套用範本", app_src) &&
+        !grepl("從範本庫套用（可跳過）", app_src) &&
+        grepl("lib-apply-card", app_src),
+      "範本庫頁籤含可跳過套用設定（無重疊舊標題）")
 check(!grepl('actionButton\\(\\s*"csa_scenario_dup"', app_src) &&
         !grepl('actionButton\\(\\s*"save_to_lib"', app_src) &&
         !grepl('actionButton\\(\\s*"lib_add_selected_control"', app_src) &&

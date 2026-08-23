@@ -72,7 +72,8 @@ ui <- page_navbar(
     base_font = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Segoe UI", sans-serif',
     "font-size-base" = "0.9rem"
   ),
-  header = tags$script(HTML(sprintf("
+  header = tags$head(
+    tags$script(HTML("
     Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
       var el = document.getElementById('significant_account');
       if (!el) return;
@@ -115,63 +116,67 @@ ui <- page_navbar(
       el.disabled = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
     });
-    document.addEventListener('DOMContentLoaded', function() {
-      var style = document.createElement('style');
-      style.textContent = [
-        ':root { --brand-blue: %s; --brand-green: %s; --brand-black: %s; --brand-white: %s; }',
-        '.navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }',
-        '.navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }',
-        '.navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%%; background: var(--brand-green); vertical-align: middle; }',
-        '.navbar .nav-link { color: rgba(255,255,255,0.82) !important; }',
-        '.navbar .nav-link:hover, .navbar .nav-link.active { color: var(--brand-green) !important; }',
-        '.bslib-sidebar-layout > .sidebar { background: var(--brand-white); border-right: 1px solid #E5E5E5; }',
-        '.card { border-color: #E5E5E5; }',
-        '.card-header { background: var(--brand-white); border-bottom: 2px solid var(--brand-green); color: var(--brand-blue); font-weight: 600; }',
-        '.btn-primary { background-color: var(--brand-blue); border-color: var(--brand-blue); }',
-        '.btn-primary:hover, .btn-primary:focus { background-color: #00205B; border-color: #00205B; }',
-        '.btn-success { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); font-weight: 600; }',
-        '.btn-success:hover, .btn-success:focus { background-color: #6FA01E; border-color: #6FA01E; color: var(--brand-black); }',
-        '.btn-outline-success { color: var(--brand-green); border-color: var(--brand-green); }',
-        '.btn-outline-success:hover { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); }',
-        '.btn-outline-primary { color: var(--brand-blue); border-color: var(--brand-blue); }',
-        '.btn-outline-primary:hover { background-color: var(--brand-blue); color: var(--brand-white); }',
-        '.accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }',
-        '.accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }',
-        '.form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }',
-        '.alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }',
-        '.alert-info { background-color: rgba(0,46,130,0.08); border-color: var(--brand-blue); color: var(--brand-blue); }',
-        '.text-danger { color: #C41E3A !important; }',
-        'a { color: var(--brand-blue); }',
-        'a:hover { color: var(--brand-green); }',
-        '.lib-options-section .shiny-input-container { margin-bottom: 0.75rem; }',
-        '.lib-options-section .form-check { margin-bottom: 0.75rem; }',
-        '.lib-options-actions { clear: both; width: 100%%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
-        '.sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }',
-        '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }',
-        '.home-hero { background: linear-gradient(135deg, #000000 0%%, #002E82 70%%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); }',
-        '.home-hero h2 { color: #fff; font-weight: 700; margin: 0 0 0.5rem 0; }',
-        '.home-hero p { color: rgba(255,255,255,0.88); margin: 0; }',
-        '.home-section h5 { color: var(--brand-blue); font-weight: 700; border-left: 4px solid var(--brand-green); padding-left: 0.6rem; margin-bottom: 0.75rem; }',
-        '.home-steps { list-style: none; padding-left: 0; counter-reset: step; }',
-        '.home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }',
-        '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
-        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; overflow: visible !important; max-height: none !important; }',
-        '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
-        '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }',
-        /* 首頁：整頁自然伸展，各頁籤用途一次顯示全部方框（無區塊內捲動） */
-        '.tab-pane[data-value=\"首頁\"] { height: auto !important; max-height: none !important; overflow: visible !important; display: block !important; }',
-        '.tab-pane[data-value=\"首頁\"] .html-fill-container, .tab-pane[data-value=\"首頁\"] .html-fill-item { height: auto !important; flex: none !important; overflow: visible !important; min-height: 0 !important; }',
-        '.home-section, .home-section > .card-body { overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important; }',
-        /* 各區塊一次顯示全部內容：禁止卡片／分頁內部上下捲動 */
-        '.bslib-card, .card, .card-body, .accordion-body, .tab-content, .tab-pane { overflow: visible !important; max-height: none !important; height: auto !important; }',
-        '.bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }',
-        '.card-header { white-space: normal; overflow: visible; line-height: 1.35; }',
-        /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
-        '.navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }'
-      ].join('\\n');
-      document.head.appendChild(style);
-    });
-  ", BRAND_BLUE, BRAND_GREEN, BRAND_BLACK, BRAND_WHITE))),
+  ")),
+    tags$style(HTML(paste0("
+      :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; }
+      .navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }
+      .navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }
+      .navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%; background: var(--brand-green); vertical-align: middle; }
+      .navbar .nav-link { color: rgba(255,255,255,0.82) !important; }
+      .navbar .nav-link:hover, .navbar .nav-link.active { color: var(--brand-green) !important; }
+      .bslib-sidebar-layout > .sidebar { background: var(--brand-white); border-right: 1px solid #E5E5E5; }
+      .card { border-color: #E5E5E5; }
+      .card-header { background: var(--brand-white); border-bottom: 2px solid var(--brand-green); color: var(--brand-blue); font-weight: 600; white-space: normal; overflow: visible; line-height: 1.35; }
+      .btn-primary { background-color: var(--brand-blue); border-color: var(--brand-blue); }
+      .btn-primary:hover, .btn-primary:focus { background-color: #00205B; border-color: #00205B; }
+      .btn-success { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); font-weight: 600; }
+      .btn-success:hover, .btn-success:focus { background-color: #6FA01E; border-color: #6FA01E; color: var(--brand-black); }
+      .btn-outline-success { color: var(--brand-green); border-color: var(--brand-green); }
+      .btn-outline-success:hover { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); }
+      .btn-outline-primary { color: var(--brand-blue); border-color: var(--brand-blue); }
+      .btn-outline-primary:hover { background-color: var(--brand-blue); color: var(--brand-white); }
+      .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
+      .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
+      .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
+      .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }
+      .alert-info { background-color: rgba(0,46,130,0.08); border-color: var(--brand-blue); color: var(--brand-blue); }
+      .text-danger { color: #C41E3A !important; }
+      a { color: var(--brand-blue); }
+      a:hover { color: var(--brand-green); }
+      .lib-options-section .shiny-input-container { margin-bottom: 0.75rem; }
+      .lib-options-section .form-check { margin-bottom: 0.75rem; }
+      .lib-options-actions { clear: both; width: 100%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }
+      .sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }
+      .sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }
+      /* 範本套用：避免標題／標籤／選單字句重疊 */
+      .lib-apply-card .card-header { white-space: normal; overflow: visible; line-height: 1.4; padding: 0.75rem 1rem; }
+      .lib-apply-card .card-body { overflow: visible !important; }
+      .lib-apply-card .shiny-input-container { margin-bottom: 1rem !important; clear: both; width: 100%; }
+      .lib-apply-card label { display: block; margin-bottom: 0.35rem; white-space: normal; }
+      .lib-apply-card .form-select, .lib-apply-card .form-control { width: 100%; }
+      .lib-apply-card .selectize-control { margin-bottom: 0; }
+      .lib-apply-card .selectize-dropdown { z-index: 1060 !important; }
+      .home-hero { background: linear-gradient(135deg, #000000 0%, #002E82 70%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); }
+      .home-hero h2 { color: #fff; font-weight: 700; margin: 0 0 0.5rem 0; }
+      .home-hero p { color: rgba(255,255,255,0.88); margin: 0; }
+      .home-section h5 { color: var(--brand-blue); font-weight: 700; border-left: 4px solid var(--brand-green); padding-left: 0.6rem; margin-bottom: 0.75rem; }
+      .home-steps { list-style: none; padding-left: 0; counter-reset: step; }
+      .home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }
+      .home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+      .home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; overflow: visible !important; max-height: none !important; }
+      .home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }
+      .home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }
+      /* 首頁：整頁自然伸展，各頁籤用途一次顯示全部方框（無區塊內捲動） */
+      .tab-pane[data-value=\"首頁\"] { height: auto !important; max-height: none !important; overflow: visible !important; display: block !important; }
+      .tab-pane[data-value=\"首頁\"] .html-fill-container, .tab-pane[data-value=\"首頁\"] .html-fill-item { height: auto !important; flex: none !important; overflow: visible !important; min-height: 0 !important; }
+      .home-section, .home-section > .card-body { overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important; }
+      /* 各區塊一次顯示全部內容：禁止卡片／分頁內部上下捲動 */
+      .bslib-card, .card, .card-body, .accordion-body, .tab-content, .tab-pane { overflow: visible !important; max-height: none !important; height: auto !important; }
+      .bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }
+      /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
+      .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
+    ")))
+  ),
   # 首頁不進 fillable（避免各頁籤用途被壓成區塊內捲動）；其餘頁可填滿視窗
   fillable = c(
     "訪談問項設計", "風險控制點設計", "控制點測試設計",
@@ -611,19 +616,18 @@ ui <- page_navbar(
   nav_panel(
     "範本庫",
     card(
+      class = "lib-apply-card",
       card_header("範本套用"),
-      p(class = "small text-muted mb-2",
+      p(class = "small text-muted mb-3",
         "選用既有範本填入「風險控制點設計」；可不選、直接於設計頁建立。"),
-      layout_columns(
-        col_widths = c(5, 7),
-        textInput("lib_query", "搜尋", value = "", placeholder = "搜尋標題／風險／控制編號…"),
-        selectInput(
-          "lib_pick", "選擇範本",
-          choices = c("未套用範本…" = "")
-        )
+      textInput("lib_query", "搜尋", value = "",
+                placeholder = "搜尋標題／風險／控制編號…"),
+      selectInput(
+        "lib_pick", "選擇範本",
+        choices = c("未套用範本…" = "")
       ),
       div(
-        class = "d-flex gap-1 flex-wrap mb-2",
+        class = "d-flex gap-1 flex-wrap mb-2 mt-1",
         actionButton("apply_lib", "套用選取範本", class = "btn-sm btn-primary"),
         actionButton("apply_lib_selected_row", "套用表格列", class = "btn-sm btn-outline-primary")
       ),
@@ -786,7 +790,7 @@ server <- function(input, output, session) {
       ))
     }
     card(
-      card_header("高權：累積制通用範本庫 — 寫入"),
+      card_header("高權：範本寫入"),
       div(
         class = "lib-options-section",
         uiOutput("lib_stats_box"),

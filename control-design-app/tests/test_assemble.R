@@ -361,6 +361,15 @@ check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
       "訪談版面與風險控制點設計趨於一致（7/5、引導、accordion、右側預覽）")
 check(grepl("套用 IUC／PBC 命名", app_txt),
       "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
+check(!grepl("interview_source", app_txt) &&
+        !grepl("① 題綱來源", app_txt) &&
+        !grepl("已定稿 RCM（實際設計列）", app_txt) &&
+        !grepl("範本庫預期（風險／目標／活動）", app_txt) &&
+        !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm_csa.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        grepl("interview_cycle", app_txt) &&
+        grepl("interview_sub", app_txt) &&
+        grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt),
+      "訪談：選循環後直接選子作業（無題綱來源 RCM／範本庫）")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))

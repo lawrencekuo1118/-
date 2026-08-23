@@ -84,11 +84,6 @@ INTERVIEW_5W1H_PROBE_LABELS <- c(
   next_step = "模組｜下一步"
 )
 
-INTERVIEW_SOURCE_CHOICES <- c(
-  "已定稿 RCM（實際設計列）" = "rcm",
-  "範本庫預期（風險／目標／活動）" = "library"
-)
-
 # 自我評估／控制點測試設計（控制點定稿後）
 DEFAULT_CSA_ELEMENTS <- c(
   "control_objective", "control_activity", "steps",

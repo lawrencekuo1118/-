@@ -291,26 +291,21 @@ ui <- page_navbar(
         card_header("訪談引導（依序選取）"),
         uiOutput("interview_status"),
         uiOutput("interview_guide_banner"),
-        # ①～④ 對齊風險控制點設計「引導選取」置於 accordion 上方
-        radioButtons(
-          "interview_source", "① 題綱來源",
-          choices = INTERVIEW_SOURCE_CHOICES,
-          selected = "rcm", inline = TRUE
-        ),
+        # ①循環 → ②子作業（內建建議候選，毋須選題綱來源／匯入底稿）
         selectInput(
           "interview_cycle", NULL,
-          choices = c("② 選擇循環…" = "", CYCLES_NINE_CHOICES),
+          choices = c("① 選擇循環…" = "", CYCLES_NINE_CHOICES),
           selected = ""
         ),
         selectInput(
           "interview_sub", NULL,
-          choices = c("③ 選擇子作業…" = ""),
+          choices = c("② 選擇子作業…" = ""),
           selected = ""
         ),
         selectizeInput(
           "worksheet_controls", NULL,
           choices = NULL, multiple = TRUE,
-          options = list(placeholder = "④ 選擇控制點（可空＝範圍內全部）")
+          options = list(placeholder = "③ 選擇風險／控制點（可空＝該子作業下全部建議）")
         ),
         div(
           class = "d-flex gap-1 flex-wrap mb-2",
@@ -323,34 +318,11 @@ ui <- page_navbar(
         tags$hr(),
         accordion(
           id = "interview_design_groups",
-          open = c("基本資料", "訪談焦點", "5W1H／PBC"),
-          accordion_panel(
-            "基本資料",
-            p(class = "small text-muted mb-2",
-              "訪談範圍之流程定位（與上方引導選取同步；版面同「風險控制點設計」基本資料）。"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("interview_cycle_code", "循環編號", value = "",
-                        placeholder = "例：EC"),
-              selectInput(
-                "interview_cycle_echo", "循環名稱",
-                choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                selected = ""
-              )
-            ),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("interview_sub_id_echo", "子作業編號", value = "",
-                        placeholder = "例：EC-101"),
-              textInput("interview_sub_name_echo", "子作業名稱", value = "",
-                        placeholder = "例：存取管理作業")
-            ),
-            uiOutput("interview_scope_summary")
-          ),
+          open = c("訪談焦點", "5W1H／PBC"),
           accordion_panel(
             "訪談焦點",
             p(class = "small text-muted mb-2",
-              "對齊風險辨識／控制設計主軸：深入且快速了解預期風險與預期控制目標／活動。"),
+              "選定循環／子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
             checkboxGroupInput(
               "interview_elements", NULL,
               choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
@@ -359,7 +331,7 @@ ui <- page_navbar(
           accordion_panel(
             "5W1H／PBC",
             p(class = "small text-muted mb-2",
-              "模組化拼湊回答架構與探針題；可套用 PBC 資料庫命名（同風險控制點設計之 IUC／PBC）。"),
+              "模組化拼湊回答架構與探針題；可套用 PBC 資料庫命名。"),
             checkboxGroupInput(
               "interview_5w1h", NULL,
               choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
@@ -959,14 +931,7 @@ server <- function(input, output, session) {
   }
 
   interview_worksheet <- function() {
-    src <- input$interview_source %||% "rcm"
-    if (identical(src, "library")) {
-      cs <- library_items_as_interview_controls(lib())
-      finalized_only <- FALSE
-    } else {
-      cs <- Filter(is_control_finalized_for_rcm, controls())
-      finalized_only <- TRUE
-    }
+    cs <- interview_pool_controls()
     cs <- filter_controls_by_cycle_sub(
       cs,
       cycle = input$interview_cycle %||% "",
@@ -980,7 +945,7 @@ server <- function(input, output, session) {
     pbc_ids <- input$interview_pbc_link %||% character()
     controls_to_interview(
       cs, input$interview_elements,
-      finalized_only = finalized_only,
+      finalized_only = FALSE,
       modules = mods,
       pbc_reg = pbc_reg(),
       pbc_ids = pbc_ids,
@@ -1007,16 +972,21 @@ server <- function(input, output, session) {
     cy <- input$interview_cycle %||% ""
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先於引導選取②循環。"),
-                 "選定後載入子作業／控制點；下方「基本資料」會同步顯示。"))
+                 tags$strong("請先選擇①循環。"),
+                 "選定後即可直接選該循環建議之子作業（毋須選題綱來源或匯入底稿）。"))
     }
-    pool <- interview_pool_controls()
-    scoped <- filter_controls_by_cycle_sub(pool, cycle = cy, sub_key = "")
-    n_sub <- length(cascade_sub_process_choices(scoped))
-    src <- if (identical(input$interview_source %||% "rcm", "library")) "範本庫預期" else "已定稿 RCM"
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    n_sub <- length(cascade_sub_process_choices(rows))
+    sk <- input$interview_sub %||% ""
+    if (!nzchar(sk)) {
+      return(div(class = "alert alert-success py-1 mb-2 small",
+                 sprintf("「%s」已載入 %d 個建議子作業，請直接選②。", cy, n_sub)))
+    }
+    scoped <- filter_controls_by_cycle_sub(
+      interview_pool_controls(), cycle = cy, sub_key = sk
+    )
     div(class = "alert alert-success py-1 mb-2 small",
-        sprintf("引導已載入：%s「%s」有 %d 個子作業選項（範圍內控制點 %d）。請續選③子作業／④控制點。",
-                src, cy, n_sub, length(scoped)))
+        sprintf("已選子作業 → 建議控制點／風險 %d 筆（③可空＝全部）。", length(scoped)))
   })
 
   output$interview_live_box <- renderUI({
@@ -1033,70 +1003,42 @@ server <- function(input, output, session) {
     )
   })
 
-  output$interview_scope_summary <- renderUI({
-    ids <- input$worksheet_controls %||% character()
-    tags$small(
-      class = "text-muted",
-      if (!length(ids) || all(!nzchar(ids))) "控制點：範圍內全部"
-      else sprintf("已選控制點 %d 個：%s", length(ids), paste(ids, collapse = "、"))
-    )
-  })
-
   output$interview_paragraph <- renderText({
     iv <- interview_worksheet()
-    if (!nrow(iv)) return("（尚無訪談題綱；請完成引導選取）")
+    if (!nrow(iv)) return("（尚無訪談題綱；請先選①循環與②子作業）")
     lines <- sprintf("%s. [%s] %s", iv[["題號"]], iv[["元素"]], iv[["訪談問題"]])
     paste(utils::head(lines, 12), collapse = "\n")
   })
 
-  # 引導選取 → 基本資料 accordion 同步（對齊風險控制點設計）
   observeEvent(input$interview_cycle, {
-    cy <- input$interview_cycle %||% ""
-    updateSelectInput(session, "interview_cycle_echo", selected = cy)
-    updateTextInput(session, "interview_cycle_code",
-                    value = if (nzchar(cy)) cycle_code_for(cy) else "")
     refresh_pbc_choices()
   }, ignoreNULL = FALSE)
 
-  observeEvent(input$interview_cycle_echo, {
-    cy <- input$interview_cycle_echo %||% ""
-    if (!identical(cy, input$interview_cycle %||% "")) {
-      updateSelectInput(session, "interview_cycle", selected = cy)
-    }
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$interview_sub, {
-    sk <- input$interview_sub %||% ""
-    if (!nzchar(sk)) {
-      updateTextInput(session, "interview_sub_id_echo", value = "")
-      updateTextInput(session, "interview_sub_name_echo", value = "")
-      return()
-    }
-    sp <- parse_sub_process_key(sk)
-    updateTextInput(session, "interview_sub_id_echo", value = sp$id %||% "")
-    updateTextInput(session, "interview_sub_name_echo", value = sp$name %||% "")
-  }, ignoreNULL = FALSE)
-
+  # 一律以內建＋使用者庫候選為訪談來源（選循環→直接選子作業）
   interview_pool_controls <- reactive({
-    src <- input$interview_source %||% "rcm"
-    if (identical(src, "library")) {
-      library_items_as_interview_controls(cascade_source_library(lib()))
-    } else {
-      Filter(is_control_finalized_for_rcm, controls())
-    }
+    library_items_as_interview_controls(cascade_source_library(lib()))
   })
 
   observe({
-    pool <- interview_pool_controls()
     cy <- input$interview_cycle %||% ""
-    scoped <- filter_controls_by_cycle_sub(pool, cycle = cy, sub_key = "")
-    ch_sub <- if (length(scoped)) cascade_sub_process_choices(scoped) else character()
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "interview_sub",
+                        choices = c("② 請先選擇①循環…" = ""), selected = "")
+      return()
+    }
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    ch_sub <- cascade_sub_process_choices(rows)
+    label0 <- if (length(ch_sub)) {
+      sprintf("② 選擇子作業…（本循環建議 %d）", length(ch_sub))
+    } else {
+      "② 選擇子作業…（本循環暫無建議）"
+    }
     updateSelectInput(
       session, "interview_sub",
-      choices = c("③ 選擇子作業…" = "", ch_sub),
+      choices = c(stats::setNames("", label0), ch_sub),
       selected = {
         cur <- input$interview_sub %||% ""
-        if (nzchar(cur) && cur %in% ch_sub) cur else ""
+        if (nzchar(cur) && cur %in% unname(ch_sub)) cur else ""
       }
     )
   })
@@ -2663,7 +2605,6 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
   })
   observeEvent(input$ws_reset_iv, {
-    updateRadioButtons(session, "interview_source", selected = "rcm")
     updateSelectInput(session, "interview_cycle", selected = "")
     updateSelectInput(session, "interview_sub", selected = "")
     updateSelectizeInput(session, "worksheet_controls", selected = character())
@@ -2671,16 +2612,11 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
     updateCheckboxInput(session, "interview_include_modules", value = TRUE)
-    updateTextInput(session, "interview_cycle_code", value = "")
-    updateSelectInput(session, "interview_cycle_echo", selected = "")
-    updateTextInput(session, "interview_sub_id_echo", value = "")
-    updateTextInput(session, "interview_sub_name_echo", value = "")
   })
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
   })
   output$interview_status <- renderUI({
-    src <- input$interview_source %||% "rcm"
     pool <- interview_pool_controls()
     scoped <- filter_controls_by_cycle_sub(
       pool,
@@ -2689,21 +2625,30 @@ server <- function(input, output, session) {
     )
     iv <- interview_worksheet()
     steps <- c(
-      sprintf("①來源：%s", if (identical(src, "library")) "範本庫" else "RCM"),
-      sprintf("②循環：%s", if (nzchar(input$interview_cycle %||% "")) "✓" else "○"),
-      sprintf("③子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
-      sprintf("④控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
+      sprintf("①循環：%s", if (nzchar(input$interview_cycle %||% "")) "✓" else "○"),
+      sprintf("②子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
+      sprintf("③風險／控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
     )
-    if (!length(scoped)) {
-      msg <- if (identical(src, "library")) {
-        "範本庫尚無列；請先匯入或於風險控制點定稿後累積範本。"
-      } else {
-        "尚無已定稿控制點；請先完成「風險控制點設計」定稿，或改選「範本庫預期」。"
-      }
+    if (!nzchar(input$interview_cycle %||% "")) {
       return(tagList(
         tags$small(class = "text-muted", paste(steps, collapse = "｜")),
         tags$br(),
-        tags$small(class = "text-warning", msg)
+        tags$small(class = "text-warning", "請先選①循環，即可直接選該循環建議之子作業。")
+      ))
+    }
+    if (!nzchar(input$interview_sub %||% "")) {
+      return(tagList(
+        tags$small(class = "text-muted", paste(steps, collapse = "｜")),
+        tags$br(),
+        tags$small(class = "text-muted", "請選②子作業（內建建議已就緒）。")
+      ))
+    }
+    if (!length(scoped)) {
+      return(tagList(
+        tags$small(class = "text-muted", paste(steps, collapse = "｜")),
+        tags$br(),
+        tags$small(class = "text-warning",
+                   "此子作業尚無建議列；可改選其他子作業，或至「風險控制點設計」新增後再訪談。")
       ))
     }
     tagList(

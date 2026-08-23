@@ -311,11 +311,11 @@ ui <- page_navbar(
             strong("參數庫"),
             "查詢／套用表單；新增刪除／重建時才需高權登入。"),
         div(class = "home-tab-card",
-            strong("PBC資料庫"),
-            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
-        div(class = "home-tab-card",
             strong("RCM"),
-            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
+            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。"),
+        div(class = "home-tab-card",
+            strong("PBC資料庫"),
+            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。")
       )
     )
   ),
@@ -728,6 +728,18 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
+    "RCM",
+    card(
+      uiOutput("rcm_count_box"),
+      uiOutput("rcm_latest_saved"),
+      DTOutput("rcm_table"),
+      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
+      tags$hr(),
+      tags$strong("缺漏／缺文件／控制缺失"),
+      DTOutput("gap_table")
+    )
+  ),
+  nav_panel(
     "PBC資料庫",
     layout_columns(
       col_widths = c(4, 8),
@@ -761,18 +773,6 @@ ui <- page_navbar(
         checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
       ),
       card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
-    )
-  ),
-  nav_panel(
-    "RCM",
-    card(
-      uiOutput("rcm_count_box"),
-      uiOutput("rcm_latest_saved"),
-      DTOutput("rcm_table"),
-      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
-      tags$hr(),
-      tags$strong("缺漏／缺文件／控制缺失"),
-      DTOutput("gap_table")
     )
   ),
 )

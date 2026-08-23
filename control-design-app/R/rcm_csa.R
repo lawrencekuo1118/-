@@ -5,7 +5,7 @@
 # ---- Selectable design elements ----
 # Three workflow tabs: 訪談問項設計 → 風險控制點設計 → 控制點測試設計
 # Priority: 風險控制點設計（RCM 列）→ 訪談問項 → 控制點測試
-# Supporting: 範本庫／參數庫（側邊欄最下方）→ PBC資料庫 → RCM
+# Supporting: 範本庫／參數庫（側邊欄最下方）→ RCM → PBC資料庫
 DESIGN_ELEMENTS <- c(
   risk = "循環／風險",
   risk_attributes = "風險三大屬性／類別",

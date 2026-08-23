@@ -282,8 +282,6 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     )
   )
   updateTextInput(session, "related_system", value = ctrl$related_system %||% "")
-  detail <- risk_attr_detail_from_ctrl(ctrl)
-  updateTextAreaInput(session, "risk_attr_detail", value = detail)
   as_vals <- parse_assertion_values(normalize_assertions_for_category(
     ctrl$assertions, ctrl$risk_category %||% ""
   ))
@@ -341,27 +339,6 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
   if (is.list(r) && length(r) && nzchar(trimws(r$romm_classification %||% ""))) {
     updateSelectInput(session, "romm_classification", selected = r$romm_classification)
   }
-  kind <- risk_attr_kind_from_category(det$risk_category)
-  if (!nzchar(kind) && is.list(r) && length(r)) {
-    kind <- risk_attr_kind_from_ctrl(r)
-  }
-  if (!nzchar(kind)) kind <- "operations"
-  detail <- ""
-  if (is.list(r) && length(r)) {
-    strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-    detail <- switch(kind,
-                     financial = strip(r$risk_attr_financial),
-                     operations = strip(r$risk_attr_operations),
-                     compliance = strip(r$risk_attr_compliance),
-                     "")
-    if (!nzchar(detail)) {
-      for (f in c(r$risk_attr_financial, r$risk_attr_operations, r$risk_attr_compliance)) {
-        d <- strip(f)
-        if (nzchar(d)) { detail <- d; break }
-      }
-    }
-  }
-  updateTextAreaInput(session, "risk_attr_detail", value = detail)
   invisible(det)
 }
 

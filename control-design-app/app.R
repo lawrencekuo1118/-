@@ -444,10 +444,6 @@ ui <- page_navbar(
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
-            textAreaInput(
-              "risk_attr_detail", lab_opt("風險屬性細節"), rows = 2,
-              placeholder = "對應所選風險類別之細節（可空）"
-            )
           ),
           accordion_panel(
             "控制設計",
@@ -1666,13 +1662,13 @@ server <- function(input, output, session) {
     rf_tag <- risk_factor_tag(input$risk_factor %||% "")
     nature <- normalize_control_type_manual_auto(input$nature %||% "")
     approach <- normalize_control_activity_type_pd(input$approach)
-    # 風險類別決定屬性種類（三擇一）；細節來自風險辨識
+    # 風險類別決定三大屬性種類；細節由風險描述自動帶入（無獨立欄位）
     kind <- risk_attr_kind_from_category(input$risk_category %||% "")
     if (!nzchar(kind)) kind <- "operations"
     attr_ctrl <- enforce_single_risk_attr(
       list(risk_category = input$risk_category %||% ""),
       kind = kind,
-      detail = input$risk_attr_detail %||% ""
+      detail = trimws(input$risk_description %||% "")
     )
     list(
       control_id = input$control_id %||% "",

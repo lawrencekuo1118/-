@@ -682,6 +682,14 @@ check(grepl('accordion_panel\\(\\s*"控制設計"', app_src) &&
         grepl('selectInput\\(\\s*"approach"', app_src) &&
         grepl('selectInput\\(\\s*"nature"', app_src),
       "控制設計區塊含控制目標／活動／預防偵測／人工自動")
+check(!grepl("設計必填與防呆", app_src) && !grepl("建議操作順序", app_src),
+      "首頁已移除設計必填與防呆／建議操作順序說明")
+check(grepl("home-tabs-grid", app_src) && grepl("overflow: visible", app_src),
+      "各頁籤用途一次顯示全部方框（不壓縮捲動）")
+check(grepl("pbc_apply_to_design", app_src) &&
+        grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
+        !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
+      "套用 IUC／PBC 命名改在 PBC資料庫")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")

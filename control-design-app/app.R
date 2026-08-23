@@ -158,6 +158,8 @@ ui <- page_navbar(
         '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }',
         '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
         '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }',
+        /* 首頁不壓縮：各頁籤用途一次顯示全部方框 */
+        '.home-section .card-body, .bslib-card.home-section { overflow: visible !important; max-height: none !important; }',
         /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
         '.navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }'
       ].join('\\n');
@@ -204,52 +206,31 @@ ui <- page_navbar(
       p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。",
         " RCM 標題列對齊鯨鏈資訊循環格式；設計採強制引導流程。")
     ),
-    layout_columns(
-      col_widths = c(7, 5),
-      card(
-        class = "home-section",
-        card_header("整體設計流程"),
-        tags$ol(
-          class = "home-steps mb-0",
-          tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "（全域必選）與公司名稱；循環選定後各頁共用。"),
-          tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
-                  strong("子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
-                  "（", tags$span(class = "text-danger", "須先選側邊欄循環"),
-                  "，再依序選取；未選上一層時，下一層沒有候選）。"),
-          tags$li("補齊 ", strong("風險辨識"),
-                  "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
-                  strong("控制設計"),
-                  "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
-          tags$li(strong("完成設計＝寫入 RCM 一列"),
-                  "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
-          tags$li(tags$strong("訪談問項設計"),
-                  "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
-          tags$li(tags$strong("控制點測試設計"),
-                  "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
-        )
+    card(
+      class = "home-section",
+      card_header("整體設計流程"),
+      tags$ol(
+        class = "home-steps mb-0",
+        tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "（全域必選）與公司名稱；循環選定後各頁共用。"),
+        tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
+                strong("子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
+                "（", tags$span(class = "text-danger", "須先選側邊欄循環"),
+                "，再依序選取；未選上一層時，下一層沒有候選）。"),
+        tags$li("補齊 ", strong("風險辨識"),
+                "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
+                strong("控制設計"),
+                "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
+        tags$li(strong("完成設計＝寫入 RCM 一列"),
+                "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
+        tags$li(tags$strong("訪談問項設計"),
+                "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
+        tags$li(tags$strong("控制點測試設計"),
+                "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
       ),
-      card(
-        class = "home-section",
-        card_header("設計必填與防呆"),
-        tags$ul(
-          class = "mb-2 ps-3",
-          tags$li(strong("六大控制項目"), "：控制類型、控制活動類型、頻率、負責單位、IUC、控制活動。"),
-          tags$li(strong("控制目標 ≠ 控制活動"), "（Why／How 分欄；可拆分建議或對調）。"),
-          tags$li(strong("控制類型"), "僅人工／自動；", strong("自動"), "時頻率強制「持續」。"),
-          tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
-          tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
-                  strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
-          tags$li(strong("會計科目"), "僅報導面可填且必填（常見科目複選，含「全部適用」）；",
-                  strong("相關法令"), "僅遵循面可填且必填。"),
-          tags$li(strong("聲明（Assertions）"), "：報導面可複選 Thomson Reuters／AICPA 八種；",
-                  "營運面僅完整性／正確性／即時性；遵循面不可選。"),
-          tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
-        ),
-        p(class = "small text-muted mb-0",
-          "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
-          "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
-          "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
-      )
+      p(class = "small text-muted mb-0 mt-2",
+        "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
+        "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
+        "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
     ),
     card(
       class = "home-section",
@@ -278,18 +259,6 @@ ui <- page_navbar(
             strong("RCM"),
             "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
       )
-    ),
-    card(
-      class = "home-section",
-      card_header("建議操作順序"),
-      p(class = "mb-1",
-        "① 側邊欄選循環 → ② ",
-        strong("風險控制點設計"), "（引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
-        strong("訪談問項設計"), "／", strong("控制點測試設計"),
-        " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
-        " → ⑥ 需要時由側邊欄開啟 ", strong("範本庫"), "／", strong("參數庫"), "（範本套用可跳過）。"),
-      p(class = "small text-muted mb-0",
-        "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
   ),
   nav_panel(
@@ -516,13 +485,9 @@ ui <- page_navbar(
                 value = "", placeholder = "例：資訊安全單位"
               )
             ),
-            selectizeInput(
-              "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
-              options = list(placeholder = "原名→新名")
-            ),
             textAreaInput(
               "iuc_or_system", lab_req("IUC／相關系統"), rows = 2,
-              placeholder = "與上方⑥引導選取同步，可覆寫"
+              placeholder = "與上方⑤引導選取同步，可覆寫；命名請至 PBC資料庫套用"
             ),
             selectizeInput(
               "assertions", "聲明（Assertions）",
@@ -628,8 +593,7 @@ ui <- page_navbar(
         textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
         textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
         textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
-        textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻"),
-        checkboxInput("pbc_also_inputs", "於「風險控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
+        textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻")
       ),
       card(
         DTOutput("csa_table"),
@@ -709,6 +673,8 @@ ui <- page_navbar(
       col_widths = c(4, 8),
       card(
         card_header("PBC 資料庫"),
+        p(class = "small text-muted mb-2",
+          "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
@@ -721,7 +687,18 @@ ui <- page_navbar(
           actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
           downloadButton("download_pbc", "匯出", class = "btn-sm")
         ),
-        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv")
+        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
+        tags$hr(),
+        tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
+        p(class = "small text-muted mb-2",
+          "將命名對照套用至「風險控制點設計」之 IUC／相關系統（公司現況整理）。"),
+        selectizeInput(
+          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "原名→新名")
+        ),
+        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE),
+        actionButton("pbc_apply_to_design", "套用至控制設計 IUC",
+                     class = "btn-sm btn-outline-success w-100")
       ),
       card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
     )
@@ -1160,9 +1137,11 @@ server <- function(input, output, session) {
     updateSelectInput(session, "cycle", selected = "")
   }, once = TRUE)
 
-  observeEvent(input$pbc_apply, {
+  observeEvent(input$pbc_apply_to_design, {
     ids <- input$pbc_apply
-    if (!length(ids)) return()
+    if (!length(ids)) {
+      return(showNotification("請先選擇要套用的 PBC 命名", type = "warning"))
+    }
     updateTextAreaInput(session, "iuc_or_system", value = apply_pbc_to_iuc(pbc_reg(), ids))
     if (isTRUE(input$pbc_also_inputs)) {
       mapped <- format_pbc_for_inputs(pbc_reg(), ids)
@@ -1173,7 +1152,9 @@ server <- function(input, output, session) {
       new_inputs <- if (nzchar(cur)) paste(cur, mapped, sep = "\n") else mapped
       updateTextAreaInput(session, "inputs", value = new_inputs)
     }
-  }, ignoreInit = TRUE)
+    showNotification("已套用 PBC 命名至控制設計 IUC", type = "message")
+    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
+  })
 
   output$pbc_all_status <- renderText({
     lines <- format_pbc_status_lines(pbc_reg())

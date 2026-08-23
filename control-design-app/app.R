@@ -217,6 +217,8 @@ ui <- page_navbar(
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
       .objective-assertions-row #control_objective { min-height: 7.5rem; resize: vertical; }
+      .objective-assertions-row #control_activity { min-height: 5.5rem; resize: vertical; }
+      .objective-assertions-row .objective-activity-stack .shiny-input-container:last-child { margin-bottom: 0; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .objective-assertions-row .assertions-side .alert { margin-bottom: 0.35rem; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
@@ -468,26 +470,30 @@ ui <- page_navbar(
             layout_columns(
               col_widths = c(6, 6),
               class = "objective-assertions-row",
-              textAreaInput(
-                "control_objective", lab_req("控制目標"), rows = 4,
-                placeholder = "Why：欲達成之控制結果（非執行步驟）"
-              ),
               div(
-                class = "assertions-side",
-                selectizeInput(
-                  "assertions", "聲明設定",
-                  choices = character(0), multiple = TRUE, selected = character(0),
-                  options = list(
-                    create = FALSE,
-                    placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
-                  )
+                class = "objective-activity-stack",
+                div(
+                  class = "assertions-side",
+                  selectizeInput(
+                    "assertions", "聲明設定",
+                    choices = character(0), multiple = TRUE, selected = character(0),
+                    options = list(
+                      create = FALSE,
+                      placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+                    )
+                  ),
+                  uiOutput("assertions_hint")
                 ),
-                uiOutput("assertions_hint")
-              )
-            ),
-            textAreaInput(
-              "control_activity", lab_req("控制活動"), rows = 3,
-              placeholder = "How：具體執行行為（含誰／何時／如何）"
+                textAreaInput(
+                  "control_objective", lab_req("控制目標"), rows = 4,
+                  placeholder = "Why：欲達成之控制結果（非執行步驟）"
+                ),
+                textAreaInput(
+                  "control_activity", lab_req("控制活動"), rows = 3,
+                  placeholder = "How：具體執行行為（含誰／何時／如何）"
+                )
+              ),
+              div(class = "objective-assertions-spacer")
             ),
             layout_columns(
               col_widths = c(6, 6),

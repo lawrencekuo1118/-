@@ -1946,11 +1946,37 @@ server <- function(input, output, session) {
           "設計必填齊全＝可寫入 RCM 一列｜", format_oa_check_html(chk))
     } else {
       high <- gaps[gaps$severity == "高", , drop = FALSE]
-      summary <- if (!isTRUE(req$ok)) paste0("必填未齊：", paste(req$missing, collapse = "、"))
-      else if (!isTRUE(chk$ok)) (chk$msg %||% paste(chk$issues, collapse = "；"))
-      else if (nrow(high)) paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
-      else paste(gaps$gap_item, collapse = "；")
-      div(class = "alert alert-warning py-1 mb-2", paste0("尚不可定稿 RCM 一列：", summary))
+      req_groups <- req$missing_by_group %||% empty_missing_by_group()
+      group_lines <- lapply(DESIGN_ACCORDION_SECTIONS, function(sec) {
+        items <- unique(req_groups[[sec]] %||% character())
+        items <- items[nzchar(items)]
+        if (!length(items)) return(NULL)
+        tags$div(
+          class = "mb-1",
+          tags$strong(sec, "："),
+          paste(items, collapse = "、")
+        )
+      })
+      group_lines <- Filter(Negate(is.null), group_lines)
+      other_msg <- if (!isTRUE(chk$ok)) {
+        chk$msg %||% paste(chk$issues, collapse = "；")
+      } else if (nrow(high)) {
+        paste(sprintf("[%s] %s", high$category, high$gap_item), collapse = "；")
+      } else if (nrow(gaps)) {
+        paste(gaps$gap_item, collapse = "；")
+      } else {
+        NULL
+      }
+      div(
+        class = "alert alert-warning py-2 mb-2 small",
+        tags$div(class = "fw-semibold mb-1", "尚不可定稿 RCM 一列"),
+        if (length(group_lines)) {
+          tags$div(class = "mb-1", tags$span(class = "text-muted", "必填未齊（依表單分組）："), group_lines)
+        },
+        if (!is.null(other_msg) && nzchar(other_msg)) {
+          tags$div(class = "mt-1", tags$span(class = "text-muted", "其他檢核："), other_msg)
+        }
+      )
     }
   })
 
@@ -2014,7 +2040,8 @@ server <- function(input, output, session) {
     req <- design_required_check(d)
     if (!isTRUE(req$ok)) {
       return(showNotification(
-        paste0("尚未完成設計，不能定稿：", paste(req$missing, collapse = "、")),
+        paste0("尚未完成設計，不能定稿：",
+               format_design_required_by_accordion(req$missing_by_group, req$missing)),
         type = "error", duration = 10
       ))
     }

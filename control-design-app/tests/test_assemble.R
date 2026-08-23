@@ -173,6 +173,17 @@ check(!isTRUE(req_bad$ok), "缺頻率／單位／類型／類別＝必填未齊"
 check(any(grepl("控制頻率", req_bad$missing)), "必填清單含控制頻率")
 check(any(grepl("流程負責單位", req_bad$missing)), "必填清單含負責單位")
 check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別")
+req_grouped <- design_required_check(modifyList(d1, list(
+  sub_process_id = "", sub_process = "",
+  risk_factor = "", risk_name = "", risk_description = "",
+  control_objective = ""
+)))
+check(
+  grepl("基礎設定：子作業編號", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
+    grepl("風險辨識：風險因素", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
+    grepl("控制設計：控制目標", format_design_required_by_accordion(req_grouped$missing_by_group)),
+  "必填缺漏依 accordion 分組顯示"
+)
 fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
 check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
 
@@ -784,6 +795,10 @@ check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
       "套用 IUC／PBC 命名改在 PBC資料庫")
+check(grepl("missing_by_group", app_src) &&
+        grepl("DESIGN_ACCORDION_SECTIONS", app_src) &&
+        grepl("必填未齊（依表單分組）", app_src),
+      "右側檢核依 accordion 分組顯示必填缺漏")
 check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
         grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
         grepl("goto_pbc_tab", app_src) &&

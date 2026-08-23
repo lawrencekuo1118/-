@@ -222,6 +222,13 @@ ui <- page_navbar(
       .objective-assertions-row .objective-activity-stack .shiny-input-container:last-child { margin-bottom: 0; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .objective-assertions-row .assertions-side .alert { margin-bottom: 0.35rem; }
+      .design-section-preview-bar {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.75rem;
+        padding-top: 0.35rem;
+        border-top: 1px dashed rgba(0,0,0,0.08);
+      }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -423,7 +430,11 @@ ui <- page_navbar(
               )
             ),
             textInput("control_id", "控制編號", value = "",
-                      placeholder = "自動順編（可覆寫）")
+                      placeholder = "自動順編（可覆寫）"),
+            div(
+              class = "design-section-preview-bar",
+              actionButton("preview_rcm_basic", "預覽", class = "btn-sm btn-outline-primary")
+            )
           ),
           accordion_panel(
             "風險辨識",
@@ -465,6 +476,10 @@ ui <- page_navbar(
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
+            div(
+              class = "design-section-preview-bar",
+              actionButton("preview_rcm_risk", "預覽", class = "btn-sm btn-outline-primary")
+            )
           ),
           accordion_panel(
             "控制設計",
@@ -568,7 +583,11 @@ ui <- page_navbar(
               class = "d-flex gap-1 flex-wrap mb-1",
               actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
             ),
-            uiOutput("related_document_hint")
+            uiOutput("related_document_hint"),
+            div(
+              class = "design-section-preview-bar",
+              actionButton("preview_rcm_control", "預覽", class = "btn-sm btn-outline-primary")
+            )
           )
         ),
         div(
@@ -767,6 +786,7 @@ ui <- page_navbar(
     "RCM",
     card(
       uiOutput("rcm_count_box"),
+      uiOutput("rcm_preview_status"),
       uiOutput("rcm_latest_saved"),
       DTOutput("rcm_table"),
       downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
@@ -782,6 +802,7 @@ server <- function(input, output, session) {
   is_admin <- reactiveVal(FALSE)
   rcm_revision <- reactiveVal(0L)
   last_saved_control <- reactiveVal(NULL)
+  rcm_preview_ctrl <- reactiveVal(NULL)
 
   bump_rcm_views <- function(ctrl = NULL) {
     rcm_revision(rcm_revision() + 1L)
@@ -790,16 +811,29 @@ server <- function(input, output, session) {
 
   rcm_display_df <- reactive({
     rcm_revision()
+    preview <- rcm_preview_ctrl()
     cs <- Filter(is_control_finalized_for_rcm, controls())
-    if (!length(cs)) return(NULL)
-    cs <- rev(cs)
-    rcm <- controls_to_rcm(cs)
-    if (!nrow(rcm)) return(NULL)
-    saved <- vapply(cs, function(x) as.character(x$saved_at %||% ""), character(1))
-    if (length(saved) == nrow(rcm)) {
-      rcm <- cbind(`儲存時間` = saved, as.data.frame(rcm, stringsAsFactors = FALSE))
+    rows <- list()
+    saved <- character()
+    if (!is.null(preview) && length(preview)) {
+      pr <- control_to_rcm_row(preview, seq_no = 0L)
+      rows[[length(rows) + 1L]] <- pr
+      saved <- c(saved, "預覽中")
     }
-    rcm
+    if (length(cs)) {
+      cs <- rev(cs)
+      rcm <- controls_to_rcm(cs)
+      if (nrow(rcm)) {
+        for (i in seq_len(nrow(rcm))) rows[[length(rows) + 1L]] <- rcm[i, , drop = FALSE]
+        saved <- c(saved, vapply(cs, function(x) as.character(x$saved_at %||% ""), character(1)))
+      }
+    }
+    if (!length(rows)) return(NULL)
+    rcm_all <- do.call(rbind, rows)
+    if (length(saved) == nrow(rcm_all)) {
+      rcm_all <- cbind(`儲存時間` = saved, as.data.frame(rcm_all, stringsAsFactors = FALSE))
+    }
+    rcm_all
   })
 
   output$admin_auth_box <- renderUI({
@@ -1866,6 +1900,29 @@ server <- function(input, output, session) {
   }
 
   output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
+
+  push_rcm_section_preview <- function(section) {
+    draft <- current_draft_from_inputs()
+    merged <- merge_design_preview_section(rcm_preview_ctrl(), draft, section)
+    rcm_preview_ctrl(merged)
+    bump_rcm_views()
+    cols <- rcm_preview_section_columns(section)
+    showNotification(
+      sprintf("已預覽「%s」→ RCM 欄位：%s", section, paste(cols, collapse = "、")),
+      type = "message", duration = 6
+    )
+    bslib::nav_select("main_nav", selected = "RCM", session = session)
+  }
+  observeEvent(input$preview_rcm_basic, {
+    push_rcm_section_preview("基礎設定")
+  }, ignoreInit = TRUE)
+  observeEvent(input$preview_rcm_risk, {
+    push_rcm_section_preview("風險辨識")
+  }, ignoreInit = TRUE)
+  observeEvent(input$preview_rcm_control, {
+    push_rcm_section_preview("控制設計")
+  }, ignoreInit = TRUE)
+
   output$oa_live_check <- renderUI({
     d <- current_draft_from_inputs()
     chk <- rcm_objective_activity_check(d$control_objective, d$control_activity)
@@ -2167,8 +2224,34 @@ server <- function(input, output, session) {
   output$rcm_count_box <- renderUI({
     rcm_revision()
     parity <- assert_design_rcm_parity(controls())
+    preview <- rcm_preview_ctrl()
     tags$p(class = "small mb-2",
-           sprintf("目前已定稿 %d 個控制點＝%d 列 RCM", parity$n_controls, parity$n_rcm_rows))
+           sprintf("目前已定稿 %d 個控制點＝%d 列 RCM", parity$n_controls, parity$n_rcm_rows),
+           if (!is.null(preview) && length(preview)) {
+             tags$span(class = "text-warning ms-2", "＋ 1 列設計預覽")
+           })
+  })
+  output$rcm_preview_status <- renderUI({
+    rcm_revision()
+    preview <- rcm_preview_ctrl()
+    if (is.null(preview) || !length(preview)) return(NULL)
+    secs <- as.character(preview$rcm_preview_sections %||% character())
+    secs <- secs[nzchar(secs)]
+    tags$div(
+      class = "alert alert-warning py-2 mb-2 small",
+      tags$strong("設計預覽列（尚未定稿）："),
+      if (length(secs)) {
+        tags$span(class = "ms-1", paste(secs, collapse = "、"))
+      },
+      if (nzchar(preview$rcm_preview_at %||% "")) {
+        tags$span(class = "text-muted ms-2", sprintf("（%s）", preview$rcm_preview_at))
+      },
+      tags$br(),
+      tags$span(
+        class = "text-muted",
+        "各區塊「預覽」會合併至本列對應欄位；完成設計後按「寫入 RCM 一列」定稿。"
+      )
+    )
   })
   output$rcm_latest_saved <- renderUI({
     rcm_revision()
@@ -2239,6 +2322,7 @@ server <- function(input, output, session) {
     idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
     if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
     controls(cs)
+    rcm_preview_ctrl(NULL)
     bump_rcm_views(pt)
     bslib::nav_select("main_nav", selected = "RCM", session = session)
     updateTextInput(session, "control_id",
@@ -2389,7 +2473,7 @@ server <- function(input, output, session) {
     df <- rcm_display_df()
     if (is.null(df) || !nrow(df)) {
       return(datatable(
-        data.frame(訊息 = "尚無已定稿控制點；完成設計並「寫入 RCM 一列」後即時顯示於此。"),
+        data.frame(訊息 = "尚無 RCM 列；於「風險控制點設計」各區塊按「預覽」，或完成設計後「寫入 RCM 一列」。"),
         rownames = FALSE, options = list(dom = "t")
       ))
     }
@@ -2397,10 +2481,18 @@ server <- function(input, output, session) {
       df, rownames = FALSE,
       options = list(
         scrollX = TRUE, pageLength = 15, dom = "tip",
-        order = list(list(0, "desc")),
+        ordering = FALSE,
         rowCallback = DT::JS(
           "function(row, data, index) {",
-          "  if (index === 0) $(row).css({'background-color': '#e8f5e9', 'font-weight': '500'});",
+          "  if (data[0] === '預覽中') {",
+          "    $(row).css({'background-color': '#fff8e1', 'font-weight': '500'});",
+          "    return;",
+          "  }",
+          "  var api = $(row).closest('table').DataTable();",
+          "  var prevPreview = index > 0 && api.row(0).data()[0] === '預覽中';",
+          "  if ((!prevPreview && index === 0) || (prevPreview && index === 1)) {",
+          "    $(row).css({'background-color': '#e8f5e9', 'font-weight': '500'});",
+          "  }",
           "}"
         )
       )

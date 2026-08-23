@@ -1382,6 +1382,7 @@ server <- function(input, output, session) {
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "相關系統／IUC" = function() {
+        # 舊參數庫鍵名；僅套用至 IUC（與相關系統分開）
         updateTextAreaInput(session, "iuc", value = val)
         updateTextInput(session, "custom_iuc", value = val)
         updateSelectInput(session, "cascade_iuc", selected = "__custom__")

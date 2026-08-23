@@ -142,11 +142,16 @@ gaps <- detect_design_gaps(bad)
 check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")
 check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
 
-gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", related_system = "", outputs = "", related_document = "")))
-check(any(gaps2$severity == "高" & grepl("IUC|相關系統|必填", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
+gaps2 <- detect_design_gaps(modifyList(d1, list(
+  iuc = "", iuc_or_system = "", related_system = "", outputs = "", related_document = ""
+)))
+check(any(gaps2$severity == "高" & grepl("IUC", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
 check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)) ||
         any(gaps2$severity == "高" & grepl("PBC", gaps2$gap_item)),
       "缺產出／相關文件缺漏偵測")
+check(!isTRUE(design_required_check(modifyList(d1, list(
+  iuc = "", iuc_or_system = "", related_system = "SAP ERP"
+)))$ok), "僅填相關系統不可代替 IUC")
 
 # 設計必填欄位
 req_ok <- design_required_check(d1)
@@ -251,6 +256,12 @@ seeded <- seed_control_library(TRUE)
 pcat2 <- parameter_catalog(seeded, list(), list())
 check(any(pcat2$參數 == "子作業編號") && any(grepl("EC-101", pcat2$選項值)), "參數庫含資訊循環子作業")
 check(any(pcat2$參數 == "控制目標"), "參數庫含控制目標選項")
+pcat_iuc <- parameter_catalog(list(), list(modifyList(d1, list(
+  iuc = "使用者權限清冊", iuc_or_system = "使用者權限清冊", related_system = "Active Directory"
+))), list())
+check(any(pcat_iuc$參數 == "IUC" & grepl("使用者權限清冊", pcat_iuc$選項值)), "參數庫 IUC 獨立收錄")
+check(any(pcat_iuc$參數 == "相關系統" & grepl("Active Directory", pcat_iuc$選項值)), "參數庫相關系統獨立收錄")
+check(!any(pcat_iuc$參數 == "相關系統／IUC"), "參數庫不再合併 IUC／相關系統")
 tmp_ps <- tempfile(fileext = ".json")
 save_parameter_store(pcat2, tmp_ps)
 reloaded <- load_parameter_store(tmp_ps)
@@ -407,7 +418,7 @@ check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號",
             "控制頻率", "建議樣本數", "抽樣方法論", "抽樣或範圍") %in% names(csa)),
       "CSA 含測試步驟設計欄位")
 check(nrow(csa) >= 3, "CSA 依元素產製多個測試步驟")
-check(any(csa[["元素"]] == "IUC／相關系統"), "CSA 含 IUC 測試步驟")
+check(any(csa[["元素"]] == "IUC"), "CSA 含 IUC 測試步驟")
 csa_multi <- controls_to_csa(list(fin_ok, not_ready), finalized_only = TRUE)
 check(all(csa_multi[["控制編號"]] == fin_ok$control_id), "CSA 僅取已定稿 RCM 列")
 

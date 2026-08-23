@@ -13,7 +13,7 @@ DESIGN_ELEMENTS <- c(
   control_activity = "控制活動",
   control_types = "控制類型／活動類型",
   frequency_owner = "頻率／負責單位",
-  iuc = "IUC／相關系統",
+  iuc = "IUC",
   company_status = "控制現況描述",
   design_gap = "控制設計差異",
   nature_approach_type = "Nature／Approach／Type（4120SR）",
@@ -23,6 +23,24 @@ DESIGN_ELEMENTS <- c(
   exception = "例外／調查門檻",
   assertion_account = "科目／聲明"
 )
+
+# IUC 與 相關系統為獨立欄位；iuc_or_system 保留向後相容（僅對應 IUC）
+ctrl_iuc_value <- function(ctrl) {
+  trimws(as.character(ctrl$iuc %||% ctrl$iuc_or_system %||% ""))
+}
+
+ctrl_related_system_value <- function(ctrl) {
+  trimws(as.character(ctrl$related_system %||% ""))
+}
+
+sync_iuc_aliases <- function(ctrl) {
+  iuc <- ctrl_iuc_value(ctrl)
+  if (nzchar(iuc)) {
+    ctrl$iuc <- iuc
+    ctrl$iuc_or_system <- iuc
+  }
+  ctrl
+}
 
 # 訪談問項設計
 # 主目標：針對不同循環／子作業下之「預期風險」與「預期控制目標／活動」深入且快速了解
@@ -320,6 +338,7 @@ new_csa_scenario <- function(scenario_name = "預設現況",
                              outputs = "",
                              investigation_threshold = "",
                              iuc_or_system = "",
+                             related_system = "",
                              frequency = "",
                              nature = "",
                              scenario_id = NULL) {
@@ -340,6 +359,7 @@ new_csa_scenario <- function(scenario_name = "預設現況",
     outputs = as.character(outputs %||% ""),
     investigation_threshold = as.character(investigation_threshold %||% ""),
     iuc_or_system = as.character(iuc_or_system %||% ""),
+    related_system = as.character(related_system %||% ""),
     frequency = as.character(frequency %||% ""),
     nature = as.character(nature %||% "")
   )
@@ -355,7 +375,8 @@ normalize_csa_scenario <- function(sc, seq_no = 1L, ctrl = list()) {
     review_steps = sc$review_steps %||% sc$steps %||% "",
     outputs = sc$outputs %||% "",
     investigation_threshold = sc$investigation_threshold %||% "",
-    iuc_or_system = sc$iuc_or_system %||% sc$related_system %||% "",
+    iuc_or_system = sc$iuc_or_system %||% "",
+    related_system = sc$related_system %||% "",
     frequency = sc$frequency %||% "",
     nature = sc$nature %||% "",
     scenario_id = sc$scenario_id %||% sprintf("S%d", as.integer(seq_no))
@@ -378,7 +399,10 @@ normalize_csa_scenario <- function(sc, seq_no = 1L, ctrl = list()) {
     out$investigation_threshold <- ctrl$investigation_threshold
   }
   if (!nzchar(trimws(out$iuc_or_system))) {
-    out$iuc_or_system <- ctrl$iuc_or_system %||% ctrl$related_system %||% ""
+    out$iuc_or_system <- ctrl_iuc_value(ctrl)
+  }
+  if (!nzchar(trimws(out$related_system))) {
+    out$related_system <- ctrl_related_system_value(ctrl)
   }
   if (!nzchar(trimws(out$frequency))) out$frequency <- ctrl$frequency %||% ""
   if (!nzchar(trimws(out$nature))) out$nature <- ctrl$nature %||% ""
@@ -396,7 +420,8 @@ synthetic_default_csa_scenario <- function(ctrl) {
       review_steps = ctrl$review_steps %||% "",
       outputs = ctrl$outputs %||% ctrl$related_document %||% "",
       investigation_threshold = ctrl$investigation_threshold %||% "",
-      iuc_or_system = ctrl$iuc_or_system %||% ctrl$related_system %||% "",
+      iuc_or_system = ctrl_iuc_value(ctrl),
+      related_system = ctrl_related_system_value(ctrl),
       frequency = ctrl$frequency %||% "",
       nature = ctrl$nature %||% ""
     ),
@@ -424,8 +449,11 @@ overlay_csa_scenario <- function(ctrl, sc) {
   out$outputs <- sc$outputs
   out$investigation_threshold <- sc$investigation_threshold
   if (nzchar(trimws(sc$iuc_or_system))) {
+    out$iuc <- sc$iuc_or_system
     out$iuc_or_system <- sc$iuc_or_system
-    out$related_system <- sc$iuc_or_system
+  }
+  if (nzchar(trimws(sc$related_system))) {
+    out$related_system <- sc$related_system
   }
   if (nzchar(trimws(sc$frequency))) out$frequency <- sc$frequency
   if (nzchar(trimws(sc$nature))) out$nature <- sc$nature
@@ -447,13 +475,13 @@ upsert_control_csa_scenario <- function(ctrl, scenario) {
     existing[[hit[[1]]]] <- sc[c(
       "scenario_id", "scenario_name", "company_status", "type", "inputs",
       "review_steps", "outputs", "investigation_threshold", "iuc_or_system",
-      "frequency", "nature"
+      "related_system", "frequency", "nature"
     )]
   } else {
     existing[[length(existing) + 1L]] <- sc[c(
       "scenario_id", "scenario_name", "company_status", "type", "inputs",
       "review_steps", "outputs", "investigation_threshold", "iuc_or_system",
-      "frequency", "nature"
+      "related_system", "frequency", "nature"
     )]
   }
   ctrl$csa_scenarios <- existing
@@ -757,7 +785,7 @@ interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
   act <- nzchar_or(ctrl$control_activity, "該控制活動")
   obj <- nzchar_or(ctrl$control_objective, "該控制目標")
   risk_label <- nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")
-  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC）")
+  iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   freq <- nzchar_or(resolve_control_frequency(ctrl$nature, ctrl$frequency), "所訂頻率")
   owner <- nzchar_or(ctrl$responsible_unit, "負責單位")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡")
@@ -813,7 +841,7 @@ suggest_interview_pbc <- function(ctrl, pbc_reg = NULL, pbc_ids = NULL) {
   if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && length(pbc_ids)) {
     linked <- tryCatch(format_pbc_for_inputs(pbc_reg, pbc_ids), error = function(e) "")
   }
-  iuc <- trimws(as.character(ctrl$related_system %||% ctrl$iuc_or_system %||% ""))
+  iuc <- trimws(as.character(ctrl_iuc_value(ctrl)))
   inputs <- trimws(as.character(ctrl$inputs %||% ""))
   outp <- trimws(as.character(ctrl$related_document %||% ctrl$outputs %||% ""))
   base <- unique(c(iuc, inputs, outp))
@@ -885,7 +913,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
   act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
   ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
-  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC／相關系統）")
+  iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   status <- nzchar_or(ctrl$company_status, "（尚未書寫現況）")
   gap <- nzchar_or(ctrl$design_gap_note, "（無設計差異說明）")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡文件")
@@ -946,8 +974,11 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     iuc = list(
       element = unname(INTERVIEW_ELEMENTS[["iuc"]]),
       question = paste0(sprintf(
-        "執行時取得哪些文件或系統資訊（設計 IUC：%s）？誰提供、如何確保完整正確？請指出可作為 PBC 的項目。",
-        iuc
+        "執行時取得哪些文件或資訊（設計 IUC：%s%s）？誰提供、如何確保完整正確？請指出可作為 PBC 的項目。",
+        iuc,
+        if (nzchar(ctrl_related_system_value(ctrl))) {
+          sprintf("；相關系統：%s", ctrl_related_system_value(ctrl))
+        } else ""
       ), suffix),
       evidence = paste(iuc, "PBC 命名對照", sep = "；")
     ),
@@ -1079,7 +1110,7 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
           control_objective = ctrl$control_objective %||% "",
           control_activity = ctrl$control_activity %||% "",
           company_status = ctrl$company_status %||% "",
-          iuc = ctrl$iuc_or_system %||% "",
+          iuc = ctrl_iuc_value(ctrl),
           steps = ctrl$review_steps %||% "",
           nzchar_or(item$evidence, "")
         )
@@ -1152,7 +1183,7 @@ control_to_csa_one <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS,
   cid <- derive_control_id(ctrl, 1L)
   obj <- nzchar_or(ctrl$control_objective, "（待補控制目標）")
   act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
-  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC／PBC）")
+  iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "執行軌跡／簽核")
   steps <- trimws(unlist(strsplit(as.character(ctrl$review_steps %||% ""), "\n")))
   steps <- steps[nzchar(steps)]
@@ -1226,7 +1257,7 @@ control_to_csa_one <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS,
                 "該步驟有完整執行軌跡且無未結例外")
       }
     } else if (identical(key, "iuc")) {
-      add_row(key, "IUC／相關系統",
+      add_row(key, "IUC",
               sprintf("確認「%s」情境依賴之 IUC／PBC 完整正確", scen_nm),
               sprintf("取得「%s」，核對來源、參數、邏輯或產生流程；比對客戶原名與檢視後命名", iuc),
               iuc,
@@ -1530,9 +1561,7 @@ design_field_value <- function(ctrl, field) {
     ))))
   }
   if (identical(field, "iuc_or_system")) {
-    return(trimws(as.character(
-      ctrl$iuc %||% ctrl$iuc_or_system %||% ""
-    )))
+    return(ctrl_iuc_value(ctrl))
   }
   if (identical(field, "nature")) {
     return(trimws(as.character(
@@ -1814,12 +1843,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (is_blank(ctrl$risk_factor) && !is_blank(ctrl$risk_name)) {
     ctrl$risk_factor <- ctrl$risk_name
   }
-  if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$iuc)) {
-    ctrl$iuc_or_system <- ctrl$iuc
-  }
-  if (is_blank(ctrl$iuc) && !is_blank(ctrl$iuc_or_system)) {
-    ctrl$iuc <- ctrl$iuc_or_system
-  }
+  ctrl <- sync_iuc_aliases(ctrl)
   if (!is_blank(ctrl$risk_factor) || !is_blank(ctrl$risk_name)) {
     tag <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name)
     ctrl$risk_factor <- tag

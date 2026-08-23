@@ -198,7 +198,7 @@ validate_control_design <- function(ctrl) {
     control_activity = "控制活動",
     frequency = "控制頻率",
     responsible_unit = "流程負責單位",
-    iuc_or_system = "相關系統／IUC",
+    iuc_or_system = "IUC",
     nature = "控制類型",
     approach = "控制活動類型"
   )

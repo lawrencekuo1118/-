@@ -86,7 +86,8 @@ library_controls_flat <- function(library, cycle = NULL) {
       },
       frequency = nzchar_trim(c$frequency),
       responsible_unit = nzchar_trim(c$responsible_unit),
-      iuc_or_system = nzchar_trim(c$related_system %||% c$iuc_or_system),
+      iuc_or_system = nzchar_trim(c$iuc %||% c$iuc_or_system),
+      related_system = nzchar_trim(c$related_system),
       romm_classification = nzchar_trim(c$romm_classification),
       significant_account = nzchar_trim(c$significant_account),
       assertions = nzchar_trim(c$assertions),
@@ -498,7 +499,7 @@ six_status_rules_check <- function(ctrl) {
   )
   for (f in names(labels)) {
     val <- if (identical(f, "iuc_or_system")) {
-      nzchar_trim(ctrl$iuc_or_system %||% ctrl$related_system)
+      ctrl_iuc_value(ctrl)
     } else if (identical(f, "approach")) {
       normalize_single_activity_type(ctrl$approach)
     } else nzchar_trim(ctrl[[f]])
@@ -516,8 +517,8 @@ assemble_status_scaffold <- function(ctrl) {
     sprintf("2. 控制活動類型：%s\n", nzchar_or(normalize_single_activity_type(ctrl$approach), "（缺）")),
     sprintf("3. 控制頻率：%s\n", nzchar_or(ctrl$frequency, "（缺）")),
     sprintf("4. 負責單位：%s\n", nzchar_or(ctrl$responsible_unit, "（缺）")),
-    sprintf("5. IUC：%s\n", nzchar_or(ctrl$iuc %||% ctrl$iuc_or_system, "（缺）")),
-    sprintf("   相關系統：%s\n", nzchar_or(ctrl$related_system, "（可空）")),
+    sprintf("5. IUC：%s\n", nzchar_or(ctrl_iuc_value(ctrl), "（缺）")),
+    sprintf("   相關系統：%s\n", nzchar_or(ctrl_related_system_value(ctrl), "（可空）")),
     sprintf("6. 控制活動：%s\n", nzchar_or(ctrl$control_activity, "（缺）")),
     "----\n",
     sprintf("控制目標：%s\n", nzchar_or(ctrl$control_objective, "（缺）")),
@@ -611,8 +612,8 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
     approach = normalize_single_activity_type(sel$approach),
     frequency = sel$frequency %||% "",
     responsible_unit = sel$responsible_unit %||% "",
-    iuc_or_system = sel$iuc_or_system %||% sel$iuc %||% "",
-    iuc = sel$iuc_or_system %||% sel$iuc %||% "",
+    iuc_or_system = sel$iuc %||% sel$iuc_or_system %||% "",
+    iuc = sel$iuc %||% sel$iuc_or_system %||% "",
     related_system = sel$related_system %||% "",
     control_id = sel$control_id %||% "",
     significant_account = {

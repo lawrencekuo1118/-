@@ -112,11 +112,13 @@ DEFAULT_CSA_ELEMENTS <- c(
 # Row1 groups + Row2 columns. Keep related fields grouped; 防呆分欄。
 RCM_HEADER_GROUPS <- list(
   `流程資訊` = c("循環名稱", "子作業編號", "子作業名稱"),
-  `風險資訊` = c("風險因素", "風險描述", "風險類別", "會計科目"),
+  `風險資訊` = c(
+    "風險因素", "風險描述", "風險類別", "RoMM 分類", "會計科目", "聲明"
+  ),
   `控制資訊` = c(
     "控制目標", "控制編號", "控制活動", "控制類型", "控制活動類型",
     "控制頻率", "控制現況描述", "控制設計差異說明",
-    "相關系統", "相關政策或程序", "相關法令", "相關文件", "流程負責單位"
+    "相關系統", "IUC", "相關政策或程序", "相關法令", "相關文件", "流程負責單位"
   ),
   `控制分析與評估` = c("控制有效性評估", "可能潛在風險", "建議改善方式", "設計檢核")
 )
@@ -131,7 +133,9 @@ RCM_HEADER_LABELS <- c(
   `風險因素` = "風險因素（Risk Factor）",
   `風險描述` = "風險描述（Risk Description）",
   `風險類別` = "風險類別（報導面／營運面／遵循面）",
+  `RoMM 分類` = "RoMM 分類",
   `會計科目` = "會計科目",
+  `聲明` = "聲明（Assertions）",
   `控制目標` = "控制目標",
   `控制編號` = "控制編號",
   `控制活動` = "控制活動",
@@ -141,6 +145,7 @@ RCM_HEADER_LABELS <- c(
   `控制現況描述` = "控制現況描述",
   `控制設計差異說明` = "控制設計差異說明",
   `相關系統` = "相關系統",
+  `IUC` = "IUC（控制執行取得之文件／資訊）",
   `相關政策或程序` = "相關政策或程序",
   `相關法令` = "相關法令",
   `相關文件` = CONTROL_EVIDENCE_DOCUMENT_LABEL,
@@ -698,6 +703,7 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
       else ctrl$risk_name %||% ""
     },
     `風險類別` = normalize_risk_category(ctrl),
+    `RoMM 分類` = trimws(as.character(ctrl$romm_classification %||% "")),
     `會計科目` = {
       ac <- trimws(as.character(ctrl$significant_account %||% ""))
       if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
@@ -706,6 +712,7 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
         ""
       }
     },
+    `聲明` = trimws(as.character(ctrl$assertions %||% "")),
     `控制目標` = trimws(ctrl$control_objective %||% ""),
     `控制編號` = derive_control_id(ctrl, seq_no),
     `控制活動` = trimws(ctrl$control_activity %||% ""),
@@ -717,7 +724,8 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     ),
     `控制現況描述` = status_desc,
     `控制設計差異說明` = design_gap,
-    `相關系統` = ctrl$related_system %||% "",
+    `相關系統` = ctrl_related_system_value(ctrl),
+    `IUC` = ctrl_iuc_value(ctrl),
     `相關政策或程序` = ctrl$related_policy %||% "",
     `相關法令` = ctrl$related_law %||% "",
     `相關文件` = ctrl$related_document %||% ctrl$outputs %||% "",

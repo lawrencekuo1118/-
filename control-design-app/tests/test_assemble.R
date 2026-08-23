@@ -727,8 +727,10 @@ check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
       "IUC 與相關系統分開設定")
 check(grepl('layout_columns[\\s\\S]{0,400}control_objective[\\s\\S]{0,400}assertions', app_src, perl = TRUE),
       "聲明設定與控制目標並排")
-check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control", app_src),
+check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
+check(!is.null(fin$control$saved_at) && nzchar(fin$control$saved_at),
+      "定稿控制點含儲存時間戳")
 check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&
         length(gregexpr("各頁籤用途", app_src, fixed = TRUE)[[1]]) == 1,
       "整體設計流程／各頁籤用途僅在首頁")

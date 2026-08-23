@@ -1888,6 +1888,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   }
   ctrl$detailed_description <- ctrl$detailed_description %||% ""
   ctrl$rcm_ready <- list(ready = TRUE, gaps = ready$gaps)
+  ctrl$saved_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   ctrl$validation <- if (exists("validate_control_design", mode = "function")) {
     validate_control_design(ctrl)
   } else list(ok = TRUE, missing = character())

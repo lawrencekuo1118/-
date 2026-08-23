@@ -777,6 +777,20 @@ server <- function(input, output, session) {
     if (!is.null(ctrl)) last_saved_control(ctrl)
   }
 
+  rcm_display_df <- reactive({
+    rcm_revision()
+    cs <- Filter(is_control_finalized_for_rcm, controls())
+    if (!length(cs)) return(NULL)
+    cs <- rev(cs)
+    rcm <- controls_to_rcm(cs)
+    if (!nrow(rcm)) return(NULL)
+    saved <- vapply(cs, function(x) as.character(x$saved_at %||% ""), character(1))
+    if (length(saved) == nrow(rcm)) {
+      rcm <- cbind(`儲存時間` = saved, as.data.frame(rcm, stringsAsFactors = FALSE))
+    }
+    rcm
+  })
+
   output$admin_auth_box <- renderUI({
     if (isTRUE(is_admin())) {
       tags$div(
@@ -2439,18 +2453,38 @@ server <- function(input, output, session) {
     if (is.null(pt)) {
       return(tags$p(class = "small text-muted mb-2", "尚無儲存成功的控制點。"))
     }
+    row <- tryCatch(control_to_rcm_row(pt, seq_no = 1L), error = function(e) NULL)
     tags$div(
       class = "alert alert-success py-2 mb-2 small",
       tags$strong("最新儲存："),
       tags$code(pt$control_id %||% "—"),
-      "｜", pt$risk_factor %||% pt$risk_name %||% "",
+      if (nzchar(pt$saved_at %||% "")) {
+        tags$span(class = "text-muted ms-2", paste0("（", pt$saved_at, "）"))
+      },
       tags$br(),
-      tags$span(class = "text-muted",
-                "目標：", substr(pt$control_objective %||% "—", 1, 40),
-                if (nzchar(pt$related_system %||% "")) paste0("｜系統：", pt$related_system) else "",
-                if (nzchar(pt$iuc_or_system %||% pt$iuc %||% "")) {
-                  paste0("｜IUC：", substr(pt$iuc_or_system %||% pt$iuc %||% "", 1, 30))
-                } else "")
+      tags$span(
+        "風險：", pt$risk_factor %||% pt$risk_name %||% "—", "｜",
+        "目標：", substr(pt$control_objective %||% "—", 1, 36), "｜",
+        "活動：", substr(pt$control_activity %||% "—", 1, 36)
+      ),
+      tags$br(),
+      tags$span(
+        class = "text-muted",
+        "類型：", pt$nature %||% "—", "／", pt$approach %||% "—",
+        "｜頻率：", pt$frequency %||% "—",
+        if (nzchar(pt$related_system %||% "")) paste0("｜系統：", pt$related_system) else "",
+        if (nzchar(pt$iuc %||% pt$iuc_or_system %||% "")) {
+          paste0("｜IUC：", substr(pt$iuc %||% pt$iuc_or_system %||% "", 1, 28))
+        } else "",
+        if (nzchar(pt$related_document %||% "")) {
+          paste0("｜文件：", substr(pt$related_document, 1, 28))
+        } else ""
+      ),
+      if (!is.null(row) && nrow(row)) {
+        tags$div(class = "text-muted mt-1",
+                 "RCM 列已同步｜子作業：", row[["子作業名稱"]] %||% "—",
+                 "｜檢核：", substr(as.character(row[["設計檢核"]] %||% ""), 1, 40))
+      }
     )
   })
 
@@ -2482,6 +2516,7 @@ server <- function(input, output, session) {
     if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
     controls(cs)
     bump_rcm_views(pt)
+    bslib::nav_select("main_nav", selected = "RCM", session = session)
     updateTextInput(session, "control_id",
                     value = next_rcm_control_id(
                       pt$sub_process_id,
@@ -2642,18 +2677,34 @@ server <- function(input, output, session) {
 
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
-    rcm_revision()
-    cs <- controls()
-    if (!length(cs)) {
+    df <- rcm_display_df()
+    if (is.null(df) || !nrow(df)) {
       return(datatable(
         data.frame(訊息 = "尚無已定稿控制點；完成設計並「寫入 RCM 一列」後即時顯示於此。"),
         rownames = FALSE, options = list(dom = "t")
       ))
     }
-    rcm <- controls_to_rcm(rev(cs))
-    datatable(rcm, rownames = FALSE,
-              options = list(scrollX = TRUE, pageLength = 15, dom = "tip"))
+    dt <- datatable(
+      df, rownames = FALSE,
+      options = list(
+        scrollX = TRUE, pageLength = 15, dom = "tip",
+        order = list(list(0, "desc")),
+        rowCallback = DT::JS(
+          "function(row, data, index) {",
+          "  if (index === 0) $(row).css({'background-color': '#e8f5e9', 'font-weight': '500'});",
+          "}"
+        )
+      )
+    )
+    dt
   })
+
+  observeEvent(rcm_revision(), {
+    df <- rcm_display_df()
+    if (is.null(df) || !nrow(df)) return()
+    proxy <- DT::dataTableProxy("rcm_table", session = session)
+    DT::replaceData(proxy, df, resetPaging = FALSE, rownames = FALSE)
+  }, ignoreInit = TRUE)
   selected_worksheet_controls_sa <- reactive({
     cs <- Filter(is_control_finalized_for_rcm, controls())
     if (!length(cs)) return(list())

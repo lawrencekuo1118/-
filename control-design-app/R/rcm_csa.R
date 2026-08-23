@@ -692,7 +692,7 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     },
     `子作業編號` = derive_sub_process_id(ctrl, seq_no),
     `子作業名稱` = ctrl$sub_process %||% "",
-    `風險因素` = risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% ""),
+    `風險因素` = format_risk_factor_text(ctrl$risk_factor %||% ctrl$risk_name %||% ""),
     `風險描述` = {
       if (!is_blank(ctrl$risk_description)) ctrl$risk_description
       else ctrl$risk_name %||% ""
@@ -1619,9 +1619,7 @@ law_is_filled <- function(x) {
 design_field_value <- function(ctrl, field) {
   ctrl <- as.list(ctrl)
   if (identical(field, "risk_factor")) {
-    return(risk_factor_tag(trimws(as.character(
-      ctrl$risk_factor %||% ctrl$risk_name %||% ""
-    ))))
+    return(format_risk_factor_text(ctrl$risk_factor %||% ctrl$risk_name %||% ""))
   }
   if (identical(field, "iuc_or_system")) {
     return(ctrl_iuc_value(ctrl))
@@ -1941,9 +1939,9 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   }
   ctrl <- sync_iuc_aliases(ctrl)
   if (!is_blank(ctrl$risk_factor) || !is_blank(ctrl$risk_name)) {
-    tag <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name)
-    ctrl$risk_factor <- tag
-    ctrl$risk_name <- tag
+    formatted <- format_risk_factor_text(ctrl$risk_factor %||% ctrl$risk_name)
+    ctrl$risk_factor <- formatted
+    ctrl$risk_name <- formatted
   }
   ctrl$frequency <- resolve_control_frequency(
     ctrl$nature %||% ctrl$control_type,

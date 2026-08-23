@@ -421,9 +421,18 @@ ui <- page_navbar(
           accordion_panel(
             "風險辨識",
             p(class = "small text-muted mb-2",
-              "包含：風險因素、風險描述、風險類別、RoMM 分類。同一控制點僅一種風險類別；需其他類別時另設控制點。"),
-            textInput("risk_factor", lab_req("風險因素"), value = "",
-                      placeholder = "簡短風險 tag／因素名稱"),
+              "包含：風險因素、風險描述、風險類別、RoMM 分類。風險因素可複選建議項目或手動輸入；同一控制點僅一種風險類別。"),
+            selectizeInput(
+              "risk_factor", lab_req("風險因素"),
+              choices = NULL, multiple = TRUE,
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "可多選；依循環／子作業載入建議，或手動輸入",
+                plugins = list("remove_button")
+              )
+            ),
+            uiOutput("risk_factor_hint"),
             textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
                           placeholder = "風險情境與影響描述"),
             selectInput(
@@ -988,6 +997,28 @@ server <- function(input, output, session) {
           sprintf("循環：%s（編號 %s）— 於側邊欄變更。", cy, if (nzchar(cc)) cc else "—"))
     }
   })
+  output$risk_factor_hint <- renderUI({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      return(div(class = "alert alert-warning py-1 mb-2 small",
+                 "請先於側邊欄選擇循環，以載入建議風險因素。"))
+    }
+    sub_key <- input$design_sub %||% ""
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    n_risk <- length(cascade_risk_choices(rows))
+    if (n_risk > 0) {
+      scope <- if (nzchar(sub_key) && !identical(sub_key, "__custom__")) "所選子作業" else "本循環"
+      div(class = "alert alert-success py-1 mb-2 small",
+          sprintf("%s已載入 %d 個建議風險因素，可複選或手動新增。", scope, n_risk))
+    } else {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          "暫無建議風險因素，請直接輸入或先選子作業。")
+    }
+  })
+
   output$design_sub_hint <- renderUI({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return(NULL)
@@ -1019,6 +1050,29 @@ server <- function(input, output, session) {
         if (nzchar(cur) && cur %in% unname(ch)) cur else ""
       }
     )
+  }
+
+  refresh_risk_factor_choices <- function() {
+    cy <- input$cycle %||% ""
+    sub_key <- input$design_sub %||% ""
+    rows <- if (nzchar(cy)) {
+      r <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+      if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+        r <- filter_cascade_rows(r, sub_key = sub_key)
+      }
+      r
+    } else {
+      list()
+    }
+    ch <- if (length(rows)) cascade_risk_choices(rows) else character()
+    cur <- parse_risk_factor_values(input$risk_factor %||% character())
+    if (length(cur)) {
+      extra <- cur[!cur %in% unname(ch)]
+      if (length(extra)) {
+        ch <- c(ch, stats::setNames(extra, vapply(extra, risk_factor_tag, character(1))))
+      }
+    }
+    updateSelectizeInput(session, "risk_factor", choices = ch, server = TRUE, selected = cur)
   }
 
   refresh_pbc_choices <- function() {
@@ -1123,6 +1177,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$cycle, {
     refresh_pbc_choices()
+    refresh_risk_factor_choices()
   }, ignoreNULL = FALSE)
 
   # 一律以內建＋使用者庫候選為訪談來源（側邊欄循環→直接選子作業）
@@ -1158,10 +1213,50 @@ server <- function(input, output, session) {
 
   observeEvent(input$design_sub, {
     sub_key <- input$design_sub %||% ""
-    if (!nzchar(sub_key) || identical(sub_key, "__custom__")) return()
+    if (!nzchar(sub_key) || identical(sub_key, "__custom__")) {
+      refresh_risk_factor_choices()
+      return()
+    }
     sp <- parse_sub_process_key(sub_key)
     updateTextInput(session, "sub_process_id", value = sp$id)
     updateTextInput(session, "sub_process", value = sp$name)
+    refresh_risk_factor_choices()
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$risk_factor, {
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) return()
+    sub_key <- input$design_sub %||% ""
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    sel <- input$risk_factor %||% character()
+    if (!length(sel)) return()
+    descs <- character()
+    cats <- character()
+    romms <- character()
+    for (rf in sel) {
+      det <- cascade_risk_detail(rows, rf)
+      if (nzchar(det$risk_description)) descs <- c(descs, det$risk_description)
+      if (nzchar(det$risk_category)) cats <- c(cats, det$risk_category)
+      r <- det$sample
+      if (is.list(r) && length(r) && nzchar(trimws(r$romm_classification %||% ""))) {
+        romms <- c(romms, r$romm_classification)
+      }
+    }
+    descs <- unique(descs[nzchar(descs)])
+    if (length(descs)) {
+      updateTextAreaInput(session, "risk_description", value = paste(descs, collapse = "；"))
+    }
+    cats <- unique(cats[nzchar(cats)])
+    if (length(cats) == 1L) {
+      updateSelectInput(session, "risk_category", selected = cats[[1]])
+    }
+    romms <- unique(romms[nzchar(romms)])
+    if (length(romms) == 1L) {
+      updateSelectInput(session, "romm_classification", selected = romms[[1]])
+    }
   }, ignoreInit = TRUE)
 
   observe({
@@ -1218,6 +1313,11 @@ server <- function(input, output, session) {
     input$cycle
     input$lib_query
     refresh_lib_choices()
+  })
+  observe({
+    input$cycle
+    input$design_sub
+    refresh_risk_factor_choices()
   })
   observe({
     input$cycle
@@ -1351,7 +1451,9 @@ server <- function(input, output, session) {
         updateSelectInput(session, "design_sub", selected = "__custom__")
       },
       "風險因素" = function() {
-        updateTextInput(session, "risk_factor", value = val)
+        sel <- parse_risk_factor_values(val)
+        updateSelectizeInput(session, "risk_factor", selected = sel)
+        refresh_risk_factor_choices()
       },
       "風險描述" = function() {
         updateTextAreaInput(session, "risk_description", value = val)
@@ -1663,7 +1765,7 @@ server <- function(input, output, session) {
   }
 
   current_draft_from_inputs <- function() {
-    rf_tag <- risk_factor_tag(input$risk_factor %||% "")
+    rf_tag <- format_risk_factor_text(input$risk_factor %||% character())
     nature <- normalize_control_type_manual_auto(input$nature %||% "")
     approach <- normalize_control_activity_type_pd(input$approach)
     # 風險類別決定屬性種類（三擇一）；細節來自風險辨識

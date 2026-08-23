@@ -194,6 +194,41 @@ risk_factor_tag <- function(x) {
   if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
 }
 
+# 風險因素複選：僅以；分隔（保留名稱中的 /）
+parse_risk_factor_values <- function(x) {
+  if (is.character(x) && length(x) > 1L) {
+    vals <- trimws(x)
+    return(unique(vals[nzchar(vals)]))
+  }
+  raw <- trimws(as.character(x %||% ""))
+  if (!nzchar(raw)) return(character())
+  vals <- trimws(unlist(strsplit(raw, "[;；]+")))
+  unique(vals[nzchar(vals)])
+}
+
+join_risk_factor_values <- function(x) {
+  vals <- parse_risk_factor_values(x)
+  if (!length(vals)) return("")
+  paste(vals, collapse = "；")
+}
+
+# 風險因素複選：解析、正規化 tag、以；接合（RCM／必填檢核）
+format_risk_factor_text <- function(x) {
+  vals <- parse_risk_factor_values(x)
+  if (!length(vals)) return("")
+  tags <- unique(vapply(vals, risk_factor_tag, character(1)))
+  tags <- tags[nzchar(tags)]
+  join_risk_factor_values(tags)
+}
+
+risk_factors_are_filled <- function(x) {
+  length(parse_risk_factor_values(x)) > 0L
+}
+
+risk_factor_selection_from_ctrl <- function(ctrl) {
+  parse_risk_factor_values(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+}
+
 # Apply library / RCM control cycle (form fields filled by apply_supplement_from_ctrl)
 apply_ctrl_to_cascade <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
@@ -224,8 +259,8 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
              nzchar(trimws(ctrl$sub_process %||% ""))) {
     updateSelectInput(session, "design_sub", selected = "__custom__")
   }
-  rf <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% "")
-  updateTextInput(session, "risk_factor", value = rf)
+  rf_sel <- risk_factor_selection_from_ctrl(ctrl)
+  updateSelectizeInput(session, "risk_factor", selected = rf_sel)
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
   if (nzchar(trimws(ctrl$risk_category %||% ""))) {
     updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
@@ -330,7 +365,7 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
     return(invisible(NULL))
   }
   det <- cascade_risk_detail(rows, risk_factor)
-  updateTextInput(session, "risk_factor", value = risk_factor_tag(risk_factor))
+  updateSelectizeInput(session, "risk_factor", selected = risk_factor)
   if (nzchar(det$risk_description)) {
     updateTextAreaInput(session, "risk_description", value = det$risk_description)
   }

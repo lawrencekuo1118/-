@@ -827,7 +827,21 @@ check(isTRUE(design_required_check(modifyList(d1, list(
   iuc = "手動 IUC A；手動 IUC B", iuc_or_system = "手動 IUC A；手動 IUC B"
 )))$ok),
       "IUC 手動複選文字可通過必填")
-check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
+check(grepl('selectizeInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素複選選單")
+check(grepl('multiple\\s*=\\s*TRUE', app_src) && grepl('"risk_factor"', app_src),
+      "風險因素為複選 selectize")
+check(identical(
+  format_risk_factor_text(c("密碼管理 / 制度與程序", "密碼管理")),
+  "密碼管理"
+), "風險因素複選去重 tag 後以分號接合")
+check(identical(
+  format_risk_factor_text("密碼管理 / 制度與程序；使用者帳號管理"),
+  "密碼管理；使用者帳號管理"
+), "風險因素複選文字可正規化")
+check(isTRUE(design_required_check(modifyList(d1, list(
+  risk_factor = "密碼管理；使用者帳號管理", risk_name = "密碼管理；使用者帳號管理"
+)))$ok),
+      "風險因素複選可通過必填")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")

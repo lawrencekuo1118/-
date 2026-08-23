@@ -627,6 +627,8 @@ check(identical(sub_process_name_from_value("EC-101||存取管理作業"), "存�
       "子作業名稱 key 可解析為名稱")
 check(identical(sub_process_id_from_value("EC-101||存取管理作業", ""), "EC-101"),
       "子作業名稱 key 可解析為編號")
+check(identical(sub_process_choice_label("EC-101||存取管理作業"), "存取管理作業"),
+      "子作業選項標籤僅顯示名稱")
 check(grepl('card_header\\(\\s*"風險控制點設計"\\)', app_casc),
       "風險控制點設計左欄標題改為表單設計")
 it_risks <- cascade_risk_choices(it_rows)
@@ -644,6 +646,7 @@ if (length(jl)) {
   check(length(rows) >= 20, "cascade flat 列來自鯨鏈庫")
   subs <- cascade_sub_process_choices(rows)
   check(length(subs) >= 1, "循環下有候選子作業")
+  check(!any(grepl("｜", names(subs))), "子作業名稱選項不含編號")
   sub1 <- unname(subs)[[1]]
   rows2 <- filter_cascade_rows(rows, sub_key = sub1)
   risks <- cascade_risk_choices(rows2)

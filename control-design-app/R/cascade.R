@@ -158,9 +158,8 @@ sub_process_choice_label <- function(key) {
   if (!nzchar(key)) return("")
   if (grepl("\\|\\|", key, fixed = FALSE)) {
     sp <- parse_sub_process_key(key)
-    if (nzchar(sp$id) && nzchar(sp$name)) return(sprintf("%s｜%s", sp$id, sp$name))
-    if (nzchar(sp$id)) return(sp$id)
-    return(sp$name)
+    if (nzchar(sp$name)) return(sp$name)
+    return(sp$id)
   }
   key
 }
@@ -212,12 +211,10 @@ cascade_sub_process_choices <- function(rows) {
     sub_process_key(r$sub_process_id, r$sub_process)
   }, character(1)))
   keys <- keys[nzchar(keys)]
-  labels <- vapply(keys, function(k) {
-    sp <- parse_sub_process_key(k)
-    if (nzchar(sp$id) && nzchar(sp$name)) sprintf("%s｜%s", sp$id, sp$name)
-    else if (nzchar(sp$id)) sp$id else sp$name
-  }, character(1))
-  stats::setNames(keys, labels)
+  labels <- vapply(keys, sub_process_choice_label, character(1))
+  # 選項僅顯示名稱；同名子作業保留第一筆
+  keep <- !duplicated(labels)
+  stats::setNames(keys[keep], labels[keep])
 }
 
 # Short tag label for 風險因素（風險描述之 tag；不含 []）

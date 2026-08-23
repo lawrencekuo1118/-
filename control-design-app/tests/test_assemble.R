@@ -670,8 +670,9 @@ check(grepl("範本套用", app_src) && grepl("未套用範本", app_src),
       "範本庫頁籤含可跳過套用設定")
 check(!grepl('actionButton\\(\\s*"csa_scenario_dup"', app_src) &&
         !grepl('actionButton\\(\\s*"save_to_lib"', app_src) &&
-        !grepl('actionButton\\(\\s*"lib_add_selected_control"', app_src),
-      "設計區塊按鈕精簡（移除多餘收集／複製鈕）")
+        !grepl('actionButton\\(\\s*"lib_add_selected_control"', app_src) &&
+        !grepl('actionButton\\(\\s*"import_jinglian_seed"', app_src),
+      "設計區塊按鈕精簡（每區至多三個）")
 check(grepl("overflow: visible !important", app_src) &&
         grepl("max-height: none !important", app_src),
       "區塊一次顯示全部內容（無區塊內上下滑動）")

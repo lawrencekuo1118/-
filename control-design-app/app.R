@@ -692,9 +692,11 @@ ui <- page_navbar(
           class = "d-flex gap-1 flex-wrap",
           actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
           actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
-          downloadButton("download_pbc", "匯出", class = "btn-sm")
+          actionButton("pbc_apply_to_design", "套用至控制設計",
+                       class = "btn-sm btn-outline-success")
         ),
         fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
+        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
         tags$hr(),
         tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
         p(class = "small text-muted mb-2",
@@ -703,9 +705,7 @@ ui <- page_navbar(
           "pbc_apply", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "原名→新名")
         ),
-        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE),
-        actionButton("pbc_apply_to_design", "套用至控制設計 IUC",
-                     class = "btn-sm btn-outline-success w-100")
+        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
       ),
       card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
     )
@@ -795,8 +795,6 @@ server <- function(input, output, session) {
         fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
                   accept = c(".csv", ".json", ".xlsx", ".xls")),
         checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
-                     class = "btn-sm btn-outline-primary mb-3"),
         tags$hr(class = "my-2"),
         tags$h6(class = "small fw-bold mb-2", "收集入庫"),
         textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
@@ -2330,20 +2328,6 @@ server <- function(input, output, session) {
     lib(persist_lib(upsert_library_item(lib(), item)))
     refresh_lib_choices()
     showNotification(paste("已存入範本庫", item$library_id), type = "message")
-  })
-
-  observeEvent(input$import_jinglian_seed, {
-    if (!require_admin(is_admin(), session)) return()
-    path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-    if (!file.exists(path)) {
-      return(showNotification("找不到內建 RCM 範本檔", type = "error"))
-    }
-    tryCatch({
-      new_lib <- import_control_library_file(path, lib(), overwrite = isTRUE(input$lib_overwrite))
-      lib(persist_lib(new_lib))
-      refresh_lib_choices()
-      showNotification(sprintf("已載入 RCM 範本庫，共 %d 筆", length(new_lib)), type = "message")
-    }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
 
   observeEvent(input$oa_swap, {

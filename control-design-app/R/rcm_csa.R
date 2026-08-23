@@ -26,7 +26,7 @@ DESIGN_ELEMENTS <- c(
 
 # IUC 與 相關系統為獨立欄位；iuc_or_system 保留向後相容（僅對應 IUC）
 ctrl_iuc_value <- function(ctrl) {
-  trimws(as.character(ctrl$iuc %||% ctrl$iuc_or_system %||% ""))
+  join_text_list_values(ctrl$iuc %||% ctrl$iuc_or_system %||% "")
 }
 
 ctrl_related_system_value <- function(ctrl) {
@@ -1403,7 +1403,7 @@ DESIGN_OPTIONAL_FIELDS <- c(
   related_policy = "相關政策或程序",
   related_system = "相關系統（IT／應用系統；自動控制必填）",
   related_document_pbc = paste0(
-    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
+    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 資料庫選取或手動輸入；自動控制／遵循面不可填）"
   )
 )
 
@@ -1433,11 +1433,13 @@ related_document_mode_for_ctrl <- function(ctrl) {
 }
 
 related_document_pbc_value <- function(ctrl, registry = NULL) {
-  ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-  if (length(ids) && is.data.frame(registry) && nrow(registry)) {
-    return(apply_pbc_to_related_document(registry, ids))
-  }
-  trimws(as.character(ctrl$related_document %||% ""))
+  txt <- join_text_list_values(ctrl$related_document %||% "")
+  if (nzchar(txt)) return(txt)
+  sel <- c(
+    parse_pbc_id_values(ctrl$related_document_pbc_ids),
+    parse_text_list_values(ctrl$related_document_manual %||% "")
+  )
+  resolve_multi_pbc_text(sel, registry)
 }
 
 is_reporting_risk_category <- function(cat) {
@@ -1673,19 +1675,22 @@ design_required_check <- function(ctrl) {
   } else {
     filled$assertions <- !length(asrt)
   }
-  # 控制佐證文件：人工＋非法遵面須自 PBC 選取；自動／遵循面不可填
+  # 控制佐證文件：人工＋非法遵面必填（PBC 選取或手動輸入，可多選）；自動／遵循面不可填
   doc_mode <- related_document_mode_for_ctrl(ctrl)
-  doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-  doc_txt <- trimws(as.character(ctrl$related_document %||% ""))
+  doc_sel <- c(
+    parse_pbc_id_values(ctrl$related_document_pbc_ids),
+    parse_text_list_values(ctrl$related_document_manual %||% "")
+  )
+  doc_txt <- related_document_pbc_value(ctrl)
   doc_label <- CONTROL_EVIDENCE_DOCUMENT_LABEL
   if (identical(doc_mode, "required")) {
-    filled$related_document_pbc <- pbc_ids_are_filled(doc_ids)
-    if (!pbc_ids_are_filled(doc_ids)) {
-      missing <- c(missing, paste0(doc_label, "（須自 PBC 資料庫選取）"))
+    filled$related_document_pbc <- multi_pbc_is_filled(doc_sel) || nzchar(doc_txt)
+    if (!filled$related_document_pbc) {
+      missing <- c(missing, paste0(doc_label, "（可多選；自 PBC 選取或手動輸入）"))
     }
   } else if (identical(doc_mode, "locked")) {
-    filled$related_document_pbc <- !pbc_ids_are_filled(doc_ids) && !nzchar(doc_txt)
-    if (pbc_ids_are_filled(doc_ids) || nzchar(doc_txt)) {
+    filled$related_document_pbc <- !multi_pbc_is_filled(doc_sel) && !nzchar(doc_txt)
+    if (multi_pbc_is_filled(doc_sel) || nzchar(doc_txt)) {
       missing <- c(missing, paste0(doc_label, "不可設定（自動控制或遵循面風險）"))
     }
   } else {
@@ -1790,10 +1795,11 @@ detect_design_gaps <- function(ctrl) {
   }
   doc_mode <- related_document_mode_for_ctrl(ctrl)
   if (identical(doc_mode, "required") &&
-      !pbc_ids_are_filled(ctrl$related_document_pbc_ids) &&
-      is_blank(ctrl$related_document)) {
-    add("缺文件", "高", paste0("缺少", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（須自 PBC 資料庫選取）"),
-        "至 PBC 資料庫登錄後，於控制設計選取對應佐證文件")
+      !multi_pbc_is_filled(ctrl$related_document_pbc_ids) &&
+      is_blank(ctrl$related_document) &&
+      is_blank(ctrl$related_document_manual)) {
+    add("缺文件", "高", paste0("缺少", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 選取或手動輸入）"),
+        "至 PBC 資料庫選取或於控制設計手動輸入佐證文件名稱")
   } else if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document) &&
              !identical(doc_mode, "locked")) {
     add("缺文件", "低", paste0("缺少產出／", CONTROL_EVIDENCE_DOCUMENT_LABEL),
@@ -1850,14 +1856,16 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
   }
-  # 控制佐證文件：自動控制或遵循面強制清空；否則以 PBC 選取為準
+  # 控制佐證文件：自動控制或遵循面強制清空；否則保留 PBC 選取＋手動輸入
   if (identical(related_document_mode_for_ctrl(ctrl), "locked")) {
     ctrl$related_document <- ""
     ctrl$related_document_pbc_ids <- character(0)
+    ctrl$related_document_manual <- ""
   } else {
-    ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-    if (length(ids)) {
-      ctrl$related_document_pbc_ids <- ids
+    ctrl$related_document_pbc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+    ctrl$related_document_manual <- join_text_list_values(ctrl$related_document_manual)
+    if (is_blank(ctrl$related_document)) {
+      ctrl$related_document <- join_text_list_values(ctrl$related_document_manual)
     }
   }
   # 聲明：依風險類別過濾；遵循面強制清空

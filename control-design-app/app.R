@@ -127,6 +127,17 @@ ui <- page_navbar(
         el.disabled = !msg.enabled;
       }
     });
+    Shiny.addCustomMessageHandler('toggleIuc', function(msg) {
+      var el = document.getElementById('iuc');
+      if (!el) return;
+      var $el = $('#iuc');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+      }
+    });
   ")),
     tags$style(HTML(paste0("
       :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; }
@@ -493,9 +504,15 @@ ui <- page_navbar(
                 value = "", placeholder = "例：資訊安全單位"
               )
             ),
-            textAreaInput(
-              "iuc", lab_req("IUC"), rows = 2,
-              placeholder = "控制執行時取得之文件／資訊（命名請至 PBC資料庫套用）"
+            selectizeInput(
+              "iuc", lab_req("IUC"),
+              choices = NULL, multiple = TRUE,
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "可多選；自 PBC 資料庫選取或手動輸入",
+                plugins = list("remove_button")
+              )
             ),
             uiOutput("related_system_label"),
             textInput(
@@ -515,7 +532,9 @@ ui <- page_navbar(
               "related_document_pbc", lab_req(CONTROL_EVIDENCE_DOCUMENT_LABEL),
               choices = NULL, multiple = TRUE,
               options = list(
-                placeholder = "自 PBC 資料庫選取文件（可多選）",
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "可多選；自 PBC 資料庫選取或手動輸入",
                 plugins = list("remove_button")
               )
             ),
@@ -987,18 +1006,21 @@ server <- function(input, output, session) {
   refresh_pbc_choices <- function() {
     cy <- input$cycle %||% ""
     ch <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy)) cy else NULL)
-    updateSelectizeInput(
-      session, "pbc_apply", choices = ch, server = TRUE,
-      selected = intersect(input$pbc_apply %||% character(), unname(ch))
-    )
-    updateSelectizeInput(
-      session, "interview_pbc_link", choices = ch, server = TRUE,
-      selected = intersect(input$interview_pbc_link %||% character(), unname(ch))
-    )
-    updateSelectizeInput(
-      session, "related_document_pbc", choices = ch, server = TRUE,
-      selected = intersect(input$related_document_pbc %||% character(), unname(ch))
-    )
+    merge_selected <- function(cur) {
+      cur <- parse_text_list_values(cur)
+      if (!length(cur)) return(cur)
+      extra <- cur[!cur %in% unname(ch)]
+      if (length(extra)) ch <<- c(ch, stats::setNames(extra, extra))
+      cur
+    }
+    update_selectize <- function(input_id) {
+      cur <- merge_selected(input[[input_id]] %||% character())
+      updateSelectizeInput(session, input_id, choices = ch, server = TRUE, selected = cur)
+    }
+    update_selectize("pbc_apply")
+    update_selectize("interview_pbc_link")
+    update_selectize("related_document_pbc")
+    update_selectize("iuc")
   }
 
   interview_worksheet <- function() {
@@ -1156,11 +1178,15 @@ server <- function(input, output, session) {
   }, once = TRUE)
 
   observeEvent(input$pbc_apply_to_design, {
-    ids <- input$pbc_apply
+    ids <- input$pbc_apply %||% character()
     if (!length(ids)) {
       return(showNotification("請先選擇要套用的 PBC 命名", type = "warning"))
     }
-    updateTextAreaInput(session, "iuc", value = apply_pbc_to_iuc(pbc_reg(), ids))
+    cur_iuc <- parse_text_list_values(input$iuc)
+    updateSelectizeInput(
+      session, "iuc",
+      selected = unique(c(cur_iuc, ids))
+    )
     if (isTRUE(input$pbc_also_inputs)) {
       mapped <- format_pbc_for_inputs(pbc_reg(), ids)
       cur <- trimws(input$inputs %||% "")
@@ -1312,24 +1338,19 @@ server <- function(input, output, session) {
       },
       "相關系統／IUC" = function() {
         # 舊參數庫鍵名；僅套用至 IUC（與相關系統分開）
-        updateTextAreaInput(session, "iuc", value = val)
+        sel <- expand_pbc_selection(val, pbc_reg())
+        updateSelectizeInput(session, "iuc", selected = sel)
       },
       "相關系統" = function() updateTextInput(session, "related_system", value = val),
       "IUC" = function() {
-        updateTextAreaInput(session, "iuc", value = val)
+        sel <- expand_pbc_selection(val, pbc_reg())
+        updateSelectizeInput(session, "iuc", selected = sel)
       },
       "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
       "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
       "相關文件" = function() {
-        ids <- match_pbc_ids_from_text(pbc_reg(), val)
-        if (length(ids)) {
-          updateSelectizeInput(session, "related_document_pbc", selected = ids)
-        } else {
-          showNotification(
-            paste0(CONTROL_EVIDENCE_DOCUMENT_LABEL, "須自 PBC 資料庫選取；請至 PBC 資料庫登錄後再選"),
-            type = "warning"
-          )
-        }
+        sel <- expand_pbc_selection(val, pbc_reg())
+        updateSelectizeInput(session, "related_document_pbc", selected = sel)
       }
     )
     mapped[[CONTROL_EVIDENCE_DOCUMENT_LABEL]] <- mapped[["相關文件"]]
@@ -1623,19 +1644,31 @@ server <- function(input, output, session) {
       control_activity = trimws(input$control_activity %||% ""),
       frequency = resolve_control_frequency(nature, input$frequency %||% ""),
       responsible_unit = trimws(input$responsible_unit %||% ""),
-      iuc_or_system = trimws(input$iuc %||% ""),
-      iuc = trimws(input$iuc %||% ""),
+      iuc_or_system = {
+        iuc_sel <- input$iuc %||% character()
+        resolve_multi_pbc_text(iuc_sel, pbc_reg())
+      },
+      iuc = {
+        iuc_sel <- input$iuc %||% character()
+        resolve_multi_pbc_text(iuc_sel, pbc_reg())
+      },
       related_system = trimws(input$related_system %||% ""),
       related_policy = input$related_policy %||% "",
       related_law = {
         v <- input$related_law %||% character(0)
         paste(unique(trimws(as.character(v))), collapse = "；")
       },
-      related_document_pbc_ids = input$related_document_pbc %||% character(),
-      related_document = {
-        ids <- input$related_document_pbc %||% character()
-        if (length(ids)) apply_pbc_to_related_document(pbc_reg(), ids) else ""
+      related_document_pbc_ids = {
+        parts <- split_pbc_selection(input$related_document_pbc %||% character(), pbc_reg())
+        parts$ids
       },
+      related_document_manual = {
+        parts <- split_pbc_selection(input$related_document_pbc %||% character(), pbc_reg())
+        paste(parts$manual, collapse = "；")
+      },
+      related_document = resolve_multi_pbc_text(
+        input$related_document_pbc %||% character(), pbc_reg()
+      ),
       nature = nature,
       approach = approach,
       control_type = nature,
@@ -1646,8 +1679,7 @@ server <- function(input, output, session) {
       outputs = {
         out <- trimws(input$outputs %||% "")
         if (nzchar(out)) out else {
-          ids <- input$related_document_pbc %||% character()
-          if (length(ids)) apply_pbc_to_related_document(pbc_reg(), ids) else ""
+          resolve_multi_pbc_text(input$related_document_pbc %||% character(), pbc_reg())
         }
       },
       investigation_threshold = input$investigation_threshold %||% "",
@@ -1720,9 +1752,8 @@ server <- function(input, output, session) {
     ))
     if (identical(mode, "required")) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("人工控制"), " — ", CONTROL_EVIDENCE_DOCUMENT_LABEL, "須自 ",
-          tags$strong("PBC 資料庫"), " 選取（可多選）；無資料請先至 ",
-          tags$strong("PBC 資料庫"), " 登錄。")
+          lab_req("人工控制"), " — ", CONTROL_EVIDENCE_DOCUMENT_LABEL,
+          "可多選；可自 ", tags$strong("PBC 資料庫"), " 選取，或直接輸入文件名稱。")
     } else if (identical(mode, "locked")) {
       reason <- c(
         if (is_automatic_control(nature)) "自動控制",
@@ -1732,7 +1763,8 @@ server <- function(input, output, session) {
           paste0("無法設定", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（", paste(reason, collapse = "／"), "）。"))
     } else {
       helpText(class = "text-muted small",
-               paste0("請先選控制類型與風險類別；人工且非法遵面時，須自 PBC 資料庫選取", CONTROL_EVIDENCE_DOCUMENT_LABEL, "。"))
+               paste0("請先選控制類型與風險類別；人工且非法遵面時，", CONTROL_EVIDENCE_DOCUMENT_LABEL,
+                      "可多選（PBC 選取或手動輸入）。"))
     }
   })
 

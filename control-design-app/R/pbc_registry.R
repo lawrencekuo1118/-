@@ -134,8 +134,71 @@ parse_pbc_id_values <- function(x) {
   unique(vals[nzchar(vals)])
 }
 
+# Multi-value text／selectize（IUC、控制佐證文件等）
+parse_text_list_values <- function(x) {
+  parse_pbc_id_values(x)
+}
+
+join_text_list_values <- function(x) {
+  vals <- parse_text_list_values(x)
+  if (!length(vals)) return("")
+  paste(vals, collapse = "；")
+}
+
 pbc_ids_are_filled <- function(x) {
   length(parse_pbc_id_values(x)) > 0L
+}
+
+multi_pbc_is_filled <- function(x) {
+  length(parse_text_list_values(x)) > 0L
+}
+
+known_pbc_ids <- function(registry) {
+  if (!is.data.frame(registry) || !nrow(registry)) return(character())
+  unique(trimws(as.character(registry$pbc_id)))
+}
+
+split_pbc_selection <- function(selection, registry = NULL) {
+  sel <- parse_text_list_values(selection)
+  if (!length(sel)) {
+    return(list(ids = character(), manual = character()))
+  }
+  known <- known_pbc_ids(registry)
+  if (!length(known)) {
+    return(list(ids = character(), manual = sel))
+  }
+  is_id <- sel %in% known
+  list(ids = sel[is_id], manual = sel[!is_id])
+}
+
+resolve_multi_pbc_text <- function(selection, registry = NULL) {
+  parts <- split_pbc_selection(selection, registry)
+  labels <- character()
+  if (length(parts$ids) && is.data.frame(registry) && nrow(registry)) {
+    labels <- c(labels, unlist(strsplit(
+      apply_pbc_to_iuc(registry, parts$ids), "；", fixed = TRUE
+    )))
+  }
+  if (length(parts$manual)) labels <- c(labels, parts$manual)
+  labels <- unique(trimws(labels))
+  labels <- labels[nzchar(labels)]
+  if (!length(labels)) return("")
+  paste(labels, collapse = "；")
+}
+
+expand_pbc_selection <- function(text, registry = NULL, stored_ids = character()) {
+  ids <- unique(c(parse_pbc_id_values(stored_ids), match_pbc_ids_from_text(registry, text)))
+  parts <- parse_text_list_values(text)
+  manual <- character()
+  for (p in parts) {
+    hit <- match_pbc_ids_from_text(registry, p)
+    if (length(hit)) {
+      ids <- c(ids, hit)
+    } else {
+      manual <- c(manual, p)
+    }
+  }
+  unique(c(ids, manual))
 }
 
 # Apply selected PBC ids → reviewed names for IUC field

@@ -245,12 +245,12 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
                          if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
                        })
   doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-  if (!length(doc_ids) && is.data.frame(pbc_registry) && nrow(pbc_registry)) {
-    doc_ids <- match_pbc_ids_from_text(
-      pbc_registry, ctrl$related_document %||% ctrl$outputs %||% ""
-    )
-  }
-  updateSelectizeInput(session, "related_document_pbc", selected = doc_ids)
+  doc_sel <- expand_pbc_selection(
+    ctrl$related_document %||% ctrl$outputs %||% "",
+    pbc_registry,
+    stored_ids = doc_ids
+  )
+  updateSelectizeInput(session, "related_document_pbc", selected = doc_sel)
   updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
   updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
@@ -267,8 +267,13 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     }
   }
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
-  updateTextAreaInput(session, "iuc",
-                      value = ctrl$iuc %||% ctrl$iuc_or_system %||% "")
+  updateSelectizeInput(
+    session, "iuc",
+    selected = expand_pbc_selection(
+      ctrl$iuc %||% ctrl$iuc_or_system %||% "",
+      pbc_registry
+    )
+  )
   updateTextInput(session, "related_system", value = ctrl$related_system %||% "")
   detail <- risk_attr_detail_from_ctrl(ctrl)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)

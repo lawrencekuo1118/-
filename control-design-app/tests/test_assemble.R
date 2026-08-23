@@ -749,10 +749,11 @@ check(!grepl('uiOutput\\(\\s*"design_required_checklist"', app_src) &&
       "已移除重複之設計必填清單／風險屬性預覽")
 check(!grepl('cascade_candidate_banner', app_src),
       "已移除引導設計上方重複提示框")
-check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
+check(grepl('selectizeInput\\(\\s*"iuc"', app_src) &&
+        grepl('create = TRUE', app_src) &&
         grepl('textInput\\(\\s*"related_system"', app_src) &&
         !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
-      "IUC 與相關系統分開設定")
+      "IUC 與相關系統分開設定（IUC 為可多選 selectize）")
 check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
         grepl('related_system_mode_for_ctrl', app_src),
       "相關系統依控制類型動態必填（自動控制）")
@@ -788,7 +789,7 @@ check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
         grepl("goto_pbc_tab", app_src) &&
         grepl("toggleRelatedDocument", app_src) &&
         !grepl('textInput\\(\\s*"related_document"', app_src),
-      "控制佐證文件改為 PBC 資料庫選取（自動／遵循面鎖定）")
+      "控制佐證文件為可多選 selectize（PBC 選取或手動輸入；自動／遵循面鎖定）")
 check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "營運面")), "required"),
       "人工＋非法遵面：控制佐證文件必填")
 check(identical(related_document_mode_for_ctrl(list(nature = "自動", risk_category = "營運面")), "locked"),
@@ -797,7 +798,19 @@ check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_cate
       "遵循面：控制佐證文件鎖定")
 check(identical(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件"), "控制佐證文件標籤常數")
 check(!isTRUE(design_required_check(without_pbc_doc(d1))$ok),
-      "未選 PBC 文件時必填檢核失敗")
+      "未選 PBC 文件且無手動輸入時必填檢核失敗")
+check(isTRUE(design_required_check(modifyList(without_pbc_doc(d1), list(
+  related_document_manual = "簽核紀錄", related_document = "簽核紀錄"
+)))$ok),
+      "控制佐證文件可改以手動輸入通過必填")
+check(identical(
+  ctrl_iuc_value(list(iuc = c("使用者權限清冊", "在職名單"))),
+  "使用者權限清冊；在職名單"
+), "IUC 複選以分號接合")
+check(isTRUE(design_required_check(modifyList(d1, list(
+  iuc = "手動 IUC A；手動 IUC B", iuc_or_system = "手動 IUC A；手動 IUC B"
+)))$ok),
+      "IUC 手動複選文字可通過必填")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")

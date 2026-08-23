@@ -122,6 +122,22 @@ lookup_pbc <- function(registry, pbc_ids) {
   registry[registry$pbc_id %in% pbc_ids, , drop = FALSE]
 }
 
+parse_pbc_id_values <- function(x) {
+  if (is.null(x)) return(character())
+  if (length(x) > 1L) {
+    vals <- trimws(as.character(x))
+    return(unique(vals[nzchar(vals)]))
+  }
+  raw <- trimws(as.character(x %||% ""))
+  if (!nzchar(raw)) return(character())
+  vals <- trimws(unlist(strsplit(raw, "[;；|/、,，]+")))
+  unique(vals[nzchar(vals)])
+}
+
+pbc_ids_are_filled <- function(x) {
+  length(parse_pbc_id_values(x)) > 0L
+}
+
 # Apply selected PBC ids → reviewed names for IUC field
 apply_pbc_to_iuc <- function(registry, pbc_ids) {
   rows <- lookup_pbc(registry, pbc_ids)
@@ -129,6 +145,38 @@ apply_pbc_to_iuc <- function(registry, pbc_ids) {
   paste(unique(vapply(seq_len(nrow(rows)), function(i) {
     format_pbc_reviewed_label(rows$reviewed_name[i], rows$pbc_kind[i])
   }, character(1))), collapse = "；")
+}
+
+# 相關文件：與 IUC 相同格式（檢視後命名＋證據類型標示）
+apply_pbc_to_related_document <- function(registry, pbc_ids) {
+  apply_pbc_to_iuc(registry, pbc_ids)
+}
+
+# 舊資料自由文字 → 嘗試對照 PBC id（精確比對檢視後命名／原名）
+match_pbc_ids_from_text <- function(registry, text) {
+  raw <- trimws(as.character(text %||% ""))
+  if (!nzchar(raw) || !is.data.frame(registry) || !nrow(registry)) {
+    return(character())
+  }
+  parts <- trimws(unlist(strsplit(raw, "[;；|/]+")))
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) return(character())
+  hits <- character()
+  for (p in parts) {
+    p_clean <- sub("^【[^】]+】", "", p)
+    idx <- which(
+      registry$pbc_id == p |
+        registry$reviewed_name == p |
+        registry$reviewed_name == p_clean |
+        registry$client_pbc_name == p |
+        registry$client_pbc_name == p_clean |
+        vapply(seq_len(nrow(registry)), function(i) {
+          format_pbc_reviewed_label(registry$reviewed_name[i], registry$pbc_kind[i]) == p
+        }, logical(1))
+    )
+    if (length(idx)) hits <- c(hits, registry$pbc_id[idx[[1]]])
+  }
+  unique(hits)
 }
 
 # Dual-name line for 控制現況 / Inputs documentation

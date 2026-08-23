@@ -82,7 +82,8 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("控制活動類型", c$approach %||% c$control_activity_type, source)
     add_vals("控制頻率", c$frequency, source)
     add_vals("流程負責單位", c$responsible_unit, source)
-    add_vals("相關系統／IUC", c$iuc_or_system %||% c$related_system, source)
+    add_vals("IUC", ctrl_iuc_value(c), source)
+    add_vals("相關系統", ctrl_related_system_value(c), source)
     add_vals("相關法令", c$related_law, source)
     add_vals("相關政策或程序", c$related_policy, source)
     add_vals("相關文件", c$related_document %||% c$outputs, source)
@@ -99,7 +100,7 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("PBC 客戶原名", pbc$client_pbc_name, "PBC命名庫")
     add_vals("PBC 檢視後命名", pbc$reviewed_name, "PBC命名庫")
     add_vals("PBC 證據類型", pbc$pbc_kind, "PBC命名庫")
-    add_vals("相關系統／IUC", pbc$iuc_or_system, "PBC命名庫")
+    add_vals("IUC", pbc$iuc_or_system, "PBC命名庫")
   }
   if (!length(rows)) return(empty_parameter_store())
   df <- do.call(rbind, rows)

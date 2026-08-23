@@ -38,10 +38,10 @@ lab_opt <- function(txt) {
   tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
 }
 
-fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL) {
+fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry = NULL) {
   if (is.null(ctrl)) return()
   apply_ctrl_to_cascade(session, ctrl)
-  apply_supplement_from_ctrl(session, ctrl)
+  apply_supplement_from_ctrl(session, ctrl, pbc_registry = pbc_registry)
 }
 
 ui <- page_navbar(
@@ -72,7 +72,8 @@ ui <- page_navbar(
     base_font = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Segoe UI", sans-serif',
     "font-size-base" = "0.9rem"
   ),
-  header = tags$script(HTML(sprintf("
+  header = tags$head(
+    tags$script(HTML("
     Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
       var el = document.getElementById('significant_account');
       if (!el) return;
@@ -115,54 +116,102 @@ ui <- page_navbar(
       el.disabled = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
     });
-    document.addEventListener('DOMContentLoaded', function() {
-      var style = document.createElement('style');
-      style.textContent = [
-        ':root { --brand-blue: %s; --brand-green: %s; --brand-black: %s; --brand-white: %s; }',
-        '.navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }',
-        '.navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }',
-        '.navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%%; background: var(--brand-green); vertical-align: middle; }',
-        '.navbar .nav-link { color: rgba(255,255,255,0.82) !important; }',
-        '.navbar .nav-link:hover, .navbar .nav-link.active { color: var(--brand-green) !important; }',
-        '.bslib-sidebar-layout > .sidebar { background: var(--brand-white); border-right: 1px solid #E5E5E5; }',
-        '.card { border-color: #E5E5E5; }',
-        '.card-header { background: var(--brand-white); border-bottom: 2px solid var(--brand-green); color: var(--brand-blue); font-weight: 600; }',
-        '.btn-primary { background-color: var(--brand-blue); border-color: var(--brand-blue); }',
-        '.btn-primary:hover, .btn-primary:focus { background-color: #00205B; border-color: #00205B; }',
-        '.btn-success { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); font-weight: 600; }',
-        '.btn-success:hover, .btn-success:focus { background-color: #6FA01E; border-color: #6FA01E; color: var(--brand-black); }',
-        '.btn-outline-success { color: var(--brand-green); border-color: var(--brand-green); }',
-        '.btn-outline-success:hover { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); }',
-        '.btn-outline-primary { color: var(--brand-blue); border-color: var(--brand-blue); }',
-        '.btn-outline-primary:hover { background-color: var(--brand-blue); color: var(--brand-white); }',
-        '.accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }',
-        '.accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }',
-        '.form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }',
-        '.alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }',
-        '.alert-info { background-color: rgba(0,46,130,0.08); border-color: var(--brand-blue); color: var(--brand-blue); }',
-        '.text-danger { color: #C41E3A !important; }',
-        'a { color: var(--brand-blue); }',
-        'a:hover { color: var(--brand-green); }',
-        '.lib-options-section .shiny-input-container { margin-bottom: 0.75rem; }',
-        '.lib-options-section .form-check { margin-bottom: 0.75rem; }',
-        '.lib-options-actions { clear: both; width: 100%%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
-        '.sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }',
-        '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }',
-        '.home-hero { background: linear-gradient(135deg, #000000 0%%, #002E82 70%%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); }',
-        '.home-hero h2 { color: #fff; font-weight: 700; margin: 0 0 0.5rem 0; }',
-        '.home-hero p { color: rgba(255,255,255,0.88); margin: 0; }',
-        '.home-section h5 { color: var(--brand-blue); font-weight: 700; border-left: 4px solid var(--brand-green); padding-left: 0.6rem; margin-bottom: 0.75rem; }',
-        '.home-steps { list-style: none; padding-left: 0; counter-reset: step; }',
-        '.home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }',
-        '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
-        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }',
-        '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
-        '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }'
-      ].join('\\n');
-      document.head.appendChild(style);
+    Shiny.addCustomMessageHandler('toggleRelatedDocument', function(msg) {
+      var el = document.getElementById('related_document_pbc');
+      if (!el) return;
+      var $el = $('#related_document_pbc');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+      }
     });
-  ", BRAND_BLUE, BRAND_GREEN, BRAND_BLACK, BRAND_WHITE))),
-  fillable = TRUE,
+  ")),
+    tags$style(HTML(paste0("
+      :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; }
+      .navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }
+      .navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }
+      .navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%; background: var(--brand-green); vertical-align: middle; }
+      .navbar .nav-link { color: rgba(255,255,255,0.82) !important; }
+      .navbar .nav-link:hover, .navbar .nav-link.active { color: var(--brand-green) !important; }
+      .bslib-sidebar-layout > .sidebar { background: var(--brand-white); border-right: 1px solid #E5E5E5; }
+      .card { border-color: #E5E5E5; }
+      .card-header { background: var(--brand-white); border-bottom: 2px solid var(--brand-green); color: var(--brand-blue); font-weight: 600; white-space: normal; overflow: visible; line-height: 1.35; }
+      .btn-primary { background-color: var(--brand-blue); border-color: var(--brand-blue); }
+      .btn-primary:hover, .btn-primary:focus { background-color: #00205B; border-color: #00205B; }
+      .btn-success { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); font-weight: 600; }
+      .btn-success:hover, .btn-success:focus { background-color: #6FA01E; border-color: #6FA01E; color: var(--brand-black); }
+      .btn-outline-success { color: var(--brand-green); border-color: var(--brand-green); }
+      .btn-outline-success:hover { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); }
+      .btn-outline-primary { color: var(--brand-blue); border-color: var(--brand-blue); }
+      .btn-outline-primary:hover { background-color: var(--brand-blue); color: var(--brand-white); }
+      .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
+      .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
+      .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
+      .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }
+      .alert-info { background-color: rgba(0,46,130,0.08); border-color: var(--brand-blue); color: var(--brand-blue); }
+      .text-danger { color: #C41E3A !important; }
+      a { color: var(--brand-blue); }
+      a:hover { color: var(--brand-green); }
+      .lib-options-section .shiny-input-container { margin-bottom: 0.75rem; }
+      .lib-options-section .form-check { margin-bottom: 0.75rem; }
+      .lib-options-actions { clear: both; width: 100%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }
+      .sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }
+      .sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }
+      /* 範本套用：避免標題／標籤／選單字句重疊 */
+      .lib-apply-card .card-header { white-space: normal; overflow: visible; line-height: 1.4; padding: 0.75rem 1rem; }
+      .lib-apply-card .card-body { overflow: visible !important; }
+      .lib-apply-card .shiny-input-container { margin-bottom: 1rem !important; clear: both; width: 100%; }
+      .lib-apply-card label { display: block; margin-bottom: 0.35rem; white-space: normal; }
+      .lib-apply-card .form-select, .lib-apply-card .form-control { width: 100%; }
+      .lib-apply-card .selectize-control { margin-bottom: 0; }
+      .lib-apply-card .selectize-dropdown { z-index: 1060 !important; }
+      .home-hero { background: linear-gradient(135deg, #000000 0%, #002E82 70%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); }
+      .home-hero h2 { color: #fff; font-weight: 700; margin: 0 0 0.5rem 0; }
+      .home-hero p { color: rgba(255,255,255,0.88); margin: 0; }
+      .home-section h5 { color: var(--brand-blue); font-weight: 700; border-left: 4px solid var(--brand-green); padding-left: 0.6rem; margin-bottom: 0.75rem; }
+      .home-steps { list-style: none; padding-left: 0; counter-reset: step; }
+      .home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }
+      .home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+      .home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; overflow: visible !important; max-height: none !important; }
+      .home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }
+      .home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }
+      /* 全頁原則：區塊一次顯示全部內容，禁止卡片／分頁內部上下捲動（僅整頁可捲） */
+      .html-fill-container, .html-fill-item, .bslib-page-main, .bslib-sidebar-layout > .main,
+      .tab-content, .tab-pane, .layout-columns, .bslib-grid, .bslib-grid-item {
+        height: auto !important; max-height: none !important; overflow: visible !important;
+        flex: none !important; min-height: 0 !important;
+      }
+      .bslib-card, .card, .card-body, .accordion, .accordion-item, .accordion-body, .accordion-collapse {
+        overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important;
+      }
+      .bslib-card > .card-body, .card > .card-body {
+        margin-top: 0 !important; margin-bottom: 0 !important; flex: none !important;
+      }
+      .home-section, .home-section > .card-body { overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important; }
+      .dataTables_wrapper, .dataTables_scroll, .dataTables_scrollBody {
+        overflow: visible !important; max-height: none !important; height: auto !important;
+      }
+      .shiny-text-output pre, .shiny-plot-output, .shiny-image-output {
+        overflow: visible !important; max-height: none !important;
+      }
+      .bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }
+      /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
+      .objective-assertions-row.bslib-grid {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+      }
+      .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
+      .objective-assertions-row #control_objective { min-height: 7.5rem; resize: vertical; }
+      .objective-assertions-row .selectize-control { min-height: 2.5rem; }
+      .objective-assertions-row .assertions-side .alert { margin-bottom: 0.35rem; }
+      /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
+      .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
+    ")))
+  ),
   sidebar = sidebar(
     width = 280,
     open = "desktop",
@@ -171,8 +220,14 @@ ui <- page_navbar(
       div(
         textInput("company", NULL, placeholder = "公司名稱"),
         tags$hr(class = "my-2"),
-        tags$div(class = "small fw-bold mb-1", "高權存取"),
-        uiOutput("admin_auth_box")
+        tags$div(class = "small fw-bold mb-1", "循環（全域）"),
+        selectInput(
+          "cycle", NULL,
+          choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
+          selected = ""
+        ),
+        textInput("cycle_code", NULL, value = "", placeholder = "循環編號（自動）"),
+        uiOutput("sidebar_cycle_hint")
       ),
       div(
         class = "mt-auto pt-2 sidebar-lib-block",
@@ -182,7 +237,9 @@ ui <- page_navbar(
         actionButton("goto_lib_tab", "開啟範本庫", class = "btn-sm btn-outline-secondary w-100 mb-2"),
         tags$hr(class = "my-2"),
         tags$div(class = "small fw-bold mb-1", "參數庫"),
-        actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100")
+        actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100"),
+        tags$hr(class = "my-2"),
+        uiOutput("admin_auth_box")
       )
     )
   ),
@@ -194,52 +251,31 @@ ui <- page_navbar(
       p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。",
         " RCM 標題列對齊鯨鏈資訊循環格式；設計採強制引導流程。")
     ),
-    layout_columns(
-      col_widths = c(7, 5),
-      card(
-        class = "home-section",
-        card_header("整體設計流程"),
-        tags$ol(
-          class = "home-steps mb-0",
-          tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱。"),
-          tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
-                  strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
-                  "（", tags$span(class = "text-danger", "須依序選取"),
-                  "：未選上一層時，下一層沒有候選）。"),
-          tags$li("補齊 ", strong("風險辨識"),
-                  "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
-                  strong("控制設計"),
-                  "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
-          tags$li(strong("完成設計＝寫入 RCM 一列"),
-                  "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
-          tags$li(tags$strong("訪談問項設計"),
-                  "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
-          tags$li(tags$strong("控制點測試設計"),
-                  "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
-        )
+    card(
+      class = "home-section",
+      card_header("整體設計流程"),
+      tags$ol(
+        class = "home-steps mb-0",
+        tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "（全域必選）與公司名稱；循環選定後各頁共用。"),
+        tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
+                strong("子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
+                "（", tags$span(class = "text-danger", "須先選側邊欄循環"),
+                "，再依序選取；未選上一層時，下一層沒有候選）。"),
+        tags$li("補齊 ", strong("風險辨識"),
+                "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
+                strong("控制設計"),
+                "；", tags$span(class = "text-danger", "*"), " 為設計必填。"),
+        tags$li(strong("完成設計＝寫入 RCM 一列"),
+                "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
+        tags$li(tags$strong("訪談問項設計"),
+                "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
+        tags$li(tags$strong("控制點測試設計"),
+                "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
       ),
-      card(
-        class = "home-section",
-        card_header("設計必填與防呆"),
-        tags$ul(
-          class = "mb-2 ps-3",
-          tags$li(strong("六大控制項目"), "：控制類型、控制活動類型、頻率、負責單位、IUC、控制活動。"),
-          tags$li(strong("控制目標 ≠ 控制活動"), "（Why／How 分欄；可拆分建議或對調）。"),
-          tags$li(strong("控制類型"), "僅人工／自動；", strong("自動"), "時頻率強制「持續」。"),
-          tags$li(strong("控制活動類型"), "僅單一預防性或偵測性。"),
-          tags$li(strong("風險辨識"), "：風險因素、風險描述、風險類別、RoMM 分類；",
-                  strong("風險類別"), "三擇一（報導面／營運面／遵循面），同一控制點不可複選。"),
-          tags$li(strong("會計科目"), "僅報導面可填且必填（常見科目複選，含「全部適用」）；",
-                  strong("相關法令"), "僅遵循面可填且必填。"),
-          tags$li(strong("聲明（Assertions）"), "：報導面可複選 Thomson Reuters／AICPA 八種；",
-                  "營運面僅完整性／正確性／即時性；遵循面不可選。"),
-          tags$li(strong("不變條件"), "：已定稿控制點數＝RCM 列數，控制編號一一對齊。")
-        ),
-        p(class = "small text-muted mb-0",
-          "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
-          "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
-          "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
-      )
+      p(class = "small text-muted mb-0 mt-2",
+        "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
+        "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
+        "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
     ),
     card(
       class = "home-section",
@@ -248,19 +284,19 @@ ui <- page_navbar(
         class = "home-tabs-grid",
         div(class = "home-tab-card",
             strong("訪談問項設計"),
-            "循環／子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
+            "依側邊欄循環選子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
         div(class = "home-tab-card",
             strong("風險控制點設計"),
-            "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
+            "依側邊欄循環引導選子作業／風險／目標／活動／IUC；定稿寫入 RCM。"),
         div(class = "home-tab-card",
             strong("控制點測試設計"),
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "可跳過套用；寫入／直接編輯需左側高權登入。"),
+            "可跳過套用；寫入／直接編輯時才需高權登入。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢／套用表單；新增刪除／重建需高權登入。"),
+            "查詢／套用表單；新增刪除／重建時才需高權登入。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
@@ -268,18 +304,6 @@ ui <- page_navbar(
             strong("RCM"),
             "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
       )
-    ),
-    card(
-      class = "home-section",
-      card_header("建議操作順序"),
-      p(class = "mb-1",
-        "① 首頁了解流程 → ② ",
-        strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
-        strong("訪談問項設計"), "／", strong("控制點測試設計"),
-        " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
-        " → ⑥ 需要時開啟 ", strong("範本庫"), "／", strong("參數庫"), "（側邊欄入口；範本套用可跳過）。"),
-      p(class = "small text-muted mb-0",
-        "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
   ),
   nav_panel(
@@ -287,30 +311,19 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(7, 5),
       card(
-        full_screen = TRUE,
         card_header("訪談引導（依序選取）"),
         uiOutput("interview_status"),
         uiOutput("interview_guide_banner"),
-        # ①～④ 對齊風險控制點設計「引導選取」置於 accordion 上方
-        radioButtons(
-          "interview_source", "① 題綱來源",
-          choices = INTERVIEW_SOURCE_CHOICES,
-          selected = "rcm", inline = TRUE
-        ),
-        selectInput(
-          "interview_cycle", NULL,
-          choices = c("② 選擇循環…" = "", CYCLES_NINE_CHOICES),
-          selected = ""
-        ),
+        # 循環於側邊欄；此處①子作業 → ②風險／控制點
         selectInput(
           "interview_sub", NULL,
-          choices = c("③ 選擇子作業…" = ""),
+          choices = c("① 選擇子作業…" = ""),
           selected = ""
         ),
         selectizeInput(
           "worksheet_controls", NULL,
           choices = NULL, multiple = TRUE,
-          options = list(placeholder = "④ 選擇控制點（可空＝範圍內全部）")
+          options = list(placeholder = "② 選擇風險／控制點（可空＝該子作業下全部建議）")
         ),
         div(
           class = "d-flex gap-1 flex-wrap mb-2",
@@ -323,34 +336,11 @@ ui <- page_navbar(
         tags$hr(),
         accordion(
           id = "interview_design_groups",
-          open = c("基本資料", "訪談焦點", "5W1H／PBC"),
-          accordion_panel(
-            "基本資料",
-            p(class = "small text-muted mb-2",
-              "訪談範圍之流程定位（與上方引導選取同步；版面同「風險控制點設計」基本資料）。"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("interview_cycle_code", "循環編號", value = "",
-                        placeholder = "例：EC"),
-              selectInput(
-                "interview_cycle_echo", "循環名稱",
-                choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                selected = ""
-              )
-            ),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("interview_sub_id_echo", "子作業編號", value = "",
-                        placeholder = "例：EC-101"),
-              textInput("interview_sub_name_echo", "子作業名稱", value = "",
-                        placeholder = "例：存取管理作業")
-            ),
-            uiOutput("interview_scope_summary")
-          ),
+          open = c("訪談焦點", "5W1H／PBC"),
           accordion_panel(
             "訪談焦點",
             p(class = "small text-muted mb-2",
-              "對齊風險辨識／控制設計主軸：深入且快速了解預期風險與預期控制目標／活動。"),
+              "側邊欄選定循環並選子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
             checkboxGroupInput(
               "interview_elements", NULL,
               choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
@@ -359,7 +349,7 @@ ui <- page_navbar(
           accordion_panel(
             "5W1H／PBC",
             p(class = "small text-muted mb-2",
-              "模組化拼湊回答架構與探針題；可套用 PBC 資料庫命名（同風險控制點設計之 IUC／PBC）。"),
+              "模組化拼湊回答架構與探針題；可套用 PBC 資料庫命名。"),
             checkboxGroupInput(
               "interview_5w1h", NULL,
               choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
@@ -394,34 +384,30 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(7, 5),
       card(
-        full_screen = TRUE,
         card_header("引導設計（依序選取）"),
         uiOutput("cascade_step_status"),
-        uiOutput("design_required_checklist"),
-        uiOutput("cascade_candidate_banner"),
-        # Step 2: 子作業
-        selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
+        # 循環於側邊欄；①子作業 → ⑤ IUC
+        selectInput("cascade_sub", NULL, choices = c("① 選擇子作業…" = "")),
         conditionalPanel(
           "input.cascade_sub == '__custom__'",
           p(class = "small text-muted mb-2",
             "自訂子作業：請於下方「基本資料」填寫子作業編號與名稱。")
         ),
-        # Step 3: 風險
-        selectInput("cascade_risk", NULL, choices = c("③ 選擇風險因素…" = "")),
-        uiOutput("cascade_risk_detail"),
+        # Step 2: 風險
+        selectInput("cascade_risk", NULL, choices = c("② 選擇風險因素…" = "")),
         conditionalPanel(
           "input.cascade_risk == '__custom__'",
           p(class = "small text-muted mb-2",
             "自訂風險：請於下方「風險辨識」填寫風險因素、風險描述、風險類別與 RoMM 分類。")
         ),
-        # Step 4: 目標
-        selectInput("cascade_objective", NULL, choices = c("④ 選擇控制目標…" = "")),
+        # Step 3: 目標
+        selectInput("cascade_objective", NULL, choices = c("③ 選擇控制目標…" = "")),
         conditionalPanel(
           "input.cascade_objective == '__custom__'",
           textAreaInput("custom_objective", NULL, rows = 2, placeholder = "自訂控制目標（Why）")
         ),
-        # Step 5: 活動（標示單一 PD）
-        selectInput("cascade_activity", NULL, choices = c("⑤ 選擇控制活動…" = "")),
+        # Step 4: 活動（標示單一 PD）
+        selectInput("cascade_activity", NULL, choices = c("④ 選擇控制活動…" = "")),
         conditionalPanel(
           "input.cascade_activity == '__custom__'",
           textAreaInput("custom_activity", NULL, rows = 2, placeholder = "自訂控制活動（How）"),
@@ -432,11 +418,11 @@ ui <- page_navbar(
           selectInput("custom_frequency", NULL, choices = c("頻率…" = "", FREQUENCY_CHOICES)),
           textInput("custom_owner", NULL, placeholder = "流程負責單位")
         ),
-        # Step 6: IUC
-        selectInput("cascade_iuc", NULL, choices = c("⑥ 選擇 IUC／相關系統…" = "")),
+        # Step 5: IUC（文件／資訊；與相關系統分開設定）
+        selectInput("cascade_iuc", NULL, choices = c("⑤ 選擇 IUC…" = "")),
         conditionalPanel(
           "input.cascade_iuc == '__custom__'",
-          textInput("custom_iuc", NULL, placeholder = "自訂 IUC／相關系統名稱"),
+          textInput("custom_iuc", NULL, placeholder = "自訂 IUC（控制執行時取得之文件／資訊）"),
           checkboxInput("custom_iuc_save", "一併新增至 APP 範本庫／PBC", TRUE)
         ),
         div(
@@ -452,21 +438,14 @@ ui <- page_navbar(
           accordion_panel(
             "基本資料",
             p(class = "small text-muted mb-2",
-              "此次控制點設計之流程定位：循環與子作業（可與上方引導選取同步，亦可直接覆寫）。"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("cycle_code", lab_req("循環編號"), value = "",
-                        placeholder = "例：EC"),
-              selectInput("cycle", lab_req("循環名稱"),
-                          choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                          selected = "")
-            ),
+              "循環於左側側邊欄設定（全域共用）。此處填寫／覆寫子作業編號、名稱與控制編號。"),
+            uiOutput("design_cycle_readonly"),
             layout_columns(
               col_widths = c(4, 8),
               textInput("sub_process_id", lab_req("子作業編號"), value = "",
                         placeholder = "例：EC-101"),
               textInput("sub_process", lab_req("子作業名稱"), value = "",
-                        placeholder = "例：存取管理")
+                        placeholder = "例：存取管理作業")
             ),
             textInput("control_id", "控制編號", value = "",
                       placeholder = "自動順編（可覆寫）")
@@ -504,6 +483,8 @@ ui <- page_navbar(
           ),
           accordion_panel(
             "控制設計",
+            p(class = "small text-muted mb-2",
+              "控制目標／活動與類型（可與上方引導選取同步，亦可直接覆寫）。"),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
@@ -511,19 +492,63 @@ ui <- page_navbar(
               actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
               actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
             ),
-            selectizeInput(
-              "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
-              options = list(placeholder = "原名→新名")
-            ),
-            selectizeInput(
-              "assertions", "聲明（Assertions）",
-              choices = character(0), multiple = TRUE, selected = character(0),
-              options = list(
-                create = FALSE,
-                placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+            layout_columns(
+              col_widths = c(6, 6),
+              class = "objective-assertions-row",
+              textAreaInput(
+                "control_objective", lab_req("控制目標"), rows = 4,
+                placeholder = "Why：欲達成之控制結果（非執行步驟）"
+              ),
+              div(
+                class = "assertions-side",
+                selectizeInput(
+                  "assertions", "聲明設定",
+                  choices = character(0), multiple = TRUE, selected = character(0),
+                  options = list(
+                    create = FALSE,
+                    placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+                  )
+                ),
+                uiOutput("assertions_hint")
               )
             ),
-            uiOutput("assertions_hint"),
+            textAreaInput(
+              "control_activity", lab_req("控制活動"), rows = 3,
+              placeholder = "How：具體執行行為（含誰／何時／如何）"
+            ),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput(
+                "approach", lab_req("控制活動類型"),
+                choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
+                selected = ""
+              ),
+              selectInput(
+                "nature", lab_req("控制類型"),
+                choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
+                selected = ""
+              )
+            ),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput(
+                "frequency", lab_req("控制頻率"),
+                choices = c("請選擇…" = "", FREQUENCY_CHOICES),
+                selected = ""
+              ),
+              textInput(
+                "responsible_unit", lab_req("流程負責單位"),
+                value = "", placeholder = "例：資訊安全單位"
+              )
+            ),
+            textAreaInput(
+              "iuc", lab_req("IUC"), rows = 2,
+              placeholder = "控制執行時取得之文件／資訊（與⑤引導選取同步；命名請至 PBC資料庫套用）"
+            ),
+            textInput(
+              "related_system", lab_opt("相關系統"),
+              placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
+            ),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
               "related_law", "相關法令",
@@ -532,13 +557,25 @@ ui <- page_navbar(
               options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
             ),
             uiOutput("related_law_hint"),
-            textInput("related_document", lab_opt("相關文件"))
+            selectizeInput(
+              "related_document_pbc", lab_req("相關文件"),
+              choices = NULL, multiple = TRUE,
+              options = list(
+                placeholder = "自 PBC 資料庫選取文件（可多選）",
+                plugins = list("remove_button")
+              )
+            ),
+            div(
+              class = "d-flex gap-1 flex-wrap mb-1",
+              actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
+            ),
+            uiOutput("related_document_hint")
           )
         ),
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
           actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
-          actionButton("collect_ready_to_lib", "RCM列→累積範本庫", class = "btn-outline-success btn-sm")
+          actionButton("collect_ready_to_lib", "儲存→資料庫", class = "btn-outline-success btn-sm")
         )
       ),
       card(
@@ -610,7 +647,6 @@ ui <- page_navbar(
           class = "d-flex gap-1 flex-wrap mb-2",
           actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
           actionButton("csa_scenario_save", "儲存此情境組", class = "btn-sm btn-primary"),
-          actionButton("csa_scenario_dup", "複製情境組", class = "btn-sm btn-outline-secondary"),
           actionButton("csa_scenario_del", "刪除此情境組", class = "btn-sm btn-outline-danger")
         ),
         tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
@@ -619,8 +655,7 @@ ui <- page_navbar(
         textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
         textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
         textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
-        textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻"),
-        checkboxInput("pbc_also_inputs", "於「風險控制點設計」套用 PBC 時寫入 Inputs 對照", TRUE)
+        textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻")
       ),
       card(
         DTOutput("csa_table"),
@@ -631,24 +666,23 @@ ui <- page_navbar(
   nav_panel(
     "範本庫",
     card(
-      card_header("從範本庫套用（可跳過）"),
-      p(class = "small text-muted mb-2",
-        "選用既有範本填入「風險控制點設計」表單；不選亦可直接於設計頁從頭建立。"),
-      layout_columns(
-        col_widths = c(5, 7),
-        textInput("lib_query", "搜尋", value = "", placeholder = "搜尋標題／風險／控制編號…"),
-        selectInput(
-          "lib_pick", "選擇範本",
-          choices = c("（可跳過）未套用範本…" = "")
-        )
+      class = "lib-apply-card",
+      card_header("範本套用"),
+      p(class = "small text-muted mb-3",
+        "選用既有範本填入「風險控制點設計」；可不選、直接於設計頁建立。"),
+      textInput("lib_query", "搜尋", value = "",
+                placeholder = "搜尋標題／風險／控制編號…"),
+      selectInput(
+        "lib_pick", "選擇範本",
+        choices = c("未套用範本…" = "")
       ),
       div(
-        class = "d-flex gap-1 flex-wrap mb-2",
-        actionButton("apply_lib", "套用至設計表單", class = "btn-sm btn-primary"),
-        actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary")
+        class = "d-flex gap-1 flex-wrap mb-2 mt-1",
+        actionButton("apply_lib", "套用選取範本", class = "btn-sm btn-primary"),
+        actionButton("apply_lib_selected_row", "套用表格列", class = "btn-sm btn-outline-primary")
       ),
       p(class = "small text-muted mb-0",
-        "寫入／匯入／刪除／直接編輯需於左側「高權存取」登入後操作。")
+        "寫入／匯入／刪除／直接編輯時會跳出高權登入。")
     ),
     uiOutput("admin_lib_edit_panel"),
     card(
@@ -700,19 +734,32 @@ ui <- page_navbar(
       col_widths = c(4, 8),
       card(
         card_header("PBC 資料庫"),
+        p(class = "small text-muted mb-2",
+          "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
         textInput("pbc_id", NULL, placeholder = "ID（可空）"),
-        selectInput("pbc_cycle", NULL, choices = c("循環（共用）" = "", CYCLES_NINE)),
+        uiOutput("pbc_cycle_readonly"),
         textInput("pbc_notes", NULL, placeholder = "備註"),
         div(
           class = "d-flex gap-1 flex-wrap",
           actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
           actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
-          downloadButton("download_pbc", "匯出", class = "btn-sm")
+          actionButton("pbc_apply_to_design", "套用至控制設計",
+                       class = "btn-sm btn-outline-success")
         ),
-        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv")
+        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
+        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
+        tags$hr(),
+        tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
+        p(class = "small text-muted mb-2",
+          "將命名對照套用至「風險控制點設計」之 IUC（公司現況整理）。"),
+        selectizeInput(
+          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "原名→新名")
+        ),
+        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
       ),
       card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
     )
@@ -721,6 +768,7 @@ ui <- page_navbar(
     "RCM",
     card(
       uiOutput("rcm_count_box"),
+      uiOutput("rcm_latest_saved"),
       DTOutput("rcm_table"),
       downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
       tags$hr(),
@@ -733,18 +781,39 @@ ui <- page_navbar(
 server <- function(input, output, session) {
   controls <- reactiveVal(list())
   is_admin <- reactiveVal(FALSE)
+  rcm_revision <- reactiveVal(0L)
+  last_saved_control <- reactiveVal(NULL)
+
+  bump_rcm_views <- function(ctrl = NULL) {
+    rcm_revision(rcm_revision() + 1L)
+    if (!is.null(ctrl)) last_saved_control(ctrl)
+  }
+
+  rcm_display_df <- reactive({
+    rcm_revision()
+    cs <- Filter(is_control_finalized_for_rcm, controls())
+    if (!length(cs)) return(NULL)
+    cs <- rev(cs)
+    rcm <- controls_to_rcm(cs)
+    if (!nrow(rcm)) return(NULL)
+    saved <- vapply(cs, function(x) as.character(x$saved_at %||% ""), character(1))
+    if (length(saved) == nrow(rcm)) {
+      rcm <- cbind(`儲存時間` = saved, as.data.frame(rcm, stringsAsFactors = FALSE))
+    }
+    rcm
+  })
 
   output$admin_auth_box <- renderUI({
     if (isTRUE(is_admin())) {
-      tagList(
-        div(class = "alert alert-success py-1 mb-2 small", "已登入高權（可改範本庫／參數庫）"),
-        actionButton("admin_logout", "登出高權", class = "btn-sm btn-outline-danger w-100")
+      tags$div(
+        class = "small text-muted",
+        tags$span("高權已登入"),
+        actionLink("admin_logout", "登出", class = "ms-1 small")
       )
     } else {
-      tagList(
-        div(class = "alert alert-secondary py-1 mb-2 small", "未登入：範本庫／參數庫唯讀"),
-        passwordInput("admin_password", NULL, placeholder = "高權密碼"),
-        actionButton("admin_login", "登入", class = "btn-sm btn-primary w-100")
+      tags$div(
+        class = "small text-muted",
+        "高權：修改範本／參數時再登入"
       )
     }
   })
@@ -752,7 +821,7 @@ server <- function(input, output, session) {
   observeEvent(input$admin_login, {
     if (verify_admin_password(input$admin_password)) {
       is_admin(TRUE)
-      updateTextInput(session, "admin_password", value = "")
+      removeModal()
       showNotification("高權登入成功", type = "message")
     } else {
       is_admin(FALSE)
@@ -779,18 +848,22 @@ server <- function(input, output, session) {
                   choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES)),
       textAreaInput("admin_lib_objective", "控制目標", rows = 2, value = ""),
       textAreaInput("admin_lib_activity", "控制活動", rows = 2, value = ""),
-      textInput("admin_lib_iuc", "IUC／相關系統", value = ""),
+      textInput("admin_lib_iuc", "IUC", value = ""),
+      textInput("admin_lib_system", "相關系統", value = ""),
       actionButton("admin_lib_save_fields", "儲存範本變更", class = "btn-sm btn-success")
     )
   })
 
   output$admin_lib_mutate_panel <- renderUI({
     if (!isTRUE(is_admin())) {
-      return(div(class = "alert alert-secondary py-2 small",
-                 "匯入／刪除／收集入庫：請先於左側登入高權。"))
+      return(div(
+        class = "alert alert-secondary py-2 small",
+        "匯入／刪除／收集入庫需高權。",
+        actionButton("admin_prompt_lib", "登入高權", class = "btn-sm btn-outline-primary ms-2")
+      ))
     }
     card(
-      card_header("高權：累積制通用範本庫 — 寫入"),
+      card_header("高權：範本寫入"),
       div(
         class = "lib-options-section",
         uiOutput("lib_stats_box"),
@@ -799,8 +872,6 @@ server <- function(input, output, session) {
         fileInput("upload_lib", NULL, buttonLabel = "匯入 CSV／JSON／RCM xlsx",
                   accept = c(".csv", ".json", ".xlsx", ".xls")),
         checkboxInput("lib_overwrite", "同 ID 則覆蓋（累積更新）", TRUE),
-        actionButton("import_jinglian_seed", "載入內建 RCM 範本庫",
-                     class = "btn-sm btn-outline-primary mb-3"),
         tags$hr(class = "my-2"),
         tags$h6(class = "small fw-bold mb-2", "收集入庫"),
         textInput("lib_title_override", NULL, placeholder = "存入時標題（可空）"),
@@ -808,20 +879,21 @@ server <- function(input, output, session) {
         checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
         div(
           class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("save_to_lib", "目前表單存入庫", class = "btn-sm btn-outline-success"),
           actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
-        ),
-        actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger")
+          actionButton("lib_add_all_ready", "全部就緒→庫", class = "btn-sm btn-success"),
+          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger")
+        )
       )
     )
   })
 
   output$admin_param_edit_panel <- renderUI({
     if (!isTRUE(is_admin())) {
-      return(div(class = "alert alert-secondary py-2 small",
-                 "新增／刪除／重建參數：請先於左側登入高權。"))
+      return(div(
+        class = "alert alert-secondary py-2 small",
+        "新增／刪除／重建參數需高權。",
+        actionButton("admin_prompt_param", "登入高權", class = "btn-sm btn-outline-primary ms-2")
+      ))
     }
     card(
       card_header("高權：直接維護參數列"),
@@ -838,6 +910,13 @@ server <- function(input, output, session) {
         actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary")
       )
     )
+  })
+
+  observeEvent(input$admin_prompt_lib, {
+    show_admin_login_modal(session)
+  })
+  observeEvent(input$admin_prompt_param, {
+    show_admin_login_modal(session)
   })
 
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
@@ -859,22 +938,15 @@ server <- function(input, output, session) {
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
-  # 啟動時若範本庫過少，合併種子／內建批次（背景執行，不依特定循環命名）
+  # 啟動時確保內建候選就緒（九大循環可直接選；毋須使用者先匯入底稿）
   observeEvent(TRUE, {
     cur <- lib()
-    if (length(cur) >= 5) return()
+    builtin <- seed_control_library(TRUE)
+    merged <- merge_libraries(cur, builtin, overwrite = FALSE)
     batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
-    merged <- merge_libraries(cur, seed_control_library(TRUE), overwrite = FALSE)
     if (file.exists(batch)) {
       merged <- tryCatch(
         merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = FALSE),
-        error = function(e) merged
-      )
-    }
-    xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-    if (file.exists(xlsx)) {
-      merged <- tryCatch(
-        import_control_library_file(xlsx, merged, overwrite = FALSE),
         error = function(e) merged
       )
     }
@@ -919,33 +991,38 @@ server <- function(input, output, session) {
     }
   }, once = TRUE)
 
-  output$cascade_candidate_banner <- renderUI({
+  output$sidebar_cycle_hint <- renderUI({
     cy <- input$cycle %||% ""
-    n_lib <- length(lib())
     if (!nzchar(cy)) {
-      return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先於「基本資料」選擇循環名稱。"),
-                 "選定後才會載入該循環的子作業／風險／目標／活動候選。"))
-    }
-    rows <- cascade_rows()
-    n_sub <- length(cascade_sub_process_choices(rows))
-    if (n_sub > 0) {
-      div(class = "alert alert-success py-1 mb-2 small",
-          sprintf("引導候選已載入：本循環「%s」有 %d 個子作業選項（範本庫 %d 筆）。請先選②子作業，③～⑥才會依序出現。",
-                  cy, n_sub, n_lib))
+      tags$div(class = "small text-warning", "必選：選定後訪談／設計／PBC 皆共用此循環。")
     } else {
-      div(class = "alert alert-danger py-2 mb-2 small",
-          tags$strong("目前沒有引導候選。"),
-          sprintf("（循環＝%s，範本庫＝%d 筆）", cy, n_lib),
-          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或於該頁套用範本（可跳過）。")
+      tags$div(class = "small text-muted", sprintf("目前：%s", cy))
     }
+  })
+  output$design_cycle_readonly <- renderUI({
+    cy <- input$cycle %||% ""
+    cc <- trimws(input$cycle_code %||% "")
+    if (!nzchar(cy)) {
+      div(class = "alert alert-warning py-1 mb-2 small",
+          tags$strong("尚未選定循環。"), "請先於左側側邊欄選擇循環。")
+    } else {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          sprintf("循環：%s（編號 %s）— 於側邊欄變更。", cy, if (nzchar(cc)) cc else "—"))
+    }
+  })
+  output$pbc_cycle_readonly <- renderUI({
+    cy <- input$cycle %||% ""
+    tags$div(
+      class = "small text-muted mb-2",
+      if (nzchar(cy)) sprintf("循環：%s（側邊欄）", cy) else "循環：共用／未選（側邊欄可指定）"
+    )
   })
 
   refresh_lib_choices <- function() {
     ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
     updateSelectInput(
       session, "lib_pick",
-      choices = c("（可跳過）未套用範本…" = "", ch),
+      choices = c("未套用範本…" = "", ch),
       selected = {
         cur <- input$lib_pick %||% ""
         if (nzchar(cur) && cur %in% unname(ch)) cur else ""
@@ -954,31 +1031,27 @@ server <- function(input, output, session) {
   }
 
   refresh_pbc_choices <- function() {
-    ch_design <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
+    cy <- input$cycle %||% ""
+    ch <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy)) cy else NULL)
     updateSelectizeInput(
-      session, "pbc_apply", choices = ch_design, server = TRUE,
-      selected = intersect(input$pbc_apply %||% character(), unname(ch_design))
+      session, "pbc_apply", choices = ch, server = TRUE,
+      selected = intersect(input$pbc_apply %||% character(), unname(ch))
     )
-    cy_iv <- input$interview_cycle %||% ""
-    ch_iv <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy_iv)) cy_iv else NULL)
     updateSelectizeInput(
-      session, "interview_pbc_link", choices = ch_iv, server = TRUE,
-      selected = intersect(input$interview_pbc_link %||% character(), unname(ch_iv))
+      session, "interview_pbc_link", choices = ch, server = TRUE,
+      selected = intersect(input$interview_pbc_link %||% character(), unname(ch))
+    )
+    updateSelectizeInput(
+      session, "related_document_pbc", choices = ch, server = TRUE,
+      selected = intersect(input$related_document_pbc %||% character(), unname(ch))
     )
   }
 
   interview_worksheet <- function() {
-    src <- input$interview_source %||% "rcm"
-    if (identical(src, "library")) {
-      cs <- library_items_as_interview_controls(lib())
-      finalized_only <- FALSE
-    } else {
-      cs <- Filter(is_control_finalized_for_rcm, controls())
-      finalized_only <- TRUE
-    }
+    cs <- interview_pool_controls()
     cs <- filter_controls_by_cycle_sub(
       cs,
-      cycle = input$interview_cycle %||% "",
+      cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
     ids <- input$worksheet_controls
@@ -989,7 +1062,7 @@ server <- function(input, output, session) {
     pbc_ids <- input$interview_pbc_link %||% character()
     controls_to_interview(
       cs, input$interview_elements,
-      finalized_only = finalized_only,
+      finalized_only = FALSE,
       modules = mods,
       pbc_reg = pbc_reg(),
       pbc_ids = pbc_ids,
@@ -1013,19 +1086,24 @@ server <- function(input, output, session) {
   })
 
   output$interview_guide_banner <- renderUI({
-    cy <- input$interview_cycle %||% ""
+    cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先於引導選取②循環。"),
-                 "選定後載入子作業／控制點；下方「基本資料」會同步顯示。"))
+                 tags$strong("請先於側邊欄選擇循環。"),
+                 "選定後即可直接選該循環建議之子作業。"))
     }
-    pool <- interview_pool_controls()
-    scoped <- filter_controls_by_cycle_sub(pool, cycle = cy, sub_key = "")
-    n_sub <- length(cascade_sub_process_choices(scoped))
-    src <- if (identical(input$interview_source %||% "rcm", "library")) "範本庫預期" else "已定稿 RCM"
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    n_sub <- length(cascade_sub_process_choices(rows))
+    sk <- input$interview_sub %||% ""
+    if (!nzchar(sk)) {
+      return(div(class = "alert alert-success py-1 mb-2 small",
+                 sprintf("「%s」已載入 %d 個建議子作業，請直接選①。", cy, n_sub)))
+    }
+    scoped <- filter_controls_by_cycle_sub(
+      interview_pool_controls(), cycle = cy, sub_key = sk
+    )
     div(class = "alert alert-success py-1 mb-2 small",
-        sprintf("引導已載入：%s「%s」有 %d 個子作業選項（範圍內控制點 %d）。請續選③子作業／④控制點。",
-                src, cy, n_sub, length(scoped)))
+        sprintf("已選子作業 → 建議控制點／風險 %d 筆（②可空＝全部）。", length(scoped)))
   })
 
   output$interview_live_box <- renderUI({
@@ -1042,70 +1120,42 @@ server <- function(input, output, session) {
     )
   })
 
-  output$interview_scope_summary <- renderUI({
-    ids <- input$worksheet_controls %||% character()
-    tags$small(
-      class = "text-muted",
-      if (!length(ids) || all(!nzchar(ids))) "控制點：範圍內全部"
-      else sprintf("已選控制點 %d 個：%s", length(ids), paste(ids, collapse = "、"))
-    )
-  })
-
   output$interview_paragraph <- renderText({
     iv <- interview_worksheet()
-    if (!nrow(iv)) return("（尚無訪談題綱；請完成引導選取）")
+    if (!nrow(iv)) return("（尚無訪談題綱；請先於側邊欄選循環，再選①子作業）")
     lines <- sprintf("%s. [%s] %s", iv[["題號"]], iv[["元素"]], iv[["訪談問題"]])
     paste(utils::head(lines, 12), collapse = "\n")
   })
 
-  # 引導選取 → 基本資料 accordion 同步（對齊風險控制點設計）
-  observeEvent(input$interview_cycle, {
-    cy <- input$interview_cycle %||% ""
-    updateSelectInput(session, "interview_cycle_echo", selected = cy)
-    updateTextInput(session, "interview_cycle_code",
-                    value = if (nzchar(cy)) cycle_code_for(cy) else "")
+  observeEvent(input$cycle, {
     refresh_pbc_choices()
   }, ignoreNULL = FALSE)
 
-  observeEvent(input$interview_cycle_echo, {
-    cy <- input$interview_cycle_echo %||% ""
-    if (!identical(cy, input$interview_cycle %||% "")) {
-      updateSelectInput(session, "interview_cycle", selected = cy)
-    }
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$interview_sub, {
-    sk <- input$interview_sub %||% ""
-    if (!nzchar(sk)) {
-      updateTextInput(session, "interview_sub_id_echo", value = "")
-      updateTextInput(session, "interview_sub_name_echo", value = "")
-      return()
-    }
-    sp <- parse_sub_process_key(sk)
-    updateTextInput(session, "interview_sub_id_echo", value = sp$id %||% "")
-    updateTextInput(session, "interview_sub_name_echo", value = sp$name %||% "")
-  }, ignoreNULL = FALSE)
-
+  # 一律以內建＋使用者庫候選為訪談來源（側邊欄循環→直接選子作業）
   interview_pool_controls <- reactive({
-    src <- input$interview_source %||% "rcm"
-    if (identical(src, "library")) {
-      library_items_as_interview_controls(lib())
-    } else {
-      Filter(is_control_finalized_for_rcm, controls())
-    }
+    library_items_as_interview_controls(cascade_source_library(lib()))
   })
 
   observe({
-    pool <- interview_pool_controls()
-    cy <- input$interview_cycle %||% ""
-    scoped <- filter_controls_by_cycle_sub(pool, cycle = cy, sub_key = "")
-    ch_sub <- if (length(scoped)) cascade_sub_process_choices(scoped) else character()
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "interview_sub",
+                        choices = c("① 請先於側邊欄選擇循環…" = ""), selected = "")
+      return()
+    }
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    ch_sub <- cascade_sub_process_choices(rows)
+    label0 <- if (length(ch_sub)) {
+      sprintf("① 選擇子作業…（本循環建議 %d）", length(ch_sub))
+    } else {
+      "① 選擇子作業…（本循環暫無建議）"
+    }
     updateSelectInput(
       session, "interview_sub",
-      choices = c("③ 選擇子作業…" = "", ch_sub),
+      choices = c(stats::setNames("", label0), ch_sub),
       selected = {
         cur <- input$interview_sub %||% ""
-        if (nzchar(cur) && cur %in% ch_sub) cur else ""
+        if (nzchar(cur) && cur %in% unname(ch_sub)) cur else ""
       }
     )
   })
@@ -1114,7 +1164,7 @@ server <- function(input, output, session) {
     pool <- interview_pool_controls()
     scoped <- filter_controls_by_cycle_sub(
       pool,
-      cycle = input$interview_cycle %||% "",
+      cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
     if (!length(scoped)) {
@@ -1151,10 +1201,12 @@ server <- function(input, output, session) {
     updateSelectInput(session, "cycle", selected = "")
   }, once = TRUE)
 
-  observeEvent(input$pbc_apply, {
+  observeEvent(input$pbc_apply_to_design, {
     ids <- input$pbc_apply
-    if (!length(ids)) return()
-    updateTextAreaInput(session, "iuc_or_system", value = apply_pbc_to_iuc(pbc_reg(), ids))
+    if (!length(ids)) {
+      return(showNotification("請先選擇要套用的 PBC 命名", type = "warning"))
+    }
+    updateTextAreaInput(session, "iuc", value = apply_pbc_to_iuc(pbc_reg(), ids))
     if (isTRUE(input$pbc_also_inputs)) {
       mapped <- format_pbc_for_inputs(pbc_reg(), ids)
       cur <- trimws(input$inputs %||% "")
@@ -1164,7 +1216,9 @@ server <- function(input, output, session) {
       new_inputs <- if (nzchar(cur)) paste(cur, mapped, sep = "\n") else mapped
       updateTextAreaInput(session, "inputs", value = new_inputs)
     }
-  }, ignoreInit = TRUE)
+    showNotification("已套用 PBC 命名至控制設計 IUC", type = "message")
+    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
+  })
 
   output$pbc_all_status <- renderText({
     lines <- format_pbc_status_lines(pbc_reg())
@@ -1290,36 +1344,57 @@ server <- function(input, output, session) {
         )
       },
       "控制目標" = function() {
+        updateTextAreaInput(session, "control_objective", value = val)
         updateTextAreaInput(session, "custom_objective", value = val)
         updateSelectInput(session, "cascade_objective", selected = "__custom__")
       },
       "控制活動" = function() {
+        updateTextAreaInput(session, "control_activity", value = val)
         updateTextAreaInput(session, "custom_activity", value = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "控制類型" = function() {
+        updateSelectInput(session, "nature", selected = val)
         updateSelectInput(session, "custom_nature", selected = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "控制活動類型" = function() {
+        updateSelectInput(session, "approach", selected = val)
         updateSelectInput(session, "custom_approach", selected = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "控制頻率" = function() {
+        updateSelectInput(session, "frequency", selected = val)
         updateSelectInput(session, "custom_frequency", selected = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "流程負責單位" = function() {
+        updateTextInput(session, "responsible_unit", value = val)
         updateTextInput(session, "custom_owner", value = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "相關系統／IUC" = function() {
+        # 舊參數庫鍵名；僅套用至 IUC（與相關系統分開）
+        updateTextAreaInput(session, "iuc", value = val)
+        updateTextInput(session, "custom_iuc", value = val)
+        updateSelectInput(session, "cascade_iuc", selected = "__custom__")
+      },
+      "相關系統" = function() updateTextInput(session, "related_system", value = val),
+      "IUC" = function() {
+        updateTextAreaInput(session, "iuc", value = val)
         updateTextInput(session, "custom_iuc", value = val)
         updateSelectInput(session, "cascade_iuc", selected = "__custom__")
       },
       "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
       "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
-      "相關文件" = function() updateTextInput(session, "related_document", value = val)
+      "相關文件" = function() {
+        ids <- match_pbc_ids_from_text(pbc_reg(), val)
+        if (length(ids)) {
+          updateSelectizeInput(session, "related_document_pbc", selected = ids)
+        } else {
+          showNotification("相關文件須自 PBC 資料庫選取；請至 PBC 資料庫登錄後再選", type = "warning")
+        }
+      }
     )
     fn <- mapped[[param]]
     if (is.null(fn)) {
@@ -1368,7 +1443,7 @@ server <- function(input, output, session) {
     if (!nzchar(id %||% "")) return(showNotification("請先選擇範本（或跳過此步驟）", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
-    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib(), pbc_registry = pbc_reg())
     bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
@@ -1380,7 +1455,7 @@ server <- function(input, output, session) {
       return(showNotification("請先在表格選取一列範本", type = "warning"))
     }
     item <- items[[s[[1]]]]
-    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib(), pbc_registry = pbc_reg())
     bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
@@ -1391,26 +1466,15 @@ server <- function(input, output, session) {
   observeEvent(input$goto_param_tab, {
     bslib::nav_select("main_nav", selected = "參數庫", session = session)
   })
-
-  observeEvent(input$save_to_lib, {
-    if (!require_admin(is_admin(), session)) return()
-    d <- current_draft_from_inputs()
-    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
-    showNotification(paste("已存入範本庫", item$library_id), type = "message")
+  observeEvent(input$goto_pbc_tab, {
+    bslib::nav_select("main_nav", selected = "PBC資料庫", session = session)
   })
+
   observeEvent(input$lib_add_current, {
     if (!require_admin(is_admin(), session)) return()
     d <- current_draft_from_inputs()
     item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入", item$library_id), type = "message")
-  })
-  observeEvent(input$lib_add_selected_control, {
-    if (!require_admin(is_admin(), session)) return()
-    s <- input$control_table_rows_selected
-    cs <- controls()
-    if (is.null(s) || !length(cs)) return(showNotification("請先在設計頁選取控制點", type = "warning"))
-    item <- add_ctrl_to_library(cs[[s]], title = input$lib_title_override, tags = input$lib_tags, source = "control")
-    showNotification(paste("控制點已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_all_ready, {
     if (!require_admin(is_admin(), session)) return()
@@ -1489,7 +1553,8 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "admin_lib_objective", value = ctrl$control_objective %||% "")
     updateTextAreaInput(session, "admin_lib_activity", value = ctrl$control_activity %||% "")
     updateTextInput(session, "admin_lib_iuc",
-                    value = ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+                    value = ctrl$iuc %||% ctrl$iuc_or_system %||% "")
+    updateTextInput(session, "admin_lib_system", value = ctrl$related_system %||% "")
   })
 
   observeEvent(input$admin_lib_save_fields, {
@@ -1509,7 +1574,8 @@ server <- function(input, output, session) {
         control_objective = trimws(input$admin_lib_objective %||% ""),
         control_activity = trimws(input$admin_lib_activity %||% ""),
         iuc_or_system = trimws(input$admin_lib_iuc %||% ""),
-        related_system = trimws(input$admin_lib_iuc %||% "")
+        iuc = trimws(input$admin_lib_iuc %||% ""),
+        related_system = trimws(input$admin_lib_system %||% "")
       )
     )
     lib(persist_lib(patched))
@@ -1623,28 +1689,66 @@ server <- function(input, output, session) {
       romm_classification = input$romm_classification %||% "",
       significant_account = join_significant_accounts(input$significant_account),
       assertions = paste(input$assertions %||% character(), collapse = "；"),
-      control_objective = sel$control_objective,
-      control_activity = sel$control_activity,
-      frequency = resolve_control_frequency(nature, sel$frequency),
-      responsible_unit = sel$responsible_unit,
-      iuc_or_system = sel$iuc_or_system,
-      related_system = sel$iuc_or_system,
+      control_objective = {
+        o <- trimws(input$control_objective %||% "")
+        if (nzchar(o)) o else sel$control_objective
+      },
+      control_activity = {
+        a <- trimws(input$control_activity %||% "")
+        if (nzchar(a)) a else sel$control_activity
+      },
+      frequency = resolve_control_frequency(nature, {
+        f <- trimws(input$frequency %||% "")
+        if (nzchar(f)) f else sel$frequency
+      }),
+      responsible_unit = {
+        u <- trimws(input$responsible_unit %||% "")
+        if (nzchar(u)) u else sel$responsible_unit
+      },
+      iuc_or_system = {
+        i <- trimws(input$iuc %||% "")
+        if (nzchar(i)) i else sel$iuc_or_system
+      },
+      iuc = {
+        i <- trimws(input$iuc %||% "")
+        if (nzchar(i)) i else sel$iuc_or_system
+      },
+      related_system = trimws(input$related_system %||% ""),
       related_policy = input$related_policy %||% "",
       related_law = {
         v <- input$related_law %||% character(0)
         paste(unique(trimws(as.character(v))), collapse = "；")
       },
-      related_document = input$related_document %||% "",
-      nature = nature,
-      approach = approach,
-      control_type = nature,
-      control_activity_type = approach,
+      related_document_pbc_ids = input$related_document_pbc %||% character(),
+      related_document = {
+        ids <- input$related_document_pbc %||% character()
+        if (length(ids)) apply_pbc_to_related_document(pbc_reg(), ids) else ""
+      },
+      nature = {
+        n <- normalize_control_type_manual_auto(input$nature)
+        if (nzchar(n)) n else nature
+      },
+      approach = {
+        a <- normalize_control_activity_type_pd(input$approach)
+        if (nzchar(a)) a else approach
+      },
+      control_type = {
+        n <- normalize_control_type_manual_auto(input$nature)
+        if (nzchar(n)) n else nature
+      },
+      control_activity_type = {
+        a <- normalize_control_activity_type_pd(input$approach)
+        if (nzchar(a)) a else approach
+      },
       type = input$type %||% "",
       inputs = input$inputs %||% "",
       review_steps = input$review_steps %||% "",
       outputs = {
         out <- trimws(input$outputs %||% "")
-        if (nzchar(out)) out else trimws(input$related_document %||% "")
+        if (nzchar(out)) out else {
+          ids <- input$related_document_pbc %||% character()
+          if (length(ids)) apply_pbc_to_related_document(pbc_reg(), ids) else ""
+        }
       },
       investigation_threshold = input$investigation_threshold %||% "",
       dependent_controls = "",
@@ -1667,10 +1771,11 @@ server <- function(input, output, session) {
   })
 
   # ---- Forced cascade: cycle → 子作業 → 風險 → 目標 → 活動(單一PD) → IUC ----
+  # 候選永遠含內建種子（九大循環可直接選），毋須先匯入底稿
   cascade_rows <- reactive({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return(list())
-    library_controls_flat(lib(), cycle = cy)
+    library_controls_flat(cascade_source_library(lib()), cycle = cy)
   })
 
   resolve_cascade_selection <- function() {
@@ -1746,6 +1851,23 @@ server <- function(input, output, session) {
       if (!nzchar(approach)) approach <- matched$approach
     }
 
+    # 控制設計 accordion 為可覆寫來源（引導選取會回填）
+    form_obj <- trimws(input$control_objective %||% "")
+    form_act <- trimws(input$control_activity %||% "")
+    form_approach <- normalize_control_activity_type_pd(input$approach)
+    form_nature <- normalize_control_type_manual_auto(input$nature)
+    form_freq <- trimws(input$frequency %||% "")
+    form_owner <- trimws(input$responsible_unit %||% "")
+    form_iuc <- trimws(input$iuc %||% "")
+    form_sys <- trimws(input$related_system %||% "")
+    if (nzchar(form_obj)) objective <- form_obj
+    if (nzchar(form_act)) activity <- form_act
+    if (nzchar(form_approach)) approach <- form_approach
+    if (nzchar(form_nature)) nature <- form_nature
+    if (nzchar(form_freq)) frequency <- form_freq
+    if (nzchar(form_owner)) owner <- form_owner
+    if (nzchar(form_iuc)) iuc <- form_iuc
+
     list(
       cycle = input$cycle %||% "",
       cycle_code = trimws(input$cycle_code %||% ""),
@@ -1762,7 +1884,8 @@ server <- function(input, output, session) {
       frequency = resolve_control_frequency(nature, frequency),
       responsible_unit = owner,
       iuc_or_system = iuc,
-      related_system = iuc
+      iuc = iuc,
+      related_system = form_sys
     )
   }
 
@@ -1808,6 +1931,30 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
+  output$related_document_hint <- renderUI({
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
+    nature <- normalize_control_type_manual_auto(input$nature %||% "")
+    mode <- related_document_mode_for_ctrl(list(
+      nature = nature, risk_category = cat
+    ))
+    if (identical(mode, "required")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          lab_req("人工控制"), " — 相關文件須自 ",
+          tags$strong("PBC 資料庫"), " 選取（可多選）；無資料請先至 ",
+          tags$strong("PBC 資料庫"), " 登錄。")
+    } else if (identical(mode, "locked")) {
+      reason <- c(
+        if (is_automatic_control(nature)) "自動控制",
+        if (is_compliance_risk_category(cat)) "遵循面風險"
+      )
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          paste0("無法設定相關文件（", paste(reason, collapse = "／"), "）。"))
+    } else {
+      helpText(class = "text-muted small",
+               "請先選控制類型與風險類別；人工且非法遵面時，須自 PBC 資料庫選取相關文件。")
+    }
+  })
+
   output$related_law_hint <- renderUI({
     cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
@@ -1840,7 +1987,7 @@ server <- function(input, output, session) {
     }
   })
 
-  # 基本資料：循環名稱 → 自動帶入循環編號（可覆寫）
+  # 側邊欄循環名稱 → 自動帶入循環編號（可覆寫）
   observeEvent(input$cycle, {
     cy <- input$cycle %||% ""
     code <- cycle_code_for(cy)
@@ -1872,6 +2019,108 @@ server <- function(input, output, session) {
     }
     apply_risk_detail_to_inputs(session, rows, rk)
   }, ignoreInit = TRUE)
+
+  # 引導選目標 → 回填控制設計「控制目標」
+  observeEvent(input$cascade_objective, {
+    obj_sel <- input$cascade_objective %||% ""
+    if (!nzchar(obj_sel) || identical(obj_sel, "__custom__")) return()
+    updateTextAreaInput(session, "control_objective", value = obj_sel)
+  }, ignoreInit = TRUE)
+
+  # 引導選活動 → 回填控制設計活動／類型／頻率／負責單位
+  observeEvent(input$cascade_activity, {
+    act_sel <- input$cascade_activity %||% ""
+    if (!nzchar(act_sel) || identical(act_sel, "__custom__")) return()
+    ak <- parse_activity_key(act_sel)
+    updateTextAreaInput(session, "control_activity", value = ak$activity %||% "")
+    ap <- normalize_control_activity_type_pd(ak$approach)
+    if (nzchar(ap)) updateSelectInput(session, "approach", selected = ap)
+    # 自匹配列補齊類型／頻率／負責單位
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    rk <- input$cascade_risk %||% ""
+    obj <- input$cascade_objective %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    if (nzchar(rk) && !identical(rk, "__custom__")) {
+      rows <- filter_cascade_rows(rows, risk_factor = rk)
+    }
+    if (nzchar(obj) && !identical(obj, "__custom__")) {
+      rows <- filter_cascade_rows(rows, objective = obj)
+    }
+    rows <- filter_cascade_rows(rows, activity_key_sel = act_sel)
+    if (length(rows)) {
+      m <- rows[[1]]
+      nt <- normalize_control_type_manual_auto(m$nature)
+      if (nzchar(nt)) updateSelectInput(session, "nature", selected = nt)
+      freq <- resolve_control_frequency(nt, m$frequency %||% "")
+      if (nzchar(freq)) updateSelectInput(session, "frequency", selected = freq)
+      if (nzchar(trimws(m$responsible_unit %||% ""))) {
+        updateTextInput(session, "responsible_unit", value = m$responsible_unit)
+      }
+    }
+  }, ignoreInit = TRUE)
+
+  # 引導選 IUC → 回填控制設計 IUC
+  observeEvent(input$cascade_iuc, {
+    iuc_sel <- input$cascade_iuc %||% ""
+    if (!nzchar(iuc_sel) || identical(iuc_sel, "__custom__")) return()
+    updateTextAreaInput(session, "iuc", value = iuc_sel)
+  }, ignoreInit = TRUE)
+
+  # 自訂引導欄位 → 同步至控制設計
+  observeEvent(input$custom_objective, {
+    if (!identical(input$cascade_objective, "__custom__")) return()
+    updateTextAreaInput(session, "control_objective",
+                        value = trimws(input$custom_objective %||% ""))
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_activity, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    updateTextAreaInput(session, "control_activity",
+                        value = trimws(input$custom_activity %||% ""))
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_approach, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    ap <- normalize_single_activity_type(input$custom_approach)
+    if (nzchar(ap)) updateSelectInput(session, "approach", selected = ap)
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_nature, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    nt <- normalize_control_type_manual_auto(input$custom_nature)
+    if (nzchar(nt)) updateSelectInput(session, "nature", selected = nt)
+    if (identical(nt, "自動")) {
+      updateSelectInput(session, "custom_frequency", selected = "持續")
+      updateSelectInput(session, "frequency", selected = "持續")
+    }
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_frequency, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    fr <- trimws(input$custom_frequency %||% "")
+    if (nzchar(fr)) updateSelectInput(session, "frequency", selected = fr)
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_owner, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    updateTextInput(session, "responsible_unit",
+                    value = trimws(input$custom_owner %||% ""))
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_iuc, {
+    if (!identical(input$cascade_iuc, "__custom__")) return()
+    updateTextAreaInput(session, "iuc",
+                        value = trimws(input$custom_iuc %||% ""))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$nature, {
+    if (identical(input$nature, "自動")) {
+      updateSelectInput(session, "frequency", selected = "持續")
+      session$sendCustomMessage("toggleFrequency", list(enabled = FALSE))
+      if (length(input$related_document_pbc %||% character())) {
+        updateSelectizeInput(session, "related_document_pbc", selected = character(0))
+      }
+    } else {
+      session$sendCustomMessage("toggleFrequency", list(enabled = TRUE))
+    }
+  }, ignoreNULL = FALSE)
 
   # 引導完成且未手動填編號 → 自動順編；風險類別驅動會計科目／法令／聲明鎖定
   observe({
@@ -1908,6 +2157,20 @@ server <- function(input, output, session) {
       "toggleAssertions",
       list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
+    doc_mode <- related_document_mode_for_ctrl(list(
+      nature = input$nature,
+      control_type = input$nature,
+      risk_category = cat
+    ))
+    session$sendCustomMessage(
+      "toggleRelatedDocument",
+      list(enabled = identical(doc_mode, "required"))
+    )
+    if (identical(doc_mode, "locked")) {
+      if (length(input$related_document_pbc %||% character())) {
+        updateSelectizeInput(session, "related_document_pbc", selected = character(0))
+      }
+    }
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
       if (length(parse_account_values(input$significant_account))) {
         updateSelectizeInput(session, "significant_account", selected = character(0))
@@ -1928,21 +2191,20 @@ server <- function(input, output, session) {
     }
   })
 
-  observeEvent(input$custom_nature, {
-    if (identical(input$custom_nature, "自動")) {
-      updateSelectInput(session, "custom_frequency", selected = "持續")
-    }
-  }, ignoreNULL = FALSE)
-
   observe({
+    cy <- input$cycle %||% ""
     rows <- cascade_rows()
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "cascade_sub",
+                        choices = c("① 請先於側邊欄選擇循環…" = ""), selected = "")
+      return()
+    }
     ch_sub <- cascade_sub_process_choices(rows)
-    n_lib <- length(lib())
     n_rows <- length(rows)
     label0 <- if (n_rows) {
-      sprintf("② 選擇子作業…（本循環 %d 筆／庫 %d）", n_rows, n_lib)
+      sprintf("① 選擇子作業…（本循環 %d 筆候選）", n_rows)
     } else {
-      sprintf("② 尚無子作業候選（範本庫 %d 筆 — 請確認循環或至範本庫匯入）", n_lib)
+      "① 選擇子作業…（可直接「＋自訂新增」，毋須匯入底稿）"
     }
     ch <- c(stats::setNames("", label0), ch_sub, "＋自訂新增子作業" = "__custom__")
     cur <- input$cascade_sub %||% ""
@@ -1954,7 +2216,7 @@ server <- function(input, output, session) {
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
       updateSelectInput(session, "cascade_risk",
-                        choices = c("③ 請先選擇循環…" = ""), selected = "")
+                        choices = c("② 請先於側邊欄選擇循環…" = ""), selected = "")
       return()
     }
     rows <- cascade_rows()
@@ -1962,13 +2224,13 @@ server <- function(input, output, session) {
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
       ch_risk <- cascade_risk_choices(rows)
-      label0 <- sprintf("③ 選擇風險因素…（本子作業 %d）", length(ch_risk))
+      label0 <- sprintf("② 選擇風險因素…（本子作業 %d）", length(ch_risk))
     } else if (identical(sub_key, "__custom__")) {
       ch_risk <- character()
-      label0 <- "③ 自訂子作業下請自訂風險或稍後套用"
+      label0 <- "② 自訂子作業下請自訂風險或稍後套用"
     } else {
       ch_risk <- cascade_risk_choices(rows)
-      label0 <- sprintf("③ 選擇風險因素…（本循環 %d）", length(ch_risk))
+      label0 <- sprintf("② 選擇風險因素…（本循環 %d）", length(ch_risk))
     }
     ch <- c(stats::setNames("", label0), ch_risk, "＋自訂新增風險" = "__custom__")
     cur <- input$cascade_risk %||% ""
@@ -1976,30 +2238,13 @@ server <- function(input, output, session) {
                       selected = if (cur %in% unname(ch)) cur else "")
   })
 
-  output$cascade_risk_detail <- renderUI({
-    rk <- input$cascade_risk %||% ""
-    if (!nzchar(rk) || identical(rk, "__custom__")) return(NULL)
-    rows <- cascade_rows()
-    sub_key <- input$cascade_sub %||% ""
-    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
-      rows <- filter_cascade_rows(rows, sub_key = sub_key)
-    }
-    det <- cascade_risk_detail(rows, rk)
-    div(
-      class = "alert alert-info py-2 mb-2 small",
-      tags$strong("風險屬性／描述："),
-      if (length(det$attrs)) tags$ul(lapply(det$attrs, tags$li)) else tags$span("（無屬性細節）"),
-      tags$div(tags$em(det$risk_description %||% ""))
-    )
-  })
-
-  observe({
+  output$cascade_step_status <- renderUI({
     rows <- cascade_rows()
     sub_key <- input$cascade_sub %||% ""
     rk <- input$cascade_risk %||% ""
     if (!nzchar(rk)) {
       updateSelectInput(session, "cascade_objective",
-                        choices = c("④ 請先選擇③風險…" = ""), selected = "")
+                        choices = c("③ 請先選擇②風險…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -2009,7 +2254,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, risk_factor = rk)
     }
     ch_obj <- cascade_objective_choices(rows)
-    ch <- c(stats::setNames("", sprintf("④ 選擇控制目標…（%d）", length(ch_obj))),
+    ch <- c(stats::setNames("", sprintf("③ 選擇控制目標…（%d）", length(ch_obj))),
             ch_obj, "＋自訂新增目標" = "__custom__")
     cur <- input$cascade_objective %||% ""
     updateSelectInput(session, "cascade_objective", choices = ch,
@@ -2023,7 +2268,7 @@ server <- function(input, output, session) {
     obj <- input$cascade_objective %||% ""
     if (!nzchar(obj)) {
       updateSelectInput(session, "cascade_activity",
-                        choices = c("⑤ 請先選擇④控制目標…" = ""), selected = "")
+                        choices = c("④ 請先選擇③控制目標…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -2036,7 +2281,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, objective = obj)
     }
     ch_act <- cascade_activity_choices(rows)
-    ch <- c(stats::setNames("", sprintf("⑤ 選擇控制活動…（%d）", length(ch_act))),
+    ch <- c(stats::setNames("", sprintf("④ 選擇控制活動…（%d）", length(ch_act))),
             ch_act, "＋自訂新增活動" = "__custom__")
     cur <- input$cascade_activity %||% ""
     updateSelectInput(session, "cascade_activity", choices = ch,
@@ -2051,7 +2296,7 @@ server <- function(input, output, session) {
     obj <- input$cascade_objective %||% ""
     if (!nzchar(act)) {
       updateSelectInput(session, "cascade_iuc",
-                        choices = c("⑥ 請先選擇⑤控制活動…" = ""), selected = "")
+                        choices = c("⑤ 請先選擇④控制活動…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -2067,7 +2312,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, activity_key_sel = act)
     }
     ch_iuc <- cascade_iuc_choices(rows, pbc_df = pbc_reg())
-    ch <- c(stats::setNames("", sprintf("⑥ 選擇 IUC／相關系統…（%d）", length(ch_iuc))),
+    ch <- c(stats::setNames("", sprintf("⑤ 選擇 IUC…（%d）", length(ch_iuc))),
             ch_iuc, "＋自訂新增 IUC" = "__custom__")
     cur <- input$cascade_iuc %||% ""
     updateSelectInput(session, "cascade_iuc", choices = ch,
@@ -2078,91 +2323,16 @@ server <- function(input, output, session) {
     sel <- resolve_cascade_selection()
     ready <- cascade_selection_ready(sel)
     steps <- c(
-      sprintf("①循環：%s", if (nzchar(sel$cycle)) "✓" else "○"),
-      sprintf("②子作業：%s", if (nzchar(sel$sub_process_id) || nzchar(sel$sub_process)) "✓" else "○"),
-      sprintf("③風險：%s", if (nzchar(sel$risk_factor)) "✓" else "○"),
-      sprintf("④目標：%s", if (nzchar(sel$control_objective)) "✓" else "○"),
-      sprintf("⑤活動：%s", if (nzchar(sel$control_activity) && activity_type_ok(sel$approach)) "✓" else "○"),
-      sprintf("⑥IUC：%s", if (nzchar(sel$iuc_or_system)) "✓" else "○")
+      sprintf("循環（側邊欄）：%s", if (nzchar(sel$cycle)) "✓" else "○"),
+      sprintf("①子作業：%s", if (nzchar(sel$sub_process_id) || nzchar(sel$sub_process)) "✓" else "○"),
+      sprintf("②風險：%s", if (nzchar(sel$risk_factor)) "✓" else "○"),
+      sprintf("③目標：%s", if (nzchar(sel$control_objective)) "✓" else "○"),
+      sprintf("④活動：%s", if (nzchar(sel$control_activity) && activity_type_ok(sel$approach)) "✓" else "○"),
+      sprintf("⑤IUC：%s", if (nzchar(sel$iuc_or_system)) "✓" else "○")
     )
     cls <- if (isTRUE(ready$ready)) "alert alert-success py-1 mb-2 small" else "alert alert-secondary py-1 mb-2 small"
     div(class = cls, paste(steps, collapse = " ｜ "),
         if (!ready$ready) tags$span(class = "text-muted", " — 完成引導後即可定稿"))
-  })
-
-  output$design_required_checklist <- renderUI({
-    d <- current_draft_from_inputs()
-    req <- design_required_check(d)
-    items <- lapply(names(req$required), function(f) {
-      ok <- isTRUE(req$filled[[f]])
-      tags$li(
-        class = if (ok) "text-success" else "text-danger",
-        if (ok) "✓ " else "○ ",
-        req$required[[f]]
-      )
-    })
-    if (identical(req$account_mode, "required")) {
-      ok_a <- isTRUE(req$filled$significant_account)
-      items <- c(items, list(tags$li(
-        class = if (ok_a) "text-success" else "text-danger",
-        if (ok_a) "✓ " else "○ ", "會計科目（報導面必填）"
-      )))
-    } else if (identical(req$account_mode, "locked")) {
-      ok_a <- isTRUE(req$filled$significant_account)
-      items <- c(items, list(tags$li(
-        class = if (ok_a) "text-success" else "text-danger",
-        if (ok_a) "✓ " else "○ ", "會計科目已鎖定（非報導面不可填）"
-      )))
-    }
-    if (identical(req$law_mode, "required")) {
-      ok_l <- isTRUE(req$filled$related_law)
-      items <- c(items, list(tags$li(
-        class = if (ok_l) "text-success" else "text-danger",
-        if (ok_l) "✓ " else "○ ", "相關法令（遵循面必填）"
-      )))
-    } else if (identical(req$law_mode, "locked")) {
-      ok_l <- isTRUE(req$filled$related_law)
-      items <- c(items, list(tags$li(
-        class = if (ok_l) "text-success" else "text-danger",
-        if (ok_l) "✓ " else "○ ", "相關法令已鎖定（非遵循面不可填）"
-      )))
-    }
-    if (identical(req$assertion_mode, "reporting")) {
-      items <- c(items, list(tags$li(
-        class = "text-muted", "○ ", "聲明（報導面：八種可複選）"
-      )))
-    } else if (identical(req$assertion_mode, "operations")) {
-      items <- c(items, list(tags$li(
-        class = "text-muted", "○ ", "聲明（營運面：完整性／正確性／即時性）"
-      )))
-    } else if (identical(req$assertion_mode, "locked")) {
-      ok_as <- isTRUE(req$filled$assertions)
-      items <- c(items, list(tags$li(
-        class = if (ok_as) "text-success" else "text-danger",
-        if (ok_as) "✓ " else "○ ", "聲明已鎖定（遵循面不可選）"
-      )))
-    }
-    cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
-    n_cascade <- length(cascade_rows())
-    acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
-    law_needed <- identical(req$law_mode, "required") || identical(req$law_mode, "locked")
-    as_needed <- identical(req$assertion_mode, "locked")
-    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed) + as.integer(as_needed)
-    n_ok <- sum(unlist(req$filled[names(req$required)])) +
-      as.integer(acct_needed && isTRUE(req$filled$significant_account)) +
-      as.integer(law_needed && isTRUE(req$filled$related_law)) +
-      as.integer(as_needed && isTRUE(req$filled$assertions))
-    div(
-      class = cls,
-      tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),
-      tags$span(class = "text-muted ms-2", sprintf("｜引導候選 %d 筆", n_cascade)),
-      tags$ul(class = "mb-0 ps-3", style = "columns: 2; -webkit-columns: 2;", items),
-      if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、")),
-      if (!n_cascade) tags$div(
-        class = "mt-1 text-danger",
-        "本循環尚無引導選項 — 請至「範本庫」匯入 RCM 或確認左側已選循環。"
-      )
-    )
   })
 
   output$auto_control_id_box <- renderUI({
@@ -2199,50 +2369,36 @@ server <- function(input, output, session) {
     showNotification(paste("已存入範本庫", item$library_id), type = "message")
   })
 
-  observeEvent(input$import_jinglian_seed, {
-    if (!require_admin(is_admin(), session)) return()
-    path <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-    if (!file.exists(path)) {
-      return(showNotification("找不到內建 RCM 範本檔", type = "error"))
-    }
-    tryCatch({
-      new_lib <- import_control_library_file(path, lib(), overwrite = isTRUE(input$lib_overwrite))
-      lib(persist_lib(new_lib))
-      refresh_lib_choices()
-      showNotification(sprintf("已載入 RCM 範本庫，共 %d 筆", length(new_lib)), type = "message")
-    }, error = function(e) showNotification(conditionMessage(e), type = "error"))
-  })
-
   observeEvent(input$oa_swap, {
-    if (identical(input$cascade_objective, "__custom__") &&
-        identical(input$cascade_activity, "__custom__")) {
-      o <- input$custom_objective %||% ""
-      a <- input$custom_activity %||% ""
+    o <- input$control_objective %||% ""
+    a <- input$control_activity %||% ""
+    updateTextAreaInput(session, "control_objective", value = a)
+    updateTextAreaInput(session, "control_activity", value = o)
+    if (identical(input$cascade_objective, "__custom__")) {
       updateTextAreaInput(session, "custom_objective", value = a)
+    }
+    if (identical(input$cascade_activity, "__custom__")) {
       updateTextAreaInput(session, "custom_activity", value = o)
-    } else {
-      showNotification("請於引導④⑤選「自訂新增」後再對調目標/活動", type = "message")
     }
   })
 
   observeEvent(input$oa_split_suggest, {
-    if (identical(input$cascade_objective, "__custom__") &&
-        identical(input$cascade_activity, "__custom__")) {
-      blob <- paste(c(input$custom_objective %||% "", input$custom_activity %||% ""), collapse = "。")
-      sug <- suggest_objective_activity_split(blob)
-      updateTextAreaInput(session, "custom_objective", value = sug$objective)
-      updateTextAreaInput(session, "custom_activity", value = sug$activity)
-      showNotification(sug$note, type = "message")
-    } else {
+    blob <- paste(c(input$control_objective %||% "", input$control_activity %||% ""),
+                  collapse = "。")
+    if (!nzchar(trimws(blob))) {
       d <- current_draft_from_inputs()
-      sug <- suggest_objective_activity_split(
-        paste(c(d$control_objective, d$control_activity), collapse = "。")
-      )
-      showNotification(
-        paste0("目前為範本選取，拆分建議：", sug$note),
-        type = "message", duration = 8
-      )
+      blob <- paste(c(d$control_objective, d$control_activity), collapse = "。")
     }
+    sug <- suggest_objective_activity_split(blob)
+    updateTextAreaInput(session, "control_objective", value = sug$objective)
+    updateTextAreaInput(session, "control_activity", value = sug$activity)
+    if (identical(input$cascade_objective, "__custom__")) {
+      updateTextAreaInput(session, "custom_objective", value = sug$objective)
+    }
+    if (identical(input$cascade_activity, "__custom__")) {
+      updateTextAreaInput(session, "custom_activity", value = sug$activity)
+    }
+    showNotification(sug$note, type = "message")
   })
 
   output$live_validation <- renderUI({
@@ -2279,9 +2435,50 @@ server <- function(input, output, session) {
         if (!parity$ok) "（不一致，請重新定稿）")
   })
   output$rcm_count_box <- renderUI({
+    rcm_revision()
     parity <- assert_design_rcm_parity(controls())
     tags$p(class = "small mb-2",
            sprintf("目前已定稿 %d 個控制點＝%d 列 RCM", parity$n_controls, parity$n_rcm_rows))
+  })
+  output$rcm_latest_saved <- renderUI({
+    rcm_revision()
+    pt <- last_saved_control()
+    if (is.null(pt)) {
+      return(tags$p(class = "small text-muted mb-2", "尚無儲存成功的控制點。"))
+    }
+    row <- tryCatch(control_to_rcm_row(pt, seq_no = 1L), error = function(e) NULL)
+    tags$div(
+      class = "alert alert-success py-2 mb-2 small",
+      tags$strong("最新儲存："),
+      tags$code(pt$control_id %||% "—"),
+      if (nzchar(pt$saved_at %||% "")) {
+        tags$span(class = "text-muted ms-2", paste0("（", pt$saved_at, "）"))
+      },
+      tags$br(),
+      tags$span(
+        "風險：", pt$risk_factor %||% pt$risk_name %||% "—", "｜",
+        "目標：", substr(pt$control_objective %||% "—", 1, 36), "｜",
+        "活動：", substr(pt$control_activity %||% "—", 1, 36)
+      ),
+      tags$br(),
+      tags$span(
+        class = "text-muted",
+        "類型：", pt$nature %||% "—", "／", pt$approach %||% "—",
+        "｜頻率：", pt$frequency %||% "—",
+        if (nzchar(pt$related_system %||% "")) paste0("｜系統：", pt$related_system) else "",
+        if (nzchar(pt$iuc %||% pt$iuc_or_system %||% "")) {
+          paste0("｜IUC：", substr(pt$iuc %||% pt$iuc_or_system %||% "", 1, 28))
+        } else "",
+        if (nzchar(pt$related_document %||% "")) {
+          paste0("｜文件：", substr(pt$related_document, 1, 28))
+        } else ""
+      ),
+      if (!is.null(row) && nrow(row)) {
+        tags$div(class = "text-muted mt-1",
+                 "RCM 列已同步｜子作業：", row[["子作業名稱"]] %||% "—",
+                 "｜檢核：", substr(as.character(row[["設計檢核"]] %||% ""), 1, 40))
+      }
+    )
   })
 
   # Primary path: 設計完成 → 直接寫入一筆控制點／RCM 列（1:1）
@@ -2311,6 +2508,8 @@ server <- function(input, output, session) {
     idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
     if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
     controls(cs)
+    bump_rcm_views(pt)
+    bslib::nav_select("main_nav", selected = "RCM", session = session)
     updateTextInput(session, "control_id",
                     value = next_rcm_control_id(
                       pt$sub_process_id,
@@ -2351,7 +2550,8 @@ server <- function(input, output, session) {
     rcm <- controls_to_rcm(cs)
     data.frame(
       控制編號 = vapply(cs, function(x) x$control_id, ""),
-      IUC = vapply(cs, function(x) x$iuc_or_system, ""),
+      IUC = vapply(cs, function(x) x$iuc %||% x$iuc_or_system %||% "", ""),
+      相關系統 = vapply(cs, function(x) x$related_system %||% "", ""),
       RCM列 = vapply(seq_along(cs), function(i) {
         if (isTRUE(cs[[i]]$rcm_ready$ready)) "已定稿＝1列" else "待補"
       }, ""),
@@ -2378,7 +2578,7 @@ server <- function(input, output, session) {
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
         reviewed_name = input$pbc_reviewed, pbc_kind = input$pbc_kind,
         iuc_or_system = input$pbc_reviewed,
-        cycle = input$pbc_cycle, notes = input$pbc_notes
+        cycle = input$cycle %||% "", notes = input$pbc_notes
       ))
       pbc_reg(reg)
       persist_pbc(reg)
@@ -2443,8 +2643,6 @@ server <- function(input, output, session) {
     updateSelectInput(session, "pbc_kind",
                       selected = normalize_pbc_kind(row$pbc_kind[[1]]))
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
-    updateSelectInput(session, "pbc_cycle",
-                      selected = if (nzchar(row$cycle[[1]])) row$cycle[[1]] else "")
   }, ignoreInit = TRUE)
   observeEvent(input$pbc_delete, {
     s <- input$pbc_table_rows_selected
@@ -2472,9 +2670,34 @@ server <- function(input, output, session) {
 
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
-    datatable(controls_to_rcm(controls()), rownames = FALSE,
-              options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+    df <- rcm_display_df()
+    if (is.null(df) || !nrow(df)) {
+      return(datatable(
+        data.frame(訊息 = "尚無已定稿控制點；完成設計並「寫入 RCM 一列」後即時顯示於此。"),
+        rownames = FALSE, options = list(dom = "t")
+      ))
+    }
+    dt <- datatable(
+      df, rownames = FALSE,
+      options = list(
+        scrollX = TRUE, pageLength = 15, dom = "tip",
+        order = list(list(0, "desc")),
+        rowCallback = DT::JS(
+          "function(row, data, index) {",
+          "  if (index === 0) $(row).css({'background-color': '#e8f5e9', 'font-weight': '500'});",
+          "}"
+        )
+      )
+    )
+    dt
   })
+
+  observeEvent(rcm_revision(), {
+    df <- rcm_display_df()
+    if (is.null(df) || !nrow(df)) return()
+    proxy <- DT::dataTableProxy("rcm_table", session = session)
+    DT::replaceData(proxy, df, resetPaging = FALSE, rownames = FALSE)
+  }, ignoreInit = TRUE)
   selected_worksheet_controls_sa <- reactive({
     cs <- Filter(is_control_finalized_for_rcm, controls())
     if (!length(cs)) return(list())
@@ -2626,22 +2849,6 @@ server <- function(input, output, session) {
     fill_csa_scenario_form(sc_new)
     showNotification(sprintf("已新增情境組「%s」", sc_new$scenario_name), type = "message")
   })
-  observeEvent(input$csa_scenario_dup, {
-    ctrl <- csa_edit_ctrl()
-    if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
-    sc <- read_csa_scenario_from_inputs(scenario_id = NULL)
-    sc$scenario_name <- paste0(sc$scenario_name, "（複本）")
-    if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
-      ctrl <- upsert_control_csa_scenario(ctrl, synthetic_default_csa_scenario(ctrl))
-    }
-    ctrl2 <- upsert_control_csa_scenario(ctrl, sc)
-    patch_control_in_store(ctrl2)
-    updateSelectizeInput(session, "csa_scenario_pick",
-                         choices = csa_scenario_choices(ctrl2),
-                         selected = sc$scenario_id, server = TRUE)
-    fill_csa_scenario_form(sc)
-    showNotification(sprintf("已複製為「%s」", sc$scenario_name), type = "message")
-  })
   observeEvent(input$csa_scenario_del, {
     ctrl <- csa_edit_ctrl()
     if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
@@ -2672,47 +2879,49 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
   })
   observeEvent(input$ws_reset_iv, {
-    updateRadioButtons(session, "interview_source", selected = "rcm")
-    updateSelectInput(session, "interview_cycle", selected = "")
     updateSelectInput(session, "interview_sub", selected = "")
     updateSelectizeInput(session, "worksheet_controls", selected = character())
     updateSelectizeInput(session, "interview_pbc_link", selected = character())
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
     updateCheckboxInput(session, "interview_include_modules", value = TRUE)
-    updateTextInput(session, "interview_cycle_code", value = "")
-    updateSelectInput(session, "interview_cycle_echo", selected = "")
-    updateTextInput(session, "interview_sub_id_echo", value = "")
-    updateTextInput(session, "interview_sub_name_echo", value = "")
   })
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
   })
   output$interview_status <- renderUI({
-    src <- input$interview_source %||% "rcm"
     pool <- interview_pool_controls()
     scoped <- filter_controls_by_cycle_sub(
       pool,
-      cycle = input$interview_cycle %||% "",
+      cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
     iv <- interview_worksheet()
     steps <- c(
-      sprintf("①來源：%s", if (identical(src, "library")) "範本庫" else "RCM"),
-      sprintf("②循環：%s", if (nzchar(input$interview_cycle %||% "")) "✓" else "○"),
-      sprintf("③子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
-      sprintf("④控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
+      sprintf("循環（側邊欄）：%s", if (nzchar(input$cycle %||% "")) "✓" else "○"),
+      sprintf("①子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
+      sprintf("②風險／控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
     )
-    if (!length(scoped)) {
-      msg <- if (identical(src, "library")) {
-        "範本庫尚無列；請先匯入或於風險控制點定稿後累積範本。"
-      } else {
-        "尚無已定稿控制點；請先完成「風險控制點設計」定稿，或改選「範本庫預期」。"
-      }
+    if (!nzchar(input$cycle %||% "")) {
       return(tagList(
         tags$small(class = "text-muted", paste(steps, collapse = "｜")),
         tags$br(),
-        tags$small(class = "text-warning", msg)
+        tags$small(class = "text-warning", "請先於側邊欄選擇循環，即可直接選該循環建議之子作業。")
+      ))
+    }
+    if (!nzchar(input$interview_sub %||% "")) {
+      return(tagList(
+        tags$small(class = "text-muted", paste(steps, collapse = "｜")),
+        tags$br(),
+        tags$small(class = "text-muted", "請選①子作業（內建建議已就緒）。")
+      ))
+    }
+    if (!length(scoped)) {
+      return(tagList(
+        tags$small(class = "text-muted", paste(steps, collapse = "｜")),
+        tags$br(),
+        tags$small(class = "text-warning",
+                   "此子作業尚無建議列；可改選其他子作業，或至「風險控制點設計」新增後再訪談。")
       ))
     }
     tagList(
@@ -2759,6 +2968,7 @@ server <- function(input, output, session) {
               rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$gap_table <- renderDT({
+    rcm_revision()
     datatable(detect_gaps_many(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })

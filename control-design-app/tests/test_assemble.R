@@ -28,6 +28,22 @@ check <- function(cond, msg) {
   } else message("OK: ", msg)
 }
 
+reg_doc <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "user_access.xlsx", reviewed_name = "使用者權限清冊",
+  pbc_kind = "系統表單", iuc_or_system = "使用者權限清冊",
+  cycle = "電腦化資訊系統循環"
+))
+pbc_doc_id <- reg_doc$pbc_id[[1]]
+with_pbc_doc <- function(ctrl) {
+  modifyList(ctrl, list(
+    related_document_pbc_ids = pbc_doc_id,
+    related_document = apply_pbc_to_related_document(reg_doc, pbc_doc_id)
+  ))
+}
+without_pbc_doc <- function(ctrl) {
+  modifyList(ctrl, list(related_document_pbc_ids = character(), related_document = ""))
+}
+
 base <- list(
   company = "示範公司", cycle = "電腦化資訊系統循環",
   sub_process_id = "EC-101", sub_process = "存取管理",
@@ -49,8 +65,8 @@ base <- list(
   key_control = "Y"
 )
 
-d1 <- modifyList(base, list(iuc_or_system = "使用者權限清冊"))
-d2 <- modifyList(base, list(iuc_or_system = "AD 群組報表", control_activity = "覆核 AD 群組"))
+d1 <- with_pbc_doc(modifyList(base, list(iuc_or_system = "使用者權限清冊")))
+d2 <- with_pbc_doc(modifyList(base, list(iuc_or_system = "AD 群組報表", control_activity = "覆核 AD 群組")))
 check(length(split_controls_by_iuc(list(d1, d2))) == 2L, "IUC 分拆")
 
 # RCM row = designed control; objective ≠ activity (Jinglian headers)
@@ -65,7 +81,7 @@ check(!nzchar(normalize_control_type_manual_auto("人工＋自動")), "混合控
 check(!nzchar(normalize_control_type_manual_auto("人工＋自動化混合")), "混合控制類型不允許")
 check(identical(resolve_control_frequency("自動", "每季"), "持續"), "自動控制頻率＝持續")
 check(identical(resolve_control_frequency("人工", "每季"), "每季"), "人工控制頻率保留")
-auto_ctrl <- modifyList(d1, list(nature = "自動", frequency = "每季"))
+auto_ctrl <- without_pbc_doc(modifyList(d1, list(nature = "自動", frequency = "每季")))
 rcm_auto <- controls_to_rcm(list(auto_ctrl))
 check(identical(as.character(rcm_auto[["控制頻率"]]), "持續"), "RCM 自動控制頻率＝持續")
 fin_auto <- finalize_control_as_rcm_row(auto_ctrl)
@@ -126,9 +142,16 @@ gaps <- detect_design_gaps(bad)
 check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")
 check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
 
-gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", related_system = "", outputs = "", related_document = "")))
-check(any(gaps2$severity == "高" & grepl("IUC|相關系統|必填", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
-check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)), "缺產出改為選填低嚴重度")
+gaps2 <- detect_design_gaps(modifyList(d1, list(
+  iuc = "", iuc_or_system = "", related_system = "", outputs = "", related_document = ""
+)))
+check(any(gaps2$severity == "高" & grepl("IUC", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
+check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)) ||
+        any(gaps2$severity == "高" & grepl("PBC", gaps2$gap_item)),
+      "缺產出／相關文件缺漏偵測")
+check(!isTRUE(design_required_check(modifyList(d1, list(
+  iuc = "", iuc_or_system = "", related_system = "SAP ERP"
+)))$ok), "僅填相關系統不可代替 IUC")
 
 # 設計必填欄位
 req_ok <- design_required_check(d1)
@@ -203,20 +226,20 @@ check(isTRUE(fin_rep_multi$ok) && grepl("應收帳款", fin_rep_multi$control$si
       "報導面複選科目可定稿")
 
 # 遵循面相關法令必填；其他類別不可填
-comp_ok <- design_required_check(modifyList(d1, list(
+comp_ok <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
   assertions = ""
-)))
+))))
 check(isTRUE(comp_ok$ok), "遵循面＋法令＝必填通過")
-comp_bad <- design_required_check(modifyList(d1, list(
+comp_bad <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "", significant_account = "",
   assertions = ""
-)))
+))))
 check(!isTRUE(comp_bad$ok) && any(grepl("相關法令", comp_bad$missing)), "遵循面缺法令不可過")
-comp_as_bad <- design_required_check(modifyList(d1, list(
+comp_as_bad <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
   assertions = "完整性 (Completeness)"
-)))
+))))
 check(!isTRUE(comp_as_bad$ok) && any(grepl("聲明", comp_as_bad$missing)),
       "遵循面填聲明應擋下")
 comp_lock <- design_required_check(modifyList(d1, list(
@@ -233,6 +256,12 @@ seeded <- seed_control_library(TRUE)
 pcat2 <- parameter_catalog(seeded, list(), list())
 check(any(pcat2$參數 == "子作業編號") && any(grepl("EC-101", pcat2$選項值)), "參數庫含資訊循環子作業")
 check(any(pcat2$參數 == "控制目標"), "參數庫含控制目標選項")
+pcat_iuc <- parameter_catalog(list(), list(modifyList(d1, list(
+  iuc = "使用者權限清冊", iuc_or_system = "使用者權限清冊", related_system = "Active Directory"
+))), list())
+check(any(pcat_iuc$參數 == "IUC" & grepl("使用者權限清冊", pcat_iuc$選項值)), "參數庫 IUC 獨立收錄")
+check(any(pcat_iuc$參數 == "相關系統" & grepl("Active Directory", pcat_iuc$選項值)), "參數庫相關系統獨立收錄")
+check(!any(pcat_iuc$參數 == "相關系統／IUC"), "參數庫不再合併 IUC／相關系統")
 tmp_ps <- tempfile(fileext = ".json")
 save_parameter_store(pcat2, tmp_ps)
 reloaded <- load_parameter_store(tmp_ps)
@@ -361,6 +390,17 @@ check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
       "訪談版面與風險控制點設計趨於一致（7/5、引導、accordion、右側預覽）")
 check(grepl("套用 IUC／PBC 命名", app_txt),
       "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
+check(!grepl("interview_source", app_txt) &&
+        !grepl("① 題綱來源", app_txt) &&
+        !grepl("已定稿 RCM（實際設計列）", app_txt) &&
+        !grepl("範本庫預期（風險／目標／活動）", app_txt) &&
+        !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm_csa.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        !grepl("interview_cycle", app_txt) &&
+        grepl("interview_sub", app_txt) &&
+        grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt) &&
+        grepl("循環（全域）", app_txt) &&
+        length(gregexpr('selectInput\\(\\s*"cycle"', app_txt, perl = TRUE)[[1]]) == 1L,
+      "訪談／設計共用側邊欄循環（無題綱來源、無頁內循環選框）")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))
@@ -378,7 +418,7 @@ check(all(c("測試程序", "所需文件_PBC", "預期結果", "控制編號",
             "控制頻率", "建議樣本數", "抽樣方法論", "抽樣或範圍") %in% names(csa)),
       "CSA 含測試步驟設計欄位")
 check(nrow(csa) >= 3, "CSA 依元素產製多個測試步驟")
-check(any(csa[["元素"]] == "IUC／相關系統"), "CSA 含 IUC 測試步驟")
+check(any(csa[["元素"]] == "IUC"), "CSA 含 IUC 測試步驟")
 csa_multi <- controls_to_csa(list(fin_ok, not_ready), finalized_only = TRUE)
 check(all(csa_multi[["控制編號"]] == fin_ok$control_id), "CSA 僅取已定稿 RCM 列")
 
@@ -483,7 +523,7 @@ imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = 
 check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
 
 # Accumulative collect pipeline
-ctrl_a <- modifyList(base, list(control_id = "EC-101-99", sub_process_id = "EC-101"))
+ctrl_a <- with_pbc_doc(modifyList(base, list(control_id = "EC-101-99", sub_process_id = "EC-101")))
 res1 <- collect_controls_to_library(list(), list(ctrl_a), source = "test", quality_gate = TRUE)
 check(res1$added == 1L, "品質通過的控制點可收集入庫")
 check(!is.null(get_library_item(res1$library, "LIB-EC-101-99")), "穩定 ID 依控制編號累積")
@@ -538,6 +578,23 @@ check(identical(next_rcm_control_id("EC-102", character()), "EC-102-01"), "空�
 seeded <- seed_control_library(TRUE)
 it_rows <- cycle_risk_rows(seeded, "電腦化資訊系統循環")
 check(length(it_rows) >= 20, sprintf("資訊循環風險列至少 20（實際 %d）", length(it_rows)))
+# 九大循環皆有內建候選，毋須先匯入底稿
+src_lib <- cascade_source_library(list())
+cycle_counts <- vapply(CYCLES_NINE, function(cy) {
+  length(library_controls_flat(src_lib, cycle = cy))
+}, integer(1))
+check(all(cycle_counts >= 1L),
+      sprintf("九大循環皆有內建引導候選（實際：%s）",
+              paste(sprintf("%s=%d", CYCLES_NINE, cycle_counts), collapse = "；")))
+empty_user <- cascade_source_library(list())
+check(length(cascade_sub_process_choices(
+  library_controls_flat(empty_user, cycle = "生產循環")
+)) >= 1L, "空使用者庫時生產循環仍可直接選子作業")
+app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("cascade_source_library", app_casc) && grepl("毋須匯入底稿", app_casc),
+      "引導候選採內建來源且文案不要求先匯入底稿")
+check(!grepl("請至「範本庫」匯入 CSV／JSON／RCM xlsx", app_casc),
+      "引導候選不再要求先匯入底稿才能選")
 it_risks <- cascade_risk_choices(it_rows)
 check(length(it_risks) >= 10, sprintf("資訊循環風險因素候選至少 10（實際 %d）", length(it_risks)))
 check(!any(grepl("\\[|\\]", names(it_risks))), "風險因素選項標籤不含[]")
@@ -629,18 +686,98 @@ check(identical(nav_titles, expect_nav),
       sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
 check(grepl("goto_lib_tab|開啟範本庫", app_src) && grepl("goto_param_tab|開啟參數庫", app_src),
       "側邊欄最下方含範本庫／參數庫入口")
+check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
+        grepl("data-value=\\\\\"參數庫\\\\\"", app_src) &&
+        grepl("display: none", app_src),
+      "標題列隱藏範本庫／參數庫（改由側邊欄進入）")
+check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
+      "PBC 頁無獨立循環選框（改用側邊欄）")
+check(!grepl('selectInput\\(\\s*"cycle".*基本資料|accordion_panel\\(\\s*"基本資料"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
+      "基本資料 accordion 內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
-check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
-      "範本庫頁籤含可跳過套用設定")
+check(grepl("範本套用", app_src) && grepl("未套用範本", app_src) &&
+        !grepl("從範本庫套用（可跳過）", app_src) &&
+        grepl("lib-apply-card", app_src),
+      "範本庫頁籤含可跳過套用設定（無重疊舊標題）")
+check(!grepl('actionButton\\(\\s*"csa_scenario_dup"', app_src) &&
+        !grepl('actionButton\\(\\s*"save_to_lib"', app_src) &&
+        !grepl('actionButton\\(\\s*"lib_add_selected_control"', app_src) &&
+        !grepl('actionButton\\(\\s*"import_jinglian_seed"', app_src),
+      "設計區塊按鈕精簡（每區至多三個）")
+check(grepl("overflow: visible !important", app_src) &&
+        grepl("max-height: none !important", app_src),
+      "區塊一次顯示全部內容（無區塊內上下滑動）")
 check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
-check(grepl("高權存取|admin_login|verify_admin_password", app_src), "含高權登入機制")
+check(grepl("admin_login|verify_admin_password|show_admin_login_modal", app_src), "含高權登入機制")
 check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直接改範本庫／參數庫")
 
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
 
 # 風險辨識區塊：風險因素、風險描述、風險類別、RoMM 分類
-check(grepl('accordion_panel\\(\\s*"風險辨識"', app_src), "有風險辨識 accordion")
+check(grepl('accordion_panel\\(\\s*"控制設計"', app_src) &&
+        grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&
+        grepl('textAreaInput\\(\\s*"control_activity"', app_src) &&
+        grepl('selectInput\\(\\s*"approach"', app_src) &&
+        grepl('selectInput\\(\\s*"nature"', app_src),
+      "控制設計區塊含控制目標／活動／預防偵測／人工自動")
+check(!grepl("設計必填與防呆", app_src) && !grepl("建議操作順序", app_src),
+      "首頁已移除設計必填與防呆／建議操作順序說明")
+check(grepl("home-tabs-grid", app_src) &&
+        !grepl('fillable\\s*=\\s*c\\(', app_src) &&
+        grepl("html-fill-container", app_src) &&
+        grepl("overflow: visible !important", app_src) &&
+        grepl("max-height: none !important", app_src),
+      "全頁區塊一次顯示（無 fillable 壓縮、無區塊內上下滑動）")
+check(!grepl('uiOutput\\(\\s*"design_required_checklist"', app_src) &&
+        !grepl('uiOutput\\(\\s*"cascade_risk_detail"', app_src),
+      "已移除重複之設計必填清單／風險屬性預覽")
+check(!grepl('cascade_candidate_banner', app_src),
+      "已移除引導設計上方重複提示框")
+check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
+        grepl('textInput\\(\\s*"related_system"', app_src) &&
+        !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
+      "IUC 與相關系統分開設定")
+check(grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
+      "聲明設定與控制目標並排")
+check(grepl('objective-assertions-row', app_src), "控制目標／聲明並排樣式")
+check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
+check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
+      "RCM 頁籤含最新儲存即時顯示")
+check(!is.null(fin$control$saved_at) && nzchar(fin$control$saved_at),
+      "定稿控制點含儲存時間戳")
+check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&
+        length(gregexpr("各頁籤用途", app_src, fixed = TRUE)[[1]]) == 1,
+      "整體設計流程／各頁籤用途僅在首頁")
+{
+  home_start <- regexpr('nav_panel\\(\\s*"首頁"', app_src, perl = TRUE)[1]
+  home_end <- regexpr('nav_panel\\(\\s*"訪談問項設計"', app_src, perl = TRUE)[1]
+  home_chunk <- substr(app_src, home_start, home_end - 1L)
+  other_chunk <- substr(app_src, home_end, nchar(app_src))
+  check(grepl("整體設計流程", home_chunk, fixed = TRUE) &&
+          grepl("各頁籤用途", home_chunk, fixed = TRUE),
+        "整體設計流程／各頁籤用途位於首頁 nav_panel 內")
+  check(!grepl("整體設計流程", other_chunk, fixed = TRUE) &&
+          !grepl("各頁籤用途", other_chunk, fixed = TRUE),
+        "其他頁籤不含整體設計流程／各頁籤用途")
+}
+check(grepl("pbc_apply_to_design", app_src) &&
+        grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
+        !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
+      "套用 IUC／PBC 命名改在 PBC資料庫")
+check(grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
+        grepl("goto_pbc_tab", app_src) &&
+        grepl("toggleRelatedDocument", app_src) &&
+        !grepl('textInput\\(\\s*"related_document"', app_src),
+      "相關文件改為 PBC 資料庫選取（自動／遵循面鎖定）")
+check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "營運面")), "required"),
+      "人工＋非法遵面：相關文件必填")
+check(identical(related_document_mode_for_ctrl(list(nature = "自動", risk_category = "營運面")), "locked"),
+      "自動控制：相關文件鎖定")
+check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "遵循面")), "locked"),
+      "遵循面：相關文件鎖定")
+check(!isTRUE(design_required_check(without_pbc_doc(d1))$ok),
+      "未選 PBC 文件時必填檢核失敗")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
@@ -686,9 +823,14 @@ check(identical(normalize_assertions_for_category("完整性 (Completeness)", "�
       "遵循面定稿清空聲明")
 
 # 高權密碼與直接維護
-check(isTRUE(verify_admin_password("尬電SOX#Admin")), "預設高權密碼可驗證")
+check(isTRUE(verify_admin_password("1118")), "預設高權密碼可驗證")
+check(!isTRUE(verify_admin_password("尬電SOX#Admin")), "舊預設密碼已停用")
 check(!isTRUE(verify_admin_password("wrong")), "錯誤密碼拒絕")
 check(!isTRUE(verify_admin_password("")), "空密碼拒絕")
+check(grepl("show_admin_login_modal|showModal", paste(readLines(file.path(root, "R/privilege.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        grepl("admin_prompt_lib|admin_prompt_param", app_src) &&
+        !grepl("高權存取", app_src),
+      "高權改為角落提示＋修改時彈出登入（側邊欄不張揚）")
 ps0 <- empty_parameter_store()
 ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
 check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")
@@ -708,20 +850,20 @@ lib1 <- patch_library_item_fields(
 check(identical(lib1[[1]]$title, "新標題") && identical(lib1[[1]]$control$risk_factor, "新風險"),
       "範本庫可高權直接改欄位")
 
-fin_as <- finalize_control_as_rcm_row(modifyList(base, list(
+fin_as <- finalize_control_as_rcm_row(with_pbc_doc(modifyList(base, list(
   assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"
-)))
+))))
 check(isTRUE(fin_as$ok), "營運面含非法聲明仍可定稿（自動過濾）")
 check(!grepl("存在或發生", fin_as$control$assertions %||% ""), "定稿後僅保留營運面允許聲明")
 check(grepl("即時性", fin_as$control$assertions %||% ""), "定稿保留即時性")
-fin_comp <- finalize_control_as_rcm_row(modifyList(base, list(
+fin_comp <- finalize_control_as_rcm_row(without_pbc_doc(modifyList(base, list(
   risk_category = "遵循面",
   risk_attr_operations = "",
   risk_attr_compliance = "[遵循] 資安政策",
   significant_account = "",
   related_law = "證券交易法",
   assertions = "完整性 (Completeness)"
-)))
+))))
 check(isTRUE(fin_comp$ok), "遵循面可定稿")
 check(!nzchar(trimws(fin_comp$control$assertions %||% "")), "遵循面定稿無 Assertions")
 

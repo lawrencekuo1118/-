@@ -19,7 +19,7 @@ DESIGN_ELEMENTS <- c(
   nature_approach_type = "Nature／Approach／Type（4120SR）",
   inputs = "Inputs（投入）",
   steps = "Steps（執行步驟）",
-  outputs = "Outputs／相關文件",
+  outputs = "Outputs／控制佐證文件",
   exception = "例外／調查門檻",
   assertion_account = "科目／聲明"
 )
@@ -143,7 +143,7 @@ RCM_HEADER_LABELS <- c(
   `相關系統` = "相關系統",
   `相關政策或程序` = "相關政策或程序",
   `相關法令` = "相關法令",
-  `相關文件` = "相關文件",
+  `相關文件` = CONTROL_EVIDENCE_DOCUMENT_LABEL,
   `流程負責單位` = "流程負責單位",
   `控制有效性評估` = "控制有效性評估（有效/無效）",
   `可能潛在風險` = "可能潛在風險",
@@ -1030,7 +1030,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     outputs = list(
       element = unname(INTERVIEW_ELEMENTS[["outputs"]]),
       question = paste0(sprintf(
-        "控制產出／相關文件為何（預期：%s）？誰簽核、留存何處、留存多久？下一步給誰？",
+        "控制產出／佐證文件為何（預期：%s）？誰簽核、留存何處、留存多久？下一步給誰？",
         outp
       ), suffix),
       evidence = outp
@@ -1264,7 +1264,7 @@ control_to_csa_one <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS,
               "IUC 完整正確，足以支撐控制結論",
               sample = "依 IUC 依賴範圍；與控制抽樣樣本勾稽")
     } else if (identical(key, "outputs")) {
-      add_row(key, "Outputs／相關文件",
+      add_row(key, "Outputs／控制佐證文件",
               sprintf("確認「%s」情境產出證據足以證明控制已發生", scen_nm),
               sprintf("抽查產出「%s」之完整性、簽核及時性與內容妥適性", outp),
               outp,
@@ -1402,7 +1402,9 @@ DESIGN_OPTIONAL_FIELDS <- c(
   assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",
   related_system = "相關系統（IT／應用系統；自動控制必填）",
-  related_document_pbc = "相關文件（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
+  related_document_pbc = paste0(
+    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
+  )
 )
 
 is_automatic_control <- function(nature) {
@@ -1418,7 +1420,7 @@ related_system_mode_for_ctrl <- function(ctrl) {
   "pending"
 }
 
-# 相關文件：人工＋非法遵面必填；自動或遵循面鎖定
+# 控制佐證文件：人工＋非法遵面必填；自動或遵循面鎖定
 related_document_mode_for_ctrl <- function(ctrl) {
   ctrl <- as.list(ctrl)
   nature <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
@@ -1671,19 +1673,20 @@ design_required_check <- function(ctrl) {
   } else {
     filled$assertions <- !length(asrt)
   }
-  # 相關文件：人工＋非法遵面須自 PBC 選取；自動／遵循面不可填
+  # 控制佐證文件：人工＋非法遵面須自 PBC 選取；自動／遵循面不可填
   doc_mode <- related_document_mode_for_ctrl(ctrl)
   doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
   doc_txt <- trimws(as.character(ctrl$related_document %||% ""))
+  doc_label <- CONTROL_EVIDENCE_DOCUMENT_LABEL
   if (identical(doc_mode, "required")) {
     filled$related_document_pbc <- pbc_ids_are_filled(doc_ids)
     if (!pbc_ids_are_filled(doc_ids)) {
-      missing <- c(missing, "相關文件（須自 PBC 資料庫選取）")
+      missing <- c(missing, paste0(doc_label, "（須自 PBC 資料庫選取）"))
     }
   } else if (identical(doc_mode, "locked")) {
     filled$related_document_pbc <- !pbc_ids_are_filled(doc_ids) && !nzchar(doc_txt)
     if (pbc_ids_are_filled(doc_ids) || nzchar(doc_txt)) {
-      missing <- c(missing, "相關文件不可設定（自動控制或遵循面風險）")
+      missing <- c(missing, paste0(doc_label, "不可設定（自動控制或遵循面風險）"))
     }
   } else {
     filled$related_document_pbc <- TRUE
@@ -1789,11 +1792,11 @@ detect_design_gaps <- function(ctrl) {
   if (identical(doc_mode, "required") &&
       !pbc_ids_are_filled(ctrl$related_document_pbc_ids) &&
       is_blank(ctrl$related_document)) {
-    add("缺文件", "高", "缺少相關文件（須自 PBC 資料庫選取）",
-        "至 PBC 資料庫登錄後，於控制設計選取對應文件")
+    add("缺文件", "高", paste0("缺少", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（須自 PBC 資料庫選取）"),
+        "至 PBC 資料庫登錄後，於控制設計選取對應佐證文件")
   } else if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document) &&
              !identical(doc_mode, "locked")) {
-    add("缺文件", "低", "缺少產出／相關文件",
+    add("缺文件", "低", paste0("缺少產出／", CONTROL_EVIDENCE_DOCUMENT_LABEL),
         "建議補可驗證證據（簽核、log、調節表）供後續 PBC")
   }
   if (is_blank(ctrl$investigation_threshold) &&
@@ -1847,7 +1850,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
   }
-  # 相關文件：自動控制或遵循面強制清空；否則以 PBC 選取為準
+  # 控制佐證文件：自動控制或遵循面強制清空；否則以 PBC 選取為準
   if (identical(related_document_mode_for_ctrl(ctrl), "locked")) {
     ctrl$related_document <- ""
     ctrl$related_document_pbc_ids <- character(0)

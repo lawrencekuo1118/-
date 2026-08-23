@@ -13,6 +13,10 @@ BRAND_GRAY <- "#F5F5F5"
 # Do not use Mainland China / Hong Kong / Macau equivalents of the above.
 # Keep English proper nouns as-is: SOX, RCM, CSA, PBC, IUC, Form 4120SR, RoMM, Assertions, Inputs/Steps/Outputs, Type.
 
+# 設計表單欄位（自 PBC 選取之控制佐證）；RCM 鯨鏈匯出欄名仍保留「相關文件」
+CONTROL_EVIDENCE_DOCUMENT_LABEL <- "控制佐證文件"
+RCM_COLUMN_RELATED_DOCUMENT <- "相關文件"
+
 CYCLES_NINE <- c(
   "銷售及收款循環",
   "採購及付款循環",

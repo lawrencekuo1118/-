@@ -791,6 +791,29 @@ check(!grepl("objective-activity-stack|objective-assertions-spacer", app_src),
 check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
+merged_basic <- merge_design_preview_section(NULL, d1, "基礎設定")
+check(isTRUE(merged_basic$rcm_preview), "預覽合併標記 rcm_preview")
+check("基礎設定" %in% merged_basic$rcm_preview_sections, "預覽記錄區塊名稱")
+merged_all <- merge_design_preview_section(
+  merge_design_preview_section(merged_basic, d1, "風險辨識"),
+  d1, "控制設計"
+)
+rcm_prev <- control_to_rcm_row(merged_all, 0L)
+check(nzchar(as.character(rcm_prev[["子作業名稱"]][[1]])), "預覽列含基礎設定欄")
+check(nzchar(as.character(rcm_prev[["風險描述"]][[1]])), "預覽列含風險辨識欄")
+check(nzchar(as.character(rcm_prev[["控制活動"]][[1]])), "預覽列含控制設計欄")
+check(grepl('preview_rcm_basic", "儲存"', app_src) &&
+        grepl('preview_rcm_risk", "儲存"', app_src) &&
+        grepl('preview_rcm_control", "儲存"', app_src),
+      "三個設計區塊皆有儲存按鈕")
+check(grepl("design-section-preview-bar", app_src), "儲存按鈕置於區塊右下")
+check(grepl("rcm_preview_ctrl|push_rcm_section_preview", app_src),
+      "RCM 預覽合併邏輯")
+check(!grepl("push_rcm_section_preview[\\s\\S]{0,400}nav_select\\(\\s*\"main_nav\"\\s*,\\s*selected\\s*=\\s*\"RCM\"", app_src, perl = TRUE),
+      "預覽不自動切換至 RCM 分頁")
+check(grepl("已儲存", app_src), "儲存通知文案")
+check(!grepl("預覽中", app_src), "RCM 表格不再標示預覽中列")
+check(grepl("rcm_preview_status", app_src), "RCM 頁顯示預覽狀態")
 check(!is.null(fin$control$saved_at) && nzchar(fin$control$saved_at),
       "定稿控制點含儲存時間戳")
 check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&

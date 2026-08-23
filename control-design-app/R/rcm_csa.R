@@ -757,6 +757,59 @@ rcm_group_for_column <- function(col) {
   "其他"
 }
 
+# 風險控制點設計各 accordion 區塊 → 控制點欄位／RCM 欄位（供「預覽」合併）
+DESIGN_SECTION_CTRL_FIELDS <- list(
+  `基礎設定` = c(
+    "company", "cycle", "cycle_code", "sub_process_id", "sub_process", "control_id"
+  ),
+  `風險辨識` = c(
+    "risk_factor", "risk_name", "risk_description", "risk_category",
+    "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
+    "romm_classification", "significant_account", "assertions"
+  ),
+  `控制設計` = c(
+    "control_objective", "control_activity", "frequency", "responsible_unit",
+    "iuc", "iuc_or_system", "related_system", "related_policy", "related_law",
+    "related_document", "related_document_pbc_ids", "related_document_manual",
+    "nature", "approach", "control_type", "control_activity_type", "type",
+    "inputs", "review_steps", "outputs", "investigation_threshold", "key_control"
+  )
+)
+
+rcm_preview_section_columns <- function(section) {
+  sec <- trimws(as.character(section %||% ""))
+  cols <- switch(
+    sec,
+    `基礎設定` = c("循環名稱", "子作業編號", "子作業名稱", "控制編號"),
+    `風險辨識` = c("風險因素", "風險描述", "風險類別", "RoMM 分類", "會計科目", "聲明"),
+    `控制設計` = setdiff(
+      RCM_HEADERS,
+      c("循環名稱", "子作業編號", "子作業名稱", "控制編號",
+        "風險因素", "風險描述", "風險類別", "RoMM 分類", "會計科目", "聲明")
+    ),
+    character()
+  )
+  intersect(cols, RCM_HEADERS)
+}
+
+merge_design_preview_section <- function(existing, draft, section) {
+  existing <- as.list(existing %||% list())
+  draft <- as.list(draft)
+  fields <- DESIGN_SECTION_CTRL_FIELDS[[section]] %||% character()
+  for (f in fields) {
+    if (!is.null(draft[[f]])) existing[[f]] <- draft[[f]]
+  }
+  existing$rcm_preview <- TRUE
+  prev_secs <- as.character(existing$rcm_preview_sections %||% character())
+  existing$rcm_preview_sections <- unique(c(prev_secs[nzchar(prev_secs)], section))
+  existing$rcm_preview_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  existing
+}
+
+is_rcm_preview_ctrl <- function(ctrl) {
+  isTRUE(ctrl$rcm_preview)
+}
+
 # ---- Interview：循環／子作業下預期風險與預期目標／活動（人事時地物鏈）----
 interview_answer_scaffold <- function(modules = DEFAULT_INTERVIEW_5W1H) {
   mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))

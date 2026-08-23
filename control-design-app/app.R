@@ -160,6 +160,10 @@ ui <- page_navbar(
         '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }',
         /* 首頁不壓縮：各頁籤用途一次顯示全部方框 */
         '.home-section .card-body, .bslib-card.home-section { overflow: visible !important; max-height: none !important; }',
+        /* 各區塊一次顯示全部內容：禁止卡片／分頁內部上下捲動 */
+        '.bslib-card, .card, .card-body, .accordion-body, .tab-content, .tab-pane { overflow: visible !important; max-height: none !important; height: auto !important; }',
+        '.bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }',
+        '.card-header { white-space: normal; overflow: visible; line-height: 1.35; }',
         /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
         '.navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }'
       ].join('\\n');
@@ -266,7 +270,6 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(7, 5),
       card(
-        full_screen = TRUE,
         card_header("訪談引導（依序選取）"),
         uiOutput("interview_status"),
         uiOutput("interview_guide_banner"),
@@ -340,7 +343,6 @@ ui <- page_navbar(
     layout_columns(
       col_widths = c(7, 5),
       card(
-        full_screen = TRUE,
         card_header("引導設計（依序選取）"),
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
@@ -584,7 +586,6 @@ ui <- page_navbar(
           class = "d-flex gap-1 flex-wrap mb-2",
           actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
           actionButton("csa_scenario_save", "儲存此情境組", class = "btn-sm btn-primary"),
-          actionButton("csa_scenario_dup", "複製情境組", class = "btn-sm btn-outline-secondary"),
           actionButton("csa_scenario_del", "刪除此情境組", class = "btn-sm btn-outline-danger")
         ),
         tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
@@ -604,21 +605,21 @@ ui <- page_navbar(
   nav_panel(
     "範本庫",
     card(
-      card_header("從範本庫套用（可跳過）"),
+      card_header("範本套用"),
       p(class = "small text-muted mb-2",
-        "選用既有範本填入「風險控制點設計」表單；不選亦可直接於設計頁從頭建立。"),
+        "選用既有範本填入「風險控制點設計」；可不選、直接於設計頁建立。"),
       layout_columns(
         col_widths = c(5, 7),
         textInput("lib_query", "搜尋", value = "", placeholder = "搜尋標題／風險／控制編號…"),
         selectInput(
           "lib_pick", "選擇範本",
-          choices = c("（可跳過）未套用範本…" = "")
+          choices = c("未套用範本…" = "")
         )
       ),
       div(
         class = "d-flex gap-1 flex-wrap mb-2",
-        actionButton("apply_lib", "套用至設計表單", class = "btn-sm btn-primary"),
-        actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary")
+        actionButton("apply_lib", "套用選取範本", class = "btn-sm btn-primary"),
+        actionButton("apply_lib_selected_row", "套用表格列", class = "btn-sm btn-outline-primary")
       ),
       p(class = "small text-muted mb-0",
         "寫入／匯入／刪除／直接編輯時會跳出高權登入。")
@@ -797,12 +798,10 @@ server <- function(input, output, session) {
         checkboxInput("auto_collect_lib", "設計完成自動收集入庫", TRUE),
         div(
           class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("save_to_lib", "目前表單存入庫", class = "btn-sm btn-outline-success"),
           actionButton("lib_add_current", "表單→庫", class = "btn-sm btn-primary"),
-          actionButton("lib_add_selected_control", "選取控制點→庫", class = "btn-sm"),
-          actionButton("lib_add_all_ready", "全部就緒控制點→庫", class = "btn-sm btn-success")
-        ),
-        actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger")
+          actionButton("lib_add_all_ready", "全部就緒→庫", class = "btn-sm btn-success"),
+          actionButton("lib_delete", "刪除選取", class = "btn-sm btn-outline-danger")
+        )
       )
     )
   })
@@ -962,7 +961,7 @@ server <- function(input, output, session) {
     ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
     updateSelectInput(
       session, "lib_pick",
-      choices = c("（可跳過）未套用範本…" = "", ch),
+      choices = c("未套用範本…" = "", ch),
       selected = {
         cur <- input$lib_pick %||% ""
         if (nzchar(cur) && cur %in% unname(ch)) cur else ""
@@ -1389,25 +1388,11 @@ server <- function(input, output, session) {
     bslib::nav_select("main_nav", selected = "參數庫", session = session)
   })
 
-  observeEvent(input$save_to_lib, {
-    if (!require_admin(is_admin(), session)) return()
-    d <- current_draft_from_inputs()
-    item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
-    showNotification(paste("已存入範本庫", item$library_id), type = "message")
-  })
   observeEvent(input$lib_add_current, {
     if (!require_admin(is_admin(), session)) return()
     d <- current_draft_from_inputs()
     item <- add_ctrl_to_library(d, title = input$lib_title_override, tags = input$lib_tags, source = "form")
     showNotification(paste("已存入", item$library_id), type = "message")
-  })
-  observeEvent(input$lib_add_selected_control, {
-    if (!require_admin(is_admin(), session)) return()
-    s <- input$control_table_rows_selected
-    cs <- controls()
-    if (is.null(s) || !length(cs)) return(showNotification("請先在設計頁選取控制點", type = "warning"))
-    item <- add_ctrl_to_library(cs[[s]], title = input$lib_title_override, tags = input$lib_tags, source = "control")
-    showNotification(paste("控制點已存入", item$library_id), type = "message")
   })
   observeEvent(input$lib_add_all_ready, {
     if (!require_admin(is_admin(), session)) return()
@@ -2765,22 +2750,6 @@ server <- function(input, output, session) {
                          selected = sc_new$scenario_id, server = TRUE)
     fill_csa_scenario_form(sc_new)
     showNotification(sprintf("已新增情境組「%s」", sc_new$scenario_name), type = "message")
-  })
-  observeEvent(input$csa_scenario_dup, {
-    ctrl <- csa_edit_ctrl()
-    if (is.null(ctrl)) return(showNotification("請先選擇已定版控制點", type = "warning"))
-    sc <- read_csa_scenario_from_inputs(scenario_id = NULL)
-    sc$scenario_name <- paste0(sc$scenario_name, "（複本）")
-    if (!is.list(ctrl$csa_scenarios) || !length(ctrl$csa_scenarios)) {
-      ctrl <- upsert_control_csa_scenario(ctrl, synthetic_default_csa_scenario(ctrl))
-    }
-    ctrl2 <- upsert_control_csa_scenario(ctrl, sc)
-    patch_control_in_store(ctrl2)
-    updateSelectizeInput(session, "csa_scenario_pick",
-                         choices = csa_scenario_choices(ctrl2),
-                         selected = sc$scenario_id, server = TRUE)
-    fill_csa_scenario_form(sc)
-    showNotification(sprintf("已複製為「%s」", sc$scenario_name), type = "message")
   })
   observeEvent(input$csa_scenario_del, {
     ctrl <- csa_edit_ctrl()

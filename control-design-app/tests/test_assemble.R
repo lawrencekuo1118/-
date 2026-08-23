@@ -666,8 +666,15 @@ check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
 check(!grepl('selectInput\\(\\s*"cycle".*基本資料|accordion_panel\\(\\s*"基本資料"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
       "基本資料 accordion 內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
-check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
+check(grepl("範本套用", app_src) && grepl("未套用範本", app_src),
       "範本庫頁籤含可跳過套用設定")
+check(!grepl('actionButton\\(\\s*"csa_scenario_dup"', app_src) &&
+        !grepl('actionButton\\(\\s*"save_to_lib"', app_src) &&
+        !grepl('actionButton\\(\\s*"lib_add_selected_control"', app_src),
+      "設計區塊按鈕精簡（移除多餘收集／複製鈕）")
+check(grepl("overflow: visible !important", app_src) &&
+        grepl("max-height: none !important", app_src),
+      "區塊一次顯示全部內容（無區塊內上下滑動）")
 check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
 check(grepl("admin_login|verify_admin_password|show_admin_login_modal", app_src), "含高權登入機制")
 check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直接改範本庫／參數庫")

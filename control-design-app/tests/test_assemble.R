@@ -793,15 +793,16 @@ rcm_prev <- control_to_rcm_row(merged_all, 0L)
 check(nzchar(as.character(rcm_prev[["子作業名稱"]][[1]])), "預覽列含基礎設定欄")
 check(nzchar(as.character(rcm_prev[["風險描述"]][[1]])), "預覽列含風險辨識欄")
 check(nzchar(as.character(rcm_prev[["控制活動"]][[1]])), "預覽列含控制設計欄")
-check(grepl("preview_rcm_basic", app_src) &&
-        grepl("preview_rcm_risk", app_src) &&
-        grepl("preview_rcm_control", app_src),
-      "三個設計區塊皆有預覽按鈕")
-check(grepl("design-section-preview-bar", app_src), "預覽按鈕置於區塊右下")
+check(grepl('preview_rcm_basic", "儲存"', app_src) &&
+        grepl('preview_rcm_risk", "儲存"', app_src) &&
+        grepl('preview_rcm_control", "儲存"', app_src),
+      "三個設計區塊皆有儲存按鈕")
+check(grepl("design-section-preview-bar", app_src), "儲存按鈕置於區塊右下")
 check(grepl("rcm_preview_ctrl|push_rcm_section_preview", app_src),
       "RCM 預覽合併邏輯")
 check(!grepl("push_rcm_section_preview[\\s\\S]{0,400}nav_select\\(\\s*\"main_nav\"\\s*,\\s*selected\\s*=\\s*\"RCM\"", app_src, perl = TRUE),
       "預覽不自動切換至 RCM 分頁")
+check(grepl("已儲存", app_src), "儲存通知文案")
 check(!grepl("預覽中", app_src), "RCM 表格不再標示預覽中列")
 check(grepl("rcm_preview_status", app_src), "RCM 頁顯示預覽狀態")
 check(!is.null(fin$control$saved_at) && nzchar(fin$control$saved_at),

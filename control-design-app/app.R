@@ -433,7 +433,7 @@ ui <- page_navbar(
                       placeholder = "自動順編（可覆寫）"),
             div(
               class = "design-section-preview-bar",
-              actionButton("preview_rcm_basic", "預覽", class = "btn-sm btn-outline-primary")
+              actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
             )
           ),
           accordion_panel(
@@ -478,7 +478,7 @@ ui <- page_navbar(
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
             div(
               class = "design-section-preview-bar",
-              actionButton("preview_rcm_risk", "預覽", class = "btn-sm btn-outline-primary")
+              actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
             )
           ),
           accordion_panel(
@@ -586,7 +586,7 @@ ui <- page_navbar(
             uiOutput("related_document_hint"),
             div(
               class = "design-section-preview-bar",
-              actionButton("preview_rcm_control", "預覽", class = "btn-sm btn-outline-primary")
+              actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
             )
           )
         ),
@@ -1908,7 +1908,7 @@ server <- function(input, output, session) {
     bump_rcm_views()
     cols <- rcm_preview_section_columns(section)
     showNotification(
-      sprintf("已將「%s」資料送至 RCM 表格：%s", section, paste(cols, collapse = "、")),
+      sprintf("已儲存「%s」至 RCM 表格：%s", section, paste(cols, collapse = "、")),
       type = "message", duration = 5
     )
   }
@@ -2248,7 +2248,7 @@ server <- function(input, output, session) {
       tags$br(),
       tags$span(
         class = "text-muted",
-        "「預覽」會將各區塊資料合併至本表對應欄位；完成設計後按「寫入 RCM 一列」定稿。"
+        "「儲存」會將各區塊資料合併至本表對應欄位；完成設計後按「寫入 RCM 一列」定稿。"
       )
     )
   })
@@ -2472,7 +2472,7 @@ server <- function(input, output, session) {
     df <- rcm_display_df()
     if (is.null(df) || !nrow(df)) {
       return(datatable(
-        data.frame(訊息 = "尚無 RCM 列；於「風險控制點設計」各區塊按「預覽」，或完成設計後「寫入 RCM 一列」。"),
+        data.frame(訊息 = "尚無 RCM 列；於「風險控制點設計」各區塊按「儲存」，或完成設計後「寫入 RCM 一列」。"),
         rownames = FALSE, options = list(dom = "t")
       ))
     }

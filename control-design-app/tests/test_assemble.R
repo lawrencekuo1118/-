@@ -849,6 +849,16 @@ check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src
       "已移除自訂風險獨立輸入（改由風險辨識）")
 check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),
       "已移除風險屬性 radio（改由風險類別）")
+check(!grepl('textAreaInput\\(\\s*"risk_attr_detail"|input\\$risk_attr_detail', app_src),
+      "已移除風險屬性細節獨立欄位（改由風險描述＋風險類別）")
+check(identical(
+  enforce_single_risk_attr(
+    list(risk_category = "營運面"),
+    kind = "operations",
+    detail = "權限不一致"
+  )$risk_attr_operations,
+  "[營運] 權限不一致"
+), "風險描述自動寫入對應風險屬性")
 
 # 聲明（Assertions）依風險類別
 check(length(ASSERTION_CHOICES_REPORTING) == 8L, "報導面 Assertions 為 Thomson Reuters 八種")

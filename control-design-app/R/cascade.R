@@ -92,7 +92,8 @@ library_controls_flat <- function(library, cycle = NULL) {
       assertions = nzchar_trim(c$assertions),
       related_policy = nzchar_trim(c$related_policy),
       related_law = nzchar_trim(c$related_law),
-      related_document = nzchar_trim(c$related_document %||% c$outputs),
+      related_document = nzchar(nzchar_trim(c$related_document %||% c$outputs)) ||
+        pbc_ids_are_filled(c$related_document_pbc_ids),
       type = nzchar_trim(c$type),
       inputs = nzchar_trim(c$inputs),
       review_steps = nzchar_trim(c$review_steps),
@@ -231,7 +232,7 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
   invisible(ctrl)
 }
 
-apply_supplement_from_ctrl <- function(session, ctrl) {
+apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   ctrl <- as.list(ctrl)
   updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
   updateTextInput(session, "cycle_code", value = {
@@ -267,8 +268,13 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
                          raw <- trimws(as.character(ctrl$related_law %||% ""))
                          if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
                        })
-  updateTextInput(session, "related_document",
-                  value = ctrl$related_document %||% ctrl$outputs %||% "")
+  doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+  if (!length(doc_ids) && is.data.frame(pbc_registry) && nrow(pbc_registry)) {
+    doc_ids <- match_pbc_ids_from_text(
+      pbc_registry, ctrl$related_document %||% ctrl$outputs %||% ""
+    )
+  }
+  updateSelectizeInput(session, "related_document_pbc", selected = doc_ids)
   updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
   updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)

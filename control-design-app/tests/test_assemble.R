@@ -28,6 +28,22 @@ check <- function(cond, msg) {
   } else message("OK: ", msg)
 }
 
+reg_doc <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "user_access.xlsx", reviewed_name = "使用者權限清冊",
+  pbc_kind = "系統表單", iuc_or_system = "使用者權限清冊",
+  cycle = "電腦化資訊系統循環"
+))
+pbc_doc_id <- reg_doc$pbc_id[[1]]
+with_pbc_doc <- function(ctrl) {
+  modifyList(ctrl, list(
+    related_document_pbc_ids = pbc_doc_id,
+    related_document = apply_pbc_to_related_document(reg_doc, pbc_doc_id)
+  ))
+}
+without_pbc_doc <- function(ctrl) {
+  modifyList(ctrl, list(related_document_pbc_ids = character(), related_document = ""))
+}
+
 base <- list(
   company = "示範公司", cycle = "電腦化資訊系統循環",
   sub_process_id = "EC-101", sub_process = "存取管理",
@@ -49,8 +65,8 @@ base <- list(
   key_control = "Y"
 )
 
-d1 <- modifyList(base, list(iuc_or_system = "使用者權限清冊"))
-d2 <- modifyList(base, list(iuc_or_system = "AD 群組報表", control_activity = "覆核 AD 群組"))
+d1 <- with_pbc_doc(modifyList(base, list(iuc_or_system = "使用者權限清冊")))
+d2 <- with_pbc_doc(modifyList(base, list(iuc_or_system = "AD 群組報表", control_activity = "覆核 AD 群組")))
 check(length(split_controls_by_iuc(list(d1, d2))) == 2L, "IUC 分拆")
 
 # RCM row = designed control; objective ≠ activity (Jinglian headers)
@@ -65,7 +81,7 @@ check(!nzchar(normalize_control_type_manual_auto("人工＋自動")), "混合控
 check(!nzchar(normalize_control_type_manual_auto("人工＋自動化混合")), "混合控制類型不允許")
 check(identical(resolve_control_frequency("自動", "每季"), "持續"), "自動控制頻率＝持續")
 check(identical(resolve_control_frequency("人工", "每季"), "每季"), "人工控制頻率保留")
-auto_ctrl <- modifyList(d1, list(nature = "自動", frequency = "每季"))
+auto_ctrl <- without_pbc_doc(modifyList(d1, list(nature = "自動", frequency = "每季")))
 rcm_auto <- controls_to_rcm(list(auto_ctrl))
 check(identical(as.character(rcm_auto[["控制頻率"]]), "持續"), "RCM 自動控制頻率＝持續")
 fin_auto <- finalize_control_as_rcm_row(auto_ctrl)
@@ -128,7 +144,9 @@ check(any(grepl("相同", gaps$gap_item)), "偵測目標活動混用")
 
 gaps2 <- detect_design_gaps(modifyList(d1, list(iuc_or_system = "", related_system = "", outputs = "", related_document = "")))
 check(any(gaps2$severity == "高" & grepl("IUC|相關系統|必填", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
-check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)), "缺產出改為選填低嚴重度")
+check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)) ||
+        any(gaps2$severity == "高" & grepl("PBC", gaps2$gap_item)),
+      "缺產出／相關文件缺漏偵測")
 
 # 設計必填欄位
 req_ok <- design_required_check(d1)
@@ -203,20 +221,20 @@ check(isTRUE(fin_rep_multi$ok) && grepl("應收帳款", fin_rep_multi$control$si
       "報導面複選科目可定稿")
 
 # 遵循面相關法令必填；其他類別不可填
-comp_ok <- design_required_check(modifyList(d1, list(
+comp_ok <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
   assertions = ""
-)))
+))))
 check(isTRUE(comp_ok$ok), "遵循面＋法令＝必填通過")
-comp_bad <- design_required_check(modifyList(d1, list(
+comp_bad <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "", significant_account = "",
   assertions = ""
-)))
+))))
 check(!isTRUE(comp_bad$ok) && any(grepl("相關法令", comp_bad$missing)), "遵循面缺法令不可過")
-comp_as_bad <- design_required_check(modifyList(d1, list(
+comp_as_bad <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
   assertions = "完整性 (Completeness)"
-)))
+))))
 check(!isTRUE(comp_as_bad$ok) && any(grepl("聲明", comp_as_bad$missing)),
       "遵循面填聲明應擋下")
 comp_lock <- design_required_check(modifyList(d1, list(
@@ -494,7 +512,7 @@ imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = 
 check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
 
 # Accumulative collect pipeline
-ctrl_a <- modifyList(base, list(control_id = "EC-101-99", sub_process_id = "EC-101"))
+ctrl_a <- with_pbc_doc(modifyList(base, list(control_id = "EC-101-99", sub_process_id = "EC-101")))
 res1 <- collect_controls_to_library(list(), list(ctrl_a), source = "test", quality_gate = TRUE)
 check(res1$added == 1L, "品質通過的控制點可收集入庫")
 check(!is.null(get_library_item(res1$library, "LIB-EC-101-99")), "穩定 ID 依控制編號累積")
@@ -704,6 +722,19 @@ check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
       "套用 IUC／PBC 命名改在 PBC資料庫")
+check(grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
+        grepl("goto_pbc_tab", app_src) &&
+        grepl("toggleRelatedDocument", app_src) &&
+        !grepl('textInput\\(\\s*"related_document"', app_src),
+      "相關文件改為 PBC 資料庫選取（自動／遵循面鎖定）")
+check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "營運面")), "required"),
+      "人工＋非法遵面：相關文件必填")
+check(identical(related_document_mode_for_ctrl(list(nature = "自動", risk_category = "營運面")), "locked"),
+      "自動控制：相關文件鎖定")
+check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "遵循面")), "locked"),
+      "遵循面：相關文件鎖定")
+check(!isTRUE(design_required_check(without_pbc_doc(d1))$ok),
+      "未選 PBC 文件時必填檢核失敗")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
@@ -776,20 +807,20 @@ lib1 <- patch_library_item_fields(
 check(identical(lib1[[1]]$title, "新標題") && identical(lib1[[1]]$control$risk_factor, "新風險"),
       "範本庫可高權直接改欄位")
 
-fin_as <- finalize_control_as_rcm_row(modifyList(base, list(
+fin_as <- finalize_control_as_rcm_row(with_pbc_doc(modifyList(base, list(
   assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"
-)))
+))))
 check(isTRUE(fin_as$ok), "營運面含非法聲明仍可定稿（自動過濾）")
 check(!grepl("存在或發生", fin_as$control$assertions %||% ""), "定稿後僅保留營運面允許聲明")
 check(grepl("即時性", fin_as$control$assertions %||% ""), "定稿保留即時性")
-fin_comp <- finalize_control_as_rcm_row(modifyList(base, list(
+fin_comp <- finalize_control_as_rcm_row(without_pbc_doc(modifyList(base, list(
   risk_category = "遵循面",
   risk_attr_operations = "",
   risk_attr_compliance = "[遵循] 資安政策",
   significant_account = "",
   related_law = "證券交易法",
   assertions = "完整性 (Completeness)"
-)))
+))))
 check(isTRUE(fin_comp$ok), "遵循面可定稿")
 check(!nzchar(trimws(fin_comp$control$assertions %||% "")), "遵循面定稿無 Assertions")
 

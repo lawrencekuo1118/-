@@ -38,10 +38,10 @@ lab_opt <- function(txt) {
   tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
 }
 
-fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL) {
+fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry = NULL) {
   if (is.null(ctrl)) return()
   apply_ctrl_to_cascade(session, ctrl)
-  apply_supplement_from_ctrl(session, ctrl)
+  apply_supplement_from_ctrl(session, ctrl, pbc_registry = pbc_registry)
 }
 
 ui <- page_navbar(
@@ -115,6 +115,17 @@ ui <- page_navbar(
       if (!el) return;
       el.disabled = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
+    });
+    Shiny.addCustomMessageHandler('toggleRelatedDocument', function(msg) {
+      var el = document.getElementById('related_document_pbc');
+      if (!el) return;
+      var $el = $('#related_document_pbc');
+      if ($el.length && $el[0].selectize) {
+        if (msg.enabled) $el[0].selectize.enable();
+        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
+      } else {
+        el.disabled = !msg.enabled;
+      }
     });
   ")),
     tags$style(HTML(paste0("
@@ -527,7 +538,19 @@ ui <- page_navbar(
               options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
             ),
             uiOutput("related_law_hint"),
-            textInput("related_document", lab_opt("相關文件"))
+            selectizeInput(
+              "related_document_pbc", lab_req("相關文件"),
+              choices = NULL, multiple = TRUE,
+              options = list(
+                placeholder = "自 PBC 資料庫選取文件（可多選）",
+                plugins = list("remove_button")
+              )
+            ),
+            div(
+              class = "d-flex gap-1 flex-wrap mb-1",
+              actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
+            ),
+            uiOutput("related_document_hint")
           )
         ),
         div(
@@ -996,6 +1019,10 @@ server <- function(input, output, session) {
       session, "interview_pbc_link", choices = ch, server = TRUE,
       selected = intersect(input$interview_pbc_link %||% character(), unname(ch))
     )
+    updateSelectizeInput(
+      session, "related_document_pbc", choices = ch, server = TRUE,
+      selected = intersect(input$related_document_pbc %||% character(), unname(ch))
+    )
   }
 
   interview_worksheet <- function() {
@@ -1331,7 +1358,14 @@ server <- function(input, output, session) {
       },
       "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
       "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
-      "相關文件" = function() updateTextInput(session, "related_document", value = val)
+      "相關文件" = function() {
+        ids <- match_pbc_ids_from_text(pbc_reg(), val)
+        if (length(ids)) {
+          updateSelectizeInput(session, "related_document_pbc", selected = ids)
+        } else {
+          showNotification("相關文件須自 PBC 資料庫選取；請至 PBC 資料庫登錄後再選", type = "warning")
+        }
+      }
     )
     fn <- mapped[[param]]
     if (is.null(fn)) {
@@ -1380,7 +1414,7 @@ server <- function(input, output, session) {
     if (!nzchar(id %||% "")) return(showNotification("請先選擇範本（或跳過此步驟）", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
-    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib(), pbc_registry = pbc_reg())
     bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
@@ -1392,7 +1426,7 @@ server <- function(input, output, session) {
       return(showNotification("請先在表格選取一列範本", type = "warning"))
     }
     item <- items[[s[[1]]]]
-    fill_inputs_from_ctrl(session, item$control, lib_items = lib())
+    fill_inputs_from_ctrl(session, item$control, lib_items = lib(), pbc_registry = pbc_reg())
     bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
@@ -1402,6 +1436,9 @@ server <- function(input, output, session) {
   })
   observeEvent(input$goto_param_tab, {
     bslib::nav_select("main_nav", selected = "參數庫", session = session)
+  })
+  observeEvent(input$goto_pbc_tab, {
+    bslib::nav_select("main_nav", selected = "PBC資料庫", session = session)
   })
 
   observeEvent(input$lib_add_current, {
@@ -1650,7 +1687,11 @@ server <- function(input, output, session) {
         v <- input$related_law %||% character(0)
         paste(unique(trimws(as.character(v))), collapse = "；")
       },
-      related_document = input$related_document %||% "",
+      related_document_pbc_ids = input$related_document_pbc %||% character(),
+      related_document = {
+        ids <- input$related_document_pbc %||% character()
+        if (length(ids)) apply_pbc_to_related_document(pbc_reg(), ids) else ""
+      },
       nature = {
         n <- normalize_control_type_manual_auto(input$nature)
         if (nzchar(n)) n else nature
@@ -1672,7 +1713,10 @@ server <- function(input, output, session) {
       review_steps = input$review_steps %||% "",
       outputs = {
         out <- trimws(input$outputs %||% "")
-        if (nzchar(out)) out else trimws(input$related_document %||% "")
+        if (nzchar(out)) out else {
+          ids <- input$related_document_pbc %||% character()
+          if (length(ids)) apply_pbc_to_related_document(pbc_reg(), ids) else ""
+        }
       },
       investigation_threshold = input$investigation_threshold %||% "",
       dependent_controls = "",
@@ -1853,6 +1897,30 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
+  output$related_document_hint <- renderUI({
+    cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
+    nature <- normalize_control_type_manual_auto(input$nature %||% "")
+    mode <- related_document_mode_for_ctrl(list(
+      nature = nature, risk_category = cat
+    ))
+    if (identical(mode, "required")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          lab_req("人工控制"), " — 相關文件須自 ",
+          tags$strong("PBC 資料庫"), " 選取（可多選）；無資料請先至 ",
+          tags$strong("PBC 資料庫"), " 登錄。")
+    } else if (identical(mode, "locked")) {
+      reason <- c(
+        if (is_automatic_control(nature)) "自動控制",
+        if (is_compliance_risk_category(cat)) "遵循面風險"
+      )
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          paste0("無法設定相關文件（", paste(reason, collapse = "／"), "）。"))
+    } else {
+      helpText(class = "text-muted small",
+               "請先選控制類型與風險類別；人工且非法遵面時，須自 PBC 資料庫選取相關文件。")
+    }
+  })
+
   output$related_law_hint <- renderUI({
     cat <- trimws(input$risk_category %||% resolve_cascade_selection()$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
@@ -2012,6 +2080,9 @@ server <- function(input, output, session) {
     if (identical(input$nature, "自動")) {
       updateSelectInput(session, "frequency", selected = "持續")
       session$sendCustomMessage("toggleFrequency", list(enabled = FALSE))
+      if (length(input$related_document_pbc %||% character())) {
+        updateSelectizeInput(session, "related_document_pbc", selected = character(0))
+      }
     } else {
       session$sendCustomMessage("toggleFrequency", list(enabled = TRUE))
     }
@@ -2052,6 +2123,20 @@ server <- function(input, output, session) {
       "toggleAssertions",
       list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
+    doc_mode <- related_document_mode_for_ctrl(list(
+      nature = input$nature,
+      control_type = input$nature,
+      risk_category = cat
+    ))
+    session$sendCustomMessage(
+      "toggleRelatedDocument",
+      list(enabled = identical(doc_mode, "required"))
+    )
+    if (identical(doc_mode, "locked")) {
+      if (length(input$related_document_pbc %||% character())) {
+        updateSelectizeInput(session, "related_document_pbc", selected = character(0))
+      }
+    }
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
       if (length(parse_account_values(input$significant_account))) {
         updateSelectizeInput(session, "significant_account", selected = character(0))
@@ -2285,16 +2370,33 @@ server <- function(input, output, session) {
         if (ok_as) "✓ " else "○ ", "聲明已鎖定（遵循面不可選）"
       )))
     }
+    if (identical(req$document_mode, "required")) {
+      ok_d <- isTRUE(req$filled$related_document_pbc)
+      items <- c(items, list(tags$li(
+        class = if (ok_d) "text-success" else "text-danger",
+        if (ok_d) "✓ " else "○ ", "相關文件（PBC 資料庫）"
+      )))
+    } else if (identical(req$document_mode, "locked")) {
+      ok_d <- isTRUE(req$filled$related_document_pbc)
+      items <- c(items, list(tags$li(
+        class = if (ok_d) "text-success" else "text-danger",
+        if (ok_d) "✓ " else "○ ", "相關文件已鎖定（自動／遵循面不可填）"
+      )))
+    }
     cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
     n_cascade <- length(cascade_rows())
     acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
     law_needed <- identical(req$law_mode, "required") || identical(req$law_mode, "locked")
     as_needed <- identical(req$assertion_mode, "locked")
-    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed) + as.integer(as_needed)
+    doc_needed <- identical(req$document_mode, "required") ||
+      identical(req$document_mode, "locked")
+    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed) +
+      as.integer(as_needed) + as.integer(doc_needed)
     n_ok <- sum(unlist(req$filled[names(req$required)])) +
       as.integer(acct_needed && isTRUE(req$filled$significant_account)) +
       as.integer(law_needed && isTRUE(req$filled$related_law)) +
-      as.integer(as_needed && isTRUE(req$filled$assertions))
+      as.integer(as_needed && isTRUE(req$filled$assertions)) +
+      as.integer(doc_needed && isTRUE(req$filled$related_document_pbc))
     div(
       class = cls,
       tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),

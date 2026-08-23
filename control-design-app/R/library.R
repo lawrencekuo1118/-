@@ -12,6 +12,7 @@ LIBRARY_CONTROL_FIELDS <- c(
   "romm_classification", "significant_account", "assertions",
   "control_objective", "control_activity", "frequency", "responsible_unit",
   "iuc_or_system", "related_system", "related_policy", "related_law", "related_document",
+  "related_document_pbc_ids",
   "company_status", "design_gap_note", "effectiveness", "residual_risk", "improvement",
   "nature", "approach", "type",
   "inputs", "review_steps", "outputs", "investigation_threshold",

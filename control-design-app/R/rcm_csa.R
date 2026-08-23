@@ -1370,8 +1370,32 @@ DESIGN_OPTIONAL_FIELDS <- c(
   related_law = "相關法令（僅遵循面必填；其他類別不可填）",
   assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",
-  related_document = "相關文件"
+  related_document_pbc = "相關文件（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
 )
+
+is_automatic_control <- function(nature) {
+  identical(normalize_control_type_manual_auto(nature), "自動")
+}
+
+# 相關文件：人工＋非法遵面必填；自動或遵循面鎖定
+related_document_mode_for_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  nature <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  cat <- trimws(as.character(ctrl$risk_category %||% ""))
+  if (is_automatic_control(nature) || is_compliance_risk_category(cat)) {
+    return("locked")
+  }
+  if (nzchar(nature) && nzchar(cat)) return("required")
+  "pending"
+}
+
+related_document_pbc_value <- function(ctrl, registry = NULL) {
+  ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+  if (length(ids) && is.data.frame(registry) && nrow(registry)) {
+    return(apply_pbc_to_related_document(registry, ids))
+  }
+  trimws(as.character(ctrl$related_document %||% ""))
+}
 
 is_reporting_risk_category <- function(cat) {
   grepl("^報導", trimws(as.character(cat %||% "")))
@@ -1605,6 +1629,23 @@ design_required_check <- function(ctrl) {
   } else {
     filled$assertions <- !length(asrt)
   }
+  # 相關文件：人工＋非法遵面須自 PBC 選取；自動／遵循面不可填
+  doc_mode <- related_document_mode_for_ctrl(ctrl)
+  doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+  doc_txt <- trimws(as.character(ctrl$related_document %||% ""))
+  if (identical(doc_mode, "required")) {
+    filled$related_document_pbc <- pbc_ids_are_filled(doc_ids)
+    if (!pbc_ids_are_filled(doc_ids)) {
+      missing <- c(missing, "相關文件（須自 PBC 資料庫選取）")
+    }
+  } else if (identical(doc_mode, "locked")) {
+    filled$related_document_pbc <- !pbc_ids_are_filled(doc_ids) && !nzchar(doc_txt)
+    if (pbc_ids_are_filled(doc_ids) || nzchar(doc_txt)) {
+      missing <- c(missing, "相關文件不可設定（自動控制或遵循面風險）")
+    }
+  } else {
+    filled$related_document_pbc <- TRUE
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
@@ -1613,7 +1654,8 @@ design_required_check <- function(ctrl) {
     optional = DESIGN_OPTIONAL_FIELDS,
     account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
     law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
-    assertion_mode = mode_as
+    assertion_mode = mode_as,
+    document_mode = doc_mode
   )
 }
 
@@ -1689,8 +1731,15 @@ detect_design_gaps <- function(ctrl) {
   if (is_blank(ctrl$inputs)) {
     add("缺文件", "中", "缺少 Inputs 說明", "補投入報表／資料來源（可附 PBC 對照）")
   }
-  if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document)) {
-    add("缺文件", "低", "缺少產出／相關文件（選填）",
+  doc_mode <- related_document_mode_for_ctrl(ctrl)
+  if (identical(doc_mode, "required") &&
+      !pbc_ids_are_filled(ctrl$related_document_pbc_ids) &&
+      is_blank(ctrl$related_document)) {
+    add("缺文件", "高", "缺少相關文件（須自 PBC 資料庫選取）",
+        "至 PBC 資料庫登錄後，於控制設計選取對應文件")
+  } else if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document) &&
+             !identical(doc_mode, "locked")) {
+    add("缺文件", "低", "缺少產出／相關文件",
         "建議補可驗證證據（簽核、log、調節表）供後續 PBC")
   }
   if (is_blank(ctrl$investigation_threshold) &&
@@ -1743,6 +1792,16 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   # 相關法令：遵循面保留；其他類別強制清空
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
+  }
+  # 相關文件：自動控制或遵循面強制清空；否則以 PBC 選取為準
+  if (identical(related_document_mode_for_ctrl(ctrl), "locked")) {
+    ctrl$related_document <- ""
+    ctrl$related_document_pbc_ids <- character(0)
+  } else {
+    ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+    if (length(ids)) {
+      ctrl$related_document_pbc_ids <- ids
+    }
   }
   # 聲明：依風險類別過濾；遵循面強制清空
   ctrl$assertions <- normalize_assertions_for_category(

@@ -772,6 +772,7 @@ check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
 check(grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
       "聲明設定與控制目標並排")
 check(grepl('objective-assertions-row', app_src), "控制目標／聲明並排樣式")
+check(grepl('objective-activity-stack', app_src), "控制目標／控制活動同欄並列")
 check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")

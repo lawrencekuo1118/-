@@ -518,7 +518,12 @@ assemble_status_scaffold <- function(ctrl) {
     sprintf("3. 控制頻率：%s\n", nzchar_or(ctrl$frequency, "（缺）")),
     sprintf("4. 負責單位：%s\n", nzchar_or(ctrl$responsible_unit, "（缺）")),
     sprintf("5. IUC：%s\n", nzchar_or(ctrl_iuc_value(ctrl), "（缺）")),
-    sprintf("   相關系統：%s\n", nzchar_or(ctrl_related_system_value(ctrl), "（可空）")),
+    sprintf("   相關系統：%s\n",
+            if (is_automatic_control(ctrl$nature %||% ctrl$control_type)) {
+              nzchar_or(ctrl_related_system_value(ctrl), "（缺）")
+            } else {
+              nzchar_or(ctrl_related_system_value(ctrl), "（可空）")
+            }),
     sprintf("6. 控制活動：%s\n", nzchar_or(ctrl$control_activity, "（缺）")),
     "----\n",
     sprintf("控制目標：%s\n", nzchar_or(ctrl$control_objective, "（缺）")),

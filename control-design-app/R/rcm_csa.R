@@ -1401,12 +1401,21 @@ DESIGN_OPTIONAL_FIELDS <- c(
   related_law = "相關法令（僅遵循面必填；其他類別不可填）",
   assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",
-  related_system = "相關系統（IT／應用系統）",
+  related_system = "相關系統（IT／應用系統；自動控制必填）",
   related_document_pbc = "相關文件（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
 )
 
 is_automatic_control <- function(nature) {
   identical(normalize_control_type_manual_auto(nature), "自動")
+}
+
+# 相關系統：自動控制必填；人工控制選填
+related_system_mode_for_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  nature <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  if (is_automatic_control(nature)) return("required")
+  if (identical(nature, "人工")) return("optional")
+  "pending"
 }
 
 # 相關文件：人工＋非法遵面必填；自動或遵循面鎖定
@@ -1563,6 +1572,9 @@ design_field_value <- function(ctrl, field) {
   if (identical(field, "iuc_or_system")) {
     return(ctrl_iuc_value(ctrl))
   }
+  if (identical(field, "related_system")) {
+    return(ctrl_related_system_value(ctrl))
+  }
   if (identical(field, "nature")) {
     return(trimws(as.character(
       normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
@@ -1676,6 +1688,17 @@ design_required_check <- function(ctrl) {
   } else {
     filled$related_document_pbc <- TRUE
   }
+  # 相關系統：自動控制必填；人工控制選填
+  sys_mode <- related_system_mode_for_ctrl(ctrl)
+  sys <- ctrl_related_system_value(ctrl)
+  if (identical(sys_mode, "required")) {
+    filled$related_system <- nzchar(sys)
+    if (!nzchar(sys)) {
+      missing <- c(missing, "相關系統（自動控制必填）")
+    }
+  } else {
+    filled$related_system <- TRUE
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
@@ -1685,7 +1708,8 @@ design_required_check <- function(ctrl) {
     account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
     law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
     assertion_mode = mode_as,
-    document_mode = doc_mode
+    document_mode = doc_mode,
+    related_system_mode = sys_mode
   )
 }
 

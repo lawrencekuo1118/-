@@ -545,10 +545,12 @@ ui <- page_navbar(
               "iuc", lab_req("IUC"), rows = 2,
               placeholder = "控制執行時取得之文件／資訊（與⑤引導選取同步；命名請至 PBC資料庫套用）"
             ),
+            uiOutput("related_system_label"),
             textInput(
-              "related_system", lab_opt("相關系統"),
+              "related_system", label = NULL,
               placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
             ),
+            uiOutput("related_system_hint"),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
               "related_law", "相關法令",
@@ -1952,6 +1954,25 @@ server <- function(input, output, session) {
     } else {
       helpText(class = "text-muted small",
                "請先選控制類型與風險類別；人工且非法遵面時，須自 PBC 資料庫選取相關文件。")
+    }
+  })
+
+  output$related_system_label <- renderUI({
+    nature <- normalize_control_type_manual_auto(input$nature %||% "")
+    if (is_automatic_control(nature)) lab_req("相關系統") else lab_opt("相關系統")
+  })
+
+  output$related_system_hint <- renderUI({
+    nature <- normalize_control_type_manual_auto(input$nature %||% "")
+    mode <- related_system_mode_for_ctrl(list(nature = nature))
+    if (identical(mode, "required")) {
+      div(class = "alert alert-info py-1 mb-2 small",
+          lab_req("自動控制"), " — 相關系統為必填（IT／應用系統名稱，與 IUC 不同）。")
+    } else if (identical(mode, "optional")) {
+      helpText(class = "text-muted small",
+               "人工控制：相關系統為選填（例：ERP、AD）。")
+    } else {
+      helpText(class = "text-muted small", "請先選控制類型；自動控制時相關系統必填。")
     }
   })
 

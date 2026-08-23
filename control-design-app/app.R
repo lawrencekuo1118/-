@@ -166,21 +166,29 @@ ui <- page_navbar(
       .home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; overflow: visible !important; max-height: none !important; }
       .home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }
       .home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }
-      /* 首頁：整頁自然伸展，各頁籤用途一次顯示全部方框（無區塊內捲動） */
-      .tab-pane[data-value=\"首頁\"] { height: auto !important; max-height: none !important; overflow: visible !important; display: block !important; }
-      .tab-pane[data-value=\"首頁\"] .html-fill-container, .tab-pane[data-value=\"首頁\"] .html-fill-item { height: auto !important; flex: none !important; overflow: visible !important; min-height: 0 !important; }
+      /* 全頁原則：區塊一次顯示全部內容，禁止卡片／分頁內部上下捲動（僅整頁可捲） */
+      .html-fill-container, .html-fill-item, .bslib-page-main, .bslib-sidebar-layout > .main,
+      .tab-content, .tab-pane, .layout-columns, .bslib-grid, .bslib-grid-item {
+        height: auto !important; max-height: none !important; overflow: visible !important;
+        flex: none !important; min-height: 0 !important;
+      }
+      .bslib-card, .card, .card-body, .accordion, .accordion-item, .accordion-body, .accordion-collapse {
+        overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important;
+      }
+      .bslib-card > .card-body, .card > .card-body {
+        margin-top: 0 !important; margin-bottom: 0 !important; flex: none !important;
+      }
       .home-section, .home-section > .card-body { overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important; }
-      /* 各區塊一次顯示全部內容：禁止卡片／分頁內部上下捲動 */
-      .bslib-card, .card, .card-body, .accordion-body, .tab-content, .tab-pane { overflow: visible !important; max-height: none !important; height: auto !important; }
+      .dataTables_wrapper, .dataTables_scroll, .dataTables_scrollBody {
+        overflow: visible !important; max-height: none !important; height: auto !important;
+      }
+      .shiny-text-output pre, .shiny-plot-output, .shiny-image-output {
+        overflow: visible !important; max-height: none !important;
+      }
       .bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
-  ),
-  # 首頁不進 fillable（避免各頁籤用途被壓成區塊內捲動）；其餘頁可填滿視窗
-  fillable = c(
-    "訪談問項設計", "風險控制點設計", "控制點測試設計",
-    "範本庫", "參數庫", "PBC資料庫", "RCM"
   ),
   sidebar = sidebar(
     width = 280,

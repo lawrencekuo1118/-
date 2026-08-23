@@ -695,10 +695,11 @@ check(grepl('accordion_panel\\(\\s*"控制設計"', app_src) &&
 check(!grepl("設計必填與防呆", app_src) && !grepl("建議操作順序", app_src),
       "首頁已移除設計必填與防呆／建議操作順序說明")
 check(grepl("home-tabs-grid", app_src) &&
-        grepl('fillable = c\\(', app_src) &&
-        grepl('data-value=\\\\\"首頁\\\\\"', app_src) &&
-        grepl("overflow: visible", app_src),
-      "各頁籤用途一次顯示全部方框（不壓縮捲動）")
+        !grepl('fillable\\s*=\\s*c\\(', app_src) &&
+        grepl("html-fill-container", app_src) &&
+        grepl("overflow: visible !important", app_src) &&
+        grepl("max-height: none !important", app_src),
+      "全頁區塊一次顯示（無 fillable 壓縮、無區塊內上下滑動）")
 check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),

@@ -386,7 +386,6 @@ ui <- page_navbar(
       card(
         card_header("引導設計（依序選取）"),
         uiOutput("cascade_step_status"),
-        uiOutput("cascade_candidate_banner"),
         # 循環於側邊欄；①子作業 → ⑤ IUC
         selectInput("cascade_sub", NULL, choices = c("① 選擇子作業…" = "")),
         conditionalPanel(
@@ -1017,26 +1016,6 @@ server <- function(input, output, session) {
       class = "small text-muted mb-2",
       if (nzchar(cy)) sprintf("循環：%s（側邊欄）", cy) else "循環：共用／未選（側邊欄可指定）"
     )
-  })
-
-  output$cascade_candidate_banner <- renderUI({
-    cy <- input$cycle %||% ""
-    if (!nzchar(cy)) {
-      return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先於側邊欄選擇循環。"),
-                 "選定後即可直接選①子作業～⑤ IUC（內建候選已就緒，毋須匯入底稿）。"))
-    }
-    rows <- cascade_rows()
-    n_sub <- length(cascade_sub_process_choices(rows))
-    if (n_sub > 0) {
-      div(class = "alert alert-success py-1 mb-2 small",
-          sprintf("引導候選已就緒：本循環「%s」有 %d 個子作業可直接選取（另可「＋自訂新增」）。請先選①子作業。",
-                  cy, n_sub))
-    } else {
-      div(class = "alert alert-info py-2 mb-2 small",
-          tags$strong("本循環尚無內建列。"),
-          "請直接選「＋自訂新增子作業」繼續設計（毋須匯入底稿）。")
-    }
   })
 
   refresh_lib_choices <- function() {

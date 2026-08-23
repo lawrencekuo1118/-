@@ -732,6 +732,8 @@ check(grepl("home-tabs-grid", app_src) &&
 check(!grepl('uiOutput\\(\\s*"design_required_checklist"', app_src) &&
         !grepl('uiOutput\\(\\s*"cascade_risk_detail"', app_src),
       "已移除重複之設計必填清單／風險屬性預覽")
+check(!grepl('cascade_candidate_banner', app_src),
+      "已移除引導設計上方重複提示框")
 check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
         grepl('textInput\\(\\s*"related_system"', app_src) &&
         !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),

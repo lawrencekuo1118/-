@@ -180,10 +180,7 @@ ui <- page_navbar(
           selected = ""
         ),
         textInput("cycle_code", NULL, value = "", placeholder = "循環編號（自動）"),
-        uiOutput("sidebar_cycle_hint"),
-        tags$hr(class = "my-2"),
-        tags$div(class = "small fw-bold mb-1", "高權存取"),
-        uiOutput("admin_auth_box")
+        uiOutput("sidebar_cycle_hint")
       ),
       div(
         class = "mt-auto pt-2 sidebar-lib-block",
@@ -193,7 +190,9 @@ ui <- page_navbar(
         actionButton("goto_lib_tab", "開啟範本庫", class = "btn-sm btn-outline-secondary w-100 mb-2"),
         tags$hr(class = "my-2"),
         tags$div(class = "small fw-bold mb-1", "參數庫"),
-        actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100")
+        actionButton("goto_param_tab", "開啟參數庫", class = "btn-sm btn-outline-secondary w-100"),
+        tags$hr(class = "my-2"),
+        uiOutput("admin_auth_box")
       )
     )
   ),
@@ -268,10 +267,10 @@ ui <- page_navbar(
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "可跳過套用；寫入／直接編輯需左側高權登入。"),
+            "可跳過套用；寫入／直接編輯時才需高權登入。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢／套用表單；新增刪除／重建需高權登入。"),
+            "查詢／套用表單；新增刪除／重建時才需高權登入。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
@@ -619,7 +618,7 @@ ui <- page_navbar(
         actionButton("apply_lib_selected_row", "套用表格選取列", class = "btn-sm btn-outline-primary")
       ),
       p(class = "small text-muted mb-0",
-        "寫入／匯入／刪除／直接編輯需於左側「高權存取」登入後操作。")
+        "寫入／匯入／刪除／直接編輯時會跳出高權登入。")
     ),
     uiOutput("admin_lib_edit_panel"),
     card(
@@ -707,15 +706,15 @@ server <- function(input, output, session) {
 
   output$admin_auth_box <- renderUI({
     if (isTRUE(is_admin())) {
-      tagList(
-        div(class = "alert alert-success py-1 mb-2 small", "已登入高權（可改範本庫／參數庫）"),
-        actionButton("admin_logout", "登出高權", class = "btn-sm btn-outline-danger w-100")
+      tags$div(
+        class = "small text-muted",
+        tags$span("高權已登入"),
+        actionLink("admin_logout", "登出", class = "ms-1 small")
       )
     } else {
-      tagList(
-        div(class = "alert alert-secondary py-1 mb-2 small", "未登入：範本庫／參數庫唯讀"),
-        passwordInput("admin_password", NULL, placeholder = "高權密碼"),
-        actionButton("admin_login", "登入", class = "btn-sm btn-primary w-100")
+      tags$div(
+        class = "small text-muted",
+        "高權：修改範本／參數時再登入"
       )
     }
   })
@@ -723,7 +722,7 @@ server <- function(input, output, session) {
   observeEvent(input$admin_login, {
     if (verify_admin_password(input$admin_password)) {
       is_admin(TRUE)
-      updateTextInput(session, "admin_password", value = "")
+      removeModal()
       showNotification("高權登入成功", type = "message")
     } else {
       is_admin(FALSE)
@@ -757,8 +756,11 @@ server <- function(input, output, session) {
 
   output$admin_lib_mutate_panel <- renderUI({
     if (!isTRUE(is_admin())) {
-      return(div(class = "alert alert-secondary py-2 small",
-                 "匯入／刪除／收集入庫：請先於左側登入高權。"))
+      return(div(
+        class = "alert alert-secondary py-2 small",
+        "匯入／刪除／收集入庫需高權。",
+        actionButton("admin_prompt_lib", "登入高權", class = "btn-sm btn-outline-primary ms-2")
+      ))
     }
     card(
       card_header("高權：累積制通用範本庫 — 寫入"),
@@ -791,8 +793,11 @@ server <- function(input, output, session) {
 
   output$admin_param_edit_panel <- renderUI({
     if (!isTRUE(is_admin())) {
-      return(div(class = "alert alert-secondary py-2 small",
-                 "新增／刪除／重建參數：請先於左側登入高權。"))
+      return(div(
+        class = "alert alert-secondary py-2 small",
+        "新增／刪除／重建參數需高權。",
+        actionButton("admin_prompt_param", "登入高權", class = "btn-sm btn-outline-primary ms-2")
+      ))
     }
     card(
       card_header("高權：直接維護參數列"),
@@ -809,6 +814,13 @@ server <- function(input, output, session) {
         actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary")
       )
     )
+  })
+
+  observeEvent(input$admin_prompt_lib, {
+    show_admin_login_modal(session)
+  })
+  observeEvent(input$admin_prompt_param, {
+    show_admin_login_modal(session)
   })
 
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")

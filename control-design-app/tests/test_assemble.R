@@ -669,7 +669,7 @@ check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強
 check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
       "範本庫頁籤含可跳過套用設定")
 check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
-check(grepl("高權存取|admin_login|verify_admin_password", app_src), "含高權登入機制")
+check(grepl("admin_login|verify_admin_password|show_admin_login_modal", app_src), "含高權登入機制")
 check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直接改範本庫／參數庫")
 
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
@@ -722,9 +722,14 @@ check(identical(normalize_assertions_for_category("完整性 (Completeness)", "�
       "遵循面定稿清空聲明")
 
 # 高權密碼與直接維護
-check(isTRUE(verify_admin_password("尬電SOX#Admin")), "預設高權密碼可驗證")
+check(isTRUE(verify_admin_password("1118")), "預設高權密碼可驗證")
+check(!isTRUE(verify_admin_password("尬電SOX#Admin")), "舊預設密碼已停用")
 check(!isTRUE(verify_admin_password("wrong")), "錯誤密碼拒絕")
 check(!isTRUE(verify_admin_password("")), "空密碼拒絕")
+check(grepl("show_admin_login_modal|showModal", paste(readLines(file.path(root, "R/privilege.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        grepl("admin_prompt_lib|admin_prompt_param", app_src) &&
+        !grepl("高權存取", app_src),
+      "高權改為角落提示＋修改時彈出登入（側邊欄不張揚）")
 ps0 <- empty_parameter_store()
 ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
 check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")

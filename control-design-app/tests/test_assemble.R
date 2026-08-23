@@ -776,12 +776,12 @@ check(grepl('selectizeInput\\(\\s*"iuc"', app_src) &&
 check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
         grepl('related_system_mode_for_ctrl', app_src),
       "相關系統依控制類型動態必填（自動控制）")
-check(grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
-      "聲明設定與控制目標並排")
-check(grepl('objective-assertions-row', app_src), "控制目標／聲明並排樣式")
-check(grepl('objective-activity-stack', app_src), "控制目標／控制活動同欄並列")
+check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
+      "控制目標不再與聲明設定並排（改全寬）")
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src),
       "聲明設定在控制目標上方")
+check(!grepl("objective-activity-stack|objective-assertions-spacer", app_src),
+      "控制目標／控制活動改為全寬（無半欄 stack）")
 check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
@@ -857,6 +857,8 @@ check(grepl('objective-assertions-row[\\s\\S]*risk_description', app_src),
       "風險描述寬度與控制目標相同（左欄 50%）")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
+check(grepl('significant_account[\\s\\S]*romm_classification', app_src),
+      "會計科目在 RoMM 分類上方")
 check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),
       "已移除自訂風險獨立輸入（改由風險辨識）")
 check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),

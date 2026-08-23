@@ -216,12 +216,11 @@ ui <- page_navbar(
         align-items: start;
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
-      .objective-assertions-row #control_objective { min-height: 7.5rem; resize: vertical; }
-      .objective-assertions-row #control_activity { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row #risk_description { min-height: 5.5rem; resize: vertical; }
-      .objective-assertions-row .objective-activity-stack .shiny-input-container:last-child { margin-bottom: 0; }
+      #control_objective { min-height: 7.5rem; resize: vertical; }
+      #control_activity { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
-      .objective-assertions-row .assertions-side .alert { margin-bottom: 0.35rem; }
+      .assertions-side .alert { margin-bottom: 0.35rem; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -452,7 +451,6 @@ ui <- page_navbar(
               choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
               selected = ""
             ),
-            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
             uiOutput("significant_account_hint"),
             selectizeInput(
               "significant_account", "會計科目",
@@ -465,11 +463,10 @@ ui <- page_navbar(
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
+            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
           ),
           accordion_panel(
             "控制設計",
-            p(class = "small text-muted mb-2",
-              "控制目標／活動與類型（Why／How；活動須對應單一預防或偵測）。"),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
@@ -477,33 +474,25 @@ ui <- page_navbar(
               actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
               actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
             ),
-            layout_columns(
-              col_widths = c(6, 6),
-              class = "objective-assertions-row",
-              div(
-                class = "objective-activity-stack",
-                div(
-                  class = "assertions-side",
-                  selectizeInput(
-                    "assertions", "聲明設定",
-                    choices = character(0), multiple = TRUE, selected = character(0),
-                    options = list(
-                      create = FALSE,
-                      placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
-                    )
-                  ),
-                  uiOutput("assertions_hint")
-                ),
-                textAreaInput(
-                  "control_objective", lab_req("控制目標"), rows = 4,
-                  placeholder = "Why：欲達成之控制結果（非執行步驟）"
-                ),
-                textAreaInput(
-                  "control_activity", lab_req("控制活動"), rows = 3,
-                  placeholder = "How：具體執行行為（含誰／何時／如何）"
+            div(
+              class = "assertions-side mb-2",
+              selectizeInput(
+                "assertions", "聲明設定",
+                choices = character(0), multiple = TRUE, selected = character(0),
+                options = list(
+                  create = FALSE,
+                  placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
                 )
               ),
-              div(class = "objective-assertions-spacer")
+              uiOutput("assertions_hint")
+            ),
+            textAreaInput(
+              "control_objective", lab_req("控制目標"), rows = 4,
+              placeholder = "Why：欲達成之控制結果（非執行步驟）"
+            ),
+            textAreaInput(
+              "control_activity", lab_req("控制活動"), rows = 3,
+              placeholder = "How：具體執行行為（含誰／何時／如何）"
             ),
             layout_columns(
               col_widths = c(6, 6),

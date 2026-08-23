@@ -197,6 +197,17 @@ ui <- page_navbar(
         overflow: visible !important; max-height: none !important;
       }
       .bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }
+      /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
+      .objective-assertions-row.bslib-grid {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+      }
+      .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
+      .objective-assertions-row #control_objective { min-height: 7.5rem; resize: vertical; }
+      .objective-assertions-row .selectize-control { min-height: 2.5rem; }
+      .objective-assertions-row .assertions-side .alert { margin-bottom: 0.35rem; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -483,14 +494,16 @@ ui <- page_navbar(
               actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
             ),
             layout_columns(
-              col_widths = c(7, 5),
+              col_widths = c(6, 6),
+              class = "objective-assertions-row",
               textAreaInput(
-                "control_objective", lab_req("控制目標"), rows = 3,
+                "control_objective", lab_req("控制目標"), rows = 4,
                 placeholder = "Why：欲達成之控制結果（非執行步驟）"
               ),
-              tagList(
+              div(
+                class = "assertions-side",
                 selectizeInput(
-                  "assertions", "聲明（Assertions）",
+                  "assertions", "聲明設定",
                   choices = character(0), multiple = TRUE, selected = character(0),
                   options = list(
                     create = FALSE,

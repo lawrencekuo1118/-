@@ -366,10 +366,12 @@ check(!grepl("interview_source", app_txt) &&
         !grepl("已定稿 RCM（實際設計列）", app_txt) &&
         !grepl("範本庫預期（風險／目標／活動）", app_txt) &&
         !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm_csa.R"), encoding = "UTF-8"), collapse = "\n")) &&
-        grepl("interview_cycle", app_txt) &&
+        !grepl("interview_cycle", app_txt) &&
         grepl("interview_sub", app_txt) &&
-        grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt),
-      "訪談：選循環後直接選子作業（無題綱來源 RCM／範本庫）")
+        grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt) &&
+        grepl("循環（全域）", app_txt) &&
+        length(gregexpr('selectInput\\(\\s*"cycle"', app_txt, perl = TRUE)[[1]]) == 1L,
+      "訪談／設計共用側邊欄循環（無題綱來源、無頁內循環選框）")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))
@@ -655,6 +657,14 @@ check(identical(nav_titles, expect_nav),
       sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
 check(grepl("goto_lib_tab|開啟範本庫", app_src) && grepl("goto_param_tab|開啟參數庫", app_src),
       "側邊欄最下方含範本庫／參數庫入口")
+check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
+        grepl("data-value=\\\\\"參數庫\\\\\"", app_src) &&
+        grepl("display: none", app_src),
+      "標題列隱藏範本庫／參數庫（改由側邊欄進入）")
+check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
+      "PBC 頁無獨立循環選框（改用側邊欄）")
+check(!grepl('selectInput\\(\\s*"cycle".*基本資料|accordion_panel\\(\\s*"基本資料"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
+      "基本資料 accordion 內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
 check(grepl("從範本庫套用（可跳過）", app_src) && grepl("（可跳過）未套用範本", app_src),
       "範本庫頁籤含可跳過套用設定")

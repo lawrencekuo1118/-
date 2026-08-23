@@ -157,7 +157,9 @@ ui <- page_navbar(
         '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
         '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }',
         '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
-        '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }'
+        '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }',
+        /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
+        '.navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }'
       ].join('\\n');
       document.head.appendChild(style);
     });
@@ -170,6 +172,15 @@ ui <- page_navbar(
       class = "d-flex flex-column h-100",
       div(
         textInput("company", NULL, placeholder = "公司名稱"),
+        tags$hr(class = "my-2"),
+        tags$div(class = "small fw-bold mb-1", "循環（全域）"),
+        selectInput(
+          "cycle", NULL,
+          choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
+          selected = ""
+        ),
+        textInput("cycle_code", NULL, value = "", placeholder = "循環編號（自動）"),
+        uiOutput("sidebar_cycle_hint"),
         tags$hr(class = "my-2"),
         tags$div(class = "small fw-bold mb-1", "高權存取"),
         uiOutput("admin_auth_box")
@@ -201,11 +212,11 @@ ui <- page_navbar(
         card_header("整體設計流程"),
         tags$ol(
           class = "home-steps mb-0",
-          tags$li(tags$strong("基本資料"), "設定循環編號／名稱、子作業編號／名稱與控制編號；左側可填公司名稱。"),
+          tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "（全域必選）與公司名稱；循環選定後各頁共用。"),
           tags$li(tags$strong("風險控制點設計"), "：依序選取 ",
-                  strong("循環 → 子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
-                  "（", tags$span(class = "text-danger", "須依序選取"),
-                  "：未選上一層時，下一層沒有候選）。"),
+                  strong("子作業 → 風險 → 控制目標 → 控制活動（單一預防／偵測）→ IUC"),
+                  "（", tags$span(class = "text-danger", "須先選側邊欄循環"),
+                  "，再依序選取；未選上一層時，下一層沒有候選）。"),
           tags$li("補齊 ", strong("風險辨識"),
                   "（風險因素、風險描述、風險類別、RoMM 分類）→ ",
                   strong("控制設計"),
@@ -248,10 +259,10 @@ ui <- page_navbar(
         class = "home-tabs-grid",
         div(class = "home-tab-card",
             strong("訪談問項設計"),
-            "循環／子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
+            "依側邊欄循環選子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
         div(class = "home-tab-card",
             strong("風險控制點設計"),
-            "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
+            "依側邊欄循環引導選子作業／風險／目標／活動／IUC；定稿寫入 RCM。"),
         div(class = "home-tab-card",
             strong("控制點測試設計"),
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
@@ -273,11 +284,11 @@ ui <- page_navbar(
       class = "home-section",
       card_header("建議操作順序"),
       p(class = "mb-1",
-        "① 首頁了解流程 → ② ",
-        strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
+        "① 側邊欄選循環 → ② ",
+        strong("風險控制點設計"), "（引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
         strong("訪談問項設計"), "／", strong("控制點測試設計"),
         " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
-        " → ⑥ 需要時開啟 ", strong("範本庫"), "／", strong("參數庫"), "（側邊欄入口；範本套用可跳過）。"),
+        " → ⑥ 需要時由側邊欄開啟 ", strong("範本庫"), "／", strong("參數庫"), "（範本套用可跳過）。"),
       p(class = "small text-muted mb-0",
         "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
@@ -291,21 +302,16 @@ ui <- page_navbar(
         card_header("訪談引導（依序選取）"),
         uiOutput("interview_status"),
         uiOutput("interview_guide_banner"),
-        # ①循環 → ②子作業（內建建議候選，毋須選題綱來源／匯入底稿）
-        selectInput(
-          "interview_cycle", NULL,
-          choices = c("① 選擇循環…" = "", CYCLES_NINE_CHOICES),
-          selected = ""
-        ),
+        # 循環於側邊欄；此處①子作業 → ②風險／控制點
         selectInput(
           "interview_sub", NULL,
-          choices = c("② 選擇子作業…" = ""),
+          choices = c("① 選擇子作業…" = ""),
           selected = ""
         ),
         selectizeInput(
           "worksheet_controls", NULL,
           choices = NULL, multiple = TRUE,
-          options = list(placeholder = "③ 選擇風險／控制點（可空＝該子作業下全部建議）")
+          options = list(placeholder = "② 選擇風險／控制點（可空＝該子作業下全部建議）")
         ),
         div(
           class = "d-flex gap-1 flex-wrap mb-2",
@@ -322,7 +328,7 @@ ui <- page_navbar(
           accordion_panel(
             "訪談焦點",
             p(class = "small text-muted mb-2",
-              "選定循環／子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
+              "側邊欄選定循環並選子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
             checkboxGroupInput(
               "interview_elements", NULL,
               choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
@@ -371,29 +377,29 @@ ui <- page_navbar(
         uiOutput("cascade_step_status"),
         uiOutput("design_required_checklist"),
         uiOutput("cascade_candidate_banner"),
-        # Step 2: 子作業
-        selectInput("cascade_sub", NULL, choices = c("② 選擇子作業…" = "")),
+        # 循環於側邊欄；①子作業 → ⑤ IUC
+        selectInput("cascade_sub", NULL, choices = c("① 選擇子作業…" = "")),
         conditionalPanel(
           "input.cascade_sub == '__custom__'",
           p(class = "small text-muted mb-2",
             "自訂子作業：請於下方「基本資料」填寫子作業編號與名稱。")
         ),
-        # Step 3: 風險
-        selectInput("cascade_risk", NULL, choices = c("③ 選擇風險因素…" = "")),
+        # Step 2: 風險
+        selectInput("cascade_risk", NULL, choices = c("② 選擇風險因素…" = "")),
         uiOutput("cascade_risk_detail"),
         conditionalPanel(
           "input.cascade_risk == '__custom__'",
           p(class = "small text-muted mb-2",
             "自訂風險：請於下方「風險辨識」填寫風險因素、風險描述、風險類別與 RoMM 分類。")
         ),
-        # Step 4: 目標
-        selectInput("cascade_objective", NULL, choices = c("④ 選擇控制目標…" = "")),
+        # Step 3: 目標
+        selectInput("cascade_objective", NULL, choices = c("③ 選擇控制目標…" = "")),
         conditionalPanel(
           "input.cascade_objective == '__custom__'",
           textAreaInput("custom_objective", NULL, rows = 2, placeholder = "自訂控制目標（Why）")
         ),
-        # Step 5: 活動（標示單一 PD）
-        selectInput("cascade_activity", NULL, choices = c("⑤ 選擇控制活動…" = "")),
+        # Step 4: 活動（標示單一 PD）
+        selectInput("cascade_activity", NULL, choices = c("④ 選擇控制活動…" = "")),
         conditionalPanel(
           "input.cascade_activity == '__custom__'",
           textAreaInput("custom_activity", NULL, rows = 2, placeholder = "自訂控制活動（How）"),
@@ -404,8 +410,8 @@ ui <- page_navbar(
           selectInput("custom_frequency", NULL, choices = c("頻率…" = "", FREQUENCY_CHOICES)),
           textInput("custom_owner", NULL, placeholder = "流程負責單位")
         ),
-        # Step 6: IUC
-        selectInput("cascade_iuc", NULL, choices = c("⑥ 選擇 IUC／相關系統…" = "")),
+        # Step 5: IUC
+        selectInput("cascade_iuc", NULL, choices = c("⑤ 選擇 IUC／相關系統…" = "")),
         conditionalPanel(
           "input.cascade_iuc == '__custom__'",
           textInput("custom_iuc", NULL, placeholder = "自訂 IUC／相關系統名稱"),
@@ -424,21 +430,14 @@ ui <- page_navbar(
           accordion_panel(
             "基本資料",
             p(class = "small text-muted mb-2",
-              "此次控制點設計之流程定位：循環與子作業（可與上方引導選取同步，亦可直接覆寫）。"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("cycle_code", lab_req("循環編號"), value = "",
-                        placeholder = "例：EC"),
-              selectInput("cycle", lab_req("循環名稱"),
-                          choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
-                          selected = "")
-            ),
+              "循環於左側側邊欄設定（全域共用）。此處填寫／覆寫子作業編號、名稱與控制編號。"),
+            uiOutput("design_cycle_readonly"),
             layout_columns(
               col_widths = c(4, 8),
               textInput("sub_process_id", lab_req("子作業編號"), value = "",
                         placeholder = "例：EC-101"),
               textInput("sub_process", lab_req("子作業名稱"), value = "",
-                        placeholder = "例：存取管理")
+                        placeholder = "例：存取管理作業")
             ),
             textInput("control_id", "控制編號", value = "",
                       placeholder = "自動順編（可覆寫）")
@@ -676,7 +675,7 @@ ui <- page_navbar(
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
         textInput("pbc_id", NULL, placeholder = "ID（可空）"),
-        selectInput("pbc_cycle", NULL, choices = c("循環（共用）" = "", CYCLES_NINE)),
+        uiOutput("pbc_cycle_readonly"),
         textInput("pbc_notes", NULL, placeholder = "備註"),
         div(
           class = "d-flex gap-1 flex-wrap",
@@ -884,18 +883,45 @@ server <- function(input, output, session) {
     }
   }, once = TRUE)
 
+  output$sidebar_cycle_hint <- renderUI({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      tags$div(class = "small text-warning", "必選：選定後訪談／設計／PBC 皆共用此循環。")
+    } else {
+      tags$div(class = "small text-muted", sprintf("目前：%s", cy))
+    }
+  })
+  output$design_cycle_readonly <- renderUI({
+    cy <- input$cycle %||% ""
+    cc <- trimws(input$cycle_code %||% "")
+    if (!nzchar(cy)) {
+      div(class = "alert alert-warning py-1 mb-2 small",
+          tags$strong("尚未選定循環。"), "請先於左側側邊欄選擇循環。")
+    } else {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          sprintf("循環：%s（編號 %s）— 於側邊欄變更。", cy, if (nzchar(cc)) cc else "—"))
+    }
+  })
+  output$pbc_cycle_readonly <- renderUI({
+    cy <- input$cycle %||% ""
+    tags$div(
+      class = "small text-muted mb-2",
+      if (nzchar(cy)) sprintf("循環：%s（側邊欄）", cy) else "循環：共用／未選（側邊欄可指定）"
+    )
+  })
+
   output$cascade_candidate_banner <- renderUI({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先於「基本資料」選擇循環名稱。"),
-                 "選定後即可直接選②子作業～⑥ IUC（內建候選已就緒，毋須匯入底稿）。"))
+                 tags$strong("請先於側邊欄選擇循環。"),
+                 "選定後即可直接選①子作業～⑤ IUC（內建候選已就緒，毋須匯入底稿）。"))
     }
     rows <- cascade_rows()
     n_sub <- length(cascade_sub_process_choices(rows))
     if (n_sub > 0) {
       div(class = "alert alert-success py-1 mb-2 small",
-          sprintf("引導候選已就緒：本循環「%s」有 %d 個子作業可直接選取（另可「＋自訂新增」）。請先選②子作業。",
+          sprintf("引導候選已就緒：本循環「%s」有 %d 個子作業可直接選取（另可「＋自訂新增」）。請先選①子作業。",
                   cy, n_sub))
     } else {
       div(class = "alert alert-info py-2 mb-2 small",
@@ -917,16 +943,15 @@ server <- function(input, output, session) {
   }
 
   refresh_pbc_choices <- function() {
-    ch_design <- pbc_choices(pbc_reg(), cycle_filter = input$cycle)
+    cy <- input$cycle %||% ""
+    ch <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy)) cy else NULL)
     updateSelectizeInput(
-      session, "pbc_apply", choices = ch_design, server = TRUE,
-      selected = intersect(input$pbc_apply %||% character(), unname(ch_design))
+      session, "pbc_apply", choices = ch, server = TRUE,
+      selected = intersect(input$pbc_apply %||% character(), unname(ch))
     )
-    cy_iv <- input$interview_cycle %||% ""
-    ch_iv <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy_iv)) cy_iv else NULL)
     updateSelectizeInput(
-      session, "interview_pbc_link", choices = ch_iv, server = TRUE,
-      selected = intersect(input$interview_pbc_link %||% character(), unname(ch_iv))
+      session, "interview_pbc_link", choices = ch, server = TRUE,
+      selected = intersect(input$interview_pbc_link %||% character(), unname(ch))
     )
   }
 
@@ -934,7 +959,7 @@ server <- function(input, output, session) {
     cs <- interview_pool_controls()
     cs <- filter_controls_by_cycle_sub(
       cs,
-      cycle = input$interview_cycle %||% "",
+      cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
     ids <- input$worksheet_controls
@@ -969,24 +994,24 @@ server <- function(input, output, session) {
   })
 
   output$interview_guide_banner <- renderUI({
-    cy <- input$interview_cycle %||% ""
+    cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
-                 tags$strong("請先選擇①循環。"),
-                 "選定後即可直接選該循環建議之子作業（毋須選題綱來源或匯入底稿）。"))
+                 tags$strong("請先於側邊欄選擇循環。"),
+                 "選定後即可直接選該循環建議之子作業。"))
     }
     rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
     n_sub <- length(cascade_sub_process_choices(rows))
     sk <- input$interview_sub %||% ""
     if (!nzchar(sk)) {
       return(div(class = "alert alert-success py-1 mb-2 small",
-                 sprintf("「%s」已載入 %d 個建議子作業，請直接選②。", cy, n_sub)))
+                 sprintf("「%s」已載入 %d 個建議子作業，請直接選①。", cy, n_sub)))
     }
     scoped <- filter_controls_by_cycle_sub(
       interview_pool_controls(), cycle = cy, sub_key = sk
     )
     div(class = "alert alert-success py-1 mb-2 small",
-        sprintf("已選子作業 → 建議控制點／風險 %d 筆（③可空＝全部）。", length(scoped)))
+        sprintf("已選子作業 → 建議控制點／風險 %d 筆（②可空＝全部）。", length(scoped)))
   })
 
   output$interview_live_box <- renderUI({
@@ -1005,33 +1030,33 @@ server <- function(input, output, session) {
 
   output$interview_paragraph <- renderText({
     iv <- interview_worksheet()
-    if (!nrow(iv)) return("（尚無訪談題綱；請先選①循環與②子作業）")
+    if (!nrow(iv)) return("（尚無訪談題綱；請先於側邊欄選循環，再選①子作業）")
     lines <- sprintf("%s. [%s] %s", iv[["題號"]], iv[["元素"]], iv[["訪談問題"]])
     paste(utils::head(lines, 12), collapse = "\n")
   })
 
-  observeEvent(input$interview_cycle, {
+  observeEvent(input$cycle, {
     refresh_pbc_choices()
   }, ignoreNULL = FALSE)
 
-  # 一律以內建＋使用者庫候選為訪談來源（選循環→直接選子作業）
+  # 一律以內建＋使用者庫候選為訪談來源（側邊欄循環→直接選子作業）
   interview_pool_controls <- reactive({
     library_items_as_interview_controls(cascade_source_library(lib()))
   })
 
   observe({
-    cy <- input$interview_cycle %||% ""
+    cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
       updateSelectInput(session, "interview_sub",
-                        choices = c("② 請先選擇①循環…" = ""), selected = "")
+                        choices = c("① 請先於側邊欄選擇循環…" = ""), selected = "")
       return()
     }
     rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
     ch_sub <- cascade_sub_process_choices(rows)
     label0 <- if (length(ch_sub)) {
-      sprintf("② 選擇子作業…（本循環建議 %d）", length(ch_sub))
+      sprintf("① 選擇子作業…（本循環建議 %d）", length(ch_sub))
     } else {
-      "② 選擇子作業…（本循環暫無建議）"
+      "① 選擇子作業…（本循環暫無建議）"
     }
     updateSelectInput(
       session, "interview_sub",
@@ -1047,7 +1072,7 @@ server <- function(input, output, session) {
     pool <- interview_pool_controls()
     scoped <- filter_controls_by_cycle_sub(
       pool,
-      cycle = input$interview_cycle %||% "",
+      cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
     if (!length(scoped)) {
@@ -1774,7 +1799,7 @@ server <- function(input, output, session) {
     }
   })
 
-  # 基本資料：循環名稱 → 自動帶入循環編號（可覆寫）
+  # 側邊欄循環名稱 → 自動帶入循環編號（可覆寫）
   observeEvent(input$cycle, {
     cy <- input$cycle %||% ""
     code <- cycle_code_for(cy)
@@ -1869,13 +1894,19 @@ server <- function(input, output, session) {
   }, ignoreNULL = FALSE)
 
   observe({
+    cy <- input$cycle %||% ""
     rows <- cascade_rows()
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "cascade_sub",
+                        choices = c("① 請先於側邊欄選擇循環…" = ""), selected = "")
+      return()
+    }
     ch_sub <- cascade_sub_process_choices(rows)
     n_rows <- length(rows)
     label0 <- if (n_rows) {
-      sprintf("② 選擇子作業…（本循環 %d 筆候選）", n_rows)
+      sprintf("① 選擇子作業…（本循環 %d 筆候選）", n_rows)
     } else {
-      "② 選擇子作業…（可直接「＋自訂新增」，毋須匯入底稿）"
+      "① 選擇子作業…（可直接「＋自訂新增」，毋須匯入底稿）"
     }
     ch <- c(stats::setNames("", label0), ch_sub, "＋自訂新增子作業" = "__custom__")
     cur <- input$cascade_sub %||% ""
@@ -1887,7 +1918,7 @@ server <- function(input, output, session) {
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
       updateSelectInput(session, "cascade_risk",
-                        choices = c("③ 請先選擇循環…" = ""), selected = "")
+                        choices = c("② 請先於側邊欄選擇循環…" = ""), selected = "")
       return()
     }
     rows <- cascade_rows()
@@ -1895,13 +1926,13 @@ server <- function(input, output, session) {
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
       ch_risk <- cascade_risk_choices(rows)
-      label0 <- sprintf("③ 選擇風險因素…（本子作業 %d）", length(ch_risk))
+      label0 <- sprintf("② 選擇風險因素…（本子作業 %d）", length(ch_risk))
     } else if (identical(sub_key, "__custom__")) {
       ch_risk <- character()
-      label0 <- "③ 自訂子作業下請自訂風險或稍後套用"
+      label0 <- "② 自訂子作業下請自訂風險或稍後套用"
     } else {
       ch_risk <- cascade_risk_choices(rows)
-      label0 <- sprintf("③ 選擇風險因素…（本循環 %d）", length(ch_risk))
+      label0 <- sprintf("② 選擇風險因素…（本循環 %d）", length(ch_risk))
     }
     ch <- c(stats::setNames("", label0), ch_risk, "＋自訂新增風險" = "__custom__")
     cur <- input$cascade_risk %||% ""
@@ -1932,7 +1963,7 @@ server <- function(input, output, session) {
     rk <- input$cascade_risk %||% ""
     if (!nzchar(rk)) {
       updateSelectInput(session, "cascade_objective",
-                        choices = c("④ 請先選擇③風險…" = ""), selected = "")
+                        choices = c("③ 請先選擇②風險…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -1942,7 +1973,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, risk_factor = rk)
     }
     ch_obj <- cascade_objective_choices(rows)
-    ch <- c(stats::setNames("", sprintf("④ 選擇控制目標…（%d）", length(ch_obj))),
+    ch <- c(stats::setNames("", sprintf("③ 選擇控制目標…（%d）", length(ch_obj))),
             ch_obj, "＋自訂新增目標" = "__custom__")
     cur <- input$cascade_objective %||% ""
     updateSelectInput(session, "cascade_objective", choices = ch,
@@ -1956,7 +1987,7 @@ server <- function(input, output, session) {
     obj <- input$cascade_objective %||% ""
     if (!nzchar(obj)) {
       updateSelectInput(session, "cascade_activity",
-                        choices = c("⑤ 請先選擇④控制目標…" = ""), selected = "")
+                        choices = c("④ 請先選擇③控制目標…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -1969,7 +2000,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, objective = obj)
     }
     ch_act <- cascade_activity_choices(rows)
-    ch <- c(stats::setNames("", sprintf("⑤ 選擇控制活動…（%d）", length(ch_act))),
+    ch <- c(stats::setNames("", sprintf("④ 選擇控制活動…（%d）", length(ch_act))),
             ch_act, "＋自訂新增活動" = "__custom__")
     cur <- input$cascade_activity %||% ""
     updateSelectInput(session, "cascade_activity", choices = ch,
@@ -1984,7 +2015,7 @@ server <- function(input, output, session) {
     obj <- input$cascade_objective %||% ""
     if (!nzchar(act)) {
       updateSelectInput(session, "cascade_iuc",
-                        choices = c("⑥ 請先選擇⑤控制活動…" = ""), selected = "")
+                        choices = c("⑤ 請先選擇④控制活動…" = ""), selected = "")
       return()
     }
     if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
@@ -2000,7 +2031,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, activity_key_sel = act)
     }
     ch_iuc <- cascade_iuc_choices(rows, pbc_df = pbc_reg())
-    ch <- c(stats::setNames("", sprintf("⑥ 選擇 IUC／相關系統…（%d）", length(ch_iuc))),
+    ch <- c(stats::setNames("", sprintf("⑤ 選擇 IUC／相關系統…（%d）", length(ch_iuc))),
             ch_iuc, "＋自訂新增 IUC" = "__custom__")
     cur <- input$cascade_iuc %||% ""
     updateSelectInput(session, "cascade_iuc", choices = ch,
@@ -2011,12 +2042,12 @@ server <- function(input, output, session) {
     sel <- resolve_cascade_selection()
     ready <- cascade_selection_ready(sel)
     steps <- c(
-      sprintf("①循環：%s", if (nzchar(sel$cycle)) "✓" else "○"),
-      sprintf("②子作業：%s", if (nzchar(sel$sub_process_id) || nzchar(sel$sub_process)) "✓" else "○"),
-      sprintf("③風險：%s", if (nzchar(sel$risk_factor)) "✓" else "○"),
-      sprintf("④目標：%s", if (nzchar(sel$control_objective)) "✓" else "○"),
-      sprintf("⑤活動：%s", if (nzchar(sel$control_activity) && activity_type_ok(sel$approach)) "✓" else "○"),
-      sprintf("⑥IUC：%s", if (nzchar(sel$iuc_or_system)) "✓" else "○")
+      sprintf("循環（側邊欄）：%s", if (nzchar(sel$cycle)) "✓" else "○"),
+      sprintf("①子作業：%s", if (nzchar(sel$sub_process_id) || nzchar(sel$sub_process)) "✓" else "○"),
+      sprintf("②風險：%s", if (nzchar(sel$risk_factor)) "✓" else "○"),
+      sprintf("③目標：%s", if (nzchar(sel$control_objective)) "✓" else "○"),
+      sprintf("④活動：%s", if (nzchar(sel$control_activity) && activity_type_ok(sel$approach)) "✓" else "○"),
+      sprintf("⑤IUC：%s", if (nzchar(sel$iuc_or_system)) "✓" else "○")
     )
     cls <- if (isTRUE(ready$ready)) "alert alert-success py-1 mb-2 small" else "alert alert-secondary py-1 mb-2 small"
     div(class = cls, paste(steps, collapse = " ｜ "),
@@ -2311,7 +2342,7 @@ server <- function(input, output, session) {
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
         reviewed_name = input$pbc_reviewed, pbc_kind = input$pbc_kind,
         iuc_or_system = input$pbc_reviewed,
-        cycle = input$pbc_cycle, notes = input$pbc_notes
+        cycle = input$cycle %||% "", notes = input$pbc_notes
       ))
       pbc_reg(reg)
       persist_pbc(reg)
@@ -2376,8 +2407,6 @@ server <- function(input, output, session) {
     updateSelectInput(session, "pbc_kind",
                       selected = normalize_pbc_kind(row$pbc_kind[[1]]))
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
-    updateSelectInput(session, "pbc_cycle",
-                      selected = if (nzchar(row$cycle[[1]])) row$cycle[[1]] else "")
   }, ignoreInit = TRUE)
   observeEvent(input$pbc_delete, {
     s <- input$pbc_table_rows_selected
@@ -2605,7 +2634,6 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
   })
   observeEvent(input$ws_reset_iv, {
-    updateSelectInput(session, "interview_cycle", selected = "")
     updateSelectInput(session, "interview_sub", selected = "")
     updateSelectizeInput(session, "worksheet_controls", selected = character())
     updateSelectizeInput(session, "interview_pbc_link", selected = character())
@@ -2620,27 +2648,27 @@ server <- function(input, output, session) {
     pool <- interview_pool_controls()
     scoped <- filter_controls_by_cycle_sub(
       pool,
-      cycle = input$interview_cycle %||% "",
+      cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
     iv <- interview_worksheet()
     steps <- c(
-      sprintf("①循環：%s", if (nzchar(input$interview_cycle %||% "")) "✓" else "○"),
-      sprintf("②子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
-      sprintf("③風險／控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
+      sprintf("循環（側邊欄）：%s", if (nzchar(input$cycle %||% "")) "✓" else "○"),
+      sprintf("①子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
+      sprintf("②風險／控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
     )
-    if (!nzchar(input$interview_cycle %||% "")) {
+    if (!nzchar(input$cycle %||% "")) {
       return(tagList(
         tags$small(class = "text-muted", paste(steps, collapse = "｜")),
         tags$br(),
-        tags$small(class = "text-warning", "請先選①循環，即可直接選該循環建議之子作業。")
+        tags$small(class = "text-warning", "請先於側邊欄選擇循環，即可直接選該循環建議之子作業。")
       ))
     }
     if (!nzchar(input$interview_sub %||% "")) {
       return(tagList(
         tags$small(class = "text-muted", paste(steps, collapse = "｜")),
         tags$br(),
-        tags$small(class = "text-muted", "請選②子作業（內建建議已就緒）。")
+        tags$small(class = "text-muted", "請選①子作業（內建建議已就緒）。")
       ))
     }
     if (!length(scoped)) {

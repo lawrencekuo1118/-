@@ -155,11 +155,13 @@ ui <- page_navbar(
         '.home-steps { list-style: none; padding-left: 0; counter-reset: step; }',
         '.home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }',
         '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
-        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }',
+        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; overflow: visible !important; max-height: none !important; }',
         '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
         '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }',
-        /* 首頁不壓縮：各頁籤用途一次顯示全部方框 */
-        '.home-section .card-body, .bslib-card.home-section { overflow: visible !important; max-height: none !important; }',
+        /* 首頁：整頁自然伸展，各頁籤用途一次顯示全部方框（無區塊內捲動） */
+        '.tab-pane[data-value=\"首頁\"] { height: auto !important; max-height: none !important; overflow: visible !important; display: block !important; }',
+        '.tab-pane[data-value=\"首頁\"] .html-fill-container, .tab-pane[data-value=\"首頁\"] .html-fill-item { height: auto !important; flex: none !important; overflow: visible !important; min-height: 0 !important; }',
+        '.home-section, .home-section > .card-body { overflow: visible !important; max-height: none !important; height: auto !important; flex: none !important; }',
         /* 各區塊一次顯示全部內容：禁止卡片／分頁內部上下捲動 */
         '.bslib-card, .card, .card-body, .accordion-body, .tab-content, .tab-pane { overflow: visible !important; max-height: none !important; height: auto !important; }',
         '.bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }',
@@ -170,7 +172,11 @@ ui <- page_navbar(
       document.head.appendChild(style);
     });
   ", BRAND_BLUE, BRAND_GREEN, BRAND_BLACK, BRAND_WHITE))),
-  fillable = TRUE,
+  # 首頁不進 fillable（避免各頁籤用途被壓成區塊內捲動）；其餘頁可填滿視窗
+  fillable = c(
+    "訪談問項設計", "風險控制點設計", "控制點測試設計",
+    "範本庫", "參數庫", "PBC資料庫", "RCM"
+  ),
   sidebar = sidebar(
     width = 280,
     open = "desktop",

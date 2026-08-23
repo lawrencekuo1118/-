@@ -627,6 +627,14 @@ expect_nav <- c("首頁", "訪談問項設計", "風險控制點設計", "控制
                 "範本庫", "參數庫", "PBC資料庫", "RCM")
 check(identical(nav_titles, expect_nav),
       sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
+home_chunk <- {
+  m <- regexpr("nav_panel\\(\\s*\"首頁\"[\\s\\S]*?nav_panel\\(", app_src, perl = TRUE)
+  if (m < 0) "" else substr(app_src, m, m + attr(m, "match.length") - 1L)
+}
+check(grepl("home-page", home_chunk) && !grepl("layout_columns", home_chunk),
+      "首頁資訊框採直向完整展開（不壓縮／不並排擠壓）")
+check(grepl("\\.home-page \\{[^}]*height: auto !important", app_src),
+      "首頁 CSS 禁止壓縮資訊框高度")
 check(grepl("goto_lib_tab|開啟範本庫", app_src) && grepl("goto_param_tab|開啟參數庫", app_src),
       "側邊欄最下方含範本庫／參數庫入口")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")

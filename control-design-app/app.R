@@ -305,17 +305,17 @@ ui <- page_navbar(
             strong("控制點測試設計"),
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
-            strong("範本庫"),
-            "可跳過套用；寫入／直接編輯時才需高權登入。"),
-        div(class = "home-tab-card",
-            strong("參數庫"),
-            "查詢／套用表單；新增刪除／重建時才需高權登入。"),
+            strong("RCM"),
+            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
         div(class = "home-tab-card",
-            strong("RCM"),
-            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
+            strong("範本庫"),
+            "可跳過套用；寫入／直接編輯時才需高權登入（側邊欄進入）。"),
+        div(class = "home-tab-card",
+            strong("參數庫"),
+            "查詢／套用表單；新增刪除／重建時才需高權登入（側邊欄進入）。")
       )
     )
   ),
@@ -663,6 +663,54 @@ ui <- page_navbar(
     )
   ),
   nav_panel(
+    "RCM",
+    card(
+      uiOutput("rcm_count_box"),
+      uiOutput("rcm_latest_saved"),
+      DTOutput("rcm_table"),
+      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
+      tags$hr(),
+      tags$strong("缺漏／缺文件／控制缺失"),
+      DTOutput("gap_table")
+    )
+  ),
+  nav_panel(
+    "PBC資料庫",
+    layout_columns(
+      col_widths = c(4, 8),
+      card(
+        card_header("PBC 資料庫"),
+        p(class = "small text-muted mb-2",
+          "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
+        textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
+        textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
+        selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
+        textInput("pbc_id", NULL, placeholder = "ID（可空）"),
+        uiOutput("pbc_cycle_readonly"),
+        textInput("pbc_notes", NULL, placeholder = "備註"),
+        div(
+          class = "d-flex gap-1 flex-wrap",
+          actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
+          actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
+          actionButton("pbc_apply_to_design", "套用至控制設計",
+                       class = "btn-sm btn-outline-success")
+        ),
+        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
+        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
+        tags$hr(),
+        tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
+        p(class = "small text-muted mb-2",
+          "將命名對照套用至「風險控制點設計」之 IUC（公司現況整理）。"),
+        selectizeInput(
+          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
+          options = list(placeholder = "原名→新名")
+        ),
+        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
+      ),
+      card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
+    )
+  ),
+  nav_panel(
     "範本庫",
     card(
       class = "lib-apply-card",
@@ -725,54 +773,6 @@ ui <- page_navbar(
       card_header("即時顯示"),
       uiOutput("param_stats"),
       DTOutput("param_table")
-    )
-  ),
-  nav_panel(
-    "PBC資料庫",
-    layout_columns(
-      col_widths = c(4, 8),
-      card(
-        card_header("PBC 資料庫"),
-        p(class = "small text-muted mb-2",
-          "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
-        textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
-        textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
-        selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
-        textInput("pbc_id", NULL, placeholder = "ID（可空）"),
-        uiOutput("pbc_cycle_readonly"),
-        textInput("pbc_notes", NULL, placeholder = "備註"),
-        div(
-          class = "d-flex gap-1 flex-wrap",
-          actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
-          actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
-          actionButton("pbc_apply_to_design", "套用至控制設計",
-                       class = "btn-sm btn-outline-success")
-        ),
-        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
-        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
-        tags$hr(),
-        tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
-        p(class = "small text-muted mb-2",
-          "將命名對照套用至「風險控制點設計」之 IUC（公司現況整理）。"),
-        selectizeInput(
-          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "原名→新名")
-        ),
-        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
-      ),
-      card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
-    )
-  ),
-  nav_panel(
-    "RCM",
-    card(
-      uiOutput("rcm_count_box"),
-      uiOutput("rcm_latest_saved"),
-      DTOutput("rcm_table"),
-      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
-      tags$hr(),
-      tags$strong("缺漏／缺文件／控制缺失"),
-      DTOutput("gap_table")
     )
   ),
 )

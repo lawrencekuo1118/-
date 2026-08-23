@@ -850,6 +850,8 @@ check(isTRUE(design_required_check(modifyList(d1, list(
 )))$ok),
       "風險因素複選可通過必填")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
+check(grepl('objective-assertions-row[\\s\\S]*risk_description', app_src),
+      "風險描述寬度與控制目標相同（左欄 50%）")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
 check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),

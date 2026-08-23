@@ -218,6 +218,7 @@ ui <- page_navbar(
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
       .objective-assertions-row #control_objective { min-height: 7.5rem; resize: vertical; }
       .objective-assertions-row #control_activity { min-height: 5.5rem; resize: vertical; }
+      .objective-assertions-row #risk_description { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row .objective-activity-stack .shiny-input-container:last-child { margin-bottom: 0; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .objective-assertions-row .assertions-side .alert { margin-bottom: 0.35rem; }
@@ -439,8 +440,13 @@ ui <- page_navbar(
               )
             ),
             uiOutput("risk_factor_hint"),
-            textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
-                          placeholder = "風險情境與影響描述"),
+            layout_columns(
+              col_widths = c(6, 6),
+              class = "objective-assertions-row",
+              textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
+                            placeholder = "風險情境與影響描述"),
+              div(class = "objective-assertions-spacer")
+            ),
             selectInput(
               "risk_category", lab_req("風險類別"),
               choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),

@@ -615,10 +615,11 @@ app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), colla
 check(grepl("cascade_source_library", app_casc),
       "訪談引導仍採內建範本庫候選")
 check(!grepl('selectInput\\(\\s*"cascade_sub"', app_casc) &&
-        !grepl('selectInput\\(\\s*"cascade_risk"', app_casc) &&
+        grepl('selectInput\\(\\s*"design_sub"', app_casc) &&
+        grepl("design_sub_hint", app_casc) &&
         !grepl("save_custom_cascade", app_casc) &&
         !grepl("cascade_step_status", app_casc),
-      "風險控制點設計已移除依序引導下拉與狀態列")
+      "風險控制點設計：保留子作業選單、移除完整引導流程")
 check(grepl('card_header\\(\\s*"風險控制點設計"\\)', app_casc),
       "風險控制點設計左欄標題改為表單設計")
 it_risks <- cascade_risk_choices(it_rows)

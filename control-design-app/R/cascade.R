@@ -217,6 +217,13 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   })
   updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
   updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
+  sp_key <- sub_process_key(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "")
+  if (nzchar(sp_key)) {
+    updateSelectInput(session, "design_sub", selected = sp_key)
+  } else if (nzchar(trimws(ctrl$sub_process_id %||% "")) ||
+             nzchar(trimws(ctrl$sub_process %||% ""))) {
+    updateSelectInput(session, "design_sub", selected = "__custom__")
+  }
   rf <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% "")
   updateTextInput(session, "risk_factor", value = rf)
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")

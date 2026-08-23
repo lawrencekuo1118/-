@@ -401,8 +401,13 @@ ui <- page_navbar(
           accordion_panel(
             "基礎設定",
             p(class = "small text-muted mb-2",
-              "循環於左側側邊欄設定（全域共用）。此處填寫／覆寫子作業編號、名稱與控制編號。"),
+              "循環於左側側邊欄設定（全域共用）。可先選建議子作業，或直接填寫／覆寫編號與名稱。"),
             uiOutput("design_cycle_readonly"),
+            uiOutput("design_sub_hint"),
+            selectInput(
+              "design_sub", lab_req("子作業"),
+              choices = c("請先於側邊欄選擇循環…" = "")
+            ),
             layout_columns(
               col_widths = c(4, 8),
               textInput("sub_process_id", lab_req("子作業編號"), value = "",
@@ -983,6 +988,19 @@ server <- function(input, output, session) {
           sprintf("循環：%s（編號 %s）— 於側邊欄變更。", cy, if (nzchar(cc)) cc else "—"))
     }
   })
+  output$design_sub_hint <- renderUI({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) return(NULL)
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    n_sub <- length(cascade_sub_process_choices(rows))
+    if (n_sub > 0) {
+      div(class = "alert alert-success py-1 mb-2 small",
+          sprintf("「%s」已載入 %d 個建議子作業，可從上方選單選取（選後自動帶入編號／名稱）。", cy, n_sub))
+    } else {
+      div(class = "alert alert-secondary py-1 mb-2 small",
+          sprintf("「%s」暫無建議子作業，請選「自訂」並於下方手動填寫。", cy))
+    }
+  })
   output$pbc_cycle_readonly <- renderUI({
     cy <- input$cycle %||% ""
     tags$div(
@@ -1111,6 +1129,40 @@ server <- function(input, output, session) {
   interview_pool_controls <- reactive({
     library_items_as_interview_controls(cascade_source_library(lib()))
   })
+
+  observe({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      updateSelectInput(session, "design_sub",
+                        choices = c("請先於側邊欄選擇循環…" = ""), selected = "")
+      return()
+    }
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    ch_sub <- cascade_sub_process_choices(rows)
+    label0 <- if (length(ch_sub)) {
+      sprintf("選擇建議子作業…（本循環 %d）", length(ch_sub))
+    } else {
+      "本循環暫無建議子作業（請下方手動填寫）"
+    }
+    ch <- c(stats::setNames("", label0), ch_sub, "＋自訂（手動填寫）" = "__custom__")
+    cur <- input$design_sub %||% ""
+    sel <- if (nzchar(cur) && cur %in% unname(ch)) cur else ""
+    # 若編號／名稱已手動填寫且與選單不符，維持自訂
+    spid <- trimws(input$sub_process_id %||% "")
+    spn <- trimws(input$sub_process %||% "")
+    if (!nzchar(sel) && (nzchar(spid) || nzchar(spn))) {
+      sel <- if ("__custom__" %in% unname(ch)) "__custom__" else ""
+    }
+    updateSelectInput(session, "design_sub", choices = ch, selected = sel)
+  })
+
+  observeEvent(input$design_sub, {
+    sub_key <- input$design_sub %||% ""
+    if (!nzchar(sub_key) || identical(sub_key, "__custom__")) return()
+    sp <- parse_sub_process_key(sub_key)
+    updateTextInput(session, "sub_process_id", value = sp$id)
+    updateTextInput(session, "sub_process", value = sp$name)
+  }, ignoreInit = TRUE)
 
   observe({
     cy <- input$cycle %||% ""
@@ -1292,9 +1344,11 @@ server <- function(input, output, session) {
       },
       "子作業編號" = function() {
         updateTextInput(session, "sub_process_id", value = val)
+        updateSelectInput(session, "design_sub", selected = "__custom__")
       },
       "子作業名稱" = function() {
         updateTextInput(session, "sub_process", value = val)
+        updateSelectInput(session, "design_sub", selected = "__custom__")
       },
       "風險因素" = function() {
         updateTextInput(session, "risk_factor", value = val)

@@ -375,7 +375,6 @@ ui <- page_navbar(
       card(
         card_header("引導設計（依序選取）"),
         uiOutput("cascade_step_status"),
-        uiOutput("design_required_checklist"),
         uiOutput("cascade_candidate_banner"),
         # 循環於側邊欄；①子作業 → ⑤ IUC
         selectInput("cascade_sub", NULL, choices = c("① 選擇子作業…" = "")),
@@ -386,7 +385,6 @@ ui <- page_navbar(
         ),
         # Step 2: 風險
         selectInput("cascade_risk", NULL, choices = c("② 選擇風險因素…" = "")),
-        uiOutput("cascade_risk_detail"),
         conditionalPanel(
           "input.cascade_risk == '__custom__'",
           p(class = "small text-muted mb-2",
@@ -410,11 +408,11 @@ ui <- page_navbar(
           selectInput("custom_frequency", NULL, choices = c("頻率…" = "", FREQUENCY_CHOICES)),
           textInput("custom_owner", NULL, placeholder = "流程負責單位")
         ),
-        # Step 5: IUC
-        selectInput("cascade_iuc", NULL, choices = c("⑤ 選擇 IUC／相關系統…" = "")),
+        # Step 5: IUC（文件／資訊；與相關系統分開設定）
+        selectInput("cascade_iuc", NULL, choices = c("⑤ 選擇 IUC…" = "")),
         conditionalPanel(
           "input.cascade_iuc == '__custom__'",
-          textInput("custom_iuc", NULL, placeholder = "自訂 IUC／相關系統名稱"),
+          textInput("custom_iuc", NULL, placeholder = "自訂 IUC（控制執行時取得之文件／資訊）"),
           checkboxInput("custom_iuc_save", "一併新增至 APP 範本庫／PBC", TRUE)
         ),
         div(
@@ -484,9 +482,23 @@ ui <- page_navbar(
               actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
               actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
             ),
-            textAreaInput(
-              "control_objective", lab_req("控制目標"), rows = 2,
-              placeholder = "Why：欲達成之控制結果（非執行步驟）"
+            layout_columns(
+              col_widths = c(7, 5),
+              textAreaInput(
+                "control_objective", lab_req("控制目標"), rows = 3,
+                placeholder = "Why：欲達成之控制結果（非執行步驟）"
+              ),
+              tagList(
+                selectizeInput(
+                  "assertions", "聲明（Assertions）",
+                  choices = character(0), multiple = TRUE, selected = character(0),
+                  options = list(
+                    create = FALSE,
+                    placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+                  )
+                ),
+                uiOutput("assertions_hint")
+              )
             ),
             textAreaInput(
               "control_activity", lab_req("控制活動"), rows = 3,
@@ -518,18 +530,13 @@ ui <- page_navbar(
               )
             ),
             textAreaInput(
-              "iuc_or_system", lab_req("IUC／相關系統"), rows = 2,
-              placeholder = "與上方⑤引導選取同步，可覆寫；命名請至 PBC資料庫套用"
+              "iuc", lab_req("IUC"), rows = 2,
+              placeholder = "控制執行時取得之文件／資訊（與⑤引導選取同步；命名請至 PBC資料庫套用）"
             ),
-            selectizeInput(
-              "assertions", "聲明（Assertions）",
-              choices = character(0), multiple = TRUE, selected = character(0),
-              options = list(
-                create = FALSE,
-                placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
-              )
+            textInput(
+              "related_system", lab_opt("相關系統"),
+              placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
             ),
-            uiOutput("assertions_hint"),
             textInput("related_policy", lab_opt("相關政策或程序")),
             selectizeInput(
               "related_law", "相關法令",
@@ -735,7 +742,7 @@ ui <- page_navbar(
         tags$hr(),
         tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
         p(class = "small text-muted mb-2",
-          "將命名對照套用至「風險控制點設計」之 IUC／相關系統（公司現況整理）。"),
+          "將命名對照套用至「風險控制點設計」之 IUC（公司現況整理）。"),
         selectizeInput(
           "pbc_apply", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "原名→新名")
@@ -749,6 +756,7 @@ ui <- page_navbar(
     "RCM",
     card(
       uiOutput("rcm_count_box"),
+      uiOutput("rcm_latest_saved"),
       DTOutput("rcm_table"),
       downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
       tags$hr(),
@@ -761,6 +769,13 @@ ui <- page_navbar(
 server <- function(input, output, session) {
   controls <- reactiveVal(list())
   is_admin <- reactiveVal(FALSE)
+  rcm_revision <- reactiveVal(0L)
+  last_saved_control <- reactiveVal(NULL)
+
+  bump_rcm_views <- function(ctrl = NULL) {
+    rcm_revision(rcm_revision() + 1L)
+    if (!is.null(ctrl)) last_saved_control(ctrl)
+  }
 
   output$admin_auth_box <- renderUI({
     if (isTRUE(is_admin())) {
@@ -807,7 +822,8 @@ server <- function(input, output, session) {
                   choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES)),
       textAreaInput("admin_lib_objective", "控制目標", rows = 2, value = ""),
       textAreaInput("admin_lib_activity", "控制活動", rows = 2, value = ""),
-      textInput("admin_lib_iuc", "IUC／相關系統", value = ""),
+      textInput("admin_lib_iuc", "IUC", value = ""),
+      textInput("admin_lib_system", "相關系統", value = ""),
       actionButton("admin_lib_save_fields", "儲存範本變更", class = "btn-sm btn-success")
     )
   })
@@ -1184,7 +1200,7 @@ server <- function(input, output, session) {
     if (!length(ids)) {
       return(showNotification("請先選擇要套用的 PBC 命名", type = "warning"))
     }
-    updateTextAreaInput(session, "iuc_or_system", value = apply_pbc_to_iuc(pbc_reg(), ids))
+    updateTextAreaInput(session, "iuc", value = apply_pbc_to_iuc(pbc_reg(), ids))
     if (isTRUE(input$pbc_also_inputs)) {
       mapped <- format_pbc_for_inputs(pbc_reg(), ids)
       cur <- trimws(input$inputs %||% "")
@@ -1352,7 +1368,13 @@ server <- function(input, output, session) {
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "相關系統／IUC" = function() {
-        updateTextAreaInput(session, "iuc_or_system", value = val)
+        updateTextAreaInput(session, "iuc", value = val)
+        updateTextInput(session, "custom_iuc", value = val)
+        updateSelectInput(session, "cascade_iuc", selected = "__custom__")
+      },
+      "相關系統" = function() updateTextInput(session, "related_system", value = val),
+      "IUC" = function() {
+        updateTextAreaInput(session, "iuc", value = val)
         updateTextInput(session, "custom_iuc", value = val)
         updateSelectInput(session, "cascade_iuc", selected = "__custom__")
       },
@@ -1524,7 +1546,8 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "admin_lib_objective", value = ctrl$control_objective %||% "")
     updateTextAreaInput(session, "admin_lib_activity", value = ctrl$control_activity %||% "")
     updateTextInput(session, "admin_lib_iuc",
-                    value = ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+                    value = ctrl$iuc %||% ctrl$iuc_or_system %||% "")
+    updateTextInput(session, "admin_lib_system", value = ctrl$related_system %||% "")
   })
 
   observeEvent(input$admin_lib_save_fields, {
@@ -1544,7 +1567,8 @@ server <- function(input, output, session) {
         control_objective = trimws(input$admin_lib_objective %||% ""),
         control_activity = trimws(input$admin_lib_activity %||% ""),
         iuc_or_system = trimws(input$admin_lib_iuc %||% ""),
-        related_system = trimws(input$admin_lib_iuc %||% "")
+        iuc = trimws(input$admin_lib_iuc %||% ""),
+        related_system = trimws(input$admin_lib_system %||% "")
       )
     )
     lib(persist_lib(patched))
@@ -1675,13 +1699,14 @@ server <- function(input, output, session) {
         if (nzchar(u)) u else sel$responsible_unit
       },
       iuc_or_system = {
-        i <- trimws(input$iuc_or_system %||% "")
+        i <- trimws(input$iuc %||% "")
         if (nzchar(i)) i else sel$iuc_or_system
       },
-      related_system = {
-        i <- trimws(input$iuc_or_system %||% "")
+      iuc = {
+        i <- trimws(input$iuc %||% "")
         if (nzchar(i)) i else sel$iuc_or_system
       },
+      related_system = trimws(input$related_system %||% ""),
       related_policy = input$related_policy %||% "",
       related_law = {
         v <- input$related_law %||% character(0)
@@ -1826,7 +1851,8 @@ server <- function(input, output, session) {
     form_nature <- normalize_control_type_manual_auto(input$nature)
     form_freq <- trimws(input$frequency %||% "")
     form_owner <- trimws(input$responsible_unit %||% "")
-    form_iuc <- trimws(input$iuc_or_system %||% "")
+    form_iuc <- trimws(input$iuc %||% "")
+    form_sys <- trimws(input$related_system %||% "")
     if (nzchar(form_obj)) objective <- form_obj
     if (nzchar(form_act)) activity <- form_act
     if (nzchar(form_approach)) approach <- form_approach
@@ -1851,7 +1877,8 @@ server <- function(input, output, session) {
       frequency = resolve_control_frequency(nature, frequency),
       responsible_unit = owner,
       iuc_or_system = iuc,
-      related_system = iuc
+      iuc = iuc,
+      related_system = form_sys
     )
   }
 
@@ -2032,7 +2059,7 @@ server <- function(input, output, session) {
   observeEvent(input$cascade_iuc, {
     iuc_sel <- input$cascade_iuc %||% ""
     if (!nzchar(iuc_sel) || identical(iuc_sel, "__custom__")) return()
-    updateTextAreaInput(session, "iuc_or_system", value = iuc_sel)
+    updateTextAreaInput(session, "iuc", value = iuc_sel)
   }, ignoreInit = TRUE)
 
   # 自訂引導欄位 → 同步至控制設計
@@ -2072,7 +2099,7 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
   observeEvent(input$custom_iuc, {
     if (!identical(input$cascade_iuc, "__custom__")) return()
-    updateTextAreaInput(session, "iuc_or_system",
+    updateTextAreaInput(session, "iuc",
                         value = trimws(input$custom_iuc %||% ""))
   }, ignoreInit = TRUE)
 
@@ -2204,24 +2231,7 @@ server <- function(input, output, session) {
                       selected = if (cur %in% unname(ch)) cur else "")
   })
 
-  output$cascade_risk_detail <- renderUI({
-    rk <- input$cascade_risk %||% ""
-    if (!nzchar(rk) || identical(rk, "__custom__")) return(NULL)
-    rows <- cascade_rows()
-    sub_key <- input$cascade_sub %||% ""
-    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
-      rows <- filter_cascade_rows(rows, sub_key = sub_key)
-    }
-    det <- cascade_risk_detail(rows, rk)
-    div(
-      class = "alert alert-info py-2 mb-2 small",
-      tags$strong("風險屬性／描述："),
-      if (length(det$attrs)) tags$ul(lapply(det$attrs, tags$li)) else tags$span("（無屬性細節）"),
-      tags$div(tags$em(det$risk_description %||% ""))
-    )
-  })
-
-  observe({
+  output$cascade_step_status <- renderUI({
     rows <- cascade_rows()
     sub_key <- input$cascade_sub %||% ""
     rk <- input$cascade_risk %||% ""
@@ -2295,7 +2305,7 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, activity_key_sel = act)
     }
     ch_iuc <- cascade_iuc_choices(rows, pbc_df = pbc_reg())
-    ch <- c(stats::setNames("", sprintf("⑤ 選擇 IUC／相關系統…（%d）", length(ch_iuc))),
+    ch <- c(stats::setNames("", sprintf("⑤ 選擇 IUC…（%d）", length(ch_iuc))),
             ch_iuc, "＋自訂新增 IUC" = "__custom__")
     cur <- input$cascade_iuc %||% ""
     updateSelectInput(session, "cascade_iuc", choices = ch,
@@ -2316,98 +2326,6 @@ server <- function(input, output, session) {
     cls <- if (isTRUE(ready$ready)) "alert alert-success py-1 mb-2 small" else "alert alert-secondary py-1 mb-2 small"
     div(class = cls, paste(steps, collapse = " ｜ "),
         if (!ready$ready) tags$span(class = "text-muted", " — 完成引導後即可定稿"))
-  })
-
-  output$design_required_checklist <- renderUI({
-    d <- current_draft_from_inputs()
-    req <- design_required_check(d)
-    items <- lapply(names(req$required), function(f) {
-      ok <- isTRUE(req$filled[[f]])
-      tags$li(
-        class = if (ok) "text-success" else "text-danger",
-        if (ok) "✓ " else "○ ",
-        req$required[[f]]
-      )
-    })
-    if (identical(req$account_mode, "required")) {
-      ok_a <- isTRUE(req$filled$significant_account)
-      items <- c(items, list(tags$li(
-        class = if (ok_a) "text-success" else "text-danger",
-        if (ok_a) "✓ " else "○ ", "會計科目（報導面必填）"
-      )))
-    } else if (identical(req$account_mode, "locked")) {
-      ok_a <- isTRUE(req$filled$significant_account)
-      items <- c(items, list(tags$li(
-        class = if (ok_a) "text-success" else "text-danger",
-        if (ok_a) "✓ " else "○ ", "會計科目已鎖定（非報導面不可填）"
-      )))
-    }
-    if (identical(req$law_mode, "required")) {
-      ok_l <- isTRUE(req$filled$related_law)
-      items <- c(items, list(tags$li(
-        class = if (ok_l) "text-success" else "text-danger",
-        if (ok_l) "✓ " else "○ ", "相關法令（遵循面必填）"
-      )))
-    } else if (identical(req$law_mode, "locked")) {
-      ok_l <- isTRUE(req$filled$related_law)
-      items <- c(items, list(tags$li(
-        class = if (ok_l) "text-success" else "text-danger",
-        if (ok_l) "✓ " else "○ ", "相關法令已鎖定（非遵循面不可填）"
-      )))
-    }
-    if (identical(req$assertion_mode, "reporting")) {
-      items <- c(items, list(tags$li(
-        class = "text-muted", "○ ", "聲明（報導面：八種可複選）"
-      )))
-    } else if (identical(req$assertion_mode, "operations")) {
-      items <- c(items, list(tags$li(
-        class = "text-muted", "○ ", "聲明（營運面：完整性／正確性／即時性）"
-      )))
-    } else if (identical(req$assertion_mode, "locked")) {
-      ok_as <- isTRUE(req$filled$assertions)
-      items <- c(items, list(tags$li(
-        class = if (ok_as) "text-success" else "text-danger",
-        if (ok_as) "✓ " else "○ ", "聲明已鎖定（遵循面不可選）"
-      )))
-    }
-    if (identical(req$document_mode, "required")) {
-      ok_d <- isTRUE(req$filled$related_document_pbc)
-      items <- c(items, list(tags$li(
-        class = if (ok_d) "text-success" else "text-danger",
-        if (ok_d) "✓ " else "○ ", "相關文件（PBC 資料庫）"
-      )))
-    } else if (identical(req$document_mode, "locked")) {
-      ok_d <- isTRUE(req$filled$related_document_pbc)
-      items <- c(items, list(tags$li(
-        class = if (ok_d) "text-success" else "text-danger",
-        if (ok_d) "✓ " else "○ ", "相關文件已鎖定（自動／遵循面不可填）"
-      )))
-    }
-    cls <- if (isTRUE(req$ok)) "alert alert-success py-2 mb-2 small" else "alert alert-warning py-2 mb-2 small"
-    n_cascade <- length(cascade_rows())
-    acct_needed <- identical(req$account_mode, "required") || identical(req$account_mode, "locked")
-    law_needed <- identical(req$law_mode, "required") || identical(req$law_mode, "locked")
-    as_needed <- identical(req$assertion_mode, "locked")
-    doc_needed <- identical(req$document_mode, "required") ||
-      identical(req$document_mode, "locked")
-    n_all <- length(req$required) + as.integer(acct_needed) + as.integer(law_needed) +
-      as.integer(as_needed) + as.integer(doc_needed)
-    n_ok <- sum(unlist(req$filled[names(req$required)])) +
-      as.integer(acct_needed && isTRUE(req$filled$significant_account)) +
-      as.integer(law_needed && isTRUE(req$filled$related_law)) +
-      as.integer(as_needed && isTRUE(req$filled$assertions)) +
-      as.integer(doc_needed && isTRUE(req$filled$related_document_pbc))
-    div(
-      class = cls,
-      tags$strong(sprintf("設計必填 %d／%d", n_ok, n_all)),
-      tags$span(class = "text-muted ms-2", sprintf("｜引導候選 %d 筆", n_cascade)),
-      tags$ul(class = "mb-0 ps-3", style = "columns: 2; -webkit-columns: 2;", items),
-      if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、")),
-      if (!n_cascade) tags$div(
-        class = "mt-1 text-muted",
-        "本循環暫無內建列 — 可直接「＋自訂新增」完成引導（毋須匯入底稿）。"
-      )
-    )
   })
 
   output$auto_control_id_box <- renderUI({
@@ -2510,9 +2428,30 @@ server <- function(input, output, session) {
         if (!parity$ok) "（不一致，請重新定稿）")
   })
   output$rcm_count_box <- renderUI({
+    rcm_revision()
     parity <- assert_design_rcm_parity(controls())
     tags$p(class = "small mb-2",
            sprintf("目前已定稿 %d 個控制點＝%d 列 RCM", parity$n_controls, parity$n_rcm_rows))
+  })
+  output$rcm_latest_saved <- renderUI({
+    rcm_revision()
+    pt <- last_saved_control()
+    if (is.null(pt)) {
+      return(tags$p(class = "small text-muted mb-2", "尚無儲存成功的控制點。"))
+    }
+    tags$div(
+      class = "alert alert-success py-2 mb-2 small",
+      tags$strong("最新儲存："),
+      tags$code(pt$control_id %||% "—"),
+      "｜", pt$risk_factor %||% pt$risk_name %||% "",
+      tags$br(),
+      tags$span(class = "text-muted",
+                "目標：", substr(pt$control_objective %||% "—", 1, 40),
+                if (nzchar(pt$related_system %||% "")) paste0("｜系統：", pt$related_system) else "",
+                if (nzchar(pt$iuc_or_system %||% pt$iuc %||% "")) {
+                  paste0("｜IUC：", substr(pt$iuc_or_system %||% pt$iuc %||% "", 1, 30))
+                } else "")
+    )
   })
 
   # Primary path: 設計完成 → 直接寫入一筆控制點／RCM 列（1:1）
@@ -2542,6 +2481,7 @@ server <- function(input, output, session) {
     idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
     if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
     controls(cs)
+    bump_rcm_views(pt)
     updateTextInput(session, "control_id",
                     value = next_rcm_control_id(
                       pt$sub_process_id,
@@ -2582,7 +2522,8 @@ server <- function(input, output, session) {
     rcm <- controls_to_rcm(cs)
     data.frame(
       控制編號 = vapply(cs, function(x) x$control_id, ""),
-      IUC = vapply(cs, function(x) x$iuc_or_system, ""),
+      IUC = vapply(cs, function(x) x$iuc %||% x$iuc_or_system %||% "", ""),
+      相關系統 = vapply(cs, function(x) x$related_system %||% "", ""),
       RCM列 = vapply(seq_along(cs), function(i) {
         if (isTRUE(cs[[i]]$rcm_ready$ready)) "已定稿＝1列" else "待補"
       }, ""),
@@ -2701,8 +2642,17 @@ server <- function(input, output, session) {
 
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
-    datatable(controls_to_rcm(controls()), rownames = FALSE,
-              options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+    rcm_revision()
+    cs <- controls()
+    if (!length(cs)) {
+      return(datatable(
+        data.frame(訊息 = "尚無已定稿控制點；完成設計並「寫入 RCM 一列」後即時顯示於此。"),
+        rownames = FALSE, options = list(dom = "t")
+      ))
+    }
+    rcm <- controls_to_rcm(rev(cs))
+    datatable(rcm, rownames = FALSE,
+              options = list(scrollX = TRUE, pageLength = 15, dom = "tip"))
   })
   selected_worksheet_controls_sa <- reactive({
     cs <- Filter(is_control_finalized_for_rcm, controls())
@@ -2974,6 +2924,7 @@ server <- function(input, output, session) {
               rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$gap_table <- renderDT({
+    rcm_revision()
     datatable(detect_gaps_many(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
   })

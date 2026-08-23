@@ -10,7 +10,7 @@ SIX_CONTROL_STATUS_RULES <- c(
   approach = "控制活動類型（預防／偵測）",
   frequency = "控制頻率",
   responsible_unit = "流程負責單位",
-  iuc_or_system = "IUC／相關系統"
+  iuc_or_system = "IUC"
 )
 # Note: objective+activity are cascade-selected; the six operational items for
 # status scaffolding are nature/approach/frequency/owner/IUC + steps derived from activity.
@@ -225,7 +225,7 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
       selected = activity_key(act, ctrl$approach %||% ctrl$control_activity_type)
     )
   }
-  iuc <- trimws(ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+  iuc <- trimws(ctrl$iuc %||% ctrl$iuc_or_system %||% "")
   if (nzchar(iuc)) {
     updateSelectInput(session, "cascade_iuc", selected = iuc)
   }
@@ -291,8 +291,9 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     }
   }
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
-  updateTextAreaInput(session, "iuc_or_system",
-                      value = ctrl$iuc_or_system %||% ctrl$related_system %||% "")
+  updateTextAreaInput(session, "iuc",
+                      value = ctrl$iuc %||% ctrl$iuc_or_system %||% "")
+  updateTextInput(session, "related_system", value = ctrl$related_system %||% "")
   detail <- risk_attr_detail_from_ctrl(ctrl)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)
   as_vals <- parse_assertion_values(normalize_assertions_for_category(
@@ -492,7 +493,7 @@ six_status_rules_check <- function(ctrl) {
     approach = "控制活動類型（預防／偵測・單一）",
     frequency = "控制頻率",
     responsible_unit = "流程負責單位",
-    iuc_or_system = "IUC／相關系統",
+    iuc_or_system = "IUC",
     control_activity = "控制活動"
   )
   for (f in names(labels)) {
@@ -515,7 +516,8 @@ assemble_status_scaffold <- function(ctrl) {
     sprintf("2. 控制活動類型：%s\n", nzchar_or(normalize_single_activity_type(ctrl$approach), "（缺）")),
     sprintf("3. 控制頻率：%s\n", nzchar_or(ctrl$frequency, "（缺）")),
     sprintf("4. 負責單位：%s\n", nzchar_or(ctrl$responsible_unit, "（缺）")),
-    sprintf("5. IUC／相關系統：%s\n", nzchar_or(ctrl$iuc_or_system %||% ctrl$related_system, "（缺）")),
+    sprintf("5. IUC：%s\n", nzchar_or(ctrl$iuc %||% ctrl$iuc_or_system, "（缺）")),
+    sprintf("   相關系統：%s\n", nzchar_or(ctrl$related_system, "（可空）")),
     sprintf("6. 控制活動：%s\n", nzchar_or(ctrl$control_activity, "（缺）")),
     "----\n",
     sprintf("控制目標：%s\n", nzchar_or(ctrl$control_objective, "（缺）")),
@@ -609,8 +611,9 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
     approach = normalize_single_activity_type(sel$approach),
     frequency = sel$frequency %||% "",
     responsible_unit = sel$responsible_unit %||% "",
-    iuc_or_system = sel$iuc_or_system %||% "",
-    related_system = sel$iuc_or_system %||% "",
+    iuc_or_system = sel$iuc_or_system %||% sel$iuc %||% "",
+    iuc = sel$iuc_or_system %||% sel$iuc %||% "",
+    related_system = sel$related_system %||% "",
     control_id = sel$control_id %||% "",
     significant_account = {
       ac <- nzchar_trim(sel$significant_account)

@@ -689,7 +689,7 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     ),
     `控制現況描述` = status_desc,
     `控制設計差異說明` = design_gap,
-    `相關系統` = ctrl$related_system %||% ctrl$iuc_or_system %||% "",
+    `相關系統` = ctrl$related_system %||% "",
     `相關政策或程序` = ctrl$related_policy %||% "",
     `相關法令` = ctrl$related_law %||% "",
     `相關文件` = ctrl$related_document %||% ctrl$outputs %||% "",
@@ -1362,7 +1362,7 @@ DESIGN_REQUIRED_FIELDS <- c(
   approach = "控制活動類型（預防／偵測）",
   frequency = "控制頻率",
   responsible_unit = "流程負責單位",
-  iuc_or_system = "相關系統／IUC"
+  iuc_or_system = "IUC（控制執行取得之文件／資訊）"
 )
 
 DESIGN_OPTIONAL_FIELDS <- c(
@@ -1370,6 +1370,7 @@ DESIGN_OPTIONAL_FIELDS <- c(
   related_law = "相關法令（僅遵循面必填；其他類別不可填）",
   assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
   related_policy = "相關政策或程序",
+  related_system = "相關系統（IT／應用系統）",
   related_document_pbc = "相關文件（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
 )
 
@@ -1530,7 +1531,7 @@ design_field_value <- function(ctrl, field) {
   }
   if (identical(field, "iuc_or_system")) {
     return(trimws(as.character(
-      ctrl$iuc_or_system %||% ctrl$related_system %||% ""
+      ctrl$iuc %||% ctrl$iuc_or_system %||% ""
     )))
   }
   if (identical(field, "nature")) {
@@ -1813,11 +1814,11 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (is_blank(ctrl$risk_factor) && !is_blank(ctrl$risk_name)) {
     ctrl$risk_factor <- ctrl$risk_name
   }
-  if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$related_system)) {
-    ctrl$iuc_or_system <- ctrl$related_system
+  if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$iuc)) {
+    ctrl$iuc_or_system <- ctrl$iuc
   }
-  if (is_blank(ctrl$related_system) && !is_blank(ctrl$iuc_or_system)) {
-    ctrl$related_system <- ctrl$iuc_or_system
+  if (is_blank(ctrl$iuc) && !is_blank(ctrl$iuc_or_system)) {
+    ctrl$iuc <- ctrl$iuc_or_system
   }
   if (!is_blank(ctrl$risk_factor) || !is_blank(ctrl$risk_name)) {
     tag <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name)

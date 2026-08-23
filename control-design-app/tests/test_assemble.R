@@ -718,6 +718,20 @@ check(grepl("home-tabs-grid", app_src) &&
         grepl("overflow: visible !important", app_src) &&
         grepl("max-height: none !important", app_src),
       "全頁區塊一次顯示（無 fillable 壓縮、無區塊內上下滑動）")
+check(!grepl('uiOutput\\(\\s*"design_required_checklist"', app_src) &&
+        !grepl('uiOutput\\(\\s*"cascade_risk_detail"', app_src),
+      "已移除重複之設計必填清單／風險屬性預覽")
+check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
+        grepl('textInput\\(\\s*"related_system"', app_src) &&
+        !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
+      "IUC 與相關系統分開設定")
+check(grepl('layout_columns[\\s\\S]{0,400}control_objective[\\s\\S]{0,400}assertions', app_src, perl = TRUE),
+      "聲明設定與控制目標並排")
+check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control", app_src),
+      "RCM 頁籤含最新儲存即時顯示")
+check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&
+        length(gregexpr("各頁籤用途", app_src, fixed = TRUE)[[1]]) == 1,
+      "整體設計流程／各頁籤用途僅在首頁")
 check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),

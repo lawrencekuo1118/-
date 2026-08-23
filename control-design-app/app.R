@@ -403,19 +403,23 @@ ui <- page_navbar(
           accordion_panel(
             "基礎設定",
             p(class = "small text-muted mb-2",
-              "循環於左側側邊欄設定（全域共用）。可先選建議子作業，或直接填寫／覆寫編號與名稱。"),
+              "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
             uiOutput("design_cycle_readonly"),
-            uiOutput("design_sub_hint"),
-            selectInput(
-              "design_sub", lab_req("子作業"),
-              choices = c("請先於側邊欄選擇循環…" = "")
-            ),
+            uiOutput("sub_process_hint"),
             layout_columns(
               col_widths = c(4, 8),
               textInput("sub_process_id", lab_req("子作業編號"), value = "",
                         placeholder = "例：EC-101"),
-              textInput("sub_process", lab_req("子作業名稱"), value = "",
-                        placeholder = "例：存取管理作業")
+              selectizeInput(
+                "sub_process", lab_req("子作業名稱"),
+                choices = NULL,
+                options = list(
+                  create = TRUE,
+                  createOnBlur = TRUE,
+                  placeholder = "選建議子作業或手動輸入名稱",
+                  maxItems = 1
+                )
+              )
             ),
             textInput("control_id", "控制編號", value = "",
                       placeholder = "自動順編（可覆寫）")
@@ -1005,14 +1009,14 @@ server <- function(input, output, session) {
       return(div(class = "alert alert-warning py-1 mb-2 small",
                  "請先於側邊欄選擇循環，以載入建議風險因素。"))
     }
-    sub_key <- input$design_sub %||% ""
+    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
     rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
-    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+    if (nzchar(sub_key)) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
     }
     n_risk <- length(cascade_risk_choices(rows))
     if (n_risk > 0) {
-      scope <- if (nzchar(sub_key) && !identical(sub_key, "__custom__")) "所選子作業" else "本循環"
+      scope <- if (nzchar(sub_key)) "所選子作業" else "本循環"
       div(class = "alert alert-success py-1 mb-2 small",
           sprintf("%s已載入 %d 個建議風險因素，可複選或手動新增。", scope, n_risk))
     } else {
@@ -1021,17 +1025,17 @@ server <- function(input, output, session) {
     }
   })
 
-  output$design_sub_hint <- renderUI({
+  output$sub_process_hint <- renderUI({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return(NULL)
     rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
     n_sub <- length(cascade_sub_process_choices(rows))
     if (n_sub > 0) {
       div(class = "alert alert-success py-1 mb-2 small",
-          sprintf("「%s」已載入 %d 個建議子作業，可從上方選單選取（選後自動帶入編號／名稱）。", cy, n_sub))
+          sprintf("「%s」已載入 %d 個建議子作業，可從子作業名稱選取（選後自動帶入編號）。", cy, n_sub))
     } else {
       div(class = "alert alert-secondary py-1 mb-2 small",
-          sprintf("「%s」暫無建議子作業，請選「自訂」並於下方手動填寫。", cy))
+          sprintf("「%s」暫無建議子作業，請直接輸入子作業名稱。", cy))
     }
   })
   output$pbc_cycle_readonly <- renderUI({
@@ -1054,12 +1058,32 @@ server <- function(input, output, session) {
     )
   }
 
+  refresh_sub_process_choices <- function() {
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) {
+      updateSelectizeInput(session, "sub_process", choices = character(), server = TRUE, selected = "")
+      return()
+    }
+    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    ch <- cascade_sub_process_choices(rows)
+    cur <- trimws(input$sub_process %||% "")
+    spid <- trimws(input$sub_process_id %||% "")
+    if (nzchar(cur) && !grepl("\\|\\|", cur, fixed = FALSE) && nzchar(spid)) {
+      k <- sub_process_key(spid, cur)
+      if (nzchar(k) && k %in% unname(ch)) cur <- k
+    }
+    if (nzchar(cur) && !cur %in% unname(ch)) {
+      ch <- c(ch, stats::setNames(cur, sub_process_choice_label(cur)))
+    }
+    updateSelectizeInput(session, "sub_process", choices = ch, server = TRUE, selected = cur)
+  }
+
   refresh_risk_factor_choices <- function() {
     cy <- input$cycle %||% ""
-    sub_key <- input$design_sub %||% ""
+    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
     rows <- if (nzchar(cy)) {
       r <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
-      if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      if (nzchar(sub_key)) {
         r <- filter_cascade_rows(r, sub_key = sub_key)
       }
       r
@@ -1179,6 +1203,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$cycle, {
     refresh_pbc_choices()
+    refresh_sub_process_choices()
     refresh_risk_factor_choices()
   }, ignoreNULL = FALSE)
 
@@ -1189,48 +1214,29 @@ server <- function(input, output, session) {
 
   observe({
     cy <- input$cycle %||% ""
-    if (!nzchar(cy)) {
-      updateSelectInput(session, "design_sub",
-                        choices = c("請先於側邊欄選擇循環…" = ""), selected = "")
-      return()
-    }
-    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
-    ch_sub <- cascade_sub_process_choices(rows)
-    label0 <- if (length(ch_sub)) {
-      sprintf("選擇建議子作業…（本循環 %d）", length(ch_sub))
-    } else {
-      "本循環暫無建議子作業（請下方手動填寫）"
-    }
-    ch <- c(stats::setNames("", label0), ch_sub, "＋自訂（手動填寫）" = "__custom__")
-    cur <- input$design_sub %||% ""
-    sel <- if (nzchar(cur) && cur %in% unname(ch)) cur else ""
-    # 若編號／名稱已手動填寫且與選單不符，維持自訂
-    spid <- trimws(input$sub_process_id %||% "")
-    spn <- trimws(input$sub_process %||% "")
-    if (!nzchar(sel) && (nzchar(spid) || nzchar(spn))) {
-      sel <- if ("__custom__" %in% unname(ch)) "__custom__" else ""
-    }
-    updateSelectInput(session, "design_sub", choices = ch, selected = sel)
+    input$sub_process
+    refresh_sub_process_choices()
   })
 
-  observeEvent(input$design_sub, {
-    sub_key <- input$design_sub %||% ""
-    if (!nzchar(sub_key) || identical(sub_key, "__custom__")) {
+  observeEvent(input$sub_process, {
+    val <- trimws(input$sub_process %||% "")
+    if (!nzchar(val)) {
       refresh_risk_factor_choices()
       return()
     }
-    sp <- parse_sub_process_key(sub_key)
-    updateTextInput(session, "sub_process_id", value = sp$id)
-    updateTextInput(session, "sub_process", value = sp$name)
+    if (grepl("\\|\\|", val, fixed = FALSE)) {
+      sp <- parse_sub_process_key(val)
+      updateTextInput(session, "sub_process_id", value = sp$id)
+    }
     refresh_risk_factor_choices()
   }, ignoreInit = TRUE)
 
   observeEvent(input$risk_factor, {
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return()
-    sub_key <- input$design_sub %||% ""
+    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
     rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
-    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+    if (nzchar(sub_key)) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
     }
     sel <- input$risk_factor %||% character()
@@ -1318,7 +1324,8 @@ server <- function(input, output, session) {
   })
   observe({
     input$cycle
-    input$design_sub
+    input$sub_process
+    input$sub_process_id
     refresh_risk_factor_choices()
   })
   observe({
@@ -1446,11 +1453,13 @@ server <- function(input, output, session) {
       },
       "子作業編號" = function() {
         updateTextInput(session, "sub_process_id", value = val)
-        updateSelectInput(session, "design_sub", selected = "__custom__")
+        refresh_sub_process_choices()
+        refresh_risk_factor_choices()
       },
       "子作業名稱" = function() {
-        updateTextInput(session, "sub_process", value = val)
-        updateSelectInput(session, "design_sub", selected = "__custom__")
+        updateSelectizeInput(session, "sub_process", selected = val)
+        refresh_sub_process_choices()
+        refresh_risk_factor_choices()
       },
       "風險因素" = function() {
         sel <- parse_risk_factor_values(val)
@@ -1786,8 +1795,12 @@ server <- function(input, output, session) {
         cc <- trimws(input$cycle_code %||% "")
         if (nzchar(cc)) cc else cycle_code_for(input$cycle %||% "")
       },
-      sub_process_id = trimws(input$sub_process_id %||% ""),
-      sub_process = trimws(input$sub_process %||% ""),
+      sub_process_id = {
+        sp_val <- trimws(input$sub_process %||% "")
+        id <- trimws(input$sub_process_id %||% "")
+        if (nzchar(id)) id else sub_process_id_from_value(sp_val)
+      },
+      sub_process = sub_process_name_from_value(input$sub_process %||% ""),
       risk_factor = rf_tag,
       risk_name = rf_tag,
       risk_description = trimws(input$risk_description %||% ""),

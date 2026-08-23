@@ -127,6 +127,44 @@ parse_sub_process_key <- function(key) {
   list(id = parts[[1]] %||% "", name = if (length(parts) > 1) parts[[2]] else "")
 }
 
+# 子作業名稱 selectize：值可為 key（id||name）或自訂名稱
+sub_process_filter_key <- function(spid, spn) {
+  spn <- trimws(as.character(spn %||% ""))
+  spid <- trimws(as.character(spid %||% ""))
+  if (grepl("\\|\\|", spn, fixed = FALSE)) return(spn)
+  key <- sub_process_key(spid, spn)
+  if (nzchar(spid) || nzchar(spn)) key else ""
+}
+
+sub_process_name_from_value <- function(val) {
+  val <- trimws(as.character(val %||% ""))
+  if (!nzchar(val)) return("")
+  if (grepl("\\|\\|", val, fixed = FALSE)) parse_sub_process_key(val)$name else val
+}
+
+sub_process_id_from_value <- function(val, fallback_id = "") {
+  val <- trimws(as.character(val %||% ""))
+  fb <- trimws(as.character(fallback_id %||% ""))
+  if (grepl("\\|\\|", val, fixed = FALSE)) {
+    sp <- parse_sub_process_key(val)
+    if (nzchar(sp$id)) sp$id else fb
+  } else {
+    fb
+  }
+}
+
+sub_process_choice_label <- function(key) {
+  key <- trimws(as.character(key %||% ""))
+  if (!nzchar(key)) return("")
+  if (grepl("\\|\\|", key, fixed = FALSE)) {
+    sp <- parse_sub_process_key(key)
+    if (nzchar(sp$id) && nzchar(sp$name)) return(sprintf("%s｜%s", sp$id, sp$name))
+    if (nzchar(sp$id)) return(sp$id)
+    return(sp$name)
+  }
+  key
+}
+
 activity_key <- function(activity, approach) {
   sprintf("%s||%s", nzchar_trim(activity), normalize_single_activity_type(approach))
 }
@@ -251,14 +289,15 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
   })
   updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
-  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
   sp_key <- sub_process_key(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "")
-  if (nzchar(sp_key)) {
-    updateSelectInput(session, "design_sub", selected = sp_key)
-  } else if (nzchar(trimws(ctrl$sub_process_id %||% "")) ||
-             nzchar(trimws(ctrl$sub_process %||% ""))) {
-    updateSelectInput(session, "design_sub", selected = "__custom__")
+  sp_sel <- if (nzchar(sp_key) &&
+               nzchar(trimws(ctrl$sub_process_id %||% "")) &&
+               nzchar(trimws(ctrl$sub_process %||% ""))) {
+    sp_key
+  } else {
+    trimws(ctrl$sub_process %||% "")
   }
+  updateSelectizeInput(session, "sub_process", selected = sp_sel)
   rf_sel <- risk_factor_selection_from_ctrl(ctrl)
   updateSelectizeInput(session, "risk_factor", selected = rf_sel)
   updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")

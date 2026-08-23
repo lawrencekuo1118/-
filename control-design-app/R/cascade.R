@@ -194,7 +194,7 @@ risk_factor_tag <- function(x) {
   if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
 }
 
-# Apply library / RCM control into cascade wizard (single source for core design fields)
+# Apply library / RCM control cycle (form fields filled by apply_supplement_from_ctrl)
 apply_ctrl_to_cascade <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
   if (nzchar(ctrl$cycle %||% "")) {
@@ -204,31 +204,6 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
                       cc <- trimws(ctrl$cycle_code %||% "")
                       if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle)
                     })
-  }
-  spid <- ctrl$sub_process_id %||% ""
-  spn <- ctrl$sub_process %||% ""
-  if (nzchar(spid) || nzchar(spn)) {
-    updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
-    updateTextInput(session, "sub_process_id", value = spid)
-    updateTextInput(session, "sub_process", value = spn)
-  }
-  rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
-  if (nzchar(rf)) {
-    updateSelectInput(session, "cascade_risk", selected = rf)
-  }
-  if (nzchar(ctrl$control_objective %||% "")) {
-    updateSelectInput(session, "cascade_objective", selected = ctrl$control_objective)
-  }
-  act <- ctrl$control_activity %||% ""
-  if (nzchar(act)) {
-    updateSelectInput(
-      session, "cascade_activity",
-      selected = activity_key(act, ctrl$approach %||% ctrl$control_activity_type)
-    )
-  }
-  iuc <- trimws(ctrl$iuc %||% ctrl$iuc_or_system %||% "")
-  if (nzchar(iuc)) {
-    updateSelectInput(session, "cascade_iuc", selected = iuc)
   }
   invisible(ctrl)
 }

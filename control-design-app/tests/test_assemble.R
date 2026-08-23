@@ -387,8 +387,8 @@ check(length(filter_controls_by_cycle_sub(lib_iv, cycle = "銷售循環")) == 0L
 check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
       "訪談焦點含預期風險／目標／活動")
 check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
-        grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
-      "訪談與風險控制點設計皆為「引導（依序選取）」左欄標題")
+        !grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
+      "訪談保留引導；風險控制點設計已移除引導設計區塊")
 app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
 check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
         grepl("interview_design_groups", app_txt) &&
@@ -601,10 +601,15 @@ check(length(cascade_sub_process_choices(
   library_controls_flat(empty_user, cycle = "生產循環")
 )) >= 1L, "空使用者庫時生產循環仍可直接選子作業")
 app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
-check(grepl("cascade_source_library", app_casc) && grepl("毋須匯入底稿", app_casc),
-      "引導候選採內建來源且文案不要求先匯入底稿")
-check(!grepl("請至「範本庫」匯入 CSV／JSON／RCM xlsx", app_casc),
-      "引導候選不再要求先匯入底稿才能選")
+check(grepl("cascade_source_library", app_casc),
+      "訪談引導仍採內建範本庫候選")
+check(!grepl('selectInput\\(\\s*"cascade_sub"', app_casc) &&
+        !grepl('selectInput\\(\\s*"cascade_risk"', app_casc) &&
+        !grepl("save_custom_cascade", app_casc) &&
+        !grepl("cascade_step_status", app_casc),
+      "風險控制點設計已移除依序引導下拉與狀態列")
+check(grepl('card_header\\(\\s*"風險控制點設計"\\)', app_casc),
+      "風險控制點設計左欄標題改為表單設計")
 it_risks <- cascade_risk_choices(it_rows)
 check(length(it_risks) >= 10, sprintf("資訊循環風險因素候選至少 10（實際 %d）", length(it_risks)))
 check(!any(grepl("\\[|\\]", names(it_risks))), "風險因素選項標籤不含[]")

@@ -260,7 +260,7 @@ ui <- page_navbar(
         tags$li(tags$strong("風險控制點設計"), "：",
                 tags$span(class = "text-danger", "須先選側邊欄循環"),
                 "，於表單填寫 ",
-                strong("基本資料 → 風險辨識 → 控制設計"),
+                strong("基礎設定 → 風險辨識 → 控制設計"),
                 "（子作業、風險、控制目標／活動、IUC 等；",
                 tags$span(class = "text-danger", "*"), " 為設計必填）。"),
         tags$li("可自 ", strong("範本庫"), " 或 ", strong("參數庫"), " 套用欄位，再覆寫調整。"),
@@ -386,9 +386,9 @@ ui <- page_navbar(
         card_header("風險控制點設計"),
         accordion(
           id = "rcm_design_groups",
-          open = c("基本資料", "風險辨識", "控制設計"),
+          open = c("基礎設定", "風險辨識", "控制設計"),
           accordion_panel(
-            "基本資料",
+            "基礎設定",
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定（全域共用）。此處填寫／覆寫子作業編號、名稱與控制編號。"),
             uiOutput("design_cycle_readonly"),

@@ -393,7 +393,7 @@ app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collap
 check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
         grepl("interview_design_groups", app_txt) &&
         grepl("rcm_design_groups", app_txt) &&
-        grepl('accordion_panel\\(\\s*"基本資料"', app_txt) &&
+        grepl('accordion_panel\\(\\s*"基礎設定"', app_txt) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
         grepl("interview_paragraph", app_txt),
@@ -707,8 +707,8 @@ check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
       "標題列隱藏範本庫／參數庫（改由側邊欄進入）")
 check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
-check(!grepl('selectInput\\(\\s*"cycle".*基本資料|accordion_panel\\(\\s*"基本資料"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
-      "基本資料 accordion 內無循環名稱選框")
+check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|accordion_panel\\(\\s*"基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
+      "基礎設定 accordion 內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
 check(grepl("範本套用", app_src) && grepl("未套用範本", app_src) &&
         !grepl("從範本庫套用（可跳過）", app_src) &&

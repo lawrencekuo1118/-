@@ -148,15 +148,18 @@ ui <- page_navbar(
         '.lib-options-actions { clear: both; width: 100%%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }',
         '.sidebar-lib-block .shiny-input-container { margin-bottom: 0.5rem; }',
         '.sidebar-lib-block .form-check { margin-top: 0.5rem; margin-bottom: 0.25rem; }',
-        '.home-hero { background: linear-gradient(135deg, #000000 0%%, #002E82 70%%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); }',
+        '.home-hero { background: linear-gradient(135deg, #000000 0%%, #002E82 70%%); color: #fff; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border-bottom: 4px solid var(--brand-green); height: auto !important; overflow: visible !important; }',
         '.home-hero h2 { color: #fff; font-weight: 700; margin: 0 0 0.5rem 0; }',
         '.home-hero p { color: rgba(255,255,255,0.88); margin: 0; }',
+        '.home-page { display: flex; flex-direction: column; gap: 1rem; height: auto !important; min-height: 0; overflow: visible !important; }',
+        '.home-page .card, .home-page .bslib-card, .home-page .home-section { height: auto !important; max-height: none !important; min-height: 0 !important; flex: 0 0 auto !important; overflow: visible !important; }',
+        '.home-page .card-body, .home-page .bslib-card .card-body { height: auto !important; max-height: none !important; overflow: visible !important; flex: none !important; }',
         '.home-section h5 { color: var(--brand-blue); font-weight: 700; border-left: 4px solid var(--brand-green); padding-left: 0.6rem; margin-bottom: 0.75rem; }',
         '.home-steps { list-style: none; padding-left: 0; counter-reset: step; }',
-        '.home-steps li { counter-increment: step; position: relative; padding: 0.55rem 0.75rem 0.55rem 2.6rem; margin-bottom: 0.4rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; }',
-        '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
-        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }',
-        '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 0.85rem 1rem; background: #fff; }',
+        '.home-steps li { counter-increment: step; position: relative; padding: 0.75rem 1rem 0.75rem 2.75rem; margin-bottom: 0.55rem; background: #F7F9FC; border-radius: 0.35rem; border: 1px solid #E5E5E5; height: auto; overflow: visible; white-space: normal; }',
+        '.home-steps li::before { content: counter(step); position: absolute; left: 0.55rem; top: 0.7rem; width: 1.5rem; height: 1.5rem; border-radius: 50%%; background: var(--brand-green); color: #000; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }',
+        '.home-tabs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.85rem; align-items: stretch; }',
+        '.home-tab-card { border: 1px solid #E5E5E5; border-top: 3px solid var(--brand-green); border-radius: 0.4rem; padding: 1rem 1.1rem; background: #fff; height: auto !important; min-height: 0; overflow: visible; white-space: normal; }',
         '.home-tab-card strong { color: var(--brand-blue); display: block; margin-bottom: 0.35rem; }'
       ].join('\\n');
       document.head.appendChild(style);
@@ -188,16 +191,19 @@ ui <- page_navbar(
   ),
   nav_panel(
     "首頁",
+    fillable = FALSE,
     div(
-      class = "home-hero",
-      tags$h2("尬電SOX"),
-      p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。",
-        " RCM 標題列對齊鯨鏈資訊循環格式；設計採強制引導流程。")
-    ),
-    layout_columns(
-      col_widths = c(7, 5),
+      class = "home-page",
+      div(
+        class = "home-hero",
+        tags$h2("尬電SOX"),
+        p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。",
+          " RCM 標題列對齊鯨鏈資訊循環格式；設計採強制引導流程。")
+      ),
       card(
         class = "home-section",
+        full_screen = FALSE,
+        fill = FALSE,
         card_header("整體設計流程"),
         tags$ol(
           class = "home-steps mb-0",
@@ -220,6 +226,8 @@ ui <- page_navbar(
       ),
       card(
         class = "home-section",
+        full_screen = FALSE,
+        fill = FALSE,
         card_header("設計必填與防呆"),
         tags$ul(
           class = "mb-2 ps-3",
@@ -239,47 +247,51 @@ ui <- page_navbar(
           "本 APP 僅產出設計欄位；控制現況描述／分析評估等後續欄位留空。",
           "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
           "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
+      ),
+      card(
+        class = "home-section",
+        full_screen = FALSE,
+        fill = FALSE,
+        card_header("各頁籤用途"),
+        div(
+          class = "home-tabs-grid",
+          div(class = "home-tab-card",
+              strong("訪談問項設計"),
+              "循環／子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
+          div(class = "home-tab-card",
+              strong("風險控制點設計"),
+              "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
+          div(class = "home-tab-card",
+              strong("控制點測試設計"),
+              "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
+          div(class = "home-tab-card",
+              strong("範本庫"),
+              "可跳過套用；寫入／直接編輯需左側高權登入。"),
+          div(class = "home-tab-card",
+              strong("參數庫"),
+              "查詢／套用表單；新增刪除／重建需高權登入。"),
+          div(class = "home-tab-card",
+              strong("PBC資料庫"),
+              "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
+          div(class = "home-tab-card",
+              strong("RCM"),
+              "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
+        )
+      ),
+      card(
+        class = "home-section",
+        full_screen = FALSE,
+        fill = FALSE,
+        card_header("建議操作順序"),
+        p(class = "mb-1",
+          "① 首頁了解流程 → ② ",
+          strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
+          strong("訪談問項設計"), "／", strong("控制點測試設計"),
+          " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
+          " → ⑥ 需要時開啟 ", strong("範本庫"), "／", strong("參數庫"), "（側邊欄入口；範本套用可跳過）。"),
+        p(class = "small text-muted mb-0",
+          "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
       )
-    ),
-    card(
-      class = "home-section",
-      card_header("各頁籤用途"),
-      div(
-        class = "home-tabs-grid",
-        div(class = "home-tab-card",
-            strong("訪談問項設計"),
-            "循環／子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
-        div(class = "home-tab-card",
-            strong("風險控制點設計"),
-            "基本資料（循環／子作業／控制編號）＋引導選取＋風險辨識＋控制設計；定稿寫入 RCM。"),
-        div(class = "home-tab-card",
-            strong("控制點測試設計"),
-            "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
-        div(class = "home-tab-card",
-            strong("範本庫"),
-            "可跳過套用；寫入／直接編輯需左側高權登入。"),
-        div(class = "home-tab-card",
-            strong("參數庫"),
-            "查詢／套用表單；新增刪除／重建需高權登入。"),
-        div(class = "home-tab-card",
-            strong("PBC資料庫"),
-            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
-        div(class = "home-tab-card",
-            strong("RCM"),
-            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。")
-      )
-    ),
-    card(
-      class = "home-section",
-      card_header("建議操作順序"),
-      p(class = "mb-1",
-        "① 首頁了解流程 → ② ",
-        strong("風險控制點設計"), "（基本資料／引導／風險辨識／控制設計）→ ③ 定稿 → ④ ",
-        strong("訪談問項設計"), "／", strong("控制點測試設計"),
-        " → ⑤ ", strong("PBC資料庫"), "／", strong("RCM"),
-        " → ⑥ 需要時開啟 ", strong("範本庫"), "／", strong("參數庫"), "（側邊欄入口；範本套用可跳過）。"),
-      p(class = "small text-muted mb-0",
-        "測試步驟欄位填於「控制點測試設計」，定稿時會一併寫入控制點草稿。")
     )
   ),
   nav_panel(

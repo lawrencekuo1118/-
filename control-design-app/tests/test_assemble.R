@@ -676,7 +676,12 @@ check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
 
 # 風險辨識區塊：風險因素、風險描述、風險類別、RoMM 分類
-check(grepl('accordion_panel\\(\\s*"風險辨識"', app_src), "有風險辨識 accordion")
+check(grepl('accordion_panel\\(\\s*"控制設計"', app_src) &&
+        grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&
+        grepl('textAreaInput\\(\\s*"control_activity"', app_src) &&
+        grepl('selectInput\\(\\s*"approach"', app_src) &&
+        grepl('selectInput\\(\\s*"nature"', app_src),
+      "控制設計區塊含控制目標／活動／預防偵測／人工自動")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")

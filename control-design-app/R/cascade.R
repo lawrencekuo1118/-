@@ -269,6 +269,24 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
                        })
   updateTextInput(session, "related_document",
                   value = ctrl$related_document %||% ctrl$outputs %||% "")
+  updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
+  updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
+  at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
+  ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  if (nzchar(at)) updateSelectInput(session, "approach", selected = at)
+  if (nzchar(ct)) updateSelectInput(session, "nature", selected = ct)
+  freq <- resolve_control_frequency(ct, ctrl$frequency %||% "")
+  if (nzchar(freq)) {
+    if (!(freq %in% FREQUENCY_CHOICES)) {
+      updateSelectInput(session, "frequency",
+                        choices = unique(c(FREQUENCY_CHOICES, freq)), selected = freq)
+    } else {
+      updateSelectInput(session, "frequency", selected = freq)
+    }
+  }
+  updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
+  updateTextAreaInput(session, "iuc_or_system",
+                      value = ctrl$iuc_or_system %||% ctrl$related_system %||% "")
   detail <- risk_attr_detail_from_ctrl(ctrl)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)
   as_vals <- parse_assertion_values(normalize_assertions_for_category(

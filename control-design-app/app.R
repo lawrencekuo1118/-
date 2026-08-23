@@ -474,6 +474,8 @@ ui <- page_navbar(
           ),
           accordion_panel(
             "控制設計",
+            p(class = "small text-muted mb-2",
+              "控制目標／活動與類型（可與上方引導選取同步，亦可直接覆寫）。"),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
@@ -481,9 +483,46 @@ ui <- page_navbar(
               actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
               actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
             ),
+            textAreaInput(
+              "control_objective", lab_req("控制目標"), rows = 2,
+              placeholder = "Why：欲達成之控制結果（非執行步驟）"
+            ),
+            textAreaInput(
+              "control_activity", lab_req("控制活動"), rows = 3,
+              placeholder = "How：具體執行行為（含誰／何時／如何）"
+            ),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput(
+                "approach", lab_req("控制活動類型"),
+                choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
+                selected = ""
+              ),
+              selectInput(
+                "nature", lab_req("控制類型"),
+                choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
+                selected = ""
+              )
+            ),
+            layout_columns(
+              col_widths = c(6, 6),
+              selectInput(
+                "frequency", lab_req("控制頻率"),
+                choices = c("請選擇…" = "", FREQUENCY_CHOICES),
+                selected = ""
+              ),
+              textInput(
+                "responsible_unit", lab_req("流程負責單位"),
+                value = "", placeholder = "例：資訊安全單位"
+              )
+            ),
             selectizeInput(
               "pbc_apply", "套用 IUC／PBC 命名", choices = NULL, multiple = TRUE,
               options = list(placeholder = "原名→新名")
+            ),
+            textAreaInput(
+              "iuc_or_system", lab_req("IUC／相關系統"), rows = 2,
+              placeholder = "與上方⑥引導選取同步，可覆寫"
             ),
             selectizeInput(
               "assertions", "聲明（Assertions）",
@@ -1260,30 +1299,37 @@ server <- function(input, output, session) {
         )
       },
       "控制目標" = function() {
+        updateTextAreaInput(session, "control_objective", value = val)
         updateTextAreaInput(session, "custom_objective", value = val)
         updateSelectInput(session, "cascade_objective", selected = "__custom__")
       },
       "控制活動" = function() {
+        updateTextAreaInput(session, "control_activity", value = val)
         updateTextAreaInput(session, "custom_activity", value = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "控制類型" = function() {
+        updateSelectInput(session, "nature", selected = val)
         updateSelectInput(session, "custom_nature", selected = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "控制活動類型" = function() {
+        updateSelectInput(session, "approach", selected = val)
         updateSelectInput(session, "custom_approach", selected = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "控制頻率" = function() {
+        updateSelectInput(session, "frequency", selected = val)
         updateSelectInput(session, "custom_frequency", selected = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "流程負責單位" = function() {
+        updateTextInput(session, "responsible_unit", value = val)
         updateTextInput(session, "custom_owner", value = val)
         updateSelectInput(session, "cascade_activity", selected = "__custom__")
       },
       "相關系統／IUC" = function() {
+        updateTextAreaInput(session, "iuc_or_system", value = val)
         updateTextInput(session, "custom_iuc", value = val)
         updateSelectInput(session, "cascade_iuc", selected = "__custom__")
       },
@@ -1593,22 +1639,52 @@ server <- function(input, output, session) {
       romm_classification = input$romm_classification %||% "",
       significant_account = join_significant_accounts(input$significant_account),
       assertions = paste(input$assertions %||% character(), collapse = "；"),
-      control_objective = sel$control_objective,
-      control_activity = sel$control_activity,
-      frequency = resolve_control_frequency(nature, sel$frequency),
-      responsible_unit = sel$responsible_unit,
-      iuc_or_system = sel$iuc_or_system,
-      related_system = sel$iuc_or_system,
+      control_objective = {
+        o <- trimws(input$control_objective %||% "")
+        if (nzchar(o)) o else sel$control_objective
+      },
+      control_activity = {
+        a <- trimws(input$control_activity %||% "")
+        if (nzchar(a)) a else sel$control_activity
+      },
+      frequency = resolve_control_frequency(nature, {
+        f <- trimws(input$frequency %||% "")
+        if (nzchar(f)) f else sel$frequency
+      }),
+      responsible_unit = {
+        u <- trimws(input$responsible_unit %||% "")
+        if (nzchar(u)) u else sel$responsible_unit
+      },
+      iuc_or_system = {
+        i <- trimws(input$iuc_or_system %||% "")
+        if (nzchar(i)) i else sel$iuc_or_system
+      },
+      related_system = {
+        i <- trimws(input$iuc_or_system %||% "")
+        if (nzchar(i)) i else sel$iuc_or_system
+      },
       related_policy = input$related_policy %||% "",
       related_law = {
         v <- input$related_law %||% character(0)
         paste(unique(trimws(as.character(v))), collapse = "；")
       },
       related_document = input$related_document %||% "",
-      nature = nature,
-      approach = approach,
-      control_type = nature,
-      control_activity_type = approach,
+      nature = {
+        n <- normalize_control_type_manual_auto(input$nature)
+        if (nzchar(n)) n else nature
+      },
+      approach = {
+        a <- normalize_control_activity_type_pd(input$approach)
+        if (nzchar(a)) a else approach
+      },
+      control_type = {
+        n <- normalize_control_type_manual_auto(input$nature)
+        if (nzchar(n)) n else nature
+      },
+      control_activity_type = {
+        a <- normalize_control_activity_type_pd(input$approach)
+        if (nzchar(a)) a else approach
+      },
       type = input$type %||% "",
       inputs = input$inputs %||% "",
       review_steps = input$review_steps %||% "",
@@ -1716,6 +1792,22 @@ server <- function(input, output, session) {
       if (!nzchar(owner)) owner <- matched$responsible_unit
       if (!nzchar(approach)) approach <- matched$approach
     }
+
+    # 控制設計 accordion 為可覆寫來源（引導選取會回填）
+    form_obj <- trimws(input$control_objective %||% "")
+    form_act <- trimws(input$control_activity %||% "")
+    form_approach <- normalize_control_activity_type_pd(input$approach)
+    form_nature <- normalize_control_type_manual_auto(input$nature)
+    form_freq <- trimws(input$frequency %||% "")
+    form_owner <- trimws(input$responsible_unit %||% "")
+    form_iuc <- trimws(input$iuc_or_system %||% "")
+    if (nzchar(form_obj)) objective <- form_obj
+    if (nzchar(form_act)) activity <- form_act
+    if (nzchar(form_approach)) approach <- form_approach
+    if (nzchar(form_nature)) nature <- form_nature
+    if (nzchar(form_freq)) frequency <- form_freq
+    if (nzchar(form_owner)) owner <- form_owner
+    if (nzchar(form_iuc)) iuc <- form_iuc
 
     list(
       cycle = input$cycle %||% "",
@@ -1844,6 +1936,105 @@ server <- function(input, output, session) {
     apply_risk_detail_to_inputs(session, rows, rk)
   }, ignoreInit = TRUE)
 
+  # 引導選目標 → 回填控制設計「控制目標」
+  observeEvent(input$cascade_objective, {
+    obj_sel <- input$cascade_objective %||% ""
+    if (!nzchar(obj_sel) || identical(obj_sel, "__custom__")) return()
+    updateTextAreaInput(session, "control_objective", value = obj_sel)
+  }, ignoreInit = TRUE)
+
+  # 引導選活動 → 回填控制設計活動／類型／頻率／負責單位
+  observeEvent(input$cascade_activity, {
+    act_sel <- input$cascade_activity %||% ""
+    if (!nzchar(act_sel) || identical(act_sel, "__custom__")) return()
+    ak <- parse_activity_key(act_sel)
+    updateTextAreaInput(session, "control_activity", value = ak$activity %||% "")
+    ap <- normalize_control_activity_type_pd(ak$approach)
+    if (nzchar(ap)) updateSelectInput(session, "approach", selected = ap)
+    # 自匹配列補齊類型／頻率／負責單位
+    rows <- cascade_rows()
+    sub_key <- input$cascade_sub %||% ""
+    rk <- input$cascade_risk %||% ""
+    obj <- input$cascade_objective %||% ""
+    if (nzchar(sub_key) && !identical(sub_key, "__custom__")) {
+      rows <- filter_cascade_rows(rows, sub_key = sub_key)
+    }
+    if (nzchar(rk) && !identical(rk, "__custom__")) {
+      rows <- filter_cascade_rows(rows, risk_factor = rk)
+    }
+    if (nzchar(obj) && !identical(obj, "__custom__")) {
+      rows <- filter_cascade_rows(rows, objective = obj)
+    }
+    rows <- filter_cascade_rows(rows, activity_key_sel = act_sel)
+    if (length(rows)) {
+      m <- rows[[1]]
+      nt <- normalize_control_type_manual_auto(m$nature)
+      if (nzchar(nt)) updateSelectInput(session, "nature", selected = nt)
+      freq <- resolve_control_frequency(nt, m$frequency %||% "")
+      if (nzchar(freq)) updateSelectInput(session, "frequency", selected = freq)
+      if (nzchar(trimws(m$responsible_unit %||% ""))) {
+        updateTextInput(session, "responsible_unit", value = m$responsible_unit)
+      }
+    }
+  }, ignoreInit = TRUE)
+
+  # 引導選 IUC → 回填控制設計 IUC
+  observeEvent(input$cascade_iuc, {
+    iuc_sel <- input$cascade_iuc %||% ""
+    if (!nzchar(iuc_sel) || identical(iuc_sel, "__custom__")) return()
+    updateTextAreaInput(session, "iuc_or_system", value = iuc_sel)
+  }, ignoreInit = TRUE)
+
+  # 自訂引導欄位 → 同步至控制設計
+  observeEvent(input$custom_objective, {
+    if (!identical(input$cascade_objective, "__custom__")) return()
+    updateTextAreaInput(session, "control_objective",
+                        value = trimws(input$custom_objective %||% ""))
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_activity, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    updateTextAreaInput(session, "control_activity",
+                        value = trimws(input$custom_activity %||% ""))
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_approach, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    ap <- normalize_single_activity_type(input$custom_approach)
+    if (nzchar(ap)) updateSelectInput(session, "approach", selected = ap)
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_nature, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    nt <- normalize_control_type_manual_auto(input$custom_nature)
+    if (nzchar(nt)) updateSelectInput(session, "nature", selected = nt)
+    if (identical(nt, "自動")) {
+      updateSelectInput(session, "custom_frequency", selected = "持續")
+      updateSelectInput(session, "frequency", selected = "持續")
+    }
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_frequency, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    fr <- trimws(input$custom_frequency %||% "")
+    if (nzchar(fr)) updateSelectInput(session, "frequency", selected = fr)
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_owner, {
+    if (!identical(input$cascade_activity, "__custom__")) return()
+    updateTextInput(session, "responsible_unit",
+                    value = trimws(input$custom_owner %||% ""))
+  }, ignoreInit = TRUE)
+  observeEvent(input$custom_iuc, {
+    if (!identical(input$cascade_iuc, "__custom__")) return()
+    updateTextAreaInput(session, "iuc_or_system",
+                        value = trimws(input$custom_iuc %||% ""))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$nature, {
+    if (identical(input$nature, "自動")) {
+      updateSelectInput(session, "frequency", selected = "持續")
+      session$sendCustomMessage("toggleFrequency", list(enabled = FALSE))
+    } else {
+      session$sendCustomMessage("toggleFrequency", list(enabled = TRUE))
+    }
+  }, ignoreNULL = FALSE)
+
   # 引導完成且未手動填編號 → 自動順編；風險類別驅動會計科目／法令／聲明鎖定
   observe({
     sel <- resolve_cascade_selection()
@@ -1898,12 +2089,6 @@ server <- function(input, output, session) {
       updateTextInput(session, "control_id", value = next_rcm_control_id(spid, ids))
     }
   })
-
-  observeEvent(input$custom_nature, {
-    if (identical(input$custom_nature, "自動")) {
-      updateSelectInput(session, "custom_frequency", selected = "持續")
-    }
-  }, ignoreNULL = FALSE)
 
   observe({
     cy <- input$cycle %||% ""
@@ -2190,35 +2375,35 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$oa_swap, {
-    if (identical(input$cascade_objective, "__custom__") &&
-        identical(input$cascade_activity, "__custom__")) {
-      o <- input$custom_objective %||% ""
-      a <- input$custom_activity %||% ""
+    o <- input$control_objective %||% ""
+    a <- input$control_activity %||% ""
+    updateTextAreaInput(session, "control_objective", value = a)
+    updateTextAreaInput(session, "control_activity", value = o)
+    if (identical(input$cascade_objective, "__custom__")) {
       updateTextAreaInput(session, "custom_objective", value = a)
+    }
+    if (identical(input$cascade_activity, "__custom__")) {
       updateTextAreaInput(session, "custom_activity", value = o)
-    } else {
-      showNotification("請於引導④⑤選「自訂新增」後再對調目標/活動", type = "message")
     }
   })
 
   observeEvent(input$oa_split_suggest, {
-    if (identical(input$cascade_objective, "__custom__") &&
-        identical(input$cascade_activity, "__custom__")) {
-      blob <- paste(c(input$custom_objective %||% "", input$custom_activity %||% ""), collapse = "。")
-      sug <- suggest_objective_activity_split(blob)
-      updateTextAreaInput(session, "custom_objective", value = sug$objective)
-      updateTextAreaInput(session, "custom_activity", value = sug$activity)
-      showNotification(sug$note, type = "message")
-    } else {
+    blob <- paste(c(input$control_objective %||% "", input$control_activity %||% ""),
+                  collapse = "。")
+    if (!nzchar(trimws(blob))) {
       d <- current_draft_from_inputs()
-      sug <- suggest_objective_activity_split(
-        paste(c(d$control_objective, d$control_activity), collapse = "。")
-      )
-      showNotification(
-        paste0("目前為範本選取，拆分建議：", sug$note),
-        type = "message", duration = 8
-      )
+      blob <- paste(c(d$control_objective, d$control_activity), collapse = "。")
     }
+    sug <- suggest_objective_activity_split(blob)
+    updateTextAreaInput(session, "control_objective", value = sug$objective)
+    updateTextAreaInput(session, "control_activity", value = sug$activity)
+    if (identical(input$cascade_objective, "__custom__")) {
+      updateTextAreaInput(session, "custom_objective", value = sug$objective)
+    }
+    if (identical(input$cascade_activity, "__custom__")) {
+      updateTextAreaInput(session, "custom_activity", value = sug$activity)
+    }
+    showNotification(sug$note, type = "message")
   })
 
   output$live_validation <- renderUI({

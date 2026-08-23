@@ -854,6 +854,8 @@ check(grepl('objective-assertions-row[\\s\\S]*risk_description', app_src),
       "風險描述寬度與控制目標相同（左欄 50%）")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
+check(grepl('significant_account[\\s\\S]*romm_classification', app_src),
+      "會計科目在 RoMM 分類上方")
 check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),
       "已移除自訂風險獨立輸入（改由風險辨識）")
 check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),

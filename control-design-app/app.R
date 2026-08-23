@@ -451,7 +451,6 @@ ui <- page_navbar(
               choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
               selected = ""
             ),
-            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
             uiOutput("significant_account_hint"),
             selectizeInput(
               "significant_account", "會計科目",
@@ -464,6 +463,7 @@ ui <- page_navbar(
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
+            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
           ),
           accordion_panel(
             "控制設計",

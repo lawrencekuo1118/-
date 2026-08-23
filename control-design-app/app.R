@@ -818,7 +818,7 @@ server <- function(input, output, session) {
     if (!is.null(preview) && length(preview)) {
       pr <- control_to_rcm_row(preview, seq_no = 0L)
       rows[[length(rows) + 1L]] <- pr
-      saved <- c(saved, "預覽中")
+      saved <- c(saved, "")
     }
     if (length(cs)) {
       cs <- rev(cs)
@@ -1908,10 +1908,9 @@ server <- function(input, output, session) {
     bump_rcm_views()
     cols <- rcm_preview_section_columns(section)
     showNotification(
-      sprintf("已預覽「%s」→ RCM 欄位：%s", section, paste(cols, collapse = "、")),
-      type = "message", duration = 6
+      sprintf("已將「%s」資料送至 RCM 表格：%s", section, paste(cols, collapse = "、")),
+      type = "message", duration = 5
     )
-    bslib::nav_select("main_nav", selected = "RCM", session = session)
   }
   observeEvent(input$preview_rcm_basic, {
     push_rcm_section_preview("基礎設定")
@@ -2228,7 +2227,7 @@ server <- function(input, output, session) {
     tags$p(class = "small mb-2",
            sprintf("目前已定稿 %d 個控制點＝%d 列 RCM", parity$n_controls, parity$n_rcm_rows),
            if (!is.null(preview) && length(preview)) {
-             tags$span(class = "text-warning ms-2", "＋ 1 列設計預覽")
+             tags$span(class = "text-muted ms-2", "（含 1 列設計中資料）")
            })
   })
   output$rcm_preview_status <- renderUI({
@@ -2238,8 +2237,8 @@ server <- function(input, output, session) {
     secs <- as.character(preview$rcm_preview_sections %||% character())
     secs <- secs[nzchar(secs)]
     tags$div(
-      class = "alert alert-warning py-2 mb-2 small",
-      tags$strong("設計預覽列（尚未定稿）："),
+      class = "alert alert-secondary py-2 mb-2 small",
+      tags$strong("設計中資料列（尚未定稿）："),
       if (length(secs)) {
         tags$span(class = "ms-1", paste(secs, collapse = "、"))
       },
@@ -2249,7 +2248,7 @@ server <- function(input, output, session) {
       tags$br(),
       tags$span(
         class = "text-muted",
-        "各區塊「預覽」會合併至本列對應欄位；完成設計後按「寫入 RCM 一列」定稿。"
+        "「預覽」會將各區塊資料合併至本表對應欄位；完成設計後按「寫入 RCM 一列」定稿。"
       )
     )
   })
@@ -2484,15 +2483,10 @@ server <- function(input, output, session) {
         ordering = FALSE,
         rowCallback = DT::JS(
           "function(row, data, index) {",
-          "  if (data[0] === '預覽中') {",
-          "    $(row).css({'background-color': '#fff8e1', 'font-weight': '500'});",
-          "    return;",
-          "  }",
           "  var api = $(row).closest('table').DataTable();",
-          "  var prevPreview = index > 0 && api.row(0).data()[0] === '預覽中';",
-          "  if ((!prevPreview && index === 0) || (prevPreview && index === 1)) {",
-          "    $(row).css({'background-color': '#e8f5e9', 'font-weight': '500'});",
-          "  }",
+          "  var draftFirst = api.rows().count() > 0 && (api.row(0).data()[0] === '' || api.row(0).data()[0] == null);",
+          "  var hi = draftFirst ? 1 : 0;",
+          "  if (index === hi) $(row).css({'background-color': '#e8f5e9', 'font-weight': '500'});",
           "}"
         )
       )

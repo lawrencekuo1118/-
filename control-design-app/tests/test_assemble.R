@@ -749,6 +749,18 @@ check(!is.null(fin$control$saved_at) && nzchar(fin$control$saved_at),
 check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&
         length(gregexpr("各頁籤用途", app_src, fixed = TRUE)[[1]]) == 1,
       "整體設計流程／各頁籤用途僅在首頁")
+{
+  home_start <- regexpr('nav_panel\\(\\s*"首頁"', app_src, perl = TRUE)[1]
+  home_end <- regexpr('nav_panel\\(\\s*"訪談問項設計"', app_src, perl = TRUE)[1]
+  home_chunk <- substr(app_src, home_start, home_end - 1L)
+  other_chunk <- substr(app_src, home_end, nchar(app_src))
+  check(grepl("整體設計流程", home_chunk, fixed = TRUE) &&
+          grepl("各頁籤用途", home_chunk, fixed = TRUE),
+        "整體設計流程／各頁籤用途位於首頁 nav_panel 內")
+  check(!grepl("整體設計流程", other_chunk, fixed = TRUE) &&
+          !grepl("各頁籤用途", other_chunk, fixed = TRUE),
+        "其他頁籤不含整體設計流程／各頁籤用途")
+}
 check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),

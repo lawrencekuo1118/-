@@ -194,7 +194,7 @@ risk_factor_tag <- function(x) {
   if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
 }
 
-# Apply library / RCM control into cascade wizard (single source for core design fields)
+# Apply library / RCM control cycle (form fields filled by apply_supplement_from_ctrl)
 apply_ctrl_to_cascade <- function(session, ctrl) {
   ctrl <- as.list(ctrl)
   if (nzchar(ctrl$cycle %||% "")) {
@@ -204,31 +204,6 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
                       cc <- trimws(ctrl$cycle_code %||% "")
                       if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle)
                     })
-  }
-  spid <- ctrl$sub_process_id %||% ""
-  spn <- ctrl$sub_process %||% ""
-  if (nzchar(spid) || nzchar(spn)) {
-    updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
-    updateTextInput(session, "sub_process_id", value = spid)
-    updateTextInput(session, "sub_process", value = spn)
-  }
-  rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
-  if (nzchar(rf)) {
-    updateSelectInput(session, "cascade_risk", selected = rf)
-  }
-  if (nzchar(ctrl$control_objective %||% "")) {
-    updateSelectInput(session, "cascade_objective", selected = ctrl$control_objective)
-  }
-  act <- ctrl$control_activity %||% ""
-  if (nzchar(act)) {
-    updateSelectInput(
-      session, "cascade_activity",
-      selected = activity_key(act, ctrl$approach %||% ctrl$control_activity_type)
-    )
-  }
-  iuc <- trimws(ctrl$iuc %||% ctrl$iuc_or_system %||% "")
-  if (nzchar(iuc)) {
-    updateSelectInput(session, "cascade_iuc", selected = iuc)
   }
   invisible(ctrl)
 }
@@ -270,12 +245,12 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
                          if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
                        })
   doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-  if (!length(doc_ids) && is.data.frame(pbc_registry) && nrow(pbc_registry)) {
-    doc_ids <- match_pbc_ids_from_text(
-      pbc_registry, ctrl$related_document %||% ctrl$outputs %||% ""
-    )
-  }
-  updateSelectizeInput(session, "related_document_pbc", selected = doc_ids)
+  doc_sel <- expand_pbc_selection(
+    ctrl$related_document %||% ctrl$outputs %||% "",
+    pbc_registry,
+    stored_ids = doc_ids
+  )
+  updateSelectizeInput(session, "related_document_pbc", selected = doc_sel)
   updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
   updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
@@ -292,8 +267,13 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     }
   }
   updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
-  updateTextAreaInput(session, "iuc",
-                      value = ctrl$iuc %||% ctrl$iuc_or_system %||% "")
+  updateSelectizeInput(
+    session, "iuc",
+    selected = expand_pbc_selection(
+      ctrl$iuc %||% ctrl$iuc_or_system %||% "",
+      pbc_registry
+    )
+  )
   updateTextInput(session, "related_system", value = ctrl$related_system %||% "")
   detail <- risk_attr_detail_from_ctrl(ctrl)
   updateTextAreaInput(session, "risk_attr_detail", value = detail)

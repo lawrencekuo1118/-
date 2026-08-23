@@ -26,7 +26,7 @@ DESIGN_ELEMENTS <- c(
 
 # IUC 與 相關系統為獨立欄位；iuc_or_system 保留向後相容（僅對應 IUC）
 ctrl_iuc_value <- function(ctrl) {
-  trimws(as.character(ctrl$iuc %||% ctrl$iuc_or_system %||% ""))
+  join_text_list_values(ctrl$iuc %||% ctrl$iuc_or_system %||% "")
 }
 
 ctrl_related_system_value <- function(ctrl) {
@@ -1396,6 +1396,56 @@ DESIGN_REQUIRED_FIELDS <- c(
   iuc_or_system = "IUC（控制執行取得之文件／資訊）"
 )
 
+DESIGN_ACCORDION_SECTIONS <- c("基礎設定", "風險辨識", "控制設計")
+
+empty_missing_by_group <- function() {
+  stats::setNames(
+    rep(list(character()), length(DESIGN_ACCORDION_SECTIONS)),
+    DESIGN_ACCORDION_SECTIONS
+  )
+}
+
+design_field_section <- function(field_key) {
+  if (field_key %in% c("cycle", "sub_process_id", "sub_process")) return("基礎設定")
+  if (field_key %in% c("risk_factor", "risk_description", "risk_category")) return("風險辨識")
+  "控制設計"
+}
+
+format_design_required_by_accordion <- function(missing_by_group = NULL, missing_fallback = character()) {
+  groups <- missing_by_group
+  if (is.null(groups) || !length(unlist(groups))) {
+    groups <- group_design_required_missing(missing_fallback)
+  }
+  lines <- character()
+  for (sec in DESIGN_ACCORDION_SECTIONS) {
+    items <- unique(groups[[sec]] %||% character())
+    items <- items[nzchar(items)]
+    if (length(items)) {
+      lines <- c(lines, sprintf("%s：%s", sec, paste(items, collapse = "、")))
+    }
+  }
+  if (!length(lines) && length(missing_fallback)) {
+    return(paste0("必填未齊：", paste(unique(missing_fallback), collapse = "、")))
+  }
+  paste(lines, collapse = "｜")
+}
+
+group_design_required_missing <- function(missing_labels) {
+  groups <- empty_missing_by_group()
+  for (lab in unique(missing_labels)) {
+    if (!nzchar(lab)) next
+    sec <- if (lab %in% c("循環名稱", "子作業編號", "子作業名稱")) {
+      "基礎設定"
+    } else if (grepl("^風險|^會計科目|^相關法令", lab)) {
+      "風險辨識"
+    } else {
+      "控制設計"
+    }
+    groups[[sec]] <- c(groups[[sec]], lab)
+  }
+  lapply(groups, unique)
+}
+
 DESIGN_OPTIONAL_FIELDS <- c(
   significant_account = "會計科目（僅報導面必填；常見科目複選／全部適用；其他類別不可填）",
   related_law = "相關法令（僅遵循面必填；其他類別不可填）",
@@ -1403,7 +1453,7 @@ DESIGN_OPTIONAL_FIELDS <- c(
   related_policy = "相關政策或程序",
   related_system = "相關系統（IT／應用系統；自動控制必填）",
   related_document_pbc = paste0(
-    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（須自 PBC 資料庫選取；自動控制／遵循面不可填）"
+    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 資料庫選取或手動輸入；自動控制／遵循面不可填）"
   )
 )
 
@@ -1433,11 +1483,13 @@ related_document_mode_for_ctrl <- function(ctrl) {
 }
 
 related_document_pbc_value <- function(ctrl, registry = NULL) {
-  ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-  if (length(ids) && is.data.frame(registry) && nrow(registry)) {
-    return(apply_pbc_to_related_document(registry, ids))
-  }
-  trimws(as.character(ctrl$related_document %||% ""))
+  txt <- join_text_list_values(ctrl$related_document %||% "")
+  if (nzchar(txt)) return(txt)
+  sel <- c(
+    parse_pbc_id_values(ctrl$related_document_pbc_ids),
+    parse_text_list_values(ctrl$related_document_manual %||% "")
+  )
+  resolve_multi_pbc_text(sel, registry)
 }
 
 is_reporting_risk_category <- function(cat) {
@@ -1599,26 +1651,33 @@ design_field_value <- function(ctrl, field) {
   trimws(as.character(ctrl[[field]] %||% ""))
 }
 
-# Returns ok + missing Chinese labels for 設計必填欄位
+# Returns ok + missing Chinese labels for 設計必填欄位（含 accordion 分組）
 design_required_check <- function(ctrl) {
   missing <- character()
+  missing_by_group <- empty_missing_by_group()
+  add_miss <- function(label, section) {
+    missing <<- c(missing, label)
+    missing_by_group[[section]] <<- c(missing_by_group[[section]], label)
+  }
   filled <- list()
   for (f in names(DESIGN_REQUIRED_FIELDS)) {
     val <- design_field_value(ctrl, f)
     filled[[f]] <- nzchar(val)
-    if (!nzchar(val)) missing <- c(missing, DESIGN_REQUIRED_FIELDS[[f]])
+    if (!nzchar(val)) {
+      add_miss(DESIGN_REQUIRED_FIELDS[[f]], design_field_section(f))
+    }
   }
   # Extra rule: nature must be exactly one 人工/自動
   raw_nature <- trimws(as.character(ctrl$nature %||% ctrl$control_type %||% ""))
   norm_nature <- normalize_control_type_manual_auto(raw_nature)
   if (nzchar(raw_nature) && !nzchar(norm_nature)) {
-    missing <- c(missing, "控制類型須為單一人工或自動（不可混用）")
+    add_miss("控制類型須為單一人工或自動（不可混用）", "控制設計")
     filled$nature <- FALSE
   }
   # Extra rule: approach must be exactly one 預防/偵測
   if (isTRUE(filled$approach) && exists("activity_type_ok", mode = "function") &&
       !activity_type_ok(ctrl$approach %||% ctrl$control_activity_type)) {
-    missing <- c(missing, "控制活動類型須為單一預防／偵測（不可混用）")
+    add_miss("控制活動類型須為單一預防／偵測（不可混用）", "控制設計")
     filled$approach <- FALSE
   }
   # 會計科目：報導面必填；其他類別不得填入（僅允許空白／NA）
@@ -1627,12 +1686,12 @@ design_required_check <- function(ctrl) {
   if (is_reporting_risk_category(cat)) {
     filled$significant_account <- account_is_filled(acct)
     if (!account_is_filled(acct)) {
-      missing <- c(missing, "會計科目（報導面必填）")
+      add_miss("會計科目（報導面必填）", "風險辨識")
     }
   } else if (nzchar(cat)) {
     filled$significant_account <- !account_is_filled(acct)
     if (account_is_filled(acct)) {
-      missing <- c(missing, "會計科目僅報導面可填（請清空）")
+      add_miss("會計科目僅報導面可填（請清空）", "風險辨識")
     }
   } else {
     filled$significant_account <- TRUE
@@ -1642,12 +1701,12 @@ design_required_check <- function(ctrl) {
   if (is_compliance_risk_category(cat)) {
     filled$related_law <- law_is_filled(law)
     if (!law_is_filled(law)) {
-      missing <- c(missing, "相關法令（遵循面必填）")
+      add_miss("相關法令（遵循面必填）", "風險辨識")
     }
   } else if (nzchar(cat)) {
     filled$related_law <- !law_is_filled(law)
     if (law_is_filled(law)) {
-      missing <- c(missing, "相關法令僅遵循面可填（請清空）")
+      add_miss("相關法令僅遵循面可填（請清空）", "風險辨識")
     }
   } else {
     filled$related_law <- TRUE
@@ -1658,35 +1717,41 @@ design_required_check <- function(ctrl) {
   if (identical(mode_as, "locked")) {
     filled$assertions <- !length(asrt)
     if (length(asrt)) {
-      missing <- c(missing, "聲明僅報導面／營運面可填（遵循面請清空）")
+      add_miss("聲明僅報導面／營運面可填（遵循面請清空）", "控制設計")
     }
   } else if (identical(mode_as, "reporting") || identical(mode_as, "operations")) {
     ok_as <- assertions_allowed_ok(asrt, cat)
     filled$assertions <- ok_as
     if (!ok_as) {
-      missing <- c(missing, if (identical(mode_as, "operations")) {
-        "聲明超出營運面可選（完整性／正確性／即時性）"
-      } else {
-        "聲明超出報導面可選（Thomson Reuters／AICPA 八種）"
-      })
+      add_miss(
+        if (identical(mode_as, "operations")) {
+          "聲明超出營運面可選（完整性／正確性／即時性）"
+        } else {
+          "聲明超出報導面可選（Thomson Reuters／AICPA 八種）"
+        },
+        "控制設計"
+      )
     }
   } else {
     filled$assertions <- !length(asrt)
   }
-  # 控制佐證文件：人工＋非法遵面須自 PBC 選取；自動／遵循面不可填
+  # 控制佐證文件：人工＋非法遵面必填（PBC 選取或手動輸入，可多選）；自動／遵循面不可填
   doc_mode <- related_document_mode_for_ctrl(ctrl)
-  doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-  doc_txt <- trimws(as.character(ctrl$related_document %||% ""))
+  doc_sel <- c(
+    parse_pbc_id_values(ctrl$related_document_pbc_ids),
+    parse_text_list_values(ctrl$related_document_manual %||% "")
+  )
+  doc_txt <- related_document_pbc_value(ctrl)
   doc_label <- CONTROL_EVIDENCE_DOCUMENT_LABEL
   if (identical(doc_mode, "required")) {
-    filled$related_document_pbc <- pbc_ids_are_filled(doc_ids)
-    if (!pbc_ids_are_filled(doc_ids)) {
-      missing <- c(missing, paste0(doc_label, "（須自 PBC 資料庫選取）"))
+    filled$related_document_pbc <- multi_pbc_is_filled(doc_sel) || nzchar(doc_txt)
+    if (!filled$related_document_pbc) {
+      add_miss(paste0(doc_label, "（可多選；自 PBC 選取或手動輸入）"), "控制設計")
     }
   } else if (identical(doc_mode, "locked")) {
-    filled$related_document_pbc <- !pbc_ids_are_filled(doc_ids) && !nzchar(doc_txt)
-    if (pbc_ids_are_filled(doc_ids) || nzchar(doc_txt)) {
-      missing <- c(missing, paste0(doc_label, "不可設定（自動控制或遵循面風險）"))
+    filled$related_document_pbc <- !multi_pbc_is_filled(doc_sel) && !nzchar(doc_txt)
+    if (multi_pbc_is_filled(doc_sel) || nzchar(doc_txt)) {
+      add_miss(paste0(doc_label, "不可設定（自動控制或遵循面風險）"), "控制設計")
     }
   } else {
     filled$related_document_pbc <- TRUE
@@ -1697,7 +1762,7 @@ design_required_check <- function(ctrl) {
   if (identical(sys_mode, "required")) {
     filled$related_system <- nzchar(sys)
     if (!nzchar(sys)) {
-      missing <- c(missing, "相關系統（自動控制必填）")
+      add_miss("相關系統（自動控制必填）", "控制設計")
     }
   } else {
     filled$related_system <- TRUE
@@ -1705,6 +1770,7 @@ design_required_check <- function(ctrl) {
   list(
     ok = !length(missing),
     missing = unique(missing),
+    missing_by_group = lapply(missing_by_group, unique),
     filled = filled,
     required = DESIGN_REQUIRED_FIELDS,
     optional = DESIGN_OPTIONAL_FIELDS,
@@ -1790,10 +1856,11 @@ detect_design_gaps <- function(ctrl) {
   }
   doc_mode <- related_document_mode_for_ctrl(ctrl)
   if (identical(doc_mode, "required") &&
-      !pbc_ids_are_filled(ctrl$related_document_pbc_ids) &&
-      is_blank(ctrl$related_document)) {
-    add("缺文件", "高", paste0("缺少", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（須自 PBC 資料庫選取）"),
-        "至 PBC 資料庫登錄後，於控制設計選取對應佐證文件")
+      !multi_pbc_is_filled(ctrl$related_document_pbc_ids) &&
+      is_blank(ctrl$related_document) &&
+      is_blank(ctrl$related_document_manual)) {
+    add("缺文件", "高", paste0("缺少", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 選取或手動輸入）"),
+        "至 PBC 資料庫選取或於控制設計手動輸入佐證文件名稱")
   } else if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document) &&
              !identical(doc_mode, "locked")) {
     add("缺文件", "低", paste0("缺少產出／", CONTROL_EVIDENCE_DOCUMENT_LABEL),
@@ -1850,14 +1917,16 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
   }
-  # 控制佐證文件：自動控制或遵循面強制清空；否則以 PBC 選取為準
+  # 控制佐證文件：自動控制或遵循面強制清空；否則保留 PBC 選取＋手動輸入
   if (identical(related_document_mode_for_ctrl(ctrl), "locked")) {
     ctrl$related_document <- ""
     ctrl$related_document_pbc_ids <- character(0)
+    ctrl$related_document_manual <- ""
   } else {
-    ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
-    if (length(ids)) {
-      ctrl$related_document_pbc_ids <- ids
+    ctrl$related_document_pbc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+    ctrl$related_document_manual <- join_text_list_values(ctrl$related_document_manual)
+    if (is_blank(ctrl$related_document)) {
+      ctrl$related_document <- join_text_list_values(ctrl$related_document_manual)
     }
   }
   # 聲明：依風險類別過濾；遵循面強制清空
@@ -1886,7 +1955,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
     return(list(
       ok = FALSE, ready = FALSE, gaps = detect_design_gaps(ctrl),
       control = NULL, rcm_row = NULL, required = req,
-      msg = paste0("必填未齊：", paste(req$missing, collapse = "、"))
+      msg = paste0("必填未齊：", format_design_required_by_accordion(req$missing_by_group, req$missing))
     ))
   }
 

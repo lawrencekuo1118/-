@@ -173,6 +173,17 @@ check(!isTRUE(req_bad$ok), "缺頻率／單位／類型／類別＝必填未齊"
 check(any(grepl("控制頻率", req_bad$missing)), "必填清單含控制頻率")
 check(any(grepl("流程負責單位", req_bad$missing)), "必填清單含負責單位")
 check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別")
+req_grouped <- design_required_check(modifyList(d1, list(
+  sub_process_id = "", sub_process = "",
+  risk_factor = "", risk_name = "", risk_description = "",
+  control_objective = ""
+)))
+check(
+  grepl("基礎設定：子作業編號", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
+    grepl("風險辨識：風險因素", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
+    grepl("控制設計：控制目標", format_design_required_by_accordion(req_grouped$missing_by_group)),
+  "必填缺漏依 accordion 分組顯示"
+)
 fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
 check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
 
@@ -387,13 +398,13 @@ check(length(filter_controls_by_cycle_sub(lib_iv, cycle = "銷售循環")) == 0L
 check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
       "訪談焦點含預期風險／目標／活動")
 check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
-        grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
-      "訪談與風險控制點設計皆為「引導（依序選取）」左欄標題")
+        !grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
+      "訪談保留引導；風險控制點設計已移除引導設計區塊")
 app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
 check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
         grepl("interview_design_groups", app_txt) &&
         grepl("rcm_design_groups", app_txt) &&
-        grepl('accordion_panel\\(\\s*"基本資料"', app_txt) &&
+        grepl('accordion_panel\\(\\s*"基礎設定"', app_txt) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
         grepl("interview_paragraph", app_txt),
@@ -601,10 +612,15 @@ check(length(cascade_sub_process_choices(
   library_controls_flat(empty_user, cycle = "生產循環")
 )) >= 1L, "空使用者庫時生產循環仍可直接選子作業")
 app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
-check(grepl("cascade_source_library", app_casc) && grepl("毋須匯入底稿", app_casc),
-      "引導候選採內建來源且文案不要求先匯入底稿")
-check(!grepl("請至「範本庫」匯入 CSV／JSON／RCM xlsx", app_casc),
-      "引導候選不再要求先匯入底稿才能選")
+check(grepl("cascade_source_library", app_casc),
+      "訪談引導仍採內建範本庫候選")
+check(!grepl('selectInput\\(\\s*"cascade_sub"', app_casc) &&
+        !grepl('selectInput\\(\\s*"cascade_risk"', app_casc) &&
+        !grepl("save_custom_cascade", app_casc) &&
+        !grepl("cascade_step_status", app_casc),
+      "風險控制點設計已移除依序引導下拉與狀態列")
+check(grepl('card_header\\(\\s*"風險控制點設計"\\)', app_casc),
+      "風險控制點設計左欄標題改為表單設計")
 it_risks <- cascade_risk_choices(it_rows)
 check(length(it_risks) >= 10, sprintf("資訊循環風險因素候選至少 10（實際 %d）", length(it_risks)))
 check(!any(grepl("\\[|\\]", names(it_risks))), "風險因素選項標籤不含[]")
@@ -702,8 +718,8 @@ check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
       "標題列隱藏範本庫／參數庫（改由側邊欄進入）")
 check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
-check(!grepl('selectInput\\(\\s*"cycle".*基本資料|accordion_panel\\(\\s*"基本資料"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
-      "基本資料 accordion 內無循環名稱選框")
+check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|accordion_panel\\(\\s*"基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
+      "基礎設定 accordion 內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
 check(grepl("範本套用", app_src) && grepl("未套用範本", app_src) &&
         !grepl("從範本庫套用（可跳過）", app_src) &&
@@ -744,10 +760,11 @@ check(!grepl('uiOutput\\(\\s*"design_required_checklist"', app_src) &&
       "已移除重複之設計必填清單／風險屬性預覽")
 check(!grepl('cascade_candidate_banner', app_src),
       "已移除引導設計上方重複提示框")
-check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
+check(grepl('selectizeInput\\(\\s*"iuc"', app_src) &&
+        grepl('create = TRUE', app_src) &&
         grepl('textInput\\(\\s*"related_system"', app_src) &&
         !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
-      "IUC 與相關系統分開設定")
+      "IUC 與相關系統分開設定（IUC 為可多選 selectize）")
 check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
         grepl('related_system_mode_for_ctrl', app_src),
       "相關系統依控制類型動態必填（自動控制）")
@@ -778,12 +795,16 @@ check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
       "套用 IUC／PBC 命名改在 PBC資料庫")
+check(grepl("missing_by_group", app_src) &&
+        grepl("DESIGN_ACCORDION_SECTIONS", app_src) &&
+        grepl("必填未齊（依表單分組）", app_src),
+      "右側檢核依 accordion 分組顯示必填缺漏")
 check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
         grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
         grepl("goto_pbc_tab", app_src) &&
         grepl("toggleRelatedDocument", app_src) &&
         !grepl('textInput\\(\\s*"related_document"', app_src),
-      "控制佐證文件改為 PBC 資料庫選取（自動／遵循面鎖定）")
+      "控制佐證文件為可多選 selectize（PBC 選取或手動輸入；自動／遵循面鎖定）")
 check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "營運面")), "required"),
       "人工＋非法遵面：控制佐證文件必填")
 check(identical(related_document_mode_for_ctrl(list(nature = "自動", risk_category = "營運面")), "locked"),
@@ -792,7 +813,19 @@ check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_cate
       "遵循面：控制佐證文件鎖定")
 check(identical(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件"), "控制佐證文件標籤常數")
 check(!isTRUE(design_required_check(without_pbc_doc(d1))$ok),
-      "未選 PBC 文件時必填檢核失敗")
+      "未選 PBC 文件且無手動輸入時必填檢核失敗")
+check(isTRUE(design_required_check(modifyList(without_pbc_doc(d1), list(
+  related_document_manual = "簽核紀錄", related_document = "簽核紀錄"
+)))$ok),
+      "控制佐證文件可改以手動輸入通過必填")
+check(identical(
+  ctrl_iuc_value(list(iuc = c("使用者權限清冊", "在職名單"))),
+  "使用者權限清冊；在職名單"
+), "IUC 複選以分號接合")
+check(isTRUE(design_required_check(modifyList(d1, list(
+  iuc = "手動 IUC A；手動 IUC B", iuc_or_system = "手動 IUC A；手動 IUC B"
+)))$ok),
+      "IUC 手動複選文字可通過必填")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")

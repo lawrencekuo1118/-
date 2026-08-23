@@ -783,8 +783,7 @@ ui <- page_navbar(
       uiOutput("param_stats"),
       DTOutput("param_table")
     )
-  ),
-)
+  )
 )
 
 server <- function(input, output, session) {

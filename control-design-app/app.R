@@ -467,8 +467,6 @@ ui <- page_navbar(
           ),
           accordion_panel(
             "控制設計",
-            p(class = "small text-muted mb-2",
-              "控制目標／活動與類型（Why／How；活動須對應單一預防或偵測）。"),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(

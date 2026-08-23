@@ -81,12 +81,22 @@ check(!nzchar(normalize_control_type_manual_auto("人工＋自動")), "混合控
 check(!nzchar(normalize_control_type_manual_auto("人工＋自動化混合")), "混合控制類型不允許")
 check(identical(resolve_control_frequency("自動", "每季"), "持續"), "自動控制頻率＝持續")
 check(identical(resolve_control_frequency("人工", "每季"), "每季"), "人工控制頻率保留")
-auto_ctrl <- without_pbc_doc(modifyList(d1, list(nature = "自動", frequency = "每季")))
+auto_ctrl <- without_pbc_doc(modifyList(d1, list(
+  nature = "自動", frequency = "每季", related_system = "SAP ERP"
+)))
 rcm_auto <- controls_to_rcm(list(auto_ctrl))
 check(identical(as.character(rcm_auto[["控制頻率"]]), "持續"), "RCM 自動控制頻率＝持續")
 fin_auto <- finalize_control_as_rcm_row(auto_ctrl)
 check(isTRUE(fin_auto$ok), "自動控制定稿成功")
 check(identical(fin_auto$control$frequency, "持續"), "定稿後頻率強制持續")
+check(identical(related_system_mode_for_ctrl(list(nature = "自動")), "required"),
+      "自動控制：相關系統 mode＝required")
+check(!isTRUE(design_required_check(without_pbc_doc(modifyList(d1, list(
+  nature = "自動", frequency = "每季", related_system = ""
+))))$ok), "自動控制缺相關系統不可過必填")
+check(isTRUE(design_required_check(modifyList(d1, list(
+  nature = "人工", related_system = ""
+)))$ok), "人工控制相關系統仍可空")
 check(identical(as.character(rcm[["控制活動類型"]]), "偵測性控制"), "控制活動類型＝預防/偵測")
 check(identical(as.character(rcm[["風險類別"]]), "營運面"), "風險類別映射")
 check(grepl("^通過", as.character(rcm[["設計檢核"]])), "設計檢核通過")
@@ -738,6 +748,9 @@ check(grepl('textAreaInput\\(\\s*"iuc"', app_src) &&
         grepl('textInput\\(\\s*"related_system"', app_src) &&
         !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
       "IUC 與相關系統分開設定")
+check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
+        grepl('related_system_mode_for_ctrl', app_src),
+      "相關系統依控制類型動態必填（自動控制）")
 check(grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
       "聲明設定與控制目標並排")
 check(grepl('objective-assertions-row', app_src), "控制目標／聲明並排樣式")

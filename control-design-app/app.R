@@ -508,7 +508,7 @@ ui <- page_navbar(
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
           actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
-          actionButton("collect_ready_to_lib", "RCM列→累積範本庫", class = "btn-outline-success btn-sm")
+          actionButton("collect_ready_to_lib", "儲存→資料庫", class = "btn-outline-success btn-sm")
         )
       ),
       card(

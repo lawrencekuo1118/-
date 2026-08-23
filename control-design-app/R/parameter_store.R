@@ -86,6 +86,7 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("相關系統", ctrl_related_system_value(c), source)
     add_vals("相關法令", c$related_law, source)
     add_vals("相關政策或程序", c$related_policy, source)
+    add_vals(CONTROL_EVIDENCE_DOCUMENT_LABEL, c$related_document %||% c$outputs, source)
     add_vals("相關文件", c$related_document %||% c$outputs, source)
     add_vals("控制現況描述", c$company_status %||% c$detailed_description, source)
     add_vals("控制有效性評估", c$effectiveness, source)

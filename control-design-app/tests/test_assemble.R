@@ -156,9 +156,9 @@ gaps2 <- detect_design_gaps(modifyList(d1, list(
   iuc = "", iuc_or_system = "", related_system = "", outputs = "", related_document = ""
 )))
 check(any(gaps2$severity == "高" & grepl("IUC", gaps2$gap_item)), "缺 IUC 為必填高嚴重度")
-check(any(gaps2$severity == "低" & grepl("產出|相關文件", gaps2$gap_item)) ||
-        any(gaps2$severity == "高" & grepl("PBC", gaps2$gap_item)),
-      "缺產出／相關文件缺漏偵測")
+check(any(gaps2$severity == "低" & grepl("產出|控制佐證文件", gaps2$gap_item)) ||
+        any(gaps2$severity == "高" & grepl("PBC|控制佐證", gaps2$gap_item)),
+      "缺產出／控制佐證文件缺漏偵測")
 check(!isTRUE(design_required_check(modifyList(d1, list(
   iuc = "", iuc_or_system = "", related_system = "SAP ERP"
 )))$ok), "僅填相關系統不可代替 IUC")
@@ -778,17 +778,19 @@ check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
         !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
       "套用 IUC／PBC 命名改在 PBC資料庫")
-check(grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
+check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
+        grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
         grepl("goto_pbc_tab", app_src) &&
         grepl("toggleRelatedDocument", app_src) &&
         !grepl('textInput\\(\\s*"related_document"', app_src),
-      "相關文件改為 PBC 資料庫選取（自動／遵循面鎖定）")
+      "控制佐證文件改為 PBC 資料庫選取（自動／遵循面鎖定）")
 check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "營運面")), "required"),
-      "人工＋非法遵面：相關文件必填")
+      "人工＋非法遵面：控制佐證文件必填")
 check(identical(related_document_mode_for_ctrl(list(nature = "自動", risk_category = "營運面")), "locked"),
-      "自動控制：相關文件鎖定")
+      "自動控制：控制佐證文件鎖定")
 check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "遵循面")), "locked"),
-      "遵循面：相關文件鎖定")
+      "遵循面：控制佐證文件鎖定")
+check(identical(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件"), "控制佐證文件標籤常數")
 check(!isTRUE(design_required_check(without_pbc_doc(d1))$ok),
       "未選 PBC 文件時必填檢核失敗")
 check(grepl('textInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素")

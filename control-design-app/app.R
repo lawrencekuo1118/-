@@ -560,7 +560,7 @@ ui <- page_navbar(
             ),
             uiOutput("related_law_hint"),
             selectizeInput(
-              "related_document_pbc", lab_req("相關文件"),
+              "related_document_pbc", lab_req(CONTROL_EVIDENCE_DOCUMENT_LABEL),
               choices = NULL, multiple = TRUE,
               options = list(
                 placeholder = "自 PBC 資料庫選取文件（可多選）",
@@ -1394,10 +1394,14 @@ server <- function(input, output, session) {
         if (length(ids)) {
           updateSelectizeInput(session, "related_document_pbc", selected = ids)
         } else {
-          showNotification("相關文件須自 PBC 資料庫選取；請至 PBC 資料庫登錄後再選", type = "warning")
+          showNotification(
+            paste0(CONTROL_EVIDENCE_DOCUMENT_LABEL, "須自 PBC 資料庫選取；請至 PBC 資料庫登錄後再選"),
+            type = "warning"
+          )
         }
       }
     )
+    mapped[[CONTROL_EVIDENCE_DOCUMENT_LABEL]] <- mapped[["相關文件"]]
     fn <- mapped[[param]]
     if (is.null(fn)) {
       return(showNotification(sprintf("「%s」無對應表單欄（已複製概念：%s）", param, val),
@@ -1941,7 +1945,7 @@ server <- function(input, output, session) {
     ))
     if (identical(mode, "required")) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("人工控制"), " — 相關文件須自 ",
+          lab_req("人工控制"), " — ", CONTROL_EVIDENCE_DOCUMENT_LABEL, "須自 ",
           tags$strong("PBC 資料庫"), " 選取（可多選）；無資料請先至 ",
           tags$strong("PBC 資料庫"), " 登錄。")
     } else if (identical(mode, "locked")) {
@@ -1950,10 +1954,10 @@ server <- function(input, output, session) {
         if (is_compliance_risk_category(cat)) "遵循面風險"
       )
       div(class = "alert alert-secondary py-1 mb-2 small",
-          paste0("無法設定相關文件（", paste(reason, collapse = "／"), "）。"))
+          paste0("無法設定", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（", paste(reason, collapse = "／"), "）。"))
     } else {
       helpText(class = "text-muted small",
-               "請先選控制類型與風險類別；人工且非法遵面時，須自 PBC 資料庫選取相關文件。")
+               paste0("請先選控制類型與風險類別；人工且非法遵面時，須自 PBC 資料庫選取", CONTROL_EVIDENCE_DOCUMENT_LABEL, "。"))
     }
   })
 
@@ -2491,7 +2495,7 @@ server <- function(input, output, session) {
           paste0("｜IUC：", substr(pt$iuc %||% pt$iuc_or_system %||% "", 1, 28))
         } else "",
         if (nzchar(pt$related_document %||% "")) {
-          paste0("｜文件：", substr(pt$related_document, 1, 28))
+          paste0("｜", CONTROL_EVIDENCE_DOCUMENT_LABEL, "：", substr(pt$related_document, 1, 28))
         } else ""
       ),
       if (!is.null(row) && nrow(row)) {

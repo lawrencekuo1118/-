@@ -147,7 +147,7 @@ apply_pbc_to_iuc <- function(registry, pbc_ids) {
   }, character(1))), collapse = "；")
 }
 
-# 相關文件：與 IUC 相同格式（檢視後命名＋證據類型標示）
+# 控制佐證文件：與 IUC 相同格式（檢視後命名＋證據類型標示）
 apply_pbc_to_related_document <- function(registry, pbc_ids) {
   apply_pbc_to_iuc(registry, pbc_ids)
 }

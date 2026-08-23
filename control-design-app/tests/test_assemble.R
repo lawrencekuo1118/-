@@ -689,6 +689,18 @@ check(identical(normalize_assertions_for_category("完整性 (Completeness)", "�
 check(isTRUE(verify_admin_password("尬電SOX#Admin")), "預設高權密碼可驗證")
 check(!isTRUE(verify_admin_password("wrong")), "錯誤密碼拒絕")
 check(!isTRUE(verify_admin_password("")), "空密碼拒絕")
+check(exists("set_action_button", mode = "function"), "按鈕條件閘道 helper 存在")
+app_gate <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("toggleButton", app_gate) && grepl("Button gates", app_gate),
+      "UI／server 含按鈕條件閘道（toggleButton）")
+check(grepl('gate\\("finalize_rcm_row"', app_gate) &&
+        grepl('gate\\("pbc_add"', app_gate) &&
+        grepl('gate\\("csa_scenario_save"', app_gate) &&
+        grepl('gate\\("apply_lib"', app_gate) &&
+        grepl('gate\\("download_interview"', app_gate),
+      "關鍵按鈕皆有條件閘道（定稿／PBC／CSA／範本／下載）")
+check(grepl("需完成引導", app_gate) && grepl("需高權登入", app_gate),
+      "條件未達成時有不可按提示文案")
 ps0 <- empty_parameter_store()
 ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
 check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")

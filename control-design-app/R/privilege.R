@@ -26,3 +26,14 @@ require_admin <- function(is_admin, session = NULL) {
   }
   FALSE
 }
+
+# Enable/disable actionButton or downloadButton until prerequisites are met
+set_action_button <- function(session, id, enabled, title = "") {
+  if (is.null(session) || !nzchar(as.character(id %||% ""))) return(invisible(FALSE))
+  session$sendCustomMessage("toggleButton", list(
+    id = as.character(id),
+    enabled = isTRUE(enabled),
+    title = as.character(title %||% "")
+  ))
+  invisible(TRUE)
+}

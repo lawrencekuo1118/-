@@ -87,16 +87,33 @@ library_controls_flat <- function(library, cycle = NULL) {
       frequency = nzchar_trim(c$frequency),
       responsible_unit = nzchar_trim(c$responsible_unit),
       iuc_or_system = nzchar_trim(c$related_system %||% c$iuc_or_system),
-      related_document = nzchar_trim(c$related_document %||% c$outputs),
-      company_status = nzchar_trim(c$company_status %||% c$detailed_description),
-      control_id = nzchar_trim(c$control_id),
+      romm_classification = nzchar_trim(c$romm_classification),
       significant_account = nzchar_trim(c$significant_account),
-      design_gap_note = nzchar_trim(c$design_gap_note),
+      assertions = nzchar_trim(c$assertions),
       related_policy = nzchar_trim(c$related_policy),
       related_law = nzchar_trim(c$related_law),
+      related_document = nzchar_trim(c$related_document %||% c$outputs),
+      type = nzchar_trim(c$type),
+      inputs = nzchar_trim(c$inputs),
+      review_steps = nzchar_trim(c$review_steps),
+      outputs = nzchar_trim(c$outputs),
+      investigation_threshold = nzchar_trim(c$investigation_threshold),
+      company_status = nzchar_trim(c$company_status %||% c$detailed_description),
+      design_gap_note = nzchar_trim(c$design_gap_note),
+      control_id = nzchar_trim(c$control_id),
       raw = c
     )
   })
+}
+
+# 引導候選來源：永遠合併內建種子（九大循環可直接選），毋須先匯入底稿
+cascade_source_library <- function(user_library = list()) {
+  builtin <- tryCatch(seed_control_library(TRUE), error = function(e) list())
+  if (!length(user_library)) return(builtin)
+  if (!exists("merge_libraries", mode = "function")) {
+    return(c(builtin, user_library))
+  }
+  merge_libraries(builtin, user_library, overwrite = FALSE)
 }
 
 sub_process_key <- function(spid, spn) {

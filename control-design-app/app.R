@@ -859,22 +859,15 @@ server <- function(input, output, session) {
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
-  # 啟動時若範本庫過少，合併種子／內建批次（背景執行，不依特定循環命名）
+  # 啟動時確保內建候選就緒（九大循環可直接選；毋須使用者先匯入底稿）
   observeEvent(TRUE, {
     cur <- lib()
-    if (length(cur) >= 5) return()
+    builtin <- seed_control_library(TRUE)
+    merged <- merge_libraries(cur, builtin, overwrite = FALSE)
     batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
-    merged <- merge_libraries(cur, seed_control_library(TRUE), overwrite = FALSE)
     if (file.exists(batch)) {
       merged <- tryCatch(
         merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = FALSE),
-        error = function(e) merged
-      )
-    }
-    xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-    if (file.exists(xlsx)) {
-      merged <- tryCatch(
-        import_control_library_file(xlsx, merged, overwrite = FALSE),
         error = function(e) merged
       )
     }
@@ -921,23 +914,21 @@ server <- function(input, output, session) {
 
   output$cascade_candidate_banner <- renderUI({
     cy <- input$cycle %||% ""
-    n_lib <- length(lib())
     if (!nzchar(cy)) {
       return(div(class = "alert alert-warning py-2 mb-2 small",
                  tags$strong("請先於「基本資料」選擇循環名稱。"),
-                 "選定後才會載入該循環的子作業／風險／目標／活動候選。"))
+                 "選定後即可直接選②子作業～⑥ IUC（內建候選已就緒，毋須匯入底稿）。"))
     }
     rows <- cascade_rows()
     n_sub <- length(cascade_sub_process_choices(rows))
     if (n_sub > 0) {
       div(class = "alert alert-success py-1 mb-2 small",
-          sprintf("引導候選已載入：本循環「%s」有 %d 個子作業選項（範本庫 %d 筆）。請先選②子作業，③～⑥才會依序出現。",
-                  cy, n_sub, n_lib))
+          sprintf("引導候選已就緒：本循環「%s」有 %d 個子作業可直接選取（另可「＋自訂新增」）。請先選②子作業。",
+                  cy, n_sub))
     } else {
-      div(class = "alert alert-danger py-2 mb-2 small",
-          tags$strong("目前沒有引導候選。"),
-          sprintf("（循環＝%s，範本庫＝%d 筆）", cy, n_lib),
-          "請至「範本庫」匯入 CSV／JSON／RCM xlsx，或於該頁套用範本（可跳過）。")
+      div(class = "alert alert-info py-2 mb-2 small",
+          tags$strong("本循環尚無內建列。"),
+          "請直接選「＋自訂新增子作業」繼續設計（毋須匯入底稿）。")
     }
   })
 
@@ -1089,7 +1080,7 @@ server <- function(input, output, session) {
   interview_pool_controls <- reactive({
     src <- input$interview_source %||% "rcm"
     if (identical(src, "library")) {
-      library_items_as_interview_controls(lib())
+      library_items_as_interview_controls(cascade_source_library(lib()))
     } else {
       Filter(is_control_finalized_for_rcm, controls())
     }
@@ -1667,10 +1658,11 @@ server <- function(input, output, session) {
   })
 
   # ---- Forced cascade: cycle → 子作業 → 風險 → 目標 → 活動(單一PD) → IUC ----
+  # 候選永遠含內建種子（九大循環可直接選），毋須先匯入底稿
   cascade_rows <- reactive({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return(list())
-    library_controls_flat(lib(), cycle = cy)
+    library_controls_flat(cascade_source_library(lib()), cycle = cy)
   })
 
   resolve_cascade_selection <- function() {
@@ -1937,12 +1929,11 @@ server <- function(input, output, session) {
   observe({
     rows <- cascade_rows()
     ch_sub <- cascade_sub_process_choices(rows)
-    n_lib <- length(lib())
     n_rows <- length(rows)
     label0 <- if (n_rows) {
-      sprintf("② 選擇子作業…（本循環 %d 筆／庫 %d）", n_rows, n_lib)
+      sprintf("② 選擇子作業…（本循環 %d 筆候選）", n_rows)
     } else {
-      sprintf("② 尚無子作業候選（範本庫 %d 筆 — 請確認循環或至範本庫匯入）", n_lib)
+      "② 選擇子作業…（可直接「＋自訂新增」，毋須匯入底稿）"
     }
     ch <- c(stats::setNames("", label0), ch_sub, "＋自訂新增子作業" = "__custom__")
     cur <- input$cascade_sub %||% ""
@@ -2159,8 +2150,8 @@ server <- function(input, output, session) {
       tags$ul(class = "mb-0 ps-3", style = "columns: 2; -webkit-columns: 2;", items),
       if (!req$ok) tags$div(class = "mt-1", "未齊：", paste(req$missing, collapse = "、")),
       if (!n_cascade) tags$div(
-        class = "mt-1 text-danger",
-        "本循環尚無引導選項 — 請至「範本庫」匯入 RCM 或確認左側已選循環。"
+        class = "mt-1 text-muted",
+        "本循環暫無內建列 — 可直接「＋自訂新增」完成引導（毋須匯入底稿）。"
       )
     )
   })

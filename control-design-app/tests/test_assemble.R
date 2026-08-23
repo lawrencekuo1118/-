@@ -538,6 +538,23 @@ check(identical(next_rcm_control_id("EC-102", character()), "EC-102-01"), "空�
 seeded <- seed_control_library(TRUE)
 it_rows <- cycle_risk_rows(seeded, "電腦化資訊系統循環")
 check(length(it_rows) >= 20, sprintf("資訊循環風險列至少 20（實際 %d）", length(it_rows)))
+# 九大循環皆有內建候選，毋須先匯入底稿
+src_lib <- cascade_source_library(list())
+cycle_counts <- vapply(CYCLES_NINE, function(cy) {
+  length(library_controls_flat(src_lib, cycle = cy))
+}, integer(1))
+check(all(cycle_counts >= 1L),
+      sprintf("九大循環皆有內建引導候選（實際：%s）",
+              paste(sprintf("%s=%d", CYCLES_NINE, cycle_counts), collapse = "；")))
+empty_user <- cascade_source_library(list())
+check(length(cascade_sub_process_choices(
+  library_controls_flat(empty_user, cycle = "生產循環")
+)) >= 1L, "空使用者庫時生產循環仍可直接選子作業")
+app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("cascade_source_library", app_casc) && grepl("毋須匯入底稿", app_casc),
+      "引導候選採內建來源且文案不要求先匯入底稿")
+check(!grepl("請至「範本庫」匯入 CSV／JSON／RCM xlsx", app_casc),
+      "引導候選不再要求先匯入底稿才能選")
 it_risks <- cascade_risk_choices(it_rows)
 check(length(it_risks) >= 10, sprintf("資訊循環風險因素候選至少 10（實際 %d）", length(it_risks)))
 check(!any(grepl("\\[|\\]", names(it_risks))), "風險因素選項標籤不含[]")

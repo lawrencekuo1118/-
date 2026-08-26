@@ -754,6 +754,21 @@ check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直�
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
 
+check(identical(recode_id_cycle_prefix("EC-101", "SC"), "SC-101"),
+      "子作業編號隨循環編號同步")
+check(identical(recode_id_cycle_prefix("EC-101-01", "SC"), "SC-101-01"),
+      "控制編號隨循環編號同步")
+check(identical(recode_id_cycle_prefix("SP-001", "EC"), "SP-001"),
+      "非循環前綴不強制改寫")
+check(identical(recode_sub_process_key("EC-101||存取管理作業", "SC"),
+                "SC-101||存取管理作業"),
+      "子作業名稱 key 前綴同步")
+
+d_sc <- modifyList(d1, list(cycle = "銷售及收款循環", cycle_code = "SC",
+                              sub_process_id = "", sub_process = "測試"))
+check(identical(derive_sub_process_id(d_sc, 1L), "SC-101"),
+      "derive 子作業編號依 cycle_code")
+
 # 風險辨識區塊：風險因素、風險描述、風險類別、RoMM 分類
 check(grepl('accordion_panel\\(\\s*"控制設計"', app_src) &&
         grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&

@@ -118,6 +118,63 @@ cascade_source_library <- function(user_library = list()) {
   merge_libraries(builtin, user_library, overwrite = FALSE)
 }
 
+# 循環編號前綴（子作業／控制編號同步用）
+KNOWN_CYCLE_CODES <- unique(unname(CYCLE_CODE_MAP))
+
+recode_id_cycle_prefix <- function(id, new_cycle_code) {
+  id <- trimws(as.character(id %||% ""))
+  new_cycle_code <- trimws(as.character(new_cycle_code %||% ""))
+  if (!nzchar(id) || !nzchar(new_cycle_code)) return(id)
+  m <- regmatches(id, regexec("^([A-Z]{2})-", id))[[1]]
+  if (length(m) < 2L) return(id)
+  old_code <- m[[2]]
+  if (!(old_code %in% KNOWN_CYCLE_CODES)) return(id)
+  sub(paste0("^", old_code, "-"), paste0(new_cycle_code, "-"), id)
+}
+
+recode_sub_process_key <- function(key, new_cycle_code) {
+  key <- trimws(as.character(key %||% ""))
+  if (!nzchar(key) || !grepl("\\|\\|", key, fixed = FALSE)) return(key)
+  sp <- parse_sub_process_key(key)
+  new_id <- recode_id_cycle_prefix(sp$id, new_cycle_code)
+  if (identical(new_id, sp$id)) return(key)
+  sub_process_key(new_id, sp$name)
+}
+
+# 循環編號變更時，同步子作業編號、控制編號與子作業名稱 key
+sync_form_ids_to_cycle_code <- function(session, new_cycle_code,
+                                        sub_process_id = "",
+                                        control_id = "",
+                                        sub_process = "") {
+  new_cycle_code <- trimws(as.character(new_cycle_code %||% ""))
+  if (!nzchar(new_cycle_code)) return(invisible(NULL))
+
+  spid <- trimws(as.character(sub_process_id %||% ""))
+  if (nzchar(spid)) {
+    new_spid <- recode_id_cycle_prefix(spid, new_cycle_code)
+    if (!identical(new_spid, spid)) {
+      updateTextInput(session, "sub_process_id", value = new_spid)
+    }
+  }
+
+  cid <- trimws(as.character(control_id %||% ""))
+  if (nzchar(cid)) {
+    new_cid <- recode_id_cycle_prefix(cid, new_cycle_code)
+    if (!identical(new_cid, cid)) {
+      updateTextInput(session, "control_id", value = new_cid)
+    }
+  }
+
+  sub_val <- trimws(as.character(sub_process %||% ""))
+  if (nzchar(sub_val)) {
+    new_sub <- recode_sub_process_key(sub_val, new_cycle_code)
+    if (!identical(new_sub, sub_val)) {
+      updateSelectizeInput(session, "sub_process", selected = new_sub)
+    }
+  }
+  invisible(NULL)
+}
+
 sub_process_key <- function(spid, spn) {
   sprintf("%s||%s", nzchar_trim(spid), nzchar_trim(spn))
 }

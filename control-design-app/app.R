@@ -2053,6 +2053,19 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
+  # 循環編號變更 → 子作業編號、控制編號前綴同步（含手動修改 cycle_code）
+  observeEvent(input$cycle_code, {
+    code <- trimws(input$cycle_code %||% "")
+    if (!nzchar(code)) return()
+    sync_form_ids_to_cycle_code(
+      session, code,
+      sub_process_id = input$sub_process_id,
+      control_id = input$control_id,
+      sub_process = input$sub_process
+    )
+    refresh_sub_process_choices()
+  }, ignoreInit = TRUE)
+
   observeEvent(input$nature, {
     if (identical(input$nature, "自動")) {
       updateSelectInput(session, "frequency", selected = "持續")

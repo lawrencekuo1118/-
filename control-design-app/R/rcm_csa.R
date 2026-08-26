@@ -637,9 +637,14 @@ count_filled_risk_attrs <- function(ctrl) {
 
 derive_sub_process_id <- function(ctrl, seq_no = 1L) {
   if (!is_blank(ctrl$sub_process_id)) return(trimws(ctrl$sub_process_id))
-  cycle <- ctrl$cycle %||% ""
-  if (grepl("資訊|電腦", cycle)) sprintf("EC-%03d", 100L + as.integer(seq_no))
-  else sprintf("SP-%03d", as.integer(seq_no))
+  cc <- trimws(ctrl$cycle_code %||% "")
+  if (!nzchar(cc) && nzchar(ctrl$cycle %||% "")) {
+    cc <- cycle_code_for(ctrl$cycle)
+  }
+  if (nzchar(cc)) {
+    return(sprintf("%s-%03d", cc, 100L + as.integer(seq_no)))
+  }
+  sprintf("SP-%03d", as.integer(seq_no))
 }
 
 derive_risk_id <- function(ctrl, seq_no = 1L) {

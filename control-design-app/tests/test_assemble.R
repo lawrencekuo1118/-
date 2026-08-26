@@ -406,12 +406,12 @@ check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "a
 app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
 check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
         grepl("interview_design_groups", app_txt) &&
-        grepl("rcm_design_groups", app_txt) &&
-        grepl('accordion_panel\\(\\s*"基礎設定"', app_txt) &&
+        grepl("rcm_design_tabs", app_txt) &&
+        grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
         grepl("interview_paragraph", app_txt),
-      "訪談版面與風險控制點設計趨於一致（7/5、引導、accordion、右側預覽）")
+      "訪談版面與風險控制點設計趨於一致（7/5、引導、分頁籤、右側預覽）")
 check(grepl("套用 IUC／PBC 命名", app_txt),
       "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
 check(!grepl("interview_source", app_txt) &&
@@ -717,6 +717,7 @@ check(length(dl_ids) >= 5, sprintf("下載按鈕數量合理（實際 %d）", le
 # 選項列順序與名稱
 nav_titles <- regmatches(app_src, gregexpr('nav_panel\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]]
 nav_titles <- sub('nav_panel\\(\\s*"([^"]+)".*', "\\1", nav_titles, perl = TRUE)
+nav_titles <- nav_titles[!nav_titles %in% c("① 基礎設定", "② 風險辨識", "③ 控制設計")]
 expect_nav <- c("首頁", "訪談問項設計", "風險控制點設計", "控制點測試設計",
                 "RCM", "PBC資料庫", "範本庫", "參數庫")
 check(identical(nav_titles, expect_nav),
@@ -732,8 +733,8 @@ check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
       "標題列隱藏範本庫／參數庫（改由側邊欄進入）")
 check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
-check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|accordion_panel\\(\\s*"基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
-      "基礎設定 accordion 內無循環名稱選框")
+check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|nav_panel\\([\\s\\S]{0,80}"① 基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
+      "基礎設定分頁內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
 check(grepl("範本套用", app_src) && grepl("未套用範本", app_src) &&
         !grepl("從範本庫套用（可跳過）", app_src) &&
@@ -754,13 +755,13 @@ check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直�
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")
 
-# 風險辨識區塊：風險因素、風險描述、風險類別、RoMM 分類
-check(grepl('accordion_panel\\(\\s*"控制設計"', app_src) &&
+# 風險辨識分頁：風險因素、風險描述、風險類別、RoMM 分類
+check(grepl('nav_panel\\([\\s\\S]*"③ 控制設計"', app_src, perl = TRUE) &&
         grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&
         grepl('textAreaInput\\(\\s*"control_activity"', app_src) &&
         grepl('selectInput\\(\\s*"approach"', app_src) &&
         grepl('selectInput\\(\\s*"nature"', app_src),
-      "控制設計區塊含控制目標／活動／預防偵測／人工自動")
+      "控制設計分頁含控制目標／活動／預防偵測／人工自動")
 check(!grepl("設計必填與防呆", app_src) && !grepl("建議操作順序", app_src),
       "首頁已移除設計必填與防呆／建議操作順序說明")
 check(grepl("home-tabs-grid", app_src) &&
@@ -784,10 +785,13 @@ check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
       "相關系統依控制類型動態必填（自動控制）")
 check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
       "控制目標不再與聲明設定並排（改全寬）")
-check(grepl('assertions-side[\\s\\S]*control_objective', app_src),
+check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
       "聲明設定在控制目標上方")
-check(!grepl("objective-activity-stack|objective-assertions-spacer", app_src),
-      "控制目標／控制活動改為全寬（無半欄 stack）")
+check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
+        grepl('"① 基礎設定"', app_src) &&
+        grepl('"② 風險辨識"', app_src) &&
+        grepl('"③ 控制設計"', app_src),
+      "風險控制點設計以三階段分頁籤排版")
 check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
@@ -833,12 +837,14 @@ check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&
 }
 check(grepl("pbc_apply_to_design", app_src) &&
         grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
-        !grepl('accordion_panel\\(\\s*"控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
+        !grepl('nav_panel\\([\\s\\S]*"③ 控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
       "套用 IUC／PBC 命名改在 PBC資料庫")
 check(grepl("missing_by_group", app_src) &&
         grepl("DESIGN_ACCORDION_SECTIONS", app_src) &&
-        grepl("必填未齊（依表單分組）", app_src),
-      "右側檢核依 accordion 分組顯示必填缺漏")
+        grepl("必填未齊（依表單分組）", app_src) &&
+        grepl('rcm_design_tabs[\\s\\S]*design-validation-panel[\\s\\S]*live_validation', app_src, perl = TRUE) &&
+        grepl('live_validation[\\s\\S]*finalize_rcm_row', app_src, perl = TRUE),
+      "必填缺漏檢核置於三頁籤下方、定稿按鈕上方")
 check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
         grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
         grepl("goto_pbc_tab", app_src) &&
@@ -882,11 +888,11 @@ check(isTRUE(design_required_check(modifyList(d1, list(
 )))$ok),
       "風險因素複選可通過必填")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
-check(grepl('objective-assertions-row[\\s\\S]*risk_description', app_src),
-      "風險描述寬度與控制目標相同（左欄 50%）")
+check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*textAreaInput\\(\\s*"risk_description"', app_src, perl = TRUE),
+      "風險描述位於風險辨識分頁內")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
-check(grepl('significant_account[\\s\\S]*romm_classification', app_src),
+check(grepl('significant_account[\\s\\S]*romm_classification', app_src, perl = TRUE),
       "會計科目在 RoMM 分類上方")
 check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),
       "已移除自訂風險獨立輸入（改由風險辨識）")

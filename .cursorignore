@@ -1,0 +1,49 @@
+# Large media / documents
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.pdf
+*.pptx
+*.ppt
+*.docx
+*.doc
+*.xlsx
+*.xlsm
+*.xls
+*.zip
+*.gz
+*.tar
+*.7z
+*.rar
+
+# Virtual environments / dependencies
+.venv/
+venv/
+env/
+node_modules/
+__pycache__/
+.Rlib/
+renv/library/
+
+# Build / output artifacts
+build/
+dist/
+out/
+.target/
+*.o
+*.so
+*.dll
+
+# R / IDE / OS clutter
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+Thumbs.db
+
+# App runtime / local state (not needed for indexing)
+**/rsconnect/
+**/.shiny_bookmarks/

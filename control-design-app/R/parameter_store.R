@@ -26,6 +26,11 @@ app_preset_parameters <- function() {
       ops <- if (exists("ASSERTION_CHOICES_OPERATIONS")) ASSERTION_CHOICES_OPERATIONS else character()
       unique(c(rep, ops))
     },
+    "會計科目" = {
+      all_opt <- if (exists("ACCOUNT_ALL_OPTION")) ACCOUNT_ALL_OPTION else "全部適用"
+      std <- if (exists("ACCOUNT_CHOICES")) ACCOUNT_CHOICES else character()
+      c(all_opt, std)
+    },
     "Form 4120SR Type" = if (exists("TYPE_CHOICES")) TYPE_CHOICES else character(),
     "RoMM 分類" = if (exists("ROMM_CLASS_CHOICES")) ROMM_CLASS_CHOICES else character(),
     "控制有效性評估" = c("有效", "無效"),
@@ -77,9 +82,11 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("控制活動類型", c$approach %||% c$control_activity_type, source)
     add_vals("控制頻率", c$frequency, source)
     add_vals("流程負責單位", c$responsible_unit, source)
-    add_vals("相關系統／IUC", c$iuc_or_system %||% c$related_system, source)
+    add_vals("IUC", ctrl_iuc_value(c), source)
+    add_vals("相關系統", ctrl_related_system_value(c), source)
     add_vals("相關法令", c$related_law, source)
     add_vals("相關政策或程序", c$related_policy, source)
+    add_vals(CONTROL_EVIDENCE_DOCUMENT_LABEL, c$related_document %||% c$outputs, source)
     add_vals("相關文件", c$related_document %||% c$outputs, source)
     # 不收集公司現況／有效性等非設計欄，避免輸入檔污染參數庫
     add_vals("聲明", c$assertions, source)
@@ -93,7 +100,7 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("PBC 客戶原名", pbc$client_pbc_name, "PBC命名庫")
     add_vals("PBC 檢視後命名", pbc$reviewed_name, "PBC命名庫")
     add_vals("PBC 證據類型", pbc$pbc_kind, "PBC命名庫")
-    add_vals("相關系統／IUC", pbc$iuc_or_system, "PBC命名庫")
+    add_vals("IUC", pbc$iuc_or_system, "PBC命名庫")
   }
   if (!length(rows)) return(empty_parameter_store())
   df <- do.call(rbind, rows)

@@ -56,6 +56,13 @@ Chrome `.crdownload` stalls).
 See [`law-articles/README.md`](./law-articles/README.md) for CSV/JSON exports of
 `藍絲法律_法條分群(260719更).xlsm` and a small CLI search tool.
 
+## GGplaystore2021 (restored Shiny app)
+
+Restored R sources for the live dashboard
+[GGplaystore2021](https://hopesmasher1118.shinyapps.io/GGplaystore2021/) live under
+[`GGplaystore2021/`](./GGplaystore2021/). See that folder's README for run/deploy
+instructions.
+
 ## Control design Shiny app (Form 4120SR)
 
 See [`control-design-app/README.md`](./control-design-app/README.md) for a Shiny

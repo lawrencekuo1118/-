@@ -122,6 +122,85 @@ lookup_pbc <- function(registry, pbc_ids) {
   registry[registry$pbc_id %in% pbc_ids, , drop = FALSE]
 }
 
+parse_pbc_id_values <- function(x) {
+  if (is.null(x)) return(character())
+  if (length(x) > 1L) {
+    vals <- trimws(as.character(x))
+    return(unique(vals[nzchar(vals)]))
+  }
+  raw <- trimws(as.character(x %||% ""))
+  if (!nzchar(raw)) return(character())
+  vals <- trimws(unlist(strsplit(raw, "[;；|/、,，]+")))
+  unique(vals[nzchar(vals)])
+}
+
+# Multi-value text／selectize（IUC、控制佐證文件等）
+parse_text_list_values <- function(x) {
+  parse_pbc_id_values(x)
+}
+
+join_text_list_values <- function(x) {
+  vals <- parse_text_list_values(x)
+  if (!length(vals)) return("")
+  paste(vals, collapse = "；")
+}
+
+pbc_ids_are_filled <- function(x) {
+  length(parse_pbc_id_values(x)) > 0L
+}
+
+multi_pbc_is_filled <- function(x) {
+  length(parse_text_list_values(x)) > 0L
+}
+
+known_pbc_ids <- function(registry) {
+  if (!is.data.frame(registry) || !nrow(registry)) return(character())
+  unique(trimws(as.character(registry$pbc_id)))
+}
+
+split_pbc_selection <- function(selection, registry = NULL) {
+  sel <- parse_text_list_values(selection)
+  if (!length(sel)) {
+    return(list(ids = character(), manual = character()))
+  }
+  known <- known_pbc_ids(registry)
+  if (!length(known)) {
+    return(list(ids = character(), manual = sel))
+  }
+  is_id <- sel %in% known
+  list(ids = sel[is_id], manual = sel[!is_id])
+}
+
+resolve_multi_pbc_text <- function(selection, registry = NULL) {
+  parts <- split_pbc_selection(selection, registry)
+  labels <- character()
+  if (length(parts$ids) && is.data.frame(registry) && nrow(registry)) {
+    labels <- c(labels, unlist(strsplit(
+      apply_pbc_to_iuc(registry, parts$ids), "；", fixed = TRUE
+    )))
+  }
+  if (length(parts$manual)) labels <- c(labels, parts$manual)
+  labels <- unique(trimws(labels))
+  labels <- labels[nzchar(labels)]
+  if (!length(labels)) return("")
+  paste(labels, collapse = "；")
+}
+
+expand_pbc_selection <- function(text, registry = NULL, stored_ids = character()) {
+  ids <- unique(c(parse_pbc_id_values(stored_ids), match_pbc_ids_from_text(registry, text)))
+  parts <- parse_text_list_values(text)
+  manual <- character()
+  for (p in parts) {
+    hit <- match_pbc_ids_from_text(registry, p)
+    if (length(hit)) {
+      ids <- c(ids, hit)
+    } else {
+      manual <- c(manual, p)
+    }
+  }
+  unique(c(ids, manual))
+}
+
 # Apply selected PBC ids → reviewed names for IUC field
 apply_pbc_to_iuc <- function(registry, pbc_ids) {
   rows <- lookup_pbc(registry, pbc_ids)
@@ -129,6 +208,38 @@ apply_pbc_to_iuc <- function(registry, pbc_ids) {
   paste(unique(vapply(seq_len(nrow(rows)), function(i) {
     format_pbc_reviewed_label(rows$reviewed_name[i], rows$pbc_kind[i])
   }, character(1))), collapse = "；")
+}
+
+# 控制佐證文件：與 IUC 相同格式（檢視後命名＋證據類型標示）
+apply_pbc_to_related_document <- function(registry, pbc_ids) {
+  apply_pbc_to_iuc(registry, pbc_ids)
+}
+
+# 舊資料自由文字 → 嘗試對照 PBC id（精確比對檢視後命名／原名）
+match_pbc_ids_from_text <- function(registry, text) {
+  raw <- trimws(as.character(text %||% ""))
+  if (!nzchar(raw) || !is.data.frame(registry) || !nrow(registry)) {
+    return(character())
+  }
+  parts <- trimws(unlist(strsplit(raw, "[;；|/]+")))
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) return(character())
+  hits <- character()
+  for (p in parts) {
+    p_clean <- sub("^【[^】]+】", "", p)
+    idx <- which(
+      registry$pbc_id == p |
+        registry$reviewed_name == p |
+        registry$reviewed_name == p_clean |
+        registry$client_pbc_name == p |
+        registry$client_pbc_name == p_clean |
+        vapply(seq_len(nrow(registry)), function(i) {
+          format_pbc_reviewed_label(registry$reviewed_name[i], registry$pbc_kind[i]) == p
+        }, logical(1))
+    )
+    if (length(idx)) hits <- c(hits, registry$pbc_id[idx[[1]]])
+  }
+  unique(hits)
 }
 
 # Dual-name line for 控制現況 / Inputs documentation

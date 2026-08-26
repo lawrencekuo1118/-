@@ -160,21 +160,21 @@ ui <- page_navbar(
       .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
       .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
       .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
-      /* 輸入框：未填淺灰；輸入／選定後黑色 */
+      /* 輸入框：未填淺灰（與「公司名稱」placeholder 同色）；輸入／選定後黑色 */
       .form-control, .form-select, textarea.form-control {
         color: var(--brand-black) !important;
       }
       .form-control:placeholder-shown,
       textarea.form-control:placeholder-shown {
-        color: #9CA3AF !important;
+        color: #ADB5BD !important;
       }
       .form-select:has(option[value=\"\"]:checked) {
-        color: #9CA3AF !important;
+        color: #ADB5BD !important;
       }
       .form-control::placeholder, .form-select::placeholder,
       textarea.form-control::placeholder,
       .selectize-input input::placeholder {
-        color: #C4C9D1 !important;
+        color: #ADB5BD !important;
         opacity: 1;
       }
       .selectize-input.has-items,
@@ -184,7 +184,7 @@ ui <- page_navbar(
       }
       .selectize-input:not(.has-items),
       .selectize-input:not(.has-items) input {
-        color: #9CA3AF !important;
+        color: #ADB5BD !important;
       }
       .selectize-dropdown .option { color: #6B7280; }
       .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }
@@ -1466,7 +1466,7 @@ server <- function(input, output, session) {
         sub_process_ui_state$sel <- ""
         freezeReactiveValue(input, "sub_process")
         updateSelectizeInput(session, "sub_process", choices = character(),
-                             server = TRUE, selected = "")
+                             selected = "")
       }
       return()
     }
@@ -1493,7 +1493,7 @@ server <- function(input, output, session) {
     sub_process_ui_state$ch_keys <- ch_keys
     sub_process_ui_state$sel <- cur
     freezeReactiveValue(input, "sub_process")
-    updateSelectizeInput(session, "sub_process", choices = ch, server = TRUE, selected = cur)
+    updateSelectizeInput(session, "sub_process", choices = ch, selected = cur)
   }
 
   refresh_risk_factor_choices <- function() {

@@ -544,9 +544,15 @@ check(identical(apply_pbc_to_iuc(reg2, reg2$pbc_id[2]), "【EMAIL】核准信"),
 check(identical(format_pbc_reviewed_label("制度手冊", "政策制度"), "【政策制度】制度手冊"),
       "PBC 格式化標示")
 
-# Library IT seeds + import
+# Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()
-check(!is.null(get_library_item(lib, "LIB-IT-ACCESS-01")), "資訊循環範本種子")
+check(is.null(get_library_item(lib, "LIB-IT-ACCESS-01")), "已移除存取管理種子")
+check(is.null(get_library_item(lib, "LIB-IT-CHANGE-01")), "已移除變更管理種子")
+seed_subs <- unique(vapply(lib, function(x) x$control$sub_process %||% "", character(1)))
+check(!"存取管理" %in% seed_subs && !"變更管理" %in% seed_subs,
+      "種子庫子作業名稱不含存取管理／變更管理")
+check(any(vapply(lib, function(x) identical(x$cycle %||% x$control$cycle, "電腦化資訊系統循環"), logical(1))),
+      "資訊循環範本仍可由批次種子提供")
 tmp_csv <- tempfile(fileext = ".csv")
 utils::write.csv(library_to_flat_df(lib), tmp_csv, row.names = FALSE, fileEncoding = "UTF-8")
 imported <- import_control_library_file(tmp_csv, existing = list(), overwrite = TRUE)

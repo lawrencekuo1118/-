@@ -1209,16 +1209,29 @@ server <- function(input, output, session) {
     )
   }
 
+  # 快取上次推送的選單，避免同值反覆 updateSelectize 造成閃跳
+  sub_process_ui_state <- new.env(parent = emptyenv())
+  sub_process_ui_state$ch_keys <- NULL
+  sub_process_ui_state$sel <- NULL
+
   refresh_sub_process_choices <- function() {
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
-      updateSelectizeInput(session, "sub_process", choices = character(), server = TRUE, selected = "")
+      if (!identical(sub_process_ui_state$sel, "") ||
+          !is.null(sub_process_ui_state$ch_keys)) {
+        sub_process_ui_state$ch_keys <- character()
+        sub_process_ui_state$sel <- ""
+        freezeReactiveValue(input, "sub_process")
+        updateSelectizeInput(session, "sub_process", choices = character(),
+                             server = TRUE, selected = "")
+      }
       return()
     }
     rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
     ch <- cascade_sub_process_choices(rows)
-    cur <- trimws(input$sub_process %||% "")
-    spid <- trimws(input$sub_process_id %||% "")
+    # isolate：勿因編號／名稱變更重跑本函式（observe 讀 lib／cycle 時會帶入依賴）
+    cur <- trimws(isolate(input$sub_process) %||% "")
+    spid <- trimws(isolate(input$sub_process_id) %||% "")
     # 選取值若為 id||name，以 key 內編號為準（避免 textInput 尚未同步的舊編號干擾）
     if (grepl("\\|\\|", cur, fixed = FALSE)) {
       sp <- parse_sub_process_key(cur)
@@ -1248,6 +1261,14 @@ server <- function(input, output, session) {
         ch <- c(ch, stats::setNames(cur, sub_process_choice_label(cur)))
       }
     }
+    ch_keys <- unname(ch)
+    if (identical(ch_keys, sub_process_ui_state$ch_keys) &&
+        identical(cur, sub_process_ui_state$sel)) {
+      return()
+    }
+    sub_process_ui_state$ch_keys <- ch_keys
+    sub_process_ui_state$sel <- cur
+    freezeReactiveValue(input, "sub_process")
     updateSelectizeInput(session, "sub_process", choices = ch, server = TRUE, selected = cur)
   }
 
@@ -1376,6 +1397,10 @@ server <- function(input, output, session) {
 
   observeEvent(input$cycle, {
     # 切換循環時清空子作業，避免舊編號殘留導致後續選名稱無法覆寫
+    freezeReactiveValue(input, "sub_process")
+    freezeReactiveValue(input, "sub_process_id")
+    sub_process_ui_state$ch_keys <- NULL
+    sub_process_ui_state$sel <- NULL
     updateSelectizeInput(session, "sub_process", selected = "")
     updateTextInput(session, "sub_process_id", value = "")
     refresh_pbc_choices()
@@ -1388,10 +1413,11 @@ server <- function(input, output, session) {
     library_items_as_interview_controls(cascade_source_library(lib()))
   })
 
-  # 僅依循環刷新候選；勿依賴 input$sub_process，否則選取當下會重跑 refresh
-  # 並與 updateTextInput(sub_process_id) 競態，造成編號無法被覆寫
+  # 僅依循環／範本庫刷新候選。refresh 內對 sub_process／sub_process_id 必須 isolate，
+  # 否則改編號或選名稱會重跑 updateSelectize → 來回閃跳／斷線。
   observe({
     input$cycle
+    lib()
     refresh_sub_process_choices()
   })
 
@@ -1403,9 +1429,13 @@ server <- function(input, output, session) {
     }
     if (grepl("\\|\\|", val, fixed = FALSE)) {
       sp <- parse_sub_process_key(val)
-      # 選建議項一律覆寫子作業編號（含改循環後重選）
+      # 選建議項一律覆寫子作業編號（含改循環後重選）；同值不重推，避免閃跳
       if (nzchar(sp$id)) {
-        updateTextInput(session, "sub_process_id", value = sp$id)
+        cur_id <- trimws(isolate(input$sub_process_id) %||% "")
+        if (!identical(sp$id, cur_id)) {
+          freezeReactiveValue(input, "sub_process_id")
+          updateTextInput(session, "sub_process_id", value = sp$id)
+        }
       }
     }
     refresh_risk_factor_choices()
@@ -2215,13 +2245,17 @@ server <- function(input, output, session) {
     if (nzchar(spid)) {
       new_spid <- recode_id_cycle_prefix(spid, code)
       if (!identical(new_spid, spid)) {
+        freezeReactiveValue(input, "sub_process_id")
         updateTextInput(session, "sub_process_id", value = new_spid)
-        sp_val <- trimws(input$sub_process %||% "")
+        sp_val <- trimws(isolate(input$sub_process) %||% "")
         if (grepl("\\|\\|", sp_val, fixed = FALSE)) {
           sp <- parse_sub_process_key(sp_val)
+          new_sel <- sub_process_key(new_spid, sp$name)
+          sub_process_ui_state$sel <- new_sel
+          freezeReactiveValue(input, "sub_process")
           updateSelectizeInput(
             session, "sub_process",
-            selected = sub_process_key(new_spid, sp$name)
+            selected = new_sel
           )
         }
       }
@@ -2230,6 +2264,7 @@ server <- function(input, output, session) {
     if (nzchar(cid)) {
       new_cid <- recode_id_cycle_prefix(cid, code)
       if (!identical(new_cid, cid)) {
+        freezeReactiveValue(input, "control_id")
         updateTextInput(session, "control_id", value = new_cid)
       }
     }

@@ -153,6 +153,18 @@ sub_process_id_from_value <- function(val, fallback_id = "") {
   }
 }
 
+# 子作業／控制編號前綴是否與目前循環編號一致（不一致則應清空／重選）
+id_matches_cycle_code <- function(id, cycle_code) {
+  id <- trimws(as.character(id %||% ""))
+  cycle_code <- trimws(as.character(cycle_code %||% ""))
+  if (!nzchar(id) || !nzchar(cycle_code)) return(TRUE)
+  if (!grepl("^[A-Z]{2}-", id)) return(TRUE)
+  id_cc <- sub("^([A-Z]{2})-.*$", "\\1", id)
+  known <- unique(unname(CYCLE_CODE_MAP))
+  if (!(id_cc %in% known)) return(TRUE)
+  identical(id_cc, cycle_code)
+}
+
 sub_process_choice_label <- function(key) {
   key <- trimws(as.character(key %||% ""))
   if (!nzchar(key)) return("")

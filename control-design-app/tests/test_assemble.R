@@ -629,6 +629,13 @@ check(identical(sub_process_id_from_value("EC-101||存取管理作業", ""), "EC
       "子作業名稱 key 可解析為編號")
 check(identical(sub_process_choice_label("EC-101||存取管理作業"), "存取管理作業"),
       "子作業選項標籤僅顯示名稱")
+check(isTRUE(id_matches_cycle_code("EC-101", "EC")), "同循環編號視為相符")
+check(!isTRUE(id_matches_cycle_code("EC-101", "SC")), "跨循環編號應判定不符")
+check(isTRUE(id_matches_cycle_code("SP-001", "EC")), "非循環前綴不強制判定不符")
+check(grepl("id_matches_cycle_code", app_casc) &&
+        grepl("updateTextInput\\(session, \"sub_process_id\"", app_casc) &&
+        grepl("切換循環時清空子作業|勿依賴 input\\$sub_process", app_casc),
+      "改循環後選子作業名稱可覆寫編號（清空殘值＋避免 refresh 競態）")
 check(grepl('card_header\\(\\s*"風險控制點設計"\\)', app_casc),
       "風險控制點設計左欄標題改為表單設計")
 it_risks <- cascade_risk_choices(it_rows)

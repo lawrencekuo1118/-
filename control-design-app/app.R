@@ -1115,12 +1115,34 @@ server <- function(input, output, session) {
     ch <- cascade_sub_process_choices(rows)
     cur <- trimws(input$sub_process %||% "")
     spid <- trimws(input$sub_process_id %||% "")
+    # 選取值若為 id||name，以 key 內編號為準（避免 textInput 尚未同步的舊編號干擾）
+    if (grepl("\\|\\|", cur, fixed = FALSE)) {
+      sp <- parse_sub_process_key(cur)
+      if (nzchar(sp$id)) spid <- sp$id
+    }
+    expected_cc <- cycle_code_for(cy)
+    if (!id_matches_cycle_code(spid, expected_cc)) {
+      # 循環已變、舊子作業不屬於新循環 → 清空，讓使用者重選並覆寫編號
+      cur <- ""
+      spid <- ""
+    }
     if (nzchar(cur) && !grepl("\\|\\|", cur, fixed = FALSE) && nzchar(spid)) {
       k <- sub_process_key(spid, cur)
       if (nzchar(k) && k %in% unname(ch)) cur <- k
     }
     if (nzchar(cur) && !cur %in% unname(ch)) {
-      ch <- c(ch, stats::setNames(cur, sub_process_choice_label(cur)))
+      # 僅保留仍屬本循環的自訂選項，勿把他循環殘值塞回選單
+      keep_custom <- TRUE
+      if (grepl("\\|\\|", cur, fixed = FALSE)) {
+        sp <- parse_sub_process_key(cur)
+        if (!id_matches_cycle_code(sp$id, expected_cc)) {
+          keep_custom <- FALSE
+          cur <- ""
+        }
+      }
+      if (keep_custom && nzchar(cur)) {
+        ch <- c(ch, stats::setNames(cur, sub_process_choice_label(cur)))
+      }
     }
     updateSelectizeInput(session, "sub_process", choices = ch, server = TRUE, selected = cur)
   }
@@ -1249,6 +1271,9 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$cycle, {
+    # 切換循環時清空子作業，避免舊編號殘留導致後續選名稱無法覆寫
+    updateSelectizeInput(session, "sub_process", selected = "")
+    updateTextInput(session, "sub_process_id", value = "")
     refresh_pbc_choices()
     refresh_sub_process_choices()
     refresh_risk_factor_choices()
@@ -1259,9 +1284,10 @@ server <- function(input, output, session) {
     library_items_as_interview_controls(cascade_source_library(lib()))
   })
 
+  # 僅依循環刷新候選；勿依賴 input$sub_process，否則選取當下會重跑 refresh
+  # 並與 updateTextInput(sub_process_id) 競態，造成編號無法被覆寫
   observe({
-    cy <- input$cycle %||% ""
-    input$sub_process
+    input$cycle
     refresh_sub_process_choices()
   })
 
@@ -1273,7 +1299,10 @@ server <- function(input, output, session) {
     }
     if (grepl("\\|\\|", val, fixed = FALSE)) {
       sp <- parse_sub_process_key(val)
-      updateTextInput(session, "sub_process_id", value = sp$id)
+      # 選建議項一律覆寫子作業編號（含改循環後重選）
+      if (nzchar(sp$id)) {
+        updateTextInput(session, "sub_process_id", value = sp$id)
+      }
     }
     refresh_risk_factor_choices()
   }, ignoreInit = TRUE)

@@ -649,8 +649,13 @@ check(!isTRUE(id_matches_cycle_code("EC-101", "SC")), "跨循環編號應判定�
 check(isTRUE(id_matches_cycle_code("SP-001", "EC")), "非循環前綴不強制判定不符")
 check(grepl("id_matches_cycle_code", app_casc) &&
         grepl("updateTextInput\\(session, \"sub_process_id\"", app_casc) &&
-        grepl("切換循環時清空子作業|勿依賴 input\\$sub_process", app_casc),
+        grepl("切換循環時清空子作業|勿依賴 input\\$sub_process|isolate\\(input\\$sub_process", app_casc),
       "改循環後選子作業名稱可覆寫編號（清空殘值＋避免 refresh 競態）")
+check(grepl("isolate\\(input\\$sub_process\\)", app_casc) &&
+        grepl("isolate\\(input\\$sub_process_id\\)", app_casc) &&
+        grepl("freezeReactiveValue\\(input, \"sub_process\"\\)", app_casc) &&
+        grepl("freezeReactiveValue\\(input, \"sub_process_id\"\\)", app_casc),
+      "子作業編號／名稱互改不觸發 refresh 閃跳（isolate＋freeze）")
 check(grepl('card_header\\(\\s*"風險控制點設計"\\)', app_casc),
       "風險控制點設計左欄標題改為表單設計")
 it_risks <- cascade_risk_choices(it_rows)

@@ -62,3 +62,10 @@ Restored R sources for the live dashboard
 [GGplaystore2021](https://hopesmasher1118.shinyapps.io/GGplaystore2021/) live under
 [`GGplaystore2021/`](./GGplaystore2021/). See that folder's README for run/deploy
 instructions.
+
+## Control design Shiny app (Form 4120SR)
+
+See [`control-design-app/README.md`](./control-design-app/README.md) for a Shiny
+assistant that designs standard internal-control points aligned with Form 4120SR
+(Significant Risk): nine cycles, three risk attributes, objectives/activities/
+frequency/owner/IUC, auto-assembled narratives, and IUC-based control splits.

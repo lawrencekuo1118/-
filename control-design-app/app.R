@@ -255,6 +255,35 @@ ui <- page_navbar(
         padding-top: 0.35rem;
         border-top: 1px dashed rgba(0,0,0,0.08);
       }
+      /* 各設計頁籤頂部簡約搜尋 */
+      .design-tab-filter-bar {
+        margin-bottom: 0.85rem;
+        padding: 0.55rem 0.75rem;
+        background: rgba(0, 91, 170, 0.04);
+        border: 1px solid rgba(0, 91, 170, 0.12);
+        border-radius: 0.35rem;
+      }
+      .design-tab-filter-bar .filter-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--brand-blue);
+        margin-bottom: 0.35rem;
+      }
+      .design-tab-filter-hits {
+        margin-top: 0.35rem;
+        max-height: 9rem;
+        overflow-y: auto;
+      }
+      .design-tab-filter-hits .btn-link {
+        display: block;
+        text-align: left;
+        white-space: normal;
+        padding: 0.15rem 0;
+        font-size: 0.82rem;
+        line-height: 1.35;
+        text-decoration: none;
+      }
+      .design-tab-filter-hits .btn-link:hover { text-decoration: underline; }
       /* 風險控制點設計：三階段分頁籤 */
       .rcm-design-tabs { margin-bottom: 0.5rem; }
       .rcm-design-tabs > .nav-tabs { border-bottom: 2px solid var(--brand-green); }
@@ -327,7 +356,7 @@ ui <- page_navbar(
       div(
         textInput("company", NULL, placeholder = "公司名稱"),
         tags$hr(class = "my-2"),
-        tags$div(class = "small fw-bold mb-1", "循環（全域）"),
+        tags$div(class = "small fw-bold mb-1", lab_req("循環（全域）")),
         selectInput(
           "cycle", NULL,
           choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
@@ -495,6 +524,13 @@ ui <- page_navbar(
           id = "rcm_design_tabs",
           nav_panel(
             "① 基礎設定",
+            div(
+              class = "design-tab-filter-bar",
+              tags$div(class = "filter-title", "關鍵字篩選 — 快速找出相關子作業名稱"),
+              textInput("filter_basic_kw", NULL, value = "", width = "100%",
+                        placeholder = "輸入子作業名稱或編號關鍵字…"),
+              uiOutput("filter_basic_hits")
+            ),
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。",
               tags$br(),
@@ -528,6 +564,18 @@ ui <- page_navbar(
           ),
           nav_panel(
             "② 風險辨識",
+            div(
+              class = "design-tab-filter-bar",
+              tags$div(class = "filter-title", "風險類別／風險因素篩選 — 快速找出相關風險描述"),
+              selectInput(
+                "filter_risk_category", NULL,
+                choices = c("全部風險類別…" = "", RISK_CATEGORY_CHOICES),
+                selected = "", width = "100%"
+              ),
+              textInput("filter_risk_factor_kw", NULL, value = "", width = "100%",
+                        placeholder = "風險因素關鍵字（可留空）…"),
+              uiOutput("filter_risk_hits")
+            ),
             p(class = "small text-muted mb-2",
               "包含：風險因素、風險描述、風險類別、RoMM 分類。風險因素可複選建議項目或手動輸入；同一控制點僅一種風險類別。"),
             selectizeInput(
@@ -570,6 +618,21 @@ ui <- page_navbar(
           ),
           nav_panel(
             "③ 控制設計",
+            div(
+              class = "design-tab-filter-bar",
+              tags$div(class = "filter-title", "控制活動類型／控制類型篩選 — 快速找出相關控制活動"),
+              selectInput(
+                "filter_ctrl_approach", NULL,
+                choices = c("全部控制活動類型…" = "", CONTROL_ACTIVITY_TYPE_PD),
+                selected = "", width = "100%"
+              ),
+              selectInput(
+                "filter_ctrl_nature", NULL,
+                choices = c("全部控制類型…" = "", CONTROL_TYPE_MANUAL_AUTO),
+                selected = "", width = "100%"
+              ),
+              uiOutput("filter_ctrl_hits")
+            ),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
@@ -696,77 +759,92 @@ ui <- page_navbar(
   ),
   nav_panel(
     "控制點測試設計",
-    layout_columns(
-      col_widths = c(4, 8),
-      card(
-        card_header("控制點測試設計（CSA）"),
-        p(class = "small text-muted mb-2",
-          "僅能選取「風險控制點設計」已定版並寫入 RCM 之控制點。",
-          "同一控制點可因不同控制現況情境維護多組測試步驟。",
-          "抽樣樣本數依該控制實際發生頻率訂定（PCAOB AS 2301／AS 2315；Deloitte 頻率對應表）；",
-          "Higher RoMM／Fraud 時上調。"),
-        selectizeInput(
-          "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "已定版風險控制點（空＝全部已定版）")
-        ),
-        checkboxGroupInput("csa_elements", "測試步驟元素",
-                           choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
-        actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
-        uiOutput("csa_status"),
-        tags$hr(),
-        tags$strong(class = "small", "頻率 → 建議最低樣本數（基準／高風險）"),
-        tags$div(
-          class = "small text-muted mb-2",
-          tags$table(
-            class = "table table-sm table-borderless mb-0",
-            tags$thead(tags$tr(
-              tags$th("頻率"), tags$th("基準"), tags$th("Higher／Fraud")
-            )),
-            tags$tbody(
-              tags$tr(tags$td("每年"), tags$td("1"), tags$td("1")),
-              tags$tr(tags$td("每半年"), tags$td("2"), tags$td("2")),
-              tags$tr(tags$td("每季"), tags$td("2"), tags$td("3")),
-              tags$tr(tags$td("每月"), tags$td("3"), tags$td("5")),
-              tags$tr(tags$td("每週"), tags$td("10"), tags$td("15")),
-              tags$tr(tags$td("每日／每筆交易"), tags$td("25"), tags$td("40")),
-              tags$tr(tags$td("持續／自動"), tags$td("To1＋再執行1"), tags$td("To1＋再執行2")),
-              tags$tr(tags$td("事件觸發／其他"), tags$td(colspan = 2, "依期間發生次數／母體"))
-            )
-          )
-        ),
-        tags$hr(),
-        tags$strong(class = "small", "控制現況情境組（同一控制點可多組）"),
-        p(class = "small text-muted mb-2",
-          "同一已定版控制點可因不同控制現況情境，各自維護一組測試步驟（Type／Inputs／Steps／Outputs）。"),
-        selectizeInput(
-          "csa_edit_control", "編輯控制點", choices = NULL,
-          options = list(placeholder = "選擇已定版控制點以編輯情境組")
-        ),
-        selectizeInput(
-          "csa_scenario_pick", "情境組", choices = NULL,
-          options = list(placeholder = "選擇或新增情境組")
-        ),
-        textInput("csa_scenario_name", "控制現況情境名稱",
-                  placeholder = "例：電子簽核路徑／口頭核准路徑"),
-        textAreaInput("csa_scenario_status", "該情境之控制現況說明", rows = 2,
-                      placeholder = "描述此情境下公司實際怎麼做"),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
-          actionButton("csa_scenario_save", "儲存此情境組", class = "btn-sm btn-primary"),
-          actionButton("csa_scenario_del", "刪除此情境組", class = "btn-sm btn-outline-danger")
-        ),
-        tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
-        selectizeInput("type", "Type", choices = TYPE_CHOICES,
-                       options = list(create = TRUE, placeholder = "Form 4120SR Type")),
-        textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
-        textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
-        textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
-        textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻")
+    card(
+      card_header("控制點測試設計（CSA）"),
+      p(class = "small text-muted mb-2",
+        "僅能選取「風險控制點設計」已定版並寫入 RCM 之控制點。",
+        "同一控制點可因不同控制現況情境維護多組測試步驟。",
+        "抽樣樣本數依該控制實際發生頻率訂定（PCAOB AS 2301／AS 2315；Deloitte 頻率對應表）；",
+        "Higher RoMM／Fraud 時上調。"),
+      selectizeInput(
+        "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
+        options = list(placeholder = "已定版風險控制點（空＝全部已定版）")
       ),
-      card(
-        DTOutput("csa_table"),
-        downloadButton("download_csa", "下載自我評估測試步驟 CSV", class = "btn-sm")
+      checkboxGroupInput("csa_elements", "測試步驟元素",
+                         choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
+      actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
+      uiOutput("csa_status"),
+      tags$hr(),
+      tags$strong(class = "small", "頻率 → 建議最低樣本數（基準／高風險）"),
+      tags$div(
+        class = "small text-muted mb-2",
+        tags$table(
+          class = "table table-sm table-borderless mb-0",
+          tags$thead(tags$tr(
+            tags$th("頻率"), tags$th("基準"), tags$th("Higher／Fraud")
+          )),
+          tags$tbody(
+            tags$tr(tags$td("每年"), tags$td("1"), tags$td("1")),
+            tags$tr(tags$td("每半年"), tags$td("2"), tags$td("2")),
+            tags$tr(tags$td("每季"), tags$td("2"), tags$td("3")),
+            tags$tr(tags$td("每月"), tags$td("3"), tags$td("5")),
+            tags$tr(tags$td("每週"), tags$td("10"), tags$td("15")),
+            tags$tr(tags$td("每日／每筆交易"), tags$td("25"), tags$td("40")),
+            tags$tr(tags$td("持續／自動"), tags$td("To1＋再執行1"), tags$td("To1＋再執行2")),
+            tags$tr(tags$td("事件觸發／其他"), tags$td(colspan = 2, "依期間發生次數／母體"))
+          )
+        )
+      ),
+      tags$hr(),
+      tags$strong(class = "small", "控制現況情境組（同一控制點可多組）"),
+      p(class = "small text-muted mb-2",
+        "同一已定版控制點可因不同控制現況情境，各自維護一組測試步驟（Type／Inputs／Steps／Outputs）。"),
+      selectizeInput(
+        "csa_edit_control", "編輯控制點", choices = NULL,
+        options = list(placeholder = "選擇已定版控制點以編輯情境組")
+      ),
+      selectizeInput(
+        "csa_scenario_pick", "情境組", choices = NULL,
+        options = list(placeholder = "選擇或新增情境組")
+      ),
+      textInput("csa_scenario_name", "控制現況情境名稱",
+                placeholder = "例：電子簽核路徑／口頭核准路徑"),
+      textAreaInput("csa_scenario_status", "該情境之控制現況說明", rows = 2,
+                    placeholder = "描述此情境下公司實際怎麼做"),
+      div(
+        class = "d-flex gap-1 flex-wrap mb-2",
+        actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
+        actionButton("csa_scenario_save", "儲存此情境組", class = "btn-sm btn-primary"),
+        actionButton("csa_scenario_del", "刪除此情境組", class = "btn-sm btn-outline-danger")
+      ),
+      tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
+      selectizeInput("type", "Type", choices = TYPE_CHOICES,
+                     options = list(create = TRUE, placeholder = "Form 4120SR Type")),
+      textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
+      textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
+      textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
+      textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻")
+    ),
+    div(
+      class = "design-preview-drawer",
+      tags$button(
+        class = "design-preview-toggle",
+        type = "button",
+        `data-bs-toggle` = "collapse",
+        `data-bs-target` = "#csaPreviewCollapse",
+        `aria-expanded` = "false",
+        `aria-controls` = "csaPreviewCollapse",
+        tags$span(class = "chevron", "▸"),
+        "預覽列（自我評估測試步驟）— 點擊展開或收回"
+      ),
+      div(
+        id = "csaPreviewCollapse",
+        class = "collapse",
+        div(
+          class = "design-preview-body",
+          DTOutput("csa_table"),
+          downloadButton("download_csa", "下載自我評估測試步驟 CSV", class = "btn-sm")
+        )
       )
     )
   ),
@@ -1147,7 +1225,7 @@ server <- function(input, output, session) {
   output$sidebar_cycle_hint <- renderUI({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
-      tags$div(class = "small text-warning", "必選：選定後訪談／設計／PBC 皆共用此循環。")
+      tags$div(class = "small text-danger", "必填：請先選定循環，訪談／設計／PBC 皆共用。")
     } else {
       tags$div(class = "small text-muted", sprintf("目前：%s", cy))
     }
@@ -1156,12 +1234,148 @@ server <- function(input, output, session) {
     cy <- input$cycle %||% ""
     cc <- trimws(input$cycle_code %||% "")
     if (!nzchar(cy)) {
-      div(class = "alert alert-warning py-1 mb-2 small",
-          tags$strong("尚未選定循環。"), "請先於左側側邊欄選擇循環。")
+      div(class = "alert alert-danger py-1 mb-2 small",
+          tags$strong("循環為必填。"), "請先於左側側邊欄選擇循環後再填寫本頁。")
     } else {
       div(class = "alert alert-secondary py-1 mb-2 small",
           sprintf("循環：%s（編號 %s）— 於側邊欄變更。", cy, if (nzchar(cc)) cc else "—"))
     }
+  })
+
+  # 設計頁籤頂部簡約搜尋：依範本庫找子作業／風險描述／控制活動
+  tab_filter_rows <- reactive({
+    cy <- input$cycle %||% ""
+    if (!nzchar(cy)) return(list())
+    library_controls_flat(cascade_source_library(lib()), cycle = cy)
+  })
+  output$filter_basic_hits <- renderUI({
+    kw <- input$filter_basic_kw %||% ""
+    hits <- search_sub_process_hits(tab_filter_rows(), keyword = kw)
+    if (!length(hits)) {
+      return(tags$div(class = "small text-muted",
+                      if (!nzchar(input$cycle %||% "")) "請先選定循環" else "無相符子作業"))
+    }
+    tags$div(
+      class = "design-tab-filter-hits",
+      lapply(seq_along(hits), function(i) {
+        h <- hits[[i]]
+        actionLink(
+          paste0("filter_basic_pick_", i),
+          label = h$label,
+          class = "btn btn-link",
+          onclick = sprintf(
+            "Shiny.setInputValue('filter_basic_apply', {nm:%s, id:%s, nonce:Math.random()}, {priority:'event'}); return false;",
+            jsonlite::toJSON(h$sub_process, auto_unbox = TRUE),
+            jsonlite::toJSON(h$sub_process_id %||% "", auto_unbox = TRUE)
+          )
+        )
+      })
+    )
+  })
+  observeEvent(input$filter_basic_apply, {
+    v <- input$filter_basic_apply
+    if (is.null(v)) return()
+    nm <- as.character(v$nm %||% "")
+    id <- as.character(v$id %||% "")
+    if (!nzchar(nm)) return()
+    if (nzchar(id)) {
+      freezeReactiveValue(input, "sub_process_id")
+      updateTextInput(session, "sub_process_id", value = id)
+    }
+    key <- if (exists("sub_process_key", mode = "function")) {
+      sub_process_key(id, nm)
+    } else nm
+    refresh_sub_process_choices()
+    updateSelectizeInput(session, "sub_process", selected = key)
+    showNotification(sprintf("已帶入子作業：%s", nm), type = "message", duration = 3)
+  })
+  output$filter_risk_hits <- renderUI({
+    hits <- search_risk_description_hits(
+      tab_filter_rows(),
+      category = input$filter_risk_category %||% "",
+      factor_kw = input$filter_risk_factor_kw %||% ""
+    )
+    if (!length(hits)) {
+      return(tags$div(class = "small text-muted",
+                      if (!nzchar(input$cycle %||% "")) "請先選定循環" else "無相符風險描述"))
+    }
+    tags$div(
+      class = "design-tab-filter-hits",
+      lapply(seq_along(hits), function(i) {
+        h <- hits[[i]]
+        actionLink(
+          paste0("filter_risk_pick_", i),
+          label = h$label,
+          class = "btn btn-link",
+          onclick = sprintf(
+            "Shiny.setInputValue('filter_risk_apply', {rf:%s, cat:%s, desc:%s, nonce:Math.random()}, {priority:'event'}); return false;",
+            jsonlite::toJSON(h$risk_factor %||% "", auto_unbox = TRUE),
+            jsonlite::toJSON(h$risk_category %||% "", auto_unbox = TRUE),
+            jsonlite::toJSON(h$risk_description %||% "", auto_unbox = TRUE)
+          )
+        )
+      })
+    )
+  })
+  observeEvent(input$filter_risk_apply, {
+    v <- input$filter_risk_apply
+    if (is.null(v)) return()
+    desc <- as.character(v$desc %||% "")
+    rf <- as.character(v$rf %||% "")
+    cat <- as.character(v$cat %||% "")
+    if (nzchar(desc)) updateTextAreaInput(session, "risk_description", value = desc)
+    if (nzchar(cat)) updateSelectInput(session, "risk_category", selected = cat)
+    if (nzchar(rf)) {
+      updateSelectizeInput(session, "risk_factor", selected = rf)
+    }
+    showNotification("已帶入風險描述", type = "message", duration = 3)
+  })
+  output$filter_ctrl_hits <- renderUI({
+    hits <- search_control_activity_hits(
+      tab_filter_rows(),
+      approach = input$filter_ctrl_approach %||% "",
+      nature = input$filter_ctrl_nature %||% ""
+    )
+    if (!length(hits)) {
+      return(tags$div(class = "small text-muted",
+                      if (!nzchar(input$cycle %||% "")) "請先選定循環" else "無相符控制活動"))
+    }
+    tags$div(
+      class = "design-tab-filter-hits",
+      lapply(seq_along(hits), function(i) {
+        h <- hits[[i]]
+        actionLink(
+          paste0("filter_ctrl_pick_", i),
+          label = h$label,
+          class = "btn btn-link",
+          onclick = sprintf(
+            "Shiny.setInputValue('filter_ctrl_apply', {act:%s, ap:%s, nat:%s, nonce:Math.random()}, {priority:'event'}); return false;",
+            jsonlite::toJSON(h$control_activity %||% "", auto_unbox = TRUE),
+            jsonlite::toJSON(h$approach %||% "", auto_unbox = TRUE),
+            jsonlite::toJSON(h$nature %||% "", auto_unbox = TRUE)
+          )
+        )
+      })
+    )
+  })
+  observeEvent(input$filter_ctrl_apply, {
+    v <- input$filter_ctrl_apply
+    if (is.null(v)) return()
+    act <- as.character(v$act %||% "")
+    ap <- as.character(v$ap %||% "")
+    nat <- as.character(v$nat %||% "")
+    if (nzchar(act)) updateTextAreaInput(session, "control_activity", value = act)
+    if (nzchar(ap)) {
+      ap_n <- if (exists("normalize_single_activity_type", mode = "function"))
+        normalize_single_activity_type(ap) else ap
+      if (nzchar(ap_n)) updateSelectInput(session, "approach", selected = ap_n)
+    }
+    if (nzchar(nat)) {
+      nat_n <- if (exists("normalize_control_type_manual_auto", mode = "function"))
+        normalize_control_type_manual_auto(nat) else nat
+      if (nzchar(nat_n)) updateSelectInput(session, "nature", selected = nat_n)
+    }
+    showNotification("已帶入控制活動", type = "message", duration = 3)
   })
   output$control_id_compose_hint <- renderUI({
     cc <- trimws(input$cycle_code %||% "")
@@ -2105,6 +2319,9 @@ server <- function(input, output, session) {
   output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
 
   push_rcm_section_preview <- function(section) {
+    if (!nzchar(trimws(input$cycle %||% ""))) {
+      return(showNotification("循環（全域）為必填：請先於側邊欄選定循環。", type = "error"))
+    }
     draft <- current_draft_from_inputs()
     merged <- merge_design_preview_section(rcm_preview_ctrl(), draft, section)
     rcm_preview_ctrl(merged)
@@ -2554,6 +2771,9 @@ server <- function(input, output, session) {
 
   # Primary path: 設計完成 → 直接寫入一筆控制點／RCM 列（1:1）
   observeEvent(input$finalize_rcm_row, {
+    if (!nzchar(trimws(input$cycle %||% ""))) {
+      return(showNotification("循環（全域）為必填：請先於側邊欄選定循環。", type = "error"))
+    }
     d <- current_draft_from_inputs()
     req <- design_required_check(d)
     if (!isTRUE(req$ok)) {

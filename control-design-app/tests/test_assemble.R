@@ -905,7 +905,24 @@ check(grepl('preview_rcm_basic", "儲存"', app_src) &&
         grepl('preview_rcm_risk", "儲存"', app_src) &&
         grepl('preview_rcm_control", "儲存"', app_src),
       "三個設計區塊皆有儲存按鈕")
-check(grepl("design-section-preview-bar", app_src), "儲存按鈕置於區塊右下")
+check(grepl("design-tab-filter-bar", app_src) &&
+        grepl("filter_basic_kw", app_src) &&
+        grepl("filter_risk_category", app_src) &&
+        grepl("filter_ctrl_approach", app_src) &&
+        grepl("search_sub_process_hits", paste(readLines(file.path(root, "R/cascade.R"), encoding = "UTF-8"), collapse = "\n")),
+      "三階段頁籤頂部有簡約搜尋篩選")
+check(grepl("csaPreviewCollapse", app_src) &&
+        grepl('data-bs-target\\s*=\\s*"#csaPreviewCollapse"', app_src) &&
+        grepl("預覽列（自我評估測試步驟）", app_src),
+      "控制點測試設計預覽為底部可收合列")
+csa_panel <- sub('(?s).*nav_panel\\(\\s*"控制點測試設計"', 'nav_panel("控制點測試設計"', app_src, perl = TRUE)
+csa_panel <- sub('(?s)nav_panel\\(\\s*"RCM".*', "", csa_panel, perl = TRUE)
+check(!grepl("layout_columns", csa_panel, fixed = TRUE) &&
+        grepl("design-preview-drawer", csa_panel, fixed = TRUE),
+      "CSA 頁不再用右側雙欄，改底部收合預覽")
+check(grepl('lab_req\\("循環（全域）"\\)', app_src) &&
+        grepl("循環（全域）為必填", app_src),
+      "循環（全域）標示必填並於儲存／定稿門檻檢查")
 check(grepl("rcm_preview_ctrl|push_rcm_section_preview", app_src),
       "RCM 預覽合併邏輯")
 check(!grepl("push_rcm_section_preview[\\s\\S]{0,400}nav_select\\(\\s*\"main_nav\"\\s*,\\s*selected\\s*=\\s*\"RCM\"", app_src, perl = TRUE),

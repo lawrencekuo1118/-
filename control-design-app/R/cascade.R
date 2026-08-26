@@ -765,3 +765,107 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
          tags = tags, cycle = ctrl$cycle, control = ctrl)
   }
 }
+
+# ── 設計頁籤頂部簡約搜尋（依範本庫快速找欄位值）──────────────────────────
+.tab_search_limit <- 12L
+
+search_sub_process_hits <- function(rows, keyword = "", limit = .tab_search_limit) {
+  kw <- trimws(as.character(keyword %||% ""))
+  seen <- character()
+  out <- list()
+  for (r in rows) {
+    nm <- nzchar_trim(r$sub_process)
+    id <- nzchar_trim(r$sub_process_id)
+    if (!nzchar(nm)) next
+    if (nzchar(kw) && !grepl(kw, nm, fixed = TRUE) &&
+        !grepl(kw, id, fixed = TRUE) &&
+        !grepl(kw, nm, ignore.case = TRUE)) next
+    key <- paste(id, nm, sep = "\t")
+    if (key %in% seen) next
+    seen <- c(seen, key)
+    out[[length(out) + 1L]] <- list(
+      sub_process = nm,
+      sub_process_id = id,
+      label = if (nzchar(id)) sprintf("%s（%s）", nm, id) else nm
+    )
+    if (length(out) >= limit) break
+  }
+  out
+}
+
+search_risk_description_hits <- function(rows, category = "", factor_kw = "",
+                                         limit = .tab_search_limit) {
+  cat <- trimws(as.character(category %||% ""))
+  fkw <- trimws(as.character(factor_kw %||% ""))
+  seen <- character()
+  out <- list()
+  for (r in rows) {
+    if (nzchar(cat) && !identical(nzchar_trim(r$risk_category), cat)) next
+    rf <- nzchar_trim(r$risk_factor %||% r$risk_name)
+    desc <- nzchar_trim(r$risk_description)
+    if (!nzchar(desc)) next
+    if (nzchar(fkw) && !grepl(fkw, rf, ignore.case = TRUE) &&
+        !grepl(fkw, desc, ignore.case = TRUE)) next
+    key <- paste(rf, desc, sep = "\t")
+    if (key %in% seen) next
+    seen <- c(seen, key)
+    out[[length(out) + 1L]] <- list(
+      risk_factor = rf,
+      risk_category = nzchar_trim(r$risk_category),
+      risk_description = desc,
+      label = {
+        short <- if (nchar(desc) > 48) paste0(substr(desc, 1, 48), "…") else desc
+        if (nzchar(rf)) sprintf("[%s] %s", rf, short) else short
+      }
+    )
+    if (length(out) >= limit) break
+  }
+  out
+}
+
+search_control_activity_hits <- function(rows, approach = "", nature = "",
+                                         limit = .tab_search_limit) {
+  ap <- trimws(as.character(approach %||% ""))
+  nat <- trimws(as.character(nature %||% ""))
+  if (nzchar(ap) && exists("normalize_single_activity_type", mode = "function")) {
+    ap_n <- normalize_single_activity_type(ap)
+    if (nzchar(ap_n)) ap <- ap_n
+  }
+  if (nzchar(nat) && exists("normalize_control_type_manual_auto", mode = "function")) {
+    nat_n <- normalize_control_type_manual_auto(nat)
+    if (nzchar(nat_n)) nat <- nat_n
+  }
+  seen <- character()
+  out <- list()
+  for (r in rows) {
+    act <- nzchar_trim(r$control_activity)
+    if (!nzchar(act)) next
+    r_ap <- nzchar_trim(r$approach)
+    r_nat <- nzchar_trim(r$nature)
+    if (nzchar(ap)) {
+      r_ap_n <- if (exists("normalize_single_activity_type", mode = "function"))
+        normalize_single_activity_type(r_ap) else r_ap
+      if (!identical(r_ap_n, ap) && !grepl(ap, r_ap, fixed = TRUE)) next
+    }
+    if (nzchar(nat)) {
+      r_nat_n <- if (exists("normalize_control_type_manual_auto", mode = "function"))
+        normalize_control_type_manual_auto(r_nat) else r_nat
+      if (!identical(r_nat_n, nat) && !identical(r_nat, nat)) next
+    }
+    key <- act
+    if (key %in% seen) next
+    seen <- c(seen, key)
+    out[[length(out) + 1L]] <- list(
+      control_activity = act,
+      approach = r_ap,
+      nature = r_nat,
+      label = {
+        short <- if (nchar(act) > 56) paste0(substr(act, 1, 56), "…") else act
+        bits <- c(if (nzchar(r_nat)) r_nat, if (nzchar(r_ap)) r_ap)
+        if (length(bits)) sprintf("%s — %s", paste(bits, collapse = "／"), short) else short
+      }
+    )
+    if (length(out) >= limit) break
+  }
+  out
+}

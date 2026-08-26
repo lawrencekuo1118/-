@@ -425,10 +425,11 @@ ui <- page_navbar(
       col_widths = c(7, 5),
       card(
         card_header("風險控制點設計"),
-        navset_tab(
-          id = "rcm_design_tabs",
+        div(
           class = "rcm-design-tabs",
-          nav_panel(
+          navset_tab(
+            id = "rcm_design_tabs",
+            nav_panel(
             "① 基礎設定",
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
@@ -593,6 +594,7 @@ ui <- page_navbar(
               class = "design-section-preview-bar",
               actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
             )
+          )
           )
         ),
         div(class = "design-validation-panel", uiOutput("live_validation")),

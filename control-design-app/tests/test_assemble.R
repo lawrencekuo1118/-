@@ -788,6 +788,7 @@ check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}asser
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
       "聲明設定在控制目標上方")
 check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
+        grepl('div\\([\\s\\S]*class\\s*=\\s*"rcm-design-tabs"', app_src, perl = TRUE) &&
         grepl('"① 基礎設定"', app_src) &&
         grepl('"② 風險辨識"', app_src) &&
         grepl('"③ 控制設計"', app_src),

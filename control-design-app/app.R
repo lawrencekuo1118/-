@@ -140,7 +140,7 @@ ui <- page_navbar(
     });
   ")),
     tags$style(HTML(paste0("
-      :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; }
+      :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; --input-placeholder: #ADB5BD; }
       .navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }
       .navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }
       .navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%; background: var(--brand-green); vertical-align: middle; }
@@ -160,22 +160,33 @@ ui <- page_navbar(
       .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
       .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
       .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
-      /* 輸入框：未填淺灰（與「公司名稱」placeholder 同色）；輸入／選定後黑色 */
-      .form-control, .form-select, textarea.form-control {
+      /* 所有輸入框預設說明字：統一為「公司名稱」placeholder 色 (#ADB5BD) */
+      .form-control, .form-select, textarea.form-control,
+      input.form-control, input[type=\"text\"], input[type=\"search\"],
+      input[type=\"password\"], input[type=\"number\"], input[type=\"email\"] {
         color: var(--brand-black) !important;
       }
       .form-control:placeholder-shown,
-      textarea.form-control:placeholder-shown {
-        color: #ADB5BD !important;
+      textarea.form-control:placeholder-shown,
+      input.form-control:placeholder-shown,
+      input[type=\"text\"]:placeholder-shown,
+      input[type=\"search\"]:placeholder-shown,
+      input[type=\"password\"]:placeholder-shown,
+      input[type=\"number\"]:placeholder-shown,
+      input[type=\"email\"]:placeholder-shown {
+        color: var(--input-placeholder) !important;
       }
-      .form-select:has(option[value=\"\"]:checked) {
-        color: #ADB5BD !important;
+      .form-select:has(option[value=\"\"]:checked),
+      select.form-select:has(option[value=\"\"]:checked),
+      select.shiny-input-select:has(option[value=\"\"]:checked) {
+        color: var(--input-placeholder) !important;
       }
       .form-control::placeholder, .form-select::placeholder,
       textarea.form-control::placeholder,
+      input::placeholder,
       .selectize-input input::placeholder {
-        color: #ADB5BD !important;
-        opacity: 1;
+        color: var(--input-placeholder) !important;
+        opacity: 1 !important;
       }
       .selectize-input.has-items,
       .selectize-input.has-items .item,
@@ -183,8 +194,14 @@ ui <- page_navbar(
         color: var(--brand-black) !important;
       }
       .selectize-input:not(.has-items),
-      .selectize-input:not(.has-items) input {
-        color: #ADB5BD !important;
+      .selectize-input:not(.has-items) input,
+      .selectize-control.single .selectize-input:not(.has-items),
+      .selectize-control.single .selectize-input:not(.has-items) input {
+        color: var(--input-placeholder) !important;
+      }
+      /* selectize 空選時顯示的 placeholder 文字節點 */
+      .selectize-input .item[data-value=\"\"] {
+        color: var(--input-placeholder) !important;
       }
       .selectize-dropdown .option { color: #6B7280; }
       .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }

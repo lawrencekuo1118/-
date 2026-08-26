@@ -1060,19 +1060,50 @@ server <- function(input, output, session) {
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
-  # 啟動時確保內建候選就緒（九大循環可直接選；毋須使用者先匯入底稿）
+  # 啟動時確保內建候選就緒；並以最新去識別批次覆寫同 ID 範本
   observeEvent(TRUE, {
     cur <- lib()
     builtin <- seed_control_library(TRUE)
-    merged <- merge_libraries(cur, builtin, overwrite = FALSE)
+    # overwrite=TRUE：讓去識別後的 PL／種子列覆蓋舊企業原文
+    merged <- merge_libraries(cur, builtin, overwrite = TRUE)
     batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
     if (file.exists(batch)) {
       merged <- tryCatch(
-        merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = FALSE),
+        merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = TRUE),
         error = function(e) merged
       )
     }
-    if (length(merged) > length(cur)) {
+    pl_batch <- file.path(root, "data", "prologium_rcm_batch.json")
+    if (file.exists(pl_batch)) {
+      merged <- tryCatch(
+        merge_libraries(merged, load_control_library(pl_batch, fallback_seed = FALSE), overwrite = TRUE),
+        error = function(e) merged
+      )
+    }
+    # 既有列再跑一次去識別（清除殘留企業名／表單碼）
+    if (exists("deidentify_library_item", mode = "function")) {
+      merged <- lapply(merged, function(it) {
+        tryCatch(deidentify_library_item(it), error = function(e) it)
+      })
+    }
+    # 強制剝除非設計欄
+    if (exists("strip_non_design_control_fields", mode = "function")) {
+      merged <- lapply(merged, function(it) {
+        if (!is.null(it$control)) {
+          it$control <- strip_non_design_control_fields(it$control)
+        }
+        it
+      })
+    }
+    changed <- !identical(length(merged), length(cur)) ||
+      !identical(
+        vapply(merged, function(x) x$updated_at %||% "", character(1)),
+        vapply(cur, function(x) x$updated_at %||% "", character(1))
+      )
+    if (changed || length(merged) != length(cur)) {
+      lib(persist_lib(merged, force = TRUE))
+    } else {
+      # 仍寫入一次以覆寫磁碟上的舊企業原文
       lib(persist_lib(merged, force = TRUE))
     }
   }, once = TRUE)

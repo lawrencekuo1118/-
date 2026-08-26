@@ -160,6 +160,20 @@ ui <- page_navbar(
       .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
       .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
       .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
+      /* 全站輸入框／選單內文字淺灰 */
+      .form-control, .form-select,
+      textarea.form-control,
+      .selectize-input, .selectize-input input,
+      .selectize-input .item {
+        color: #9CA3AF !important;
+      }
+      .form-control::placeholder, .form-select::placeholder,
+      textarea.form-control::placeholder,
+      .selectize-input input::placeholder {
+        color: #C4C9D1 !important;
+        opacity: 1;
+      }
+      .selectize-dropdown .option { color: #6B7280; }
       .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }
       .alert-info { background-color: rgba(0,46,130,0.08); border-color: var(--brand-blue); color: var(--brand-blue); }
       .text-danger { color: #C41E3A !important; }
@@ -217,9 +231,8 @@ ui <- page_navbar(
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
       .objective-assertions-row #risk_description { min-height: 5.5rem; resize: vertical; }
-      #control_objective { min-height: 7.5rem; resize: vertical; color: #9CA3AF; }
-      #control_activity { min-height: 5.5rem; resize: vertical; color: #9CA3AF; }
-      #control_objective::placeholder, #control_activity::placeholder { color: #C4C9D1; }
+      #control_objective { min-height: 7.5rem; resize: vertical; }
+      #control_activity { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .assertions-side .alert { margin-bottom: 0.35rem; }
       .design-section-preview-bar {

@@ -917,7 +917,7 @@ server <- function(input, output, session) {
         saved <- c(saved, vapply(cs, function(x) as.character(x$saved_at %||% ""), character(1)))
       }
     }
-    if (!length(rows)) return(NULL)
+    if (!length(rows)) return(empty_rcm_display_df())
     rcm_all <- do.call(rbind, rows)
     if (length(saved) == nrow(rcm_all)) {
       rcm_all <- cbind(`儲存時間` = saved, as.data.frame(rcm_all, stringsAsFactors = FALSE))
@@ -2699,17 +2699,16 @@ server <- function(input, output, session) {
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
     df <- rcm_display_df()
-    if (is.null(df) || !nrow(df)) {
-      return(datatable(
-        data.frame(訊息 = "尚無 RCM 列；於「風險控制點設計」各區塊按「儲存」，或完成設計後「寫入 RCM 一列」。"),
-        rownames = FALSE, options = list(dom = "t")
-      ))
-    }
+    if (is.null(df)) df <- empty_rcm_display_df()
+    # 無資料仍顯示 RCM 標題列（欄名）；提示改由上方 rcm_count_box
     dt <- datatable(
       df, rownames = FALSE,
       options = list(
         scrollX = TRUE, pageLength = 15, dom = "tip",
         ordering = FALSE,
+        language = list(
+          emptyTable = "尚無 RCM 列；於「風險控制點設計」各區塊按「儲存」，或完成設計後「寫入 RCM 一列」。"
+        ),
         rowCallback = DT::JS(
           "function(row, data, index) {",
           "  var api = $(row).closest('table').DataTable();",
@@ -2725,7 +2724,7 @@ server <- function(input, output, session) {
 
   observeEvent(rcm_revision(), {
     df <- rcm_display_df()
-    if (is.null(df) || !nrow(df)) return()
+    if (is.null(df)) df <- empty_rcm_display_df()
     proxy <- DT::dataTableProxy("rcm_table", session = session)
     DT::replaceData(proxy, df, resetPaging = FALSE, rownames = FALSE)
   }, ignoreInit = TRUE)

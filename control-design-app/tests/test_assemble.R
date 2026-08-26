@@ -800,9 +800,11 @@ check(grepl('selectizeInput\\(\\s*"iuc"', app_src) &&
         grepl('textInput\\(\\s*"related_system"', app_src) &&
         !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
       "IUC 與相關系統分開設定（IUC 為可多選 selectize）")
-check(grepl('uiOutput\\(\\s*"related_system_label"', app_src) &&
+check(grepl('textInput\\(\\s*"related_system"\\s*,\\s*lab_opt\\(\\s*"相關系統"', app_src) &&
+        grepl('textInput\\(\\s*"related_policy"\\s*,\\s*lab_opt\\(\\s*"相關政策或程序"', app_src) &&
+        grepl("updateTextInput\\(session, \"related_system\", label", app_src) &&
         grepl('related_system_mode_for_ctrl', app_src),
-      "相關系統依控制類型動態必填（自動控制）")
+      "相關系統選填標籤與相關政策或程序同列排版")
 check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
       "控制目標不再與聲明設定並排（改全寬）")
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),

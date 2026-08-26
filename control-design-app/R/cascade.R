@@ -109,8 +109,22 @@ library_controls_flat <- function(library, cycle = NULL) {
 }
 
 # 引導候選來源：永遠合併內建種子（九大循環可直接選），毋須先匯入底稿
+# 快取種子，避免每次刷新選單都重跑 seed（約 1–2 秒）導致 UI 卡住／訊息錯序
+.cascade_builtin_library_cache <- new.env(parent = emptyenv())
+
+cascade_builtin_library <- function(force = FALSE) {
+  if (!isTRUE(force) && !is.null(.cascade_builtin_library_cache$items)) {
+    return(.cascade_builtin_library_cache$items)
+  }
+  items <- tryCatch(seed_control_library(TRUE), error = function(e) list())
+  .cascade_builtin_library_cache$items <- items
+  items
+}
+
 cascade_source_library <- function(user_library = list()) {
-  builtin <- tryCatch(seed_control_library(TRUE), error = function(e) list())
+  # 磁碟／session 庫已夠大時直接用，避免每次選單刷新都 merge 種子
+  if (length(user_library) >= 100L) return(user_library)
+  builtin <- cascade_builtin_library()
   if (!length(user_library)) return(builtin)
   if (!exists("merge_libraries", mode = "function")) {
     return(c(builtin, user_library))

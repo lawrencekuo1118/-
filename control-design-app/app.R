@@ -138,6 +138,36 @@ ui <- page_navbar(
         el.disabled = !msg.enabled;
       }
     });
+    // 子作業名稱：選項已在 selectize.options 時，聚焦／點擊強制 refreshOptions 以寫入下拉 DOM
+    (function() {
+      function wireSubProcessMenu() {
+        var el = document.getElementById('sub_process');
+        if (!el || !el.selectize || el.selectize.__subMenuWired) return;
+        var s = el.selectize;
+        s.__subMenuWired = true;
+        var openRendered = function(ev) {
+          try {
+            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+            var keys = Object.keys(s.options || {});
+            if (!keys.length) return;
+            // 若下拉 DOM 尚無選項，重建一次
+            if (!s.$dropdown_content.children('[data-selectable]').length) {
+              var snapshot = keys.map(function(k) { return s.options[k]; });
+              s.clearOptions();
+              s.addOption(snapshot);
+            }
+            s.refreshOptions(false);
+            s.open();
+          } catch (err) {}
+        };
+        s.$control.off('mousedown.subMenu click.subMenu').on('mousedown.subMenu click.subMenu', openRendered);
+        s.$control_input.off('focus.subMenu').on('focus.subMenu', function() { openRendered(); });
+      }
+      $(document).on('shiny:value shiny:connected shiny:idle', function() {
+        setTimeout(wireSubProcessMenu, 30);
+      });
+      setInterval(wireSubProcessMenu, 800);
+    })();
   ")),
     tags$style(HTML(paste0("
       :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; }
@@ -235,6 +265,19 @@ ui <- page_navbar(
         overflow: visible !important; max-height: none !important;
       }
       .bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }
+      /* 子作業 selectize 下拉勿被 tab／card 裁切 */
+      .rcm-design-tabs, .rcm-design-tabs .tab-content, .rcm-design-tabs .tab-pane,
+      .rcm-design-tabs .card, .rcm-design-tabs .card-body {
+        overflow: visible !important;
+      }
+      .rcm-design-tabs .selectize-dropdown {
+        z-index: 2000 !important;
+      }
+      #sub_process-selectized,
+      .selectize-control.single .selectize-input {
+        cursor: pointer;
+      }
+
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
         display: grid !important;
@@ -544,16 +587,7 @@ ui <- page_navbar(
             textInput("sub_process_id", lab_req("子作業編號"), value = "",
                       placeholder = "循環編號-子作業序號（例：EC-101）",
                       width = "100%"),
-            selectizeInput(
-              "sub_process", lab_req("子作業名稱"),
-              choices = NULL, width = "100%",
-              options = list(
-                create = TRUE,
-                createOnBlur = TRUE,
-                placeholder = "選建議子作業或手動輸入名稱",
-                maxItems = 1
-              )
-            ),
+            uiOutput("sub_process_select_ui"),
             textInput("control_id", "控制編號", value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("control_id_compose_hint"),
@@ -1137,52 +1171,46 @@ server <- function(input, output, session) {
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
   lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
-  # 啟動時確保內建候選就緒；並以最新去識別批次覆寫同 ID 範本
-  observeEvent(TRUE, {
-    cur <- lib()
-    builtin <- seed_control_library(TRUE)
-    # overwrite=TRUE：讓去識別後的 PL／種子列覆蓋舊企業原文
-    merged <- merge_libraries(cur, builtin, overwrite = TRUE)
-    batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
-    if (file.exists(batch)) {
-      merged <- tryCatch(
-        merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = TRUE),
-        error = function(e) merged
-      )
-    }
-    pl_batch <- file.path(root, "data", "prologium_rcm_batch.json")
-    if (file.exists(pl_batch)) {
-      merged <- tryCatch(
-        merge_libraries(merged, load_control_library(pl_batch, fallback_seed = FALSE), overwrite = TRUE),
-        error = function(e) merged
-      )
-    }
-    # 既有列再跑一次去識別（清除殘留企業名／表單碼）
-    if (exists("deidentify_library_item", mode = "function")) {
-      merged <- lapply(merged, function(it) {
-        tryCatch(deidentify_library_item(it), error = function(e) it)
-      })
-    }
-    # 強制剝除非設計欄
-    if (exists("strip_non_design_control_fields", mode = "function")) {
-      merged <- lapply(merged, function(it) {
-        if (!is.null(it$control)) {
-          it$control <- strip_non_design_control_fields(it$control)
-        }
-        it
-      })
-    }
-    changed <- !identical(length(merged), length(cur)) ||
-      !identical(
-        vapply(merged, function(x) x$updated_at %||% "", character(1)),
-        vapply(cur, function(x) x$updated_at %||% "", character(1))
-      )
-    if (changed || length(merged) != length(cur)) {
+  # 磁碟庫已含種子／批次時，勿在每個 session 同步重跑去識別合併（約 7s），
+  # 否則會堵住循環／子作業選單更新。僅在庫過小時補齊。
+  session$onFlushed(function() {
+    isolate({
+      cur <- lib()
+      if (length(cur) >= 100L) return()
+      builtin <- seed_control_library(TRUE)
+      if (exists("cascade_builtin_library", mode = "function")) {
+        try(cascade_builtin_library(force = TRUE), silent = TRUE)
+      }
+      merged <- merge_libraries(cur, builtin, overwrite = TRUE)
+      batch <- file.path(root, "data", "jinglian_it_rcm_batch.json")
+      if (file.exists(batch)) {
+        merged <- tryCatch(
+          merge_libraries(merged, load_control_library(batch, fallback_seed = FALSE), overwrite = TRUE),
+          error = function(e) merged
+        )
+      }
+      pl_batch <- file.path(root, "data", "prologium_rcm_batch.json")
+      if (file.exists(pl_batch)) {
+        merged <- tryCatch(
+          merge_libraries(merged, load_control_library(pl_batch, fallback_seed = FALSE), overwrite = TRUE),
+          error = function(e) merged
+        )
+      }
+      if (exists("deidentify_library_item", mode = "function")) {
+        merged <- lapply(merged, function(it) {
+          tryCatch(deidentify_library_item(it), error = function(e) it)
+        })
+      }
+      if (exists("strip_non_design_control_fields", mode = "function")) {
+        merged <- lapply(merged, function(it) {
+          if (!is.null(it$control)) {
+            it$control <- strip_non_design_control_fields(it$control)
+          }
+          it
+        })
+      }
       lib(persist_lib(merged, force = TRUE))
-    } else {
-      # 仍寫入一次以覆寫磁碟上的舊企業原文
-      lib(persist_lib(merged, force = TRUE))
-    }
+    })
   }, once = TRUE)
 
   persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
@@ -1452,49 +1480,68 @@ server <- function(input, output, session) {
     )
   }
 
-  # 快取上次推送的選單，避免同值反覆 updateSelectize 造成閃跳
+  # 子作業名稱以 renderUI 重建 selectize（choices 寫入 HTML），
+  # 避免分頁尚未綁定時 updateSelectizeInput 訊息丟失。
   sub_process_ui_state <- new.env(parent = emptyenv())
-  sub_process_ui_state$ch_keys <- NULL
-  sub_process_ui_state$sel <- NULL
+  sub_process_ui_state$cycle <- NULL
+  sub_process_ui_tick <- reactiveVal(0L)
 
-  refresh_sub_process_choices <- function() {
-    cy <- input$cycle %||% ""
-    if (!nzchar(cy)) {
-      if (!identical(sub_process_ui_state$sel, "") ||
-          !is.null(sub_process_ui_state$ch_keys)) {
-        sub_process_ui_state$ch_keys <- character()
-        sub_process_ui_state$sel <- ""
-        freezeReactiveValue(input, "sub_process")
-        updateSelectizeInput(session, "sub_process", choices = character(),
-                             selected = "")
-      }
-      return()
+  refresh_sub_process_choices <- function(force = FALSE) {
+    # renderUI 已依 cycle／lib 重繪；force 時再 bump 一次以重掛載選單
+    if (isTRUE(force)) {
+      sub_process_ui_tick(isolate(sub_process_ui_tick()) + 1L)
     }
-    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
-    ch <- cascade_sub_process_choices(rows)
-    # isolate：勿因編號／名稱變更重跑本函式
-    cur <- sub_process_name_from_value(isolate(input$sub_process) %||% "")
-    spid <- trimws(isolate(input$sub_process_id) %||% "")
-    expected_cc <- cycle_code_for(cy)
-    if (!id_matches_cycle_code(spid, expected_cc)) {
-      # 循環已變、舊子作業不屬於新循環 → 清空
-      cur <- ""
-      spid <- ""
-    }
-    if (nzchar(cur) && !cur %in% unname(ch)) {
-      # 自訂名稱仍可留在選單（標籤＝名稱）
-      ch <- c(ch, stats::setNames(cur, cur))
-    }
-    ch_keys <- unname(ch)
-    if (identical(ch_keys, sub_process_ui_state$ch_keys) &&
-        identical(cur, sub_process_ui_state$sel)) {
-      return()
-    }
-    sub_process_ui_state$ch_keys <- ch_keys
-    sub_process_ui_state$sel <- cur
-    freezeReactiveValue(input, "sub_process")
-    updateSelectizeInput(session, "sub_process", choices = ch, selected = cur)
   }
+
+  output$sub_process_select_ui <- renderUI({
+    tick <- sub_process_ui_tick()
+    cy <- input$cycle %||% ""
+    lib_items <- lib()
+    ch <- character()
+    sel <- ""
+    if (nzchar(cy)) {
+      rows <- library_controls_flat(cascade_source_library(lib_items), cycle = cy)
+      ch <- cascade_sub_process_choices(rows)
+      cur <- sub_process_name_from_value(isolate(input$sub_process) %||% "")
+      spid <- trimws(isolate(input$sub_process_id) %||% "")
+      if (!id_matches_cycle_code(spid, cycle_code_for(cy))) {
+        cur <- ""
+      }
+      # 循環變更時清空選取；同循環僅 bump／庫更新時保留有效名稱
+      if (!identical(sub_process_ui_state$cycle, cy)) {
+        sub_process_ui_state$cycle <- cy
+        sel <- ""
+      } else {
+        sel <- cur
+        if (nzchar(sel) && !sel %in% unname(ch)) {
+          ch <- c(ch, stats::setNames(sel, sel))
+        }
+      }
+    } else {
+      sub_process_ui_state$cycle <- ""
+    }
+    # 避免重建時舊值回寫造成閃跳
+    freezeReactiveValue(input, "sub_process")
+    # 開頭放空選項，避免 selectize 自動選第一筆；允許空白
+    ch_ui <- if (length(ch)) c("(請選擇或輸入名稱)" = "", ch) else c("(請先選循環)" = "")
+    selectizeInput(
+      "sub_process", lab_req("子作業名稱"),
+      choices = ch_ui,
+      selected = if (nzchar(sel)) sel else "",
+      width = "100%",
+      options = list(
+        create = TRUE,
+        createOnBlur = TRUE,
+        placeholder = "選建議子作業或手動輸入名稱",
+        maxItems = 1,
+        openOnFocus = TRUE,
+        maxOptions = 1000,
+        closeAfterSelect = TRUE,
+        allowEmptyOption = TRUE,
+        showEmptyOptionInDropdown = FALSE
+      )
+    )
+  })
 
   refresh_risk_factor_choices <- function() {
     cy <- input$cycle %||% ""
@@ -1620,15 +1667,13 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$cycle, {
-    # 切換循環時清空子作業，避免舊編號殘留導致後續選名稱無法覆寫
+    # 切換循環時清空子作業編號；名稱選單由 renderUI 依循環重掛載
     freezeReactiveValue(input, "sub_process")
     freezeReactiveValue(input, "sub_process_id")
-    sub_process_ui_state$ch_keys <- NULL
-    sub_process_ui_state$sel <- NULL
-    updateSelectizeInput(session, "sub_process", selected = "")
+    sub_process_ui_state$cycle <- NULL
     updateTextInput(session, "sub_process_id", value = "")
     refresh_pbc_choices()
-    refresh_sub_process_choices()
+    refresh_sub_process_choices(force = TRUE)
     refresh_risk_factor_choices()
   }, ignoreNULL = FALSE)
 
@@ -1637,13 +1682,19 @@ server <- function(input, output, session) {
     library_items_as_interview_controls(cascade_source_library(lib()))
   })
 
-  # 僅依循環／範本庫刷新候選。refresh 內對 sub_process／sub_process_id 必須 isolate，
-  # 否則改編號或選名稱會重跑 updateSelectize → 來回閃跳／斷線。
-  observe({
-    input$cycle
-    lib()
-    refresh_sub_process_choices()
-  })
+  # 設計分頁／基礎設定可能延遲顯示；進入時 bump 重掛載選單
+  observeEvent(input$main_nav, {
+    if (identical(input$main_nav, "風險控制點設計")) {
+      refresh_sub_process_choices(force = TRUE)
+      refresh_risk_factor_choices()
+    }
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$rcm_design_tabs, {
+    if (identical(input$main_nav, "風險控制點設計")) {
+      refresh_sub_process_choices(force = TRUE)
+    }
+  }, ignoreInit = TRUE)
 
   observeEvent(input$sub_process, {
     val <- trimws(input$sub_process %||% "")
@@ -1783,10 +1834,8 @@ server <- function(input, output, session) {
     refresh_pbc_choices()
   })
 
-  # 啟動時循環維持未選，需使用者主動選擇
-  observeEvent(TRUE, {
-    updateSelectInput(session, "cycle", selected = "")
-  }, once = TRUE)
+  # 啟動時循環維持未選（selectInput 預設已是 ""）；勿再延遲 updateSelectInput 清空，
+  # 否則會與使用者剛選的循環競態，把選單／循環編號沖掉。
 
   observeEvent(input$pbc_apply_to_design, {
     ids <- input$pbc_apply %||% character()

@@ -698,6 +698,16 @@ check(length(cascade_sub_process_choices(
   library_controls_flat(empty_user, cycle = "生產循環")
 )) >= 1L, "空使用者庫時生產循環仍可直接選子作業")
 app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(exists("cascade_builtin_library", mode = "function"),
+      "cascade_builtin_library 快取種子")
+check(grepl("refresh_sub_process_choices\\(force", app_casc) &&
+        grepl("input\\$main_nav", app_casc) &&
+        grepl("sub_process_select_ui", app_casc) &&
+        grepl("openOnFocus", app_casc),
+      "進入設計分頁強制重送子作業選單")
+check(!grepl("updateSelectInput\\(session, \"cycle\", selected = \"\"\\)", app_casc),
+      "啟動時不再延遲清空循環（避免競態）")
+
 check(grepl("cascade_source_library", app_casc),
       "訪談引導仍採內建範本庫候選")
 check(grepl("控制編號＝循環編號-子作業序號-控制序號|control_id_compose_hint", app_casc),

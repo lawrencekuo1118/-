@@ -217,8 +217,9 @@ ui <- page_navbar(
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
       .objective-assertions-row #risk_description { min-height: 5.5rem; resize: vertical; }
-      #control_objective { min-height: 7.5rem; resize: vertical; }
-      #control_activity { min-height: 5.5rem; resize: vertical; }
+      #control_objective { min-height: 7.5rem; resize: vertical; color: #9CA3AF; }
+      #control_activity { min-height: 5.5rem; resize: vertical; color: #9CA3AF; }
+      #control_objective::placeholder, #control_activity::placeholder { color: #C4C9D1; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .assertions-side .alert { margin-bottom: 0.35rem; }
       .design-section-preview-bar {

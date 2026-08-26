@@ -306,7 +306,7 @@ ui <- page_navbar(
                 tags$span(class = "text-danger", "*"), " 為設計必填）。"),
         tags$li("可自 ", strong("範本庫"), " 或 ", strong("參數庫"), " 套用欄位，再覆寫調整。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"),
-                "（1 控制點 ↔ 1 RCM 列；控制編號自動順編如 EC-101-01）。"),
+                "（1 控制點 ↔ 1 RCM 列；控制編號＝循環編號-子作業序號-控制序號，如 EC-101-01）。"),
         tags$li(tags$strong("訪談問項設計"),
                 "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
         tags$li(tags$strong("控制點測試設計"),
@@ -432,13 +432,19 @@ ui <- page_navbar(
             nav_panel(
             "① 基礎設定",
             p(class = "small text-muted mb-2",
-              "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
+              "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。",
+              tags$br(),
+              "編號組成：",
+              tags$code("子作業編號＝循環編號-子作業序號"),
+              "；",
+              tags$code("控制編號＝循環編號-子作業序號-控制序號"),
+              "（例：EC-101、EC-101-01）。"),
             uiOutput("design_cycle_readonly"),
             uiOutput("sub_process_hint"),
             layout_columns(
               col_widths = c(4, 8),
               textInput("sub_process_id", lab_req("子作業編號"), value = "",
-                        placeholder = "例：EC-101"),
+                        placeholder = "循環編號-子作業序號（例：EC-101）"),
               selectizeInput(
                 "sub_process", lab_req("子作業名稱"),
                 choices = NULL,
@@ -451,7 +457,8 @@ ui <- page_navbar(
               )
             ),
             textInput("control_id", "控制編號", value = "",
-                      placeholder = "自動順編（可覆寫）"),
+                      placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
+            uiOutput("control_id_compose_hint"),
             div(
               class = "design-section-preview-bar",
               actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
@@ -1049,6 +1056,30 @@ server <- function(input, output, session) {
       div(class = "alert alert-secondary py-1 mb-2 small",
           sprintf("循環：%s（編號 %s）— 於側邊欄變更。", cy, if (nzchar(cc)) cc else "—"))
     }
+  })
+  output$control_id_compose_hint <- renderUI({
+    cc <- trimws(input$cycle_code %||% "")
+    if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
+    spid <- trimws(input$sub_process_id %||% "")
+    cid <- trimws(input$control_id %||% "")
+    sn <- sub_process_seq_from_id(spid, cc)
+    parts <- parse_rcm_id_parts(cid)
+    ctrl_seg <- if (isTRUE(parts$ok) && nzchar(parts$ctrl)) parts$ctrl else "01"
+    example <- if (nzchar(cc) && nzchar(sn)) {
+      compose_control_id(cc, sn, ctrl_seg)
+    } else if (nzchar(cc)) {
+      compose_control_id(cc, "101", "01")
+    } else {
+      "EC-101-01"
+    }
+    tags$div(
+      class = "small text-muted mb-2",
+      sprintf("控制編號組成：[%s]-[%s]-[%s] → ",
+              if (nzchar(cc)) cc else "循環編號",
+              if (nzchar(sn)) sn else "子作業序號",
+              ctrl_seg),
+      tags$code(example)
+    )
   })
   output$risk_factor_hint <- renderUI({
     cy <- input$cycle %||% ""
@@ -2100,6 +2131,52 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
+  # 循環編號變更 → 子作業／控制編號依組成規則同步前綴
+  # 控制編號＝[循環編號]-[子作業序號]-[控制序號]
+  observeEvent(input$cycle_code, {
+    code <- trimws(input$cycle_code %||% "")
+    if (!nzchar(code)) return()
+    spid <- trimws(input$sub_process_id %||% "")
+    if (nzchar(spid)) {
+      new_spid <- recode_id_cycle_prefix(spid, code)
+      if (!identical(new_spid, spid)) {
+        updateTextInput(session, "sub_process_id", value = new_spid)
+        sp_val <- trimws(input$sub_process %||% "")
+        if (grepl("\\|\\|", sp_val, fixed = FALSE)) {
+          sp <- parse_sub_process_key(sp_val)
+          updateSelectizeInput(
+            session, "sub_process",
+            selected = sub_process_key(new_spid, sp$name)
+          )
+        }
+      }
+    }
+    cid <- trimws(input$control_id %||% "")
+    if (nzchar(cid)) {
+      new_cid <- recode_id_cycle_prefix(cid, code)
+      if (!identical(new_cid, cid)) {
+        updateTextInput(session, "control_id", value = new_cid)
+      }
+    }
+  }, ignoreInit = TRUE)
+
+  # 子作業編號變更 → 控制編號中段同步（保留控制序號）
+  observeEvent(input$sub_process_id, {
+    spid <- trimws(input$sub_process_id %||% "")
+    cid <- trimws(input$control_id %||% "")
+    if (!nzchar(spid) || !nzchar(cid)) return()
+    cc <- trimws(input$cycle_code %||% "")
+    if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
+    sn <- sub_process_seq_from_id(spid, cc)
+    if (!nzchar(sn) || !nzchar(cc)) return()
+    parts <- parse_rcm_id_parts(cid)
+    if (!isTRUE(parts$ok) || !nzchar(parts$ctrl)) return()
+    new_cid <- compose_control_id(cc, sn, parts$ctrl)
+    if (!identical(new_cid, cid)) {
+      updateTextInput(session, "control_id", value = new_cid)
+    }
+  }, ignoreInit = TRUE)
+
   observeEvent(input$nature, {
     if (identical(input$nature, "自動")) {
       updateSelectInput(session, "frequency", selected = "持續")
@@ -2173,7 +2250,10 @@ server <- function(input, output, session) {
     spid <- trimws(input$sub_process_id %||% "")
     if (nzchar(spid) && !nzchar(trimws(input$control_id %||% ""))) {
       ids <- collect_existing_control_ids(lists = list(lib(), controls()))
-      updateTextInput(session, "control_id", value = next_rcm_control_id(spid, ids))
+      cc <- trimws(input$cycle_code %||% "")
+      if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
+      updateTextInput(session, "control_id",
+                      value = next_rcm_control_id(spid, ids, cycle_code = cc))
     }
   })
 
@@ -2363,7 +2443,8 @@ server <- function(input, output, session) {
     updateTextInput(session, "control_id",
                     value = next_rcm_control_id(
                       pt$sub_process_id,
-                      collect_existing_control_ids(lists = list(lib(), controls()))
+                      collect_existing_control_ids(lists = list(lib(), controls())),
+                      cycle_code = pt$cycle_code %||% cycle_code_for(pt$cycle %||% "")
                     ))
     if (isTRUE(input$auto_collect_lib) && isTRUE(is_admin())) {
       res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)

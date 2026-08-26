@@ -165,6 +165,72 @@ id_matches_cycle_code <- function(id, cycle_code) {
   identical(id_cc, cycle_code)
 }
 
+# 編號組成規則：
+#   子作業編號 = [循環編號]-[子作業序號]          例：EC-101
+#   控制編號   = [循環編號]-[子作業序號]-[控制序號] 例：EC-101-01
+parse_rcm_id_parts <- function(id) {
+  id <- trimws(as.character(id %||% ""))
+  if (!nzchar(id)) {
+    return(list(cycle = "", sub = "", ctrl = "", ok = FALSE))
+  }
+  # EC-101-01
+  m3 <- regmatches(id, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)-([0-9]+)$", id, perl = TRUE))[[1]]
+  if (length(m3) >= 4L) {
+    return(list(cycle = m3[[2]], sub = m3[[3]], ctrl = m3[[4]], ok = TRUE))
+  }
+  # EC-101
+  m2 <- regmatches(id, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)$", id, perl = TRUE))[[1]]
+  if (length(m2) >= 3L) {
+    return(list(cycle = m2[[2]], sub = m2[[3]], ctrl = "", ok = TRUE))
+  }
+  list(cycle = "", sub = id, ctrl = "", ok = FALSE)
+}
+
+compose_sub_process_id <- function(cycle_code, sub_no) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  sn <- trimws(as.character(sub_no %||% ""))
+  if (!nzchar(cc) || !nzchar(sn)) return("")
+  sprintf("%s-%s", cc, sn)
+}
+
+compose_control_id <- function(cycle_code, sub_no, ctrl_no) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  sn <- trimws(as.character(sub_no %||% ""))
+  if (!nzchar(cc) || !nzchar(sn)) return("")
+  n <- suppressWarnings(as.integer(ctrl_no))
+  if (is.na(n) || n < 1L) n <- 1L
+  sprintf("%s-%s-%02d", cc, sn, n)
+}
+
+# 自子作業編號取出序號（EC-101 → 101；已是純序號則原樣）
+sub_process_seq_from_id <- function(sub_process_id, cycle_code = "") {
+  sp <- trimws(as.character(sub_process_id %||% ""))
+  if (!nzchar(sp)) return("")
+  parts <- parse_rcm_id_parts(sp)
+  if (isTRUE(parts$ok) && nzchar(parts$sub)) return(parts$sub)
+  cc <- trimws(as.character(cycle_code %||% ""))
+  if (nzchar(cc) && startsWith(sp, paste0(cc, "-"))) {
+    return(sub(paste0("^", cc, "-"), "", sp))
+  }
+  sp
+}
+
+# 依循環編號重寫既有 ID 前綴（保留子作業序號／控制序號）
+recode_id_cycle_prefix <- function(id, new_cycle_code) {
+  id <- trimws(as.character(id %||% ""))
+  new_cycle_code <- trimws(as.character(new_cycle_code %||% ""))
+  if (!nzchar(id) || !nzchar(new_cycle_code)) return(id)
+  parts <- parse_rcm_id_parts(id)
+  if (!isTRUE(parts$ok) || !nzchar(parts$sub)) return(id)
+  known <- unique(unname(CYCLE_CODE_MAP))
+  if (!(parts$cycle %in% known)) return(id)
+  if (nzchar(parts$ctrl)) {
+    compose_control_id(new_cycle_code, parts$sub, parts$ctrl)
+  } else {
+    compose_sub_process_id(new_cycle_code, parts$sub)
+  }
+}
+
 sub_process_choice_label <- function(key) {
   key <- trimws(as.character(key %||% ""))
   if (!nzchar(key)) return("")
@@ -611,10 +677,25 @@ collect_existing_control_ids <- function(..., lists = list()) {
   unique(ids[nzchar(ids)])
 }
 
-next_rcm_control_id <- function(sub_process_id, existing_ids = character()) {
+next_rcm_control_id <- function(sub_process_id, existing_ids = character(),
+                                cycle_code = "") {
   sp <- nzchar_trim(sub_process_id)
-  if (!nzchar(sp)) sp <- "SP-001"
-  # Match {sp}-NN at end
+  cc <- trimws(as.character(cycle_code %||% ""))
+  # 正規化為 [循環]-[子作業序號]
+  if (nzchar(sp)) {
+    parts <- parse_rcm_id_parts(sp)
+    if (isTRUE(parts$ok) && nzchar(parts$sub)) {
+      if (!nzchar(cc)) cc <- parts$cycle
+      if (nzchar(cc)) sp <- compose_sub_process_id(cc, parts$sub)
+    } else if (nzchar(cc)) {
+      sn <- sub_process_seq_from_id(sp, cc)
+      if (nzchar(sn)) sp <- compose_sub_process_id(cc, sn)
+    }
+  }
+  if (!nzchar(sp)) {
+    if (nzchar(cc)) sp <- compose_sub_process_id(cc, "001") else sp <- "SP-001"
+  }
+  # Match {sp}-NN at end → 控制編號 = [循環]-[子作業序號]-[控制序號]
   pat <- paste0("^", gsub("([.\\-])", "\\\\\\1", sp), "-(\\d+)$")
   nums <- integer()
   for (id in existing_ids) {
@@ -622,6 +703,10 @@ next_rcm_control_id <- function(sub_process_id, existing_ids = character()) {
     if (length(m) >= 2) nums <- c(nums, as.integer(m[[2]]))
   }
   next_n <- if (length(nums)) max(nums) + 1L else 1L
+  parts <- parse_rcm_id_parts(sp)
+  if (isTRUE(parts$ok) && nzchar(parts$cycle) && nzchar(parts$sub)) {
+    return(compose_control_id(parts$cycle, parts$sub, next_n))
+  }
   sprintf("%s-%02d", sp, next_n)
 }
 

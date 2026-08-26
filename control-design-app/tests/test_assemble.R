@@ -598,6 +598,17 @@ check(!activity_type_ok("預防＋偵測"), "混合屬性不允許")
 check(identical(next_rcm_control_id("EC-101", c("EC-101-01", "EC-101-03")), "EC-101-04"),
       "控制編號自動順編")
 check(identical(next_rcm_control_id("EC-102", character()), "EC-102-01"), "空庫從 01 起編")
+check(identical(compose_control_id("EC", "101", 1L), "EC-101-01"),
+      "控制編號＝循環-子作業-控制序號")
+check(identical(compose_sub_process_id("SC", "101"), "SC-101"),
+      "子作業編號＝循環-子作業序號")
+check(identical(parse_rcm_id_parts("EC-101-01")$sub, "101") &&
+        identical(parse_rcm_id_parts("EC-101-01")$ctrl, "01"),
+      "可解析控制編號三節")
+check(identical(recode_id_cycle_prefix("EC-101-01", "SC"), "SC-101-01"),
+      "循環編號變更時控制編號前綴同步")
+check(identical(recode_id_cycle_prefix("EC-101", "SC"), "SC-101"),
+      "循環編號變更時子作業編號前綴同步")
 
 seeded <- seed_control_library(TRUE)
 it_rows <- cycle_risk_rows(seeded, "電腦化資訊系統循環")
@@ -617,6 +628,8 @@ check(length(cascade_sub_process_choices(
 app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
 check(grepl("cascade_source_library", app_casc),
       "訪談引導仍採內建範本庫候選")
+check(grepl("控制編號＝循環編號-子作業序號-控制序號|control_id_compose_hint", app_casc),
+      "基礎設定說明控制編號組成規則")
 check(!grepl('selectInput\\(\\s*"design_sub"|selectInput\\(\\s*"cascade_sub"', app_casc) &&
         grepl('selectizeInput\\(\\s*"sub_process"', app_casc) &&
         grepl("sub_process_hint", app_casc) &&

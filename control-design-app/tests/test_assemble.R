@@ -922,8 +922,11 @@ check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
       "聲明設定在控制目標上方")
 check(grepl('placeholder-shown', app_src) &&
         grepl('selectize-input\\.has-items', app_src) &&
-        grepl('輸入／選定後黑色|輸入框：未填淺灰', app_src),
-      "輸入框未填淺灰、選定後黑色")
+        grepl('--input-placeholder:\\s*#ADB5BD', app_src) &&
+        grepl('var\\(--input-placeholder\\)', app_src) &&
+        grepl('公司名稱', app_src) &&
+        grepl('輸入／選定後黑色|輸入框：未填淺灰|預設說明字', app_src),
+      "輸入框預設說明字統一為公司名稱 placeholder 色 (#ADB5BD)")
 check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
         grepl('div\\([\\s\\S]*class\\s*=\\s*"rcm-design-tabs"', app_src, perl = TRUE) &&
         grepl('"① 基礎設定"', app_src) &&

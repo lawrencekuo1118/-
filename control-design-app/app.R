@@ -168,7 +168,7 @@ ui <- page_navbar(
       textarea.form-control:placeholder-shown {
         color: #9CA3AF !important;
       }
-      .form-select:has(option[value=""]:checked) {
+      .form-select:has(option[value=\"\"]:checked) {
         color: #9CA3AF !important;
       }
       .form-control::placeholder, .form-select::placeholder,
@@ -276,6 +276,38 @@ ui <- page_navbar(
       }
       .rcm-design-tabs > .tab-content { padding-top: 0.85rem; overflow: visible !important; }
       .design-validation-panel { margin-top: 0.75rem; }
+      /* 設計頁預覽：預設收合於下方，可點擊展開／收回 */
+      .design-preview-drawer {
+        margin-top: 1rem;
+        border: 1px solid #E5E5E5;
+        border-radius: 0.375rem;
+        background: var(--brand-white);
+      }
+      .design-preview-drawer > .design-preview-toggle {
+        width: 100%;
+        text-align: left;
+        border: none;
+        border-radius: 0.375rem;
+        background: rgba(134,188,37,0.08);
+        color: var(--brand-blue);
+        font-weight: 600;
+        padding: 0.65rem 1rem;
+      }
+      .design-preview-drawer > .design-preview-toggle:hover {
+        background: rgba(134,188,37,0.16);
+      }
+      .design-preview-drawer > .design-preview-toggle .chevron {
+        display: inline-block;
+        margin-right: 0.35rem;
+        transition: transform 0.15s ease;
+      }
+      .design-preview-drawer > .design-preview-toggle[aria-expanded=true] .chevron {
+        transform: rotate(90deg);
+      }
+      .design-preview-drawer .design-preview-body {
+        padding: 0.85rem 1rem 1rem;
+        border-top: 1px solid #E5E5E5;
+      }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -448,15 +480,13 @@ ui <- page_navbar(
   ),
   nav_panel(
     "風險控制點設計",
-    layout_columns(
-      col_widths = c(7, 5),
-      card(
-        card_header("風險控制點設計"),
-        div(
-          class = "rcm-design-tabs",
-          navset_tab(
-            id = "rcm_design_tabs",
-            nav_panel(
+    card(
+      card_header("風險控制點設計"),
+      div(
+        class = "rcm-design-tabs",
+        navset_tab(
+          id = "rcm_design_tabs",
+          nav_panel(
             "① 基礎設定",
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。",
@@ -628,20 +658,37 @@ ui <- page_navbar(
               actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
             )
           )
-          )
-        ),
-        div(class = "design-validation-panel", uiOutput("live_validation")),
-        div(
-          class = "d-flex gap-1 flex-wrap mt-2",
-          actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
-          actionButton("collect_ready_to_lib", "儲存→資料庫", class = "btn-outline-success btn-sm")
         )
       ),
-      card(
-        uiOutput("rcm_parity_box"),
-        verbatimTextOutput("live_preview"),
-        DTOutput("control_table"),
-        verbatimTextOutput("control_paragraph")
+      div(class = "design-validation-panel", uiOutput("live_validation")),
+      div(
+        class = "d-flex gap-1 flex-wrap mt-2",
+        actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
+        actionButton("collect_ready_to_lib", "儲存→資料庫", class = "btn-outline-success btn-sm")
+      )
+    ),
+    div(
+      class = "design-preview-drawer",
+      tags$button(
+        class = "design-preview-toggle",
+        type = "button",
+        `data-bs-toggle` = "collapse",
+        `data-bs-target` = "#designPreviewCollapse",
+        `aria-expanded` = "false",
+        `aria-controls` = "designPreviewCollapse",
+        tags$span(class = "chevron", "▸"),
+        "預覽列（不變條件／即時描述／已定稿控制點）— 點擊展開或收回"
+      ),
+      div(
+        id = "designPreviewCollapse",
+        class = "collapse",
+        div(
+          class = "design-preview-body",
+          uiOutput("rcm_parity_box"),
+          verbatimTextOutput("live_preview"),
+          DTOutput("control_table"),
+          verbatimTextOutput("control_paragraph")
+        )
       )
     )
   ),

@@ -407,11 +407,13 @@ app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collap
 check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
         grepl("interview_design_groups", app_txt) &&
         grepl("rcm_design_tabs", app_txt) &&
+        grepl("design-preview-drawer", app_txt) &&
+        grepl("designPreviewCollapse", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
         grepl("interview_paragraph", app_txt),
-      "訪談版面與風險控制點設計趨於一致（7/5、引導、分頁籤、右側預覽）")
+      "訪談 7/5；風險控制點設計為分頁籤＋底部可收合預覽")
 check(grepl("套用 IUC／PBC 命名", app_txt),
       "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
 check(!grepl("interview_source", app_txt) &&

@@ -841,8 +841,10 @@ check(grepl("pbc_apply_to_design", app_src) &&
       "套用 IUC／PBC 命名改在 PBC資料庫")
 check(grepl("missing_by_group", app_src) &&
         grepl("DESIGN_ACCORDION_SECTIONS", app_src) &&
-        grepl("必填未齊（依表單分組）", app_src),
-      "右側檢核依表單分組顯示必填缺漏")
+        grepl("必填未齊（依表單分組）", app_src) &&
+        grepl('rcm_design_tabs[\\s\\S]*design-validation-panel[\\s\\S]*live_validation', app_src, perl = TRUE) &&
+        grepl('live_validation[\\s\\S]*finalize_rcm_row', app_src, perl = TRUE),
+      "必填缺漏檢核置於三頁籤下方、定稿按鈕上方")
 check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
         grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
         grepl("goto_pbc_tab", app_src) &&

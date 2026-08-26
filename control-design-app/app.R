@@ -248,6 +248,7 @@ ui <- page_navbar(
         border-bottom-color: var(--brand-green);
       }
       .rcm-design-tabs > .tab-content { padding-top: 0.85rem; overflow: visible !important; }
+      .design-validation-panel { margin-top: 0.75rem; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -594,6 +595,7 @@ ui <- page_navbar(
             )
           )
         ),
+        div(class = "design-validation-panel", uiOutput("live_validation")),
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
           actionButton("finalize_rcm_row", "完成設計＝寫入 RCM 一列", class = "btn-success btn-sm"),
@@ -601,7 +603,6 @@ ui <- page_navbar(
         )
       ),
       card(
-        uiOutput("live_validation"),
         uiOutput("rcm_parity_box"),
         verbatimTextOutput("live_preview"),
         DTOutput("control_table"),

@@ -814,6 +814,13 @@ check(grepl('textInput\\(\\s*"related_system"\\s*,\\s*lab_opt\\(\\s*"相關系�
       "相關系統選填標籤與相關政策或程序同列排版")
 check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
       "控制目標不再與聲明設定並排（改全寬）")
+# 僅檢查「風險控制點設計」分頁內不再用雙欄排子作業／類型／頻率
+design_panel <- sub('(?s).*nav_panel\\(\\s*"風險控制點設計"', "", app_src, perl = TRUE)
+design_panel <- sub('(?s)nav_panel\\(\\s*"控制點測試設計".*', "", design_panel, perl = TRUE)
+check(!grepl("layout_columns", design_panel, fixed = TRUE) &&
+        grepl("rcm-design-tabs .shiny-input-container { width: 100%", app_src, fixed = TRUE) &&
+        grepl('textInput\\(\\s*"sub_process_id"[\\s\\S]*width\\s*=\\s*"100%"', app_src, perl = TRUE),
+      "風險控制點設計輸入列皆滿版單欄")
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
       "聲明設定在控制目標上方")
 check(grepl('placeholder-shown', app_src) &&

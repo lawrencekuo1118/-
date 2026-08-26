@@ -275,6 +275,13 @@ ui <- page_navbar(
         border-bottom-color: var(--brand-green);
       }
       .rcm-design-tabs > .tab-content { padding-top: 0.85rem; overflow: visible !important; }
+      /* 控制設計：輸入列滿版（單欄全寬） */
+      .rcm-design-tabs .shiny-input-container { width: 100%; max-width: 100%; }
+      .rcm-design-tabs .form-control,
+      .rcm-design-tabs .form-select,
+      .rcm-design-tabs textarea.form-control,
+      .rcm-design-tabs .selectize-control,
+      .rcm-design-tabs .selectize-input { width: 100% !important; max-width: 100%; }
       .design-validation-panel { margin-top: 0.75rem; }
       /* 設計頁預覽：預設收合於下方，可點擊展開／收回 */
       .design-preview-drawer {
@@ -498,22 +505,20 @@ ui <- page_navbar(
               "（例：EC-101、EC-101-01）。"),
             uiOutput("design_cycle_readonly"),
             uiOutput("sub_process_hint"),
-            layout_columns(
-              col_widths = c(4, 8),
-              textInput("sub_process_id", lab_req("子作業編號"), value = "",
-                        placeholder = "循環編號-子作業序號（例：EC-101）"),
-              selectizeInput(
-                "sub_process", lab_req("子作業名稱"),
-                choices = NULL,
-                options = list(
-                  create = TRUE,
-                  createOnBlur = TRUE,
-                  placeholder = "選建議子作業或手動輸入名稱",
-                  maxItems = 1
-                )
+            textInput("sub_process_id", lab_req("子作業編號"), value = "",
+                      placeholder = "循環編號-子作業序號（例：EC-101）",
+                      width = "100%"),
+            selectizeInput(
+              "sub_process", lab_req("子作業名稱"),
+              choices = NULL, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "選建議子作業或手動輸入名稱",
+                maxItems = 1
               )
             ),
-            textInput("control_id", "控制編號", value = "",
+            textInput("control_id", "控制編號", value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("control_id_compose_hint"),
             div(
@@ -527,7 +532,7 @@ ui <- page_navbar(
               "包含：風險因素、風險描述、風險類別、RoMM 分類。風險因素可複選建議項目或手動輸入；同一控制點僅一種風險類別。"),
             selectizeInput(
               "risk_factor", lab_req("風險因素"),
-              choices = NULL, multiple = TRUE,
+              choices = NULL, multiple = TRUE, width = "100%",
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
@@ -537,11 +542,11 @@ ui <- page_navbar(
             ),
             uiOutput("risk_factor_hint"),
             textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
-                          placeholder = "風險情境與影響描述"),
+                          width = "100%", placeholder = "風險情境與影響描述"),
             selectInput(
               "risk_category", lab_req("風險類別"),
               choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
-              selected = ""
+              selected = "", width = "100%"
             ),
             uiOutput("significant_account_hint"),
             selectizeInput(
@@ -549,13 +554,15 @@ ui <- page_navbar(
               choices = account_select_choices(),
               multiple = TRUE,
               selected = character(0),
+              width = "100%",
               options = list(
                 create = TRUE,
                 placeholder = "報導面必填：可複選常見科目，或選「全部適用」"
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
-            selectInput("romm_classification", "RoMM 分類", choices = ROMM_CLASS_CHOICES),
+            selectInput("romm_classification", "RoMM 分類",
+                        choices = ROMM_CLASS_CHOICES, width = "100%"),
             div(
               class = "design-section-preview-bar",
               actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
@@ -575,6 +582,7 @@ ui <- page_navbar(
               selectizeInput(
                 "assertions", "聲明設定",
                 choices = character(0), multiple = TRUE, selected = character(0),
+                width = "100%",
                 options = list(
                   create = FALSE,
                   placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
@@ -583,41 +591,35 @@ ui <- page_navbar(
               uiOutput("assertions_hint")
             ),
             textAreaInput(
-              "control_objective", lab_req("控制目標"), rows = 4,
+              "control_objective", lab_req("控制目標"), rows = 4, width = "100%",
               placeholder = "Why：欲達成之控制結果（非執行步驟）"
             ),
             textAreaInput(
-              "control_activity", lab_req("控制活動"), rows = 3,
+              "control_activity", lab_req("控制活動"), rows = 3, width = "100%",
               placeholder = "How：具體執行行為（含誰／何時／如何）"
             ),
-            layout_columns(
-              col_widths = c(6, 6),
-              selectInput(
-                "approach", lab_req("控制活動類型"),
-                choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
-                selected = ""
-              ),
-              selectInput(
-                "nature", lab_req("控制類型"),
-                choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
-                selected = ""
-              )
+            selectInput(
+              "approach", lab_req("控制活動類型"),
+              choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
+              selected = "", width = "100%"
             ),
-            layout_columns(
-              col_widths = c(6, 6),
-              selectInput(
-                "frequency", lab_req("控制頻率"),
-                choices = c("請選擇…" = "", FREQUENCY_CHOICES),
-                selected = ""
-              ),
-              textInput(
-                "responsible_unit", lab_req("流程負責單位"),
-                value = "", placeholder = "例：資訊安全單位"
-              )
+            selectInput(
+              "nature", lab_req("控制類型"),
+              choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
+              selected = "", width = "100%"
+            ),
+            selectInput(
+              "frequency", lab_req("控制頻率"),
+              choices = c("請選擇…" = "", FREQUENCY_CHOICES),
+              selected = "", width = "100%"
+            ),
+            textInput(
+              "responsible_unit", lab_req("流程負責單位"),
+              value = "", width = "100%", placeholder = "例：資訊安全單位"
             ),
             selectizeInput(
               "iuc", lab_req("IUC"),
-              choices = NULL, multiple = TRUE,
+              choices = NULL, multiple = TRUE, width = "100%",
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
@@ -626,21 +628,21 @@ ui <- page_navbar(
               )
             ),
             textInput(
-              "related_system", lab_opt("相關系統"),
+              "related_system", lab_opt("相關系統"), width = "100%",
               placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
             ),
             uiOutput("related_system_hint"),
-            textInput("related_policy", lab_opt("相關政策或程序")),
+            textInput("related_policy", lab_opt("相關政策或程序"), width = "100%"),
             selectizeInput(
               "related_law", "相關法令",
               choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
-              multiple = TRUE,
+              multiple = TRUE, width = "100%",
               options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
             ),
             uiOutput("related_law_hint"),
             selectizeInput(
               "related_document_pbc", lab_req(CONTROL_EVIDENCE_DOCUMENT_LABEL),
-              choices = NULL, multiple = TRUE,
+              choices = NULL, multiple = TRUE, width = "100%",
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,

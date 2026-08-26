@@ -160,11 +160,15 @@ ui <- page_navbar(
       .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
       .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
       .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
-      /* 全站輸入框／選單內文字淺灰 */
-      .form-control, .form-select,
-      textarea.form-control,
-      .selectize-input, .selectize-input input,
-      .selectize-input .item {
+      /* 輸入框：未填淺灰；輸入／選定後黑色 */
+      .form-control, .form-select, textarea.form-control {
+        color: var(--brand-black) !important;
+      }
+      .form-control:placeholder-shown,
+      textarea.form-control:placeholder-shown {
+        color: #9CA3AF !important;
+      }
+      .form-select:has(option[value=""]:checked) {
         color: #9CA3AF !important;
       }
       .form-control::placeholder, .form-select::placeholder,
@@ -172,6 +176,15 @@ ui <- page_navbar(
       .selectize-input input::placeholder {
         color: #C4C9D1 !important;
         opacity: 1;
+      }
+      .selectize-input.has-items,
+      .selectize-input.has-items .item,
+      .selectize-input.has-items input {
+        color: var(--brand-black) !important;
+      }
+      .selectize-input:not(.has-items),
+      .selectize-input:not(.has-items) input {
+        color: #9CA3AF !important;
       }
       .selectize-dropdown .option { color: #6B7280; }
       .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }

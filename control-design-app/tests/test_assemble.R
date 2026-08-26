@@ -708,6 +708,15 @@ check(identical(sub_process_id_from_value("EC-101||存取管理作業", ""), "EC
       "子作業名稱 key 可解析為編號")
 check(identical(sub_process_choice_label("EC-101||存取管理作業"), "存取管理作業"),
       "子作業選項標籤僅顯示名稱")
+check(identical(sub_process_name_from_value("存取管理作業"), "存取管理作業"),
+      "純名稱維持原樣")
+check(identical(parse_sub_process_key("存取管理作業")$name, "存取管理作業") &&
+        !nzchar(parse_sub_process_key("存取管理作業")$id),
+      "純名稱 parse 為 name 非 id")
+check(identical(lookup_sub_process_id_for_name(
+  list(list(sub_process = "存取管理作業", sub_process_id = "EC-101")),
+  "存取管理作業"
+), "EC-101"), "可依名稱查回關聯編號")
 check(isTRUE(id_matches_cycle_code("EC-101", "EC")), "同循環編號視為相符")
 check(!isTRUE(id_matches_cycle_code("EC-101", "SC")), "跨循環編號應判定不符")
 check(isTRUE(id_matches_cycle_code("SP-001", "EC")), "非循環前綴不強制判定不符")
@@ -737,11 +746,17 @@ if (length(jl)) {
   check(length(rows) >= 20, "cascade flat 列來自鯨鏈庫")
   subs <- cascade_sub_process_choices(rows)
   check(length(subs) >= 1, "循環下有候選子作業")
-  check(!any(grepl("｜", names(subs))), "子作業名稱選項不含編號")
+  check(!any(grepl("｜|\\|\\||（", names(subs))), "子作業名稱選項標籤不含編號")
+  check(!any(grepl("\\|\\||^[A-Z]{2}-\\d+", unname(subs))), "子作業名稱選項值為純名稱")
+  check(all(names(subs) == unname(subs)), "子作業選項 value＝label＝純名稱")
   sub1 <- unname(subs)[[1]]
   rows2 <- filter_cascade_rows(rows, sub_key = sub1)
+  check(length(rows2) >= 1, "以純名稱可篩選子作業列")
   risks <- cascade_risk_choices(rows2)
   check(length(risks) >= 1, "子作業下有風險候選")
+  hits <- search_sub_process_hits(rows, keyword = substr(sub1, 1, 2))
+  check(length(hits) >= 1 && all(!grepl("（|\\|\\|", vapply(hits, function(h) h$label, ""))),
+        "搜尋命中標籤僅純名稱")
   rk <- unname(risks)[[1]]
   det <- cascade_risk_detail(rows2, rk)
   check(nzchar(det$risk_description) || nzchar(det$risk_category) || length(det$attrs),
@@ -765,10 +780,12 @@ if (length(jl)) {
   sel_incomplete <- list(cycle = "電腦化資訊系統循環")
   check(!cascade_selection_ready(sel_incomplete)$ready, "未完成引導不可就緒")
   akp <- parse_activity_key(ak)
-  sp <- parse_sub_process_key(sub1)
+  sp_name <- sub1
+  sp_id <- lookup_sub_process_id_for_name(rows, sp_name)
+  check(nzchar(sp_id), "純名稱可反查子作業編號")
   sel_full <- list(
     cycle = "電腦化資訊系統循環",
-    sub_process_id = sp$id, sub_process = sp$name,
+    sub_process_id = sp_id, sub_process = sp_name,
     risk_factor = rk, control_objective = obj1,
     control_activity = akp$activity, approach = akp$approach,
     iuc_or_system = if (length(iucs)) unname(iucs)[[1]] else "自訂IUC-測試"

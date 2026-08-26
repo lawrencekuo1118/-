@@ -123,23 +123,40 @@ sub_process_key <- function(spid, spn) {
 }
 
 parse_sub_process_key <- function(key) {
-  parts <- strsplit(nzchar_trim(key), "\\|\\|", perl = TRUE)[[1]]
+  key <- nzchar_trim(key)
+  if (!nzchar(key)) return(list(id = "", name = ""))
+  if (!grepl("\\|\\|", key, fixed = FALSE)) {
+    # 純名稱（APP 顯示用）或純編號
+    if (grepl("^[A-Z]{2}-\\d+", key)) {
+      return(list(id = key, name = ""))
+    }
+    return(list(id = "", name = key))
+  }
+  parts <- strsplit(key, "\\|\\|", perl = TRUE)[[1]]
   list(id = parts[[1]] %||% "", name = if (length(parts) > 1) parts[[2]] else "")
 }
 
-# 子作業名稱 selectize：值可為 key（id||name）或自訂名稱
+# 子作業名稱 selectize：畫面永遠只顯示／選取純名稱；編號由關聯查表帶入
 sub_process_filter_key <- function(spid, spn) {
   spn <- trimws(as.character(spn %||% ""))
   spid <- trimws(as.character(spid %||% ""))
   if (grepl("\\|\\|", spn, fixed = FALSE)) return(spn)
-  key <- sub_process_key(spid, spn)
-  if (nzchar(spid) || nzchar(spn)) key else ""
+  nm <- sub_process_name_from_value(spn)
+  if (nzchar(nm) && nzchar(spid)) return(sub_process_key(spid, nm))
+  if (nzchar(nm)) return(nm)
+  if (nzchar(spid)) return(spid)
+  ""
 }
 
 sub_process_name_from_value <- function(val) {
   val <- trimws(as.character(val %||% ""))
   if (!nzchar(val)) return("")
-  if (grepl("\\|\\|", val, fixed = FALSE)) parse_sub_process_key(val)$name else val
+  if (grepl("\\|\\|", val, fixed = FALSE)) {
+    return(parse_sub_process_key(val)$name)
+  }
+  # 純編號不當成名稱
+  if (grepl("^[A-Z]{2}-\\d+(-\\d+)?$", val)) return("")
+  val
 }
 
 sub_process_id_from_value <- function(val, fallback_id = "") {
@@ -148,9 +165,32 @@ sub_process_id_from_value <- function(val, fallback_id = "") {
   if (grepl("\\|\\|", val, fixed = FALSE)) {
     sp <- parse_sub_process_key(val)
     if (nzchar(sp$id)) sp$id else fb
+  } else if (grepl("^[A-Z]{2}-\\d+", val)) {
+    val
   } else {
     fb
   }
+}
+
+# 依名稱從範本列查出關聯子作業編號（同名取第一筆；可指定偏好編號）
+lookup_sub_process_id_for_name <- function(rows, name, preferred_id = "") {
+  nm <- nzchar_trim(name)
+  if (!nzchar(nm) || !length(rows)) return("")
+  pref <- nzchar_trim(preferred_id)
+  if (nzchar(pref)) {
+    hit <- Filter(function(r) {
+      identical(nzchar_trim(r$sub_process), nm) &&
+        identical(nzchar_trim(r$sub_process_id), pref)
+    }, rows)
+    if (length(hit)) return(pref)
+  }
+  for (r in rows) {
+    if (identical(nzchar_trim(r$sub_process), nm)) {
+      id <- nzchar_trim(r$sub_process_id)
+      if (nzchar(id)) return(id)
+    }
+  }
+  ""
 }
 
 # 子作業／控制編號前綴是否與目前循環編號一致（不一致則應清空／重選）
@@ -284,15 +324,10 @@ filter_cascade_rows <- function(rows,
 }
 
 cascade_sub_process_choices <- function(rows) {
-  keys <- unique(vapply(rows, function(r) {
-    if (!nzchar(r$sub_process_id) && !nzchar(r$sub_process)) return("")
-    sub_process_key(r$sub_process_id, r$sub_process)
-  }, character(1)))
-  keys <- keys[nzchar(keys)]
-  labels <- vapply(keys, sub_process_choice_label, character(1))
-  # 選項僅顯示名稱；同名子作業保留第一筆
-  keep <- !duplicated(labels)
-  stats::setNames(keys[keep], labels[keep])
+  # 選單 value／label 皆為純名稱（永不夾帶編號）；同名保留第一筆
+  labels <- unique(vapply(rows, function(r) nzchar_trim(r$sub_process), character(1)))
+  labels <- labels[nzchar(labels)]
+  stats::setNames(labels, labels)
 }
 
 # Short tag label for 風險因素（風險描述之 tag；不含 []）
@@ -364,14 +399,8 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
   })
   updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
-  sp_key <- sub_process_key(ctrl$sub_process_id %||% "", ctrl$sub_process %||% "")
-  sp_sel <- if (nzchar(sp_key) &&
-               nzchar(trimws(ctrl$sub_process_id %||% "")) &&
-               nzchar(trimws(ctrl$sub_process %||% ""))) {
-    sp_key
-  } else {
-    trimws(ctrl$sub_process %||% "")
-  }
+  # 選單永遠只選純名稱（編號另欄維護）
+  sp_sel <- sub_process_name_from_value(ctrl$sub_process %||% "")
   updateSelectizeInput(session, "sub_process", selected = sp_sel)
   rf_sel <- risk_factor_selection_from_ctrl(ctrl)
   updateSelectizeInput(session, "risk_factor", selected = rf_sel)
@@ -786,7 +815,7 @@ search_sub_process_hits <- function(rows, keyword = "", limit = .tab_search_limi
     out[[length(out) + 1L]] <- list(
       sub_process = nm,
       sub_process_id = id,
-      label = if (nzchar(id)) sprintf("%s（%s）", nm, id) else nm
+      label = nm
     )
     if (length(out) >= limit) break
   }

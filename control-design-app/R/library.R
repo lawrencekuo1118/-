@@ -35,7 +35,111 @@ strip_non_design_control_fields <- function(ctrl) {
   }
   # 匯入檔常把「控制現況描述」誤塞進 detailed_description；設計庫一律清空後由組裝函式重建
   ctrl$detailed_description <- ""
+  # 常見別名一併清空（含差異缺失／現況相關欄）
+  for (alias in c(
+    "control_status", "status_description", "design_gap", "gap_analysis",
+    "控制現況描述", "控制設計差異說明", "控制有效性評估",
+    "可能潛在風險", "建議改善方式", "現況描述", "差異說明",
+    "差異缺失", "缺失說明", "有效性評估", "潛在風險", "改善建議",
+    "改善方式", "建議改善"
+  )) {
+    if (!is.null(ctrl[[alias]])) ctrl[[alias]] <- ""
+  }
   ctrl
+}
+
+# 企業專屬用語／文件編號／系統商品名 → 通用表述（入庫前去識別）
+CLIENT_NAME_MARKERS <- c(
+  "輝能科技", "ProLogium", "prologium", "PROLOGIUM",
+  "鯨鏈科技", "Jinglian", "jinglian"
+)
+
+deidentify_client_specific_text <- function(text) {
+  s <- as.character(text %||% "")
+  if (!nzchar(s)) return(s)
+  # 公司／集團名
+  s <- gsub("輝能科技", "本公司", s, fixed = TRUE)
+  s <- gsub("(?i)ProLogium", "集團", s, perl = TRUE)
+  s <- gsub("鯨鏈科技", "本公司", s, fixed = TRUE)
+  s <- gsub("(?i)Jinglian", "本公司", s, perl = TRUE)
+  # 企業內部表單／程序編號（如 A6-004-A、Q2-001、R2-001-I）
+  s <- gsub("[（(]\\s*[A-Za-z]{1,3}\\d?[-－]\\d{2,4}(?:[-－][A-Za-z0-9]+)?\\s*[）)]", "", s, perl = TRUE)
+  # 企業常用專屬系統商品名 → 通用系統類別
+  s <- gsub("(?i)Easy\\s*flow", "電子簽核系統", s, perl = TRUE)
+  s <- gsub("(?i)Shop\\s*flow", "生產流程系統", s, perl = TRUE)
+  s <- gsub("\\bSPM系統\\b", "流程管理系統", s, perl = TRUE)
+  s <- gsub("\\bSPM\\b", "流程管理系統", s, perl = TRUE)
+  s <- gsub("\\bSFT\\b", "檔案傳輸系統", s, perl = TRUE)
+  s <- gsub("鼎新", "ERP套裝", s, fixed = TRUE)
+  # 清理多餘空白
+  s <- gsub("[ \\t]{2,}", " ", s)
+  s <- gsub(" *\r?\n *", "\n", s)
+  trimws(s)
+}
+
+deidentify_control_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  # 不保留來源公司名
+  ctrl$company <- ""
+  text_keys <- c(
+    "title", "risk_factor", "risk_name", "risk_description",
+    "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
+    "control_objective", "control_activity", "responsible_unit",
+    "iuc", "iuc_or_system", "related_system", "related_policy", "related_law",
+    "related_document", "inputs", "review_steps", "outputs",
+    "investigation_threshold", "dependent_controls",
+    "detailed_description", "summary_description", "sub_process"
+  )
+  for (k in text_keys) {
+    if (!is.null(ctrl[[k]]) && is.character(ctrl[[k]])) {
+      ctrl[[k]] <- deidentify_client_specific_text(ctrl[[k]])
+    }
+  }
+  # 敘述含公司名時強制以去識別後欄位重建（避免殘留）
+  ctrl$detailed_description <- ""
+  ctrl$summary_description <- ""
+  ctrl
+}
+
+deidentify_library_item <- function(item) {
+  item <- as.list(item)
+  if (!is.null(item$control)) {
+    item$control <- deidentify_control_fields(item$control)
+  }
+  if (!is.null(item$title)) {
+    item$title <- deidentify_client_specific_text(item$title)
+  }
+  # 標籤去掉企業名
+  if (!is.null(item$tags)) {
+    tg <- as.character(unlist(item$tags, use.names = FALSE))
+    tg <- tg[!tg %in% CLIENT_NAME_MARKERS]
+    tg <- vapply(tg, deidentify_client_specific_text, character(1), USE.NAMES = FALSE)
+    tg <- unique(c(tg[nzchar(tg)], "去識別範本"))
+    item$tags <- tg
+  }
+  # 來源改為中性鍵（保留 PL-/JL- 編號前綴供追蹤）
+  src <- as.character(item$source %||% "")
+  if (grepl("prologium|輝能|jinglian|鯨鏈", src, ignore.case = TRUE)) {
+    item$source <- "rcm_import_batch"
+  }
+  # 重建組裝敘述（公司欄已空 →「就公司現行…」）
+  ctrl <- item$control %||% list()
+  if (exists("assemble_summary_description", mode = "function")) {
+    ctrl$summary_description <- tryCatch(
+      assemble_summary_description(ctrl), error = function(e) ctrl$title %||% ""
+    )
+  }
+  if (exists("assemble_control_paragraph", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(
+      assemble_control_paragraph(ctrl), error = function(e) ""
+    )
+  } else if (exists("assemble_detailed_description", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(
+      assemble_detailed_description(ctrl), error = function(e) ""
+    )
+  }
+  item$control <- ctrl
+  item
 }
 
 seed_control_library <- function(include_jinglian_batch = TRUE) {
@@ -304,8 +408,12 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
   out
 }
 
-library_item_from_control <- function(ctrl, tags = character(), source = "manual") {
+library_item_from_control <- function(ctrl, tags = character(), source = "manual",
+                                       deidentify = TRUE) {
   ctrl <- strip_non_design_control_fields(as.list(ctrl))
+  if (isTRUE(deidentify)) {
+    ctrl <- deidentify_control_fields(ctrl)
+  }
   # Stable accumulative ID: prefer real RCM 控制編號 so re-save updates same template
   if (is.null(ctrl$library_id) || !nzchar(as.character(ctrl$library_id %||% ""))) {
     cid <- trimws(as.character(ctrl$control_id %||% ""))
@@ -328,6 +436,8 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
         } else (ctrl$control_activity %||% "控制")
       }
     )
+  } else if (isTRUE(deidentify)) {
+    ctrl$title <- deidentify_client_specific_text(ctrl$title)
   }
   if (is.null(ctrl$summary_description) || !nzchar(as.character(ctrl$summary_description %||% ""))) {
     if (exists("assemble_summary_description", mode = "function")) {
@@ -341,12 +451,22 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
   }
   tags <- unique(c(as.character(tags), as.character(ctrl$tags %||% character()), "累積範本"))
   tags <- tags[nzchar(tags)]
+  if (isTRUE(deidentify)) {
+    tags <- tags[!tags %in% CLIENT_NAME_MARKERS]
+    tags <- unique(c(vapply(tags, deidentify_client_specific_text, character(1), USE.NAMES = FALSE),
+                     "去識別範本"))
+    tags <- tags[nzchar(tags)]
+  }
+  src <- as.character(source %||% "manual")
+  if (isTRUE(deidentify) && grepl("prologium|輝能|jinglian|鯨鏈", src, ignore.case = TRUE)) {
+    src <- "rcm_import_batch"
+  }
   list(
     library_id = as.character(ctrl$library_id),
     title = as.character(ctrl$title),
     tags = tags,
     cycle = as.character(ctrl$cycle %||% ""),
-    source = as.character(source %||% "manual"),
+    source = src,
     updated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     control = ctrl
   )
@@ -811,15 +931,16 @@ import_rcm_xlsx_as_library <- function(path,
   df <- df[keep, , drop = FALSE]
 
   sheet_cycle <- normalize_rcm_cycle_name("", sheet_name = sheet)
-  base_tags <- unique(c(tags, "輝能科技", sheet_cycle[nzchar(sheet_cycle)]))
+  # 不寫入企業專屬標籤／公司名；去識別於 library_item_from_control
+  base_tags <- unique(c(tags, "RCM", sheet_cycle[nzchar(sheet_cycle)]))
+  base_tags <- base_tags[!base_tags %in% CLIENT_NAME_MARKERS]
   items <- lapply(seq_len(nrow(df)), function(i) {
     row <- as.list(df[i, , drop = FALSE])
     row <- lapply(row, function(x) if (length(x)) x[[1]] else x)
     ctrl <- rcm_row_to_control(row, sheet_name = sheet, id_prefix = id_prefix)
     if (!nzchar(ctrl$cycle %||% "")) ctrl$cycle <- sheet_cycle
-    if (!nzchar(ctrl$company %||% "") && nzchar(company_default)) {
-      ctrl$company <- company_default
-    }
+    # 公司欄一律不入庫（即使 xlsx／default 有值）
+    ctrl$company <- ""
     if (identical(ctrl$control_id, "控制編號") ||
         (!nzchar(ctrl$control_objective %||% "") && !nzchar(ctrl$control_activity %||% ""))) {
       return(NULL)
@@ -827,7 +948,8 @@ import_rcm_xlsx_as_library <- function(path,
     library_item_from_control(
       ctrl,
       tags = unique(c(base_tags, ctrl$cycle %||% "")),
-      source = source
+      source = source,
+      deidentify = TRUE
     )
   })
   Filter(Negate(is.null), items)

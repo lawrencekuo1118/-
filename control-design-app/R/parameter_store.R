@@ -33,7 +33,7 @@ app_preset_parameters <- function() {
     },
     "Form 4120SR Type" = if (exists("TYPE_CHOICES")) TYPE_CHOICES else character(),
     "RoMM 分類" = if (exists("ROMM_CLASS_CHOICES")) ROMM_CLASS_CHOICES else character(),
-    "控制有效性評估" = c("有效", "無效"),
+    # 不提供「控制有效性評估」等非設計參數預設，避免寫入參數庫
     "PBC 證據類型" = if (exists("PBC_KIND_VALUES")) PBC_KIND_VALUES else character()
   )
 }

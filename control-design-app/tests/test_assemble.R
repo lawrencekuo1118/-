@@ -600,34 +600,45 @@ if (file.exists(xlsx)) {
   message("SKIP: 鯨鏈 xlsx 不在 templates/")
 }
 
-# 輝能科技全循環 RCM → 範本庫批次
+# 全循環 RCM → 範本庫批次（去識別）
 pl_xlsx <- file.path(root, "templates", "輝能科技_資訊循環_風險控制矩陣（RCM）.xlsx")
 pl_batch <- file.path(root, "data", "prologium_rcm_batch.json")
-check(identical(normalize_rcm_cycle_name("資訊"), "電腦化資訊系統循環"), "輝能循環短名正規化：資訊")
+check(identical(normalize_rcm_cycle_name("資訊"), "電腦化資訊系統循環"), "循環短名正規化：資訊")
 check(identical(normalize_rcm_cycle_name("不動產、廠房及設備循環"), "固定資產循環"),
-      "輝能循環正規化：不動產→固定資產")
+      "循環正規化：不動產→固定資產")
 check(identical(normalize_rcm_cycle_name("", sheet_name = "RCM_企業層級"), "企業層級"),
-      "輝能循環正規化：企業層級 sheet")
+      "循環正規化：企業層級 sheet")
 if (file.exists(pl_xlsx)) {
   pl_it <- import_rcm_xlsx_as_library(
-    pl_xlsx, source = "prologium_rcm", id_prefix = "PL",
-    company_default = "輝能科技", tags = c("輝能科技")
+    pl_xlsx, source = "rcm_import_batch", id_prefix = "PL",
+    company_default = "", tags = c("RCM")
   )
-  check(length(pl_it) >= 20, sprintf("輝能資訊循環匯入至少 20 筆（實際 %d）", length(pl_it)))
+  check(length(pl_it) >= 20, sprintf("資訊循環匯入至少 20 筆（實際 %d）", length(pl_it)))
   check(any(vapply(pl_it, function(x) grepl("^PL-", x$library_id %||% ""), logical(1))),
-        "輝能匯入控制編號帶 PL- 前綴")
+        "匯入控制編號帶 PL- 前綴")
   check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$company_status %||% "")), logical(1))),
-        "輝能匯入清空控制現況（非設計欄）")
+        "匯入清空控制現況（非設計欄）")
+  check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$company %||% "")), logical(1))),
+        "匯入不保留企業公司名")
+  check(!any(vapply(pl_it, function(x) {
+    grepl("輝能|ProLogium", paste(c(x$tags, x$control$detailed_description), collapse = " "),
+          ignore.case = TRUE)
+  }, logical(1))), "匯入結果去識別（無企業名）")
 }
 if (file.exists(pl_batch)) {
   pl_lib <- load_control_library(pl_batch, fallback_seed = FALSE)
   check(length(pl_lib) >= 100, sprintf("已提交 prologium_rcm_batch.json（實際 %d）", length(pl_lib)))
   pl_cycles <- unique(vapply(pl_lib, function(x) x$cycle %||% "", ""))
   check(all(c("電腦化資訊系統循環", "銷售及收款循環", "企業層級", "財務報導循環") %in% pl_cycles),
-        "輝能批次涵蓋資訊／銷售／企業層級／財務報導")
+        "批次涵蓋資訊／銷售／企業層級／財務報導")
+  check(!any(vapply(pl_lib, function(x) {
+    blob <- paste(c(x$tags, x$control$company, x$control$related_document,
+                    x$control$detailed_description), collapse = " ")
+    grepl("輝能科技|ProLogium", blob, ignore.case = TRUE)
+  }, logical(1))), "批次 JSON 已去識別企業名")
   seeded2 <- seed_control_library(TRUE)
   pl_seed <- sum(vapply(seeded2, function(x) grepl("^PL-", x$library_id %||% ""), logical(1)))
-  check(pl_seed >= 100, sprintf("種子庫含輝能批次（PL 實際 %d）", pl_seed))
+  check(pl_seed >= 100, sprintf("種子庫含 PL 批次（實際 %d）", pl_seed))
 } else {
   message("SKIP: prologium_rcm_batch.json 尚未產出")
 }
@@ -1073,6 +1084,23 @@ check(!nzchar(trimws(clean_item$control$improvement %||% "")), "入庫清空改�
 check(!nzchar(trimws(clean_item$control$design_gap_note %||% "")), "入庫清空設計差異")
 check(!identical(clean_item$control$detailed_description %||% "", "這其實是控制現況描述"),
       "入庫不以現況文字當 detailed_description")
+# RCM 列不得回填現況／差異／有效性（即使控制物件帶值）
+rcm_pollute <- control_to_rcm_row(modifyList(polluted, list(
+  detailed_description = "誤塞的現況長文",
+  company_status = "實際做法",
+  design_gap_note = "差異說明",
+  effectiveness = "有效", residual_risk = "風險", improvement = "改善"
+)))
+check(!nzchar(trimws(as.character(rcm_pollute[["控制現況描述"]] %||% ""))),
+      "RCM 控制現況描述一律留空")
+check(!nzchar(trimws(as.character(rcm_pollute[["控制設計差異說明"]] %||% ""))),
+      "RCM 控制設計差異說明一律留空")
+check(!nzchar(trimws(as.character(rcm_pollute[["控制有效性評估"]] %||% ""))),
+      "RCM 控制有效性評估一律留空")
+check(!nzchar(trimws(as.character(rcm_pollute[["可能潛在風險"]] %||% ""))),
+      "RCM 可能潛在風險一律留空")
+check(!nzchar(trimws(as.character(rcm_pollute[["建議改善方式"]] %||% ""))),
+      "RCM 建議改善方式一律留空")
 pcat_pollute <- parameter_catalog(
   list(clean_item),
   list(modifyList(polluted, list(control_id = "X-1"))),
@@ -1080,6 +1108,28 @@ pcat_pollute <- parameter_catalog(
 )
 check(!any(pcat_pollute$參數 == "控制現況描述"), "參數庫不收集控制現況描述")
 check(!any(grepl("公司目前實際做法", pcat_pollute$選項值)), "參數庫不含現況原文")
+check(!any(pcat_pollute$參數 == "控制有效性評估"), "參數庫不收集控制有效性評估")
+
+# 企業專屬用語／文件編號去識別
+dei_raw <- list(
+  company = "輝能科技",
+  cycle = "投資循環",
+  control_objective = "確認關係人",
+  control_activity = "覆核名單",
+  related_document = "1. ProLogium集團組織圖\n2. 輝能科技關係人名單\n3. 簽呈（A6-004-A）",
+  iuc_or_system = "Easyflow 申請單；SPM系統",
+  outputs = "簽呈（A6-004-A）"
+)
+dei_item <- library_item_from_control(dei_raw, tags = c("輝能科技", "RCM"), source = "prologium_rcm")
+check(!nzchar(trimws(dei_item$control$company %||% "")), "去識別後不保留公司名")
+check(!grepl("輝能|ProLogium|prologium", jsonlite::toJSON(dei_item, auto_unbox = TRUE), ignore.case = TRUE),
+      "去識別後 JSON 不含企業名")
+check(!grepl("A6-004-A", dei_item$control$related_document %||% ""), "去識別後去掉表單編號")
+check(grepl("電子簽核系統", dei_item$control$iuc_or_system %||% ""), "Easyflow 改為通用系統名")
+check(grepl("流程管理系統", dei_item$control$iuc_or_system %||% ""), "SPM 改為通用系統名")
+check(!"輝能科技" %in% (dei_item$tags %||% character()), "標籤不含企業名")
+check(identical(dei_item$source, "rcm_import_batch"), "來源改為中性 rcm_import_batch")
+check(!grepl("輝能", dei_item$control$detailed_description %||% ""), "組裝敘述不含企業名")
 
 fin_as <- finalize_control_as_rcm_row(with_pbc_doc(modifyList(base, list(
   assertions = "存在或發生 (Existence or Occurrence)；即時性 (Timeliness)"

@@ -690,8 +690,10 @@ rcm_type_fields_check <- function(control_type, activity_type) {
 control_to_rcm_row <- function(ctrl, seq_no = 1L) {
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type, ctrl$approach %||% ctrl$control_activity_type)
-  status_desc <- ctrl$company_status %||% ctrl$detailed_description %||% ""
-  design_gap <- ctrl$design_gap_note %||% ""
+  # 本 APP 僅產出設計欄：現況／差異／有效性／潛在風險／改善一律留空
+  # （勿回填 detailed_description，避免匯入現況文字污染 RCM）
+  status_desc <- ""
+  design_gap <- ""
   # If OA or type check fails, force 設計檢核
   design_ok <- isTRUE(chk$ok) && isTRUE(tchk$ok)
   design_msg <- if (design_ok) {
@@ -740,9 +742,9 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
     `相關法令` = ctrl$related_law %||% "",
     `相關文件` = ctrl$related_document %||% ctrl$outputs %||% "",
     `流程負責單位` = ctrl$responsible_unit %||% "",
-    `控制有效性評估` = ctrl$effectiveness %||% "",
-    `可能潛在風險` = ctrl$residual_risk %||% "",
-    `建議改善方式` = ctrl$improvement %||% "",
+    `控制有效性評估` = "",
+    `可能潛在風險` = "",
+    `建議改善方式` = "",
     `設計檢核` = design_msg,
     check.names = FALSE,
     stringsAsFactors = FALSE
@@ -2075,16 +2077,23 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
       ctrl$control_id <- derive_control_id(ctrl, seq_hint)
     }
   }
-  # 設計階段：現況／分析評估欄位留空（不在本 APP 範圍）
+  # 設計階段：現況／差異／分析評估欄位一律留空（不在本 APP 範圍）
   ctrl$company_status <- ""
-  ctrl$design_gap_note <- ctrl$design_gap_note %||% ""
+  ctrl$design_gap_note <- ""
   ctrl$effectiveness <- ""
   ctrl$residual_risk <- ""
   ctrl$improvement <- ""
   if (exists("assemble_summary_description", mode = "function")) {
     ctrl$summary_description <- tryCatch(assemble_summary_description(ctrl), error = function(e) "")
   }
-  ctrl$detailed_description <- ctrl$detailed_description %||% ""
+  # detailed_description 僅保留組裝後之設計敘述；不含公司現況原文
+  if (exists("assemble_control_paragraph", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(assemble_control_paragraph(ctrl), error = function(e) "")
+  } else if (exists("assemble_detailed_description", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(assemble_detailed_description(ctrl), error = function(e) "")
+  } else {
+    ctrl$detailed_description <- ""
+  }
   ctrl$rcm_ready <- list(ready = TRUE, gaps = ready$gaps)
   ctrl$saved_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   ctrl$validation <- if (exists("validate_control_design", mode = "function")) {

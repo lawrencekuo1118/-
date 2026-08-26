@@ -5,3 +5,5 @@
 !control_library_template.csv
 !jinglian_it_rcm_batch.json
 !seed_jinglian_batch.R
+!prologium_rcm_batch.json
+!seed_prologium_batch.R

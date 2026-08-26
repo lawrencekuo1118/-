@@ -29,7 +29,10 @@ CYCLES_NINE <- c(
   "電腦化資訊系統循環"
 )
 
-# Display labels (value remains CYCLES_NINE entry)
+# 擴充循環（輝能 RCM 另含企業層級／財務報導）
+CYCLES_EXTENDED <- c(CYCLES_NINE, "財務報導循環", "企業層級")
+
+# Display labels (value remains CYCLES_NINE entry or extended)
 CYCLES_NINE_CHOICES <- c(
   "銷售及收款循環" = "銷售及收款循環",
   "採購及付款循環" = "採購及付款循環",
@@ -39,7 +42,9 @@ CYCLES_NINE_CHOICES <- c(
   "固定資產循環" = "固定資產循環",
   "投資循環" = "投資循環",
   "研發循環" = "研發循環",
-  "資訊循環（電腦化資訊系統循環）" = "電腦化資訊系統循環"
+  "資訊循環（電腦化資訊系統循環）" = "電腦化資訊系統循環",
+  "財務報導循環" = "財務報導循環",
+  "企業層級" = "企業層級"
 )
 
 # 循環編號（設計基本資料；資訊循環對齊鯨鏈 EC 前綴）
@@ -52,7 +57,9 @@ CYCLE_CODE_MAP <- c(
   "固定資產循環" = "FA",
   "投資循環" = "IV",
   "研發循環" = "RD",
-  "電腦化資訊系統循環" = "EC"
+  "電腦化資訊系統循環" = "EC",
+  "財務報導循環" = "CA",
+  "企業層級" = "EL"
 )
 
 cycle_code_for <- function(cycle_name) {

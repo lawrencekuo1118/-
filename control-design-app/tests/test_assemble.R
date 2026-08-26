@@ -574,7 +574,10 @@ check(st$n == 1L, "library_stats 筆數")
 xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
 jl <- list()
 if (file.exists(xlsx)) {
-  jl <- import_rcm_xlsx_as_library(xlsx)
+  jl <- import_rcm_xlsx_as_library(
+    xlsx, source = "jinglian_batch", id_prefix = "JL",
+    tags = c("鯨鏈RCM", "資訊循環", "首批")
+  )
   check(length(jl) >= 20, sprintf("鯨鏈 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
   check(any(vapply(jl, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1))),
         "鯨鏈匯入控制編號帶 JL-EC- 前綴")
@@ -595,6 +598,38 @@ if (file.exists(xlsx)) {
         "鯨鏈列目標/活動分欄或設計檢核標示")
 } else {
   message("SKIP: 鯨鏈 xlsx 不在 templates/")
+}
+
+# 輝能科技全循環 RCM → 範本庫批次
+pl_xlsx <- file.path(root, "templates", "輝能科技_資訊循環_風險控制矩陣（RCM）.xlsx")
+pl_batch <- file.path(root, "data", "prologium_rcm_batch.json")
+check(identical(normalize_rcm_cycle_name("資訊"), "電腦化資訊系統循環"), "輝能循環短名正規化：資訊")
+check(identical(normalize_rcm_cycle_name("不動產、廠房及設備循環"), "固定資產循環"),
+      "輝能循環正規化：不動產→固定資產")
+check(identical(normalize_rcm_cycle_name("", sheet_name = "RCM_企業層級"), "企業層級"),
+      "輝能循環正規化：企業層級 sheet")
+if (file.exists(pl_xlsx)) {
+  pl_it <- import_rcm_xlsx_as_library(
+    pl_xlsx, source = "prologium_rcm", id_prefix = "PL",
+    company_default = "輝能科技", tags = c("輝能科技")
+  )
+  check(length(pl_it) >= 20, sprintf("輝能資訊循環匯入至少 20 筆（實際 %d）", length(pl_it)))
+  check(any(vapply(pl_it, function(x) grepl("^PL-", x$library_id %||% ""), logical(1))),
+        "輝能匯入控制編號帶 PL- 前綴")
+  check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$company_status %||% "")), logical(1))),
+        "輝能匯入清空控制現況（非設計欄）")
+}
+if (file.exists(pl_batch)) {
+  pl_lib <- load_control_library(pl_batch, fallback_seed = FALSE)
+  check(length(pl_lib) >= 100, sprintf("已提交 prologium_rcm_batch.json（實際 %d）", length(pl_lib)))
+  pl_cycles <- unique(vapply(pl_lib, function(x) x$cycle %||% "", ""))
+  check(all(c("電腦化資訊系統循環", "銷售及收款循環", "企業層級", "財務報導循環") %in% pl_cycles),
+        "輝能批次涵蓋資訊／銷售／企業層級／財務報導")
+  seeded2 <- seed_control_library(TRUE)
+  pl_seed <- sum(vapply(seeded2, function(x) grepl("^PL-", x$library_id %||% ""), logical(1)))
+  check(pl_seed >= 100, sprintf("種子庫含輝能批次（PL 實際 %d）", pl_seed))
+} else {
+  message("SKIP: prologium_rcm_batch.json 尚未產出")
 }
 
 # Cascade engine: cycle → sub → risk → objective → activity(single PD) → IUC

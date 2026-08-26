@@ -21,7 +21,10 @@ xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx
 out <- file.path(root, "data", "jinglian_it_rcm_batch.json")
 if (!file.exists(xlsx)) stop("找不到鯨鏈 RCM：", xlsx)
 
-jl <- import_rcm_xlsx_as_library(xlsx)
+jl <- import_rcm_xlsx_as_library(
+  xlsx, source = "jinglian_batch", id_prefix = "JL",
+  tags = c("鯨鏈RCM", "資訊循環", "首批")
+)
 if (!length(jl)) stop("匯入結果為空")
 # Guard: no header-echo IDs
 bad <- vapply(jl, function(x) grepl("控制編號|^JL-控制", x$library_id %||% ""), logical(1))

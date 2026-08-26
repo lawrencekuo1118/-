@@ -277,17 +277,31 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
     normalizePath(getwd())
   })
 
+  out <- base
   batch_json <- file.path(app_root, "data", "jinglian_it_rcm_batch.json")
   if (file.exists(batch_json)) {
     jl <- tryCatch(load_control_library(batch_json, fallback_seed = FALSE), error = function(e) list())
-    if (length(jl)) return(merge_libraries(base, jl, overwrite = TRUE))
+    if (length(jl)) out <- merge_libraries(out, jl, overwrite = TRUE)
+  } else {
+    xlsx <- file.path(app_root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    if (file.exists(xlsx)) {
+      jl <- tryCatch(
+        import_rcm_xlsx_as_library(
+          xlsx, source = "jinglian_batch", id_prefix = "JL",
+          tags = c("鯨鏈RCM", "資訊循環", "首批")
+        ),
+        error = function(e) list()
+      )
+      if (length(jl)) out <- merge_libraries(out, jl, overwrite = TRUE)
+    }
   }
-  xlsx <- file.path(app_root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-  if (file.exists(xlsx)) {
-    jl <- tryCatch(import_rcm_xlsx_as_library(xlsx), error = function(e) list())
-    if (length(jl)) return(merge_libraries(base, jl, overwrite = TRUE))
+  # 輝能科技全循環 RCM 批次
+  pl_json <- file.path(app_root, "data", "prologium_rcm_batch.json")
+  if (file.exists(pl_json)) {
+    pl <- tryCatch(load_control_library(pl_json, fallback_seed = FALSE), error = function(e) list())
+    if (length(pl)) out <- merge_libraries(out, pl, overwrite = FALSE)
   }
-  base
+  out
 }
 
 library_item_from_control <- function(ctrl, tags = character(), source = "manual") {
@@ -617,10 +631,51 @@ normalize_rcm_header_cell <- function(x) {
   # strip parenthetical English / notes
   x <- sub("（.*$", "", x)
   x <- sub("\\(.*$", "", x)
-  trimws(x)
+  x <- trimws(x)
+  # 輝能／各版本欄名別名 → 標準鍵
+  aliases <- c(
+    "控制活動編號" = "控制編號",
+    "控制目標編號" = "控制目標編號",
+    "頻率" = "控制頻率",
+    "現況描述" = "控制現況描述",
+    "相關資訊系統" = "相關系統",
+    "相關政策及程序" = "相關政策或程序",
+    "佐證文件" = "相關文件",
+    "建議" = "建議改善方式",
+    "風險範籌" = "風險範疇",
+    "編號" = "子作業編號",
+    "名稱" = "子作業名稱"
+  )
+  if (nzchar(x) && x %in% names(aliases)) x <- unname(aliases[[x]])
+  x
 }
 
-rcm_row_to_control <- function(row) {
+# 循環名稱正規化（輝能短名／別名 → APP 九大循環或擴充循環）
+normalize_rcm_cycle_name <- function(cycle_raw, sheet_name = "") {
+  cy <- trimws(as.character(cycle_raw %||% ""))
+  sh <- trimws(as.character(sheet_name %||% ""))
+  if (!nzchar(cy) && nzchar(sh)) {
+    cy <- sub("^RCM[_＿]?", "", sh)
+    cy <- gsub("[,，]", "、", cy)
+  }
+  if (!nzchar(cy)) return("")
+  # already canonical
+  if (cy %in% CYCLES_NINE || cy %in% c("企業層級", "財務報導循環")) return(cy)
+  if (grepl("資訊|電腦", cy)) return("電腦化資訊系統循環")
+  if (grepl("銷售|收款", cy)) return("銷售及收款循環")
+  if (grepl("採購|付款", cy)) return("採購及付款循環")
+  if (grepl("^生產|生產循環", cy)) return("生產循環")
+  if (grepl("薪工|人事|薪資", cy)) return("薪工循環")
+  if (grepl("融資|借款", cy)) return("融資循環")
+  if (grepl("固定資產|不動產|廠房及設備|PPE", cy)) return("固定資產循環")
+  if (grepl("投資", cy)) return("投資循環")
+  if (grepl("研發", cy)) return("研發循環")
+  if (grepl("財務報導", cy)) return("財務報導循環")
+  if (grepl("企業層級|EL|Entity", cy, ignore.case = TRUE)) return("企業層級")
+  cy
+}
+
+rcm_row_to_control <- function(row, sheet_name = "", id_prefix = "PL") {
   getv <- function(... ) {
     keys <- c(...)
     for (k in keys) {
@@ -634,24 +689,41 @@ rcm_row_to_control <- function(row) {
     }
     ""
   }
-  cycle_raw <- getv("循環名稱")
-  cycle <- if (grepl("資訊", cycle_raw)) "電腦化資訊系統循環" else cycle_raw
+  cycle <- normalize_rcm_cycle_name(getv("循環名稱"), sheet_name = sheet_name)
   risk_factor <- getv("風險因素")
   risk_desc <- getv("風險描述")
   risk_cat <- getv("風險類別")
+  cid <- getv("控制編號", "控制活動編號")
+  if (!nzchar(cid)) cid <- getv("控制目標編號")
+  spid <- getv("子作業編號")
+  spn <- getv("子作業名稱")
+  # 企業層級：原則／關注點補進風險描述
+  if (identical(cycle, "企業層級")) {
+    principle <- getv("原則")
+    pof <- getv("關注點")
+    if (!nzchar(risk_desc) && nzchar(principle)) {
+      risk_desc <- principle
+    } else if (nzchar(principle)) {
+      risk_desc <- paste(risk_desc, principle, sep = "／")
+    }
+    if (nzchar(pof)) {
+      risk_desc <- paste(c(risk_desc[nzchar(risk_desc)], paste0("關注點：", pof)), collapse = "\n")
+    }
+  }
   ctrl <- list(
-    control_id = getv("控制編號"),
+    control_id = cid,
     library_id = {
-      cid <- getv("控制編號")
-      if (nzchar(cid)) paste0("JL-", cid) else NULL
+      if (nzchar(cid)) paste0(id_prefix, "-", cid) else NULL
     },
+    company = getv("公司"),
     title = {
       obj <- getv("控制目標")
-      if (nzchar(obj)) obj else paste(getv("子作業名稱"), getv("風險因素"), sep = "｜")
+      if (nzchar(obj)) obj else paste(spn, risk_factor, sep = "｜")
     },
     cycle = cycle,
-    sub_process_id = getv("子作業編號"),
-    sub_process = getv("子作業名稱"),
+    cycle_code = getv("循環編號"),
+    sub_process_id = spid,
+    sub_process = spn,
     risk_factor = risk_factor,
     risk_name = risk_factor,
     risk_description = risk_desc,
@@ -664,35 +736,44 @@ rcm_row_to_control <- function(row) {
     control_activity = getv("控制活動"),
     nature = normalize_control_type_manual_auto(getv("控制類型")),
     approach = normalize_control_activity_type_pd(getv("控制活動類型")),
-    frequency = getv("控制頻率"),
+    frequency = getv("控制頻率", "頻率"),
     # 現況／分析評估不入庫（由 strip_non_design_control_fields 再保險清空）
     company_status = "",
     design_gap_note = "",
-    related_system = getv("相關系統"),
-    iuc_or_system = getv("相關系統", CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件"),
-    related_policy = getv("相關政策或程序"),
+    related_system = getv("相關系統", "相關資訊系統"),
+    iuc = getv("IUC"),
+    iuc_or_system = getv("IUC", "相關系統", "相關資訊系統", CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件"),
+    related_policy = getv("相關政策或程序", "相關政策及程序"),
     related_law = getv("相關法令"),
-    related_document = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件"),
+    related_document = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件", "佐證文件"),
     responsible_unit = getv("流程負責單位"),
     effectiveness = "",
     residual_risk = "",
     improvement = "",
-    outputs = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件"),
+    outputs = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件", "佐證文件"),
     detailed_description = "",
     key_control = "Y"
   )
   ctrl
 }
 
-import_rcm_xlsx_as_library <- function(path) {
+import_rcm_xlsx_as_library <- function(path,
+                                       source = "rcm_xlsx",
+                                       tags = character(),
+                                       id_prefix = "PL",
+                                       company_default = "") {
   if (!requireNamespace("readxl", quietly = TRUE)) {
     stop("需要 readxl 套件以匯入 RCM xlsx：install.packages(\"readxl\")")
   }
   sheets <- readxl::excel_sheets(path)
-  sheet <- sheets[[1]]
-  # Prefer sheet named like 資訊循環 / RCM
-  hit <- grep("循環|RCM|控制", sheets, ignore.case = TRUE)
-  if (length(hit)) sheet <- sheets[[hit[[1]]]]
+  # 優先 RCM_ 資料頁（略過封面／文件資訊／修改）
+  rcm_hit <- grep("^RCM", sheets, ignore.case = TRUE)
+  if (length(rcm_hit)) {
+    sheet <- sheets[[rcm_hit[[1]]]]
+  } else {
+    hit <- grep("循環|RCM|控制|企業層級", sheets, ignore.case = TRUE)
+    sheet <- if (length(hit)) sheets[[hit[[1]]]] else sheets[[1]]
+  }
 
   header_row <- readxl::read_excel(path, sheet = sheet, col_names = FALSE, n_max = 2)
   headers <- vapply(seq_len(ncol(header_row)), function(j) {
@@ -725,23 +806,29 @@ import_rcm_xlsx_as_library <- function(path) {
       return(FALSE)
     }
     if (identical(cid, "") && identical(obj, "") && identical(act, "")) return(FALSE)
-    # Prefer rows with an EC-/SP- style id or non-empty objective+activity
     nzchar(obj) || nzchar(act)
   }, logical(1))
   df <- df[keep, , drop = FALSE]
 
+  sheet_cycle <- normalize_rcm_cycle_name("", sheet_name = sheet)
+  base_tags <- unique(c(tags, "輝能科技", sheet_cycle[nzchar(sheet_cycle)]))
   items <- lapply(seq_len(nrow(df)), function(i) {
     row <- as.list(df[i, , drop = FALSE])
-    # unlist length-1
     row <- lapply(row, function(x) if (length(x)) x[[1]] else x)
-    ctrl <- rcm_row_to_control(row)
-    # Skip if control_id still looks like a header label
+    ctrl <- rcm_row_to_control(row, sheet_name = sheet, id_prefix = id_prefix)
+    if (!nzchar(ctrl$cycle %||% "")) ctrl$cycle <- sheet_cycle
+    if (!nzchar(ctrl$company %||% "") && nzchar(company_default)) {
+      ctrl$company <- company_default
+    }
     if (identical(ctrl$control_id, "控制編號") ||
         (!nzchar(ctrl$control_objective %||% "") && !nzchar(ctrl$control_activity %||% ""))) {
       return(NULL)
     }
-    library_item_from_control(ctrl, tags = c("鯨鏈RCM", "資訊循環", "首批"),
-                              source = "jinglian_batch")
+    library_item_from_control(
+      ctrl,
+      tags = unique(c(base_tags, ctrl$cycle %||% "")),
+      source = source
+    )
   })
   Filter(Negate(is.null), items)
 }

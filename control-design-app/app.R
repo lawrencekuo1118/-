@@ -228,6 +228,26 @@ ui <- page_navbar(
         padding-top: 0.35rem;
         border-top: 1px dashed rgba(0,0,0,0.08);
       }
+      /* 風險控制點設計：三階段分頁籤 */
+      .rcm-design-tabs { margin-bottom: 0.5rem; }
+      .rcm-design-tabs > .nav-tabs { border-bottom: 2px solid var(--brand-green); }
+      .rcm-design-tabs > .nav-tabs .nav-link {
+        color: var(--brand-blue);
+        font-weight: 600;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.55rem 1rem;
+      }
+      .rcm-design-tabs > .nav-tabs .nav-link:hover {
+        border-color: rgba(134,188,37,0.45);
+        color: var(--brand-blue);
+      }
+      .rcm-design-tabs > .nav-tabs .nav-link.active {
+        color: var(--brand-blue);
+        background: rgba(134,188,37,0.12);
+        border-bottom-color: var(--brand-green);
+      }
+      .rcm-design-tabs > .tab-content { padding-top: 0.85rem; overflow: visible !important; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -281,7 +301,7 @@ ui <- page_navbar(
                 tags$span(class = "text-danger", "須先選側邊欄循環"),
                 "，於表單填寫 ",
                 strong("基礎設定 → 風險辨識 → 控制設計"),
-                "（子作業、風險、控制目標／活動、IUC 等；",
+                " 三個分頁籤依序填寫（子作業、風險、控制目標／活動、IUC 等；",
                 tags$span(class = "text-danger", "*"), " 為設計必填）。"),
         tags$li("可自 ", strong("範本庫"), " 或 ", strong("參數庫"), " 套用欄位，再覆寫調整。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"),
@@ -306,7 +326,7 @@ ui <- page_navbar(
             "依側邊欄循環選子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
         div(class = "home-tab-card",
             strong("風險控制點設計"),
-            "依側邊欄循環於表單填寫子作業、風險、控制目標／活動、IUC 等；定稿寫入 RCM。"),
+            "依側邊欄循環於分頁籤填寫基礎設定、風險辨識、控制設計；定稿寫入 RCM。"),
         div(class = "home-tab-card",
             strong("控制點測試設計"),
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
@@ -404,11 +424,11 @@ ui <- page_navbar(
       col_widths = c(7, 5),
       card(
         card_header("風險控制點設計"),
-        accordion(
-          id = "rcm_design_groups",
-          open = c("基礎設定", "風險辨識", "控制設計"),
-          accordion_panel(
-            "基礎設定",
+        navset_tab(
+          id = "rcm_design_tabs",
+          class = "rcm-design-tabs",
+          nav_panel(
+            "① 基礎設定",
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
             uiOutput("design_cycle_readonly"),
@@ -435,8 +455,8 @@ ui <- page_navbar(
               actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
             )
           ),
-          accordion_panel(
-            "風險辨識",
+          nav_panel(
+            "② 風險辨識",
             p(class = "small text-muted mb-2",
               "包含：風險因素、風險描述、風險類別、RoMM 分類。風險因素可複選建議項目或手動輸入；同一控制點僅一種風險類別。"),
             selectizeInput(
@@ -450,13 +470,8 @@ ui <- page_navbar(
               )
             ),
             uiOutput("risk_factor_hint"),
-            layout_columns(
-              col_widths = c(6, 6),
-              class = "objective-assertions-row",
-              textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
-                            placeholder = "風險情境與影響描述"),
-              div(class = "objective-assertions-spacer")
-            ),
+            textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
+                          placeholder = "風險情境與影響描述"),
             selectInput(
               "risk_category", lab_req("風險類別"),
               choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
@@ -480,8 +495,8 @@ ui <- page_navbar(
               actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
             )
           ),
-          accordion_panel(
-            "控制設計",
+          nav_panel(
+            "③ 控制設計",
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(

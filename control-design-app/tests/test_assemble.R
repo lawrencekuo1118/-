@@ -570,34 +570,48 @@ check(bad_collect$skipped == 1L && bad_collect$added == 0L, "品質門檻略過�
 st <- library_stats(res2$library)
 check(st$n == 1L, "library_stats 筆數")
 
-# Jinglian RCM xlsx → library batch
+# IT-cycle RCM xlsx → library batch（去識別）
 xlsx <- file.path(root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
 jl <- list()
 if (file.exists(xlsx)) {
   jl <- import_rcm_xlsx_as_library(
-    xlsx, source = "jinglian_batch", id_prefix = "JL",
-    tags = c("鯨鏈RCM", "資訊循環", "首批")
+    xlsx, source = "rcm_import_batch", id_prefix = "JL",
+    company_default = "", tags = c("RCM", "資訊循環", "首批")
   )
-  check(length(jl) >= 20, sprintf("鯨鏈 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
+  check(length(jl) >= 20, sprintf("資訊循環 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
   check(any(vapply(jl, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1))),
-        "鯨鏈匯入控制編號帶 JL-EC- 前綴")
+        "匯入控制編號帶 JL-EC- 前綴")
   check(!any(vapply(jl, function(x) grepl("控制編號", x$library_id %||% ""), logical(1))),
-        "鯨鏈匯入不含標題列雜訊")
-  # Seed includes Jinglian as first batch
+        "匯入不含標題列雜訊")
+  check(all(vapply(jl, function(x) !nzchar(trimws(x$control$company_status %||% "")), logical(1))),
+        "匯入清空控制現況")
+  check(!any(vapply(jl, function(x) {
+    grepl("鯨鏈|Jinglian|輝能|ProLogium", paste(c(x$tags, x$source, x$control$company_status), collapse = " "),
+          ignore.case = TRUE)
+  }, logical(1))), "匯入結果去識別（無企業標籤／來源）")
+  # Seed includes JL as first batch
   seeded <- seed_control_library(TRUE)
   jl_seed <- sum(vapply(seeded, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1)))
-  check(jl_seed >= 20, sprintf("種子庫含鯨鏈首批（JL-EC 實際 %d）", jl_seed))
+  check(jl_seed >= 20, sprintf("種子庫含 JL 首批（JL-EC 實際 %d）", jl_seed))
   batch_file <- file.path(root, "data", "jinglian_it_rcm_batch.json")
   check(file.exists(batch_file), "已提交 jinglian_it_rcm_batch.json 首批資料")
+  jl_batch <- load_control_library(batch_file, fallback_seed = FALSE)
+  check(!any(vapply(jl_batch, function(x) {
+    grepl("鯨鏈|Jinglian", paste(c(x$tags, x$source, x$control$company_status,
+                                    x$control$design_gap_note), collapse = " "),
+          ignore.case = TRUE)
+  }, logical(1))), "已提交 JL 批次已去識別")
+  check(all(vapply(jl_batch, function(x) !nzchar(trimws(x$control$company_status %||% "")), logical(1))),
+        "JL 批次不含控制現況")
   sample_ctrl <- jl[[1]]$control
   rcm_jl <- control_to_rcm_row(sample_ctrl, 1L)
   check(all(c("控制目標", "控制活動", "控制類型", "控制活動類型") %in% names(rcm_jl)),
-        "鯨鏈列可映射回 RCM 標題")
+        "JL 列可映射回 RCM 標題")
   check(!identical(as.character(rcm_jl[["控制目標"]]), as.character(rcm_jl[["控制活動"]])) ||
           grepl("待修", as.character(rcm_jl[["設計檢核"]])),
-        "鯨鏈列目標/活動分欄或設計檢核標示")
+        "JL 列目標/活動分欄或設計檢核標示")
 } else {
-  message("SKIP: 鯨鏈 xlsx 不在 templates/")
+  message("SKIP: 資訊循環 xlsx 不在 templates/")
 }
 
 # 全循環 RCM → 範本庫批次（去識別）

@@ -51,8 +51,15 @@ strip_non_design_control_fields <- function(ctrl) {
 # 企業專屬用語／文件編號／系統商品名 → 通用表述（入庫前去識別）
 CLIENT_NAME_MARKERS <- c(
   "輝能科技", "ProLogium", "prologium", "PROLOGIUM",
-  "鯨鏈科技", "Jinglian", "jinglian"
+  "鯨鏈科技", "鯨鏈RCM", "鯨鏈", "Jinglian", "jinglian"
 )
+
+is_client_identifying_tag <- function(tag) {
+  tg <- trimws(as.character(tag %||% ""))
+  if (!nzchar(tg)) return(FALSE)
+  if (tg %in% CLIENT_NAME_MARKERS) return(TRUE)
+  grepl("輝能|ProLogium|prologium|鯨鏈|Jinglian", tg, ignore.case = TRUE)
+}
 
 deidentify_client_specific_text <- function(text) {
   s <- as.character(text %||% "")
@@ -61,7 +68,9 @@ deidentify_client_specific_text <- function(text) {
   s <- gsub("輝能科技", "本公司", s, fixed = TRUE)
   s <- gsub("(?i)ProLogium", "集團", s, perl = TRUE)
   s <- gsub("鯨鏈科技", "本公司", s, fixed = TRUE)
+  s <- gsub("鯨鏈RCM", "RCM", s, fixed = TRUE)
   s <- gsub("(?i)Jinglian", "本公司", s, perl = TRUE)
+  s <- gsub("鯨鏈", "本公司", s, fixed = TRUE)
   # 企業內部表單／程序編號（如 A6-004-A、Q2-001、R2-001-I）
   s <- gsub("[（(]\\s*[A-Za-z]{1,3}\\d?[-－]\\d{2,4}(?:[-－][A-Za-z0-9]+)?\\s*[）)]", "", s, perl = TRUE)
   # 企業常用專屬系統商品名 → 通用系統類別
@@ -79,7 +88,10 @@ deidentify_client_specific_text <- function(text) {
 
 deidentify_control_fields <- function(ctrl) {
   ctrl <- as.list(ctrl)
-  # 不保留來源公司名
+  # 非設計欄＋公司名一併清掉
+  if (exists("strip_non_design_control_fields", mode = "function")) {
+    ctrl <- strip_non_design_control_fields(ctrl)
+  }
   ctrl$company <- ""
   text_keys <- c(
     "title", "risk_factor", "risk_name", "risk_description",
@@ -109,10 +121,10 @@ deidentify_library_item <- function(item) {
   if (!is.null(item$title)) {
     item$title <- deidentify_client_specific_text(item$title)
   }
-  # 標籤去掉企業名
+  # 標籤去掉企業名／企業批次標
   if (!is.null(item$tags)) {
     tg <- as.character(unlist(item$tags, use.names = FALSE))
-    tg <- tg[!tg %in% CLIENT_NAME_MARKERS]
+    tg <- tg[!vapply(tg, is_client_identifying_tag, logical(1))]
     tg <- vapply(tg, deidentify_client_specific_text, character(1), USE.NAMES = FALSE)
     tg <- unique(c(tg[nzchar(tg)], "去識別範本"))
     item$tags <- tg
@@ -391,8 +403,8 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
     if (file.exists(xlsx)) {
       jl <- tryCatch(
         import_rcm_xlsx_as_library(
-          xlsx, source = "jinglian_batch", id_prefix = "JL",
-          tags = c("鯨鏈RCM", "資訊循環", "首批")
+          xlsx, source = "rcm_import_batch", id_prefix = "JL",
+          tags = c("RCM", "資訊循環", "首批")
         ),
         error = function(e) list()
       )
@@ -452,7 +464,7 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
   tags <- unique(c(as.character(tags), as.character(ctrl$tags %||% character()), "累積範本"))
   tags <- tags[nzchar(tags)]
   if (isTRUE(deidentify)) {
-    tags <- tags[!tags %in% CLIENT_NAME_MARKERS]
+    tags <- tags[!vapply(tags, is_client_identifying_tag, logical(1))]
     tags <- unique(c(vapply(tags, deidentify_client_specific_text, character(1), USE.NAMES = FALSE),
                      "去識別範本"))
     tags <- tags[nzchar(tags)]

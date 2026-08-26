@@ -73,6 +73,10 @@ check(length(split_controls_by_iuc(list(d1, d2))) == 2L, "IUC 分拆")
 rcm <- controls_to_rcm(list(d1))
 check(all(RCM_HEADERS %in% names(rcm)), "RCM 含鯨鏈標準標題列")
 check(identical(as.character(rcm[["IUC"]]), "使用者權限清冊"), "RCM 含 IUC 欄")
+empty_disp <- empty_rcm_display_df()
+check(nrow(empty_disp) == 0L && all(RCM_HEADERS %in% names(empty_disp)) &&
+        "儲存時間" %in% names(empty_disp),
+      "空 RCM 顯示表仍含標題列（含儲存時間）")
 check(identical(as.character(rcm[["RoMM 分類"]]), ROMM_CLASS_CHOICES[[1]]), "RCM 含 RoMM 分類欄")
 check(identical(as.character(rcm[["聲明"]]), "完整性 (Completeness)"), "RCM 含聲明欄")
 check(identical(as.character(rcm[["控制目標"]]), "確保系統使用者權限與現職一致"), "RCM 目標欄獨立")
@@ -824,6 +828,10 @@ check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
 check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
+check(grepl("empty_rcm_display_df", app_src) &&
+        grepl("emptyTable", app_src) &&
+        !grepl('data\\.frame\\(訊息\\s*=\\s*"尚無 RCM 列', app_src),
+      "RCM 頁無資料時仍渲染標題列而非單欄訊息")
 merged_basic <- merge_design_preview_section(NULL, d1, "基礎設定")
 check(isTRUE(merged_basic$rcm_preview), "預覽合併標記 rcm_preview")
 check("基礎設定" %in% merged_basic$rcm_preview_sections, "預覽記錄區塊名稱")

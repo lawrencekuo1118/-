@@ -759,6 +759,15 @@ controls_to_rcm <- function(controls) {
   }))
 }
 
+# 0 列但保留 RCM 標題列（含儲存時間），供空表仍顯示欄名
+empty_rcm_display_df <- function() {
+  empty <- controls_to_rcm(list())
+  cbind(
+    `儲存時間` = character(0),
+    as.data.frame(empty, stringsAsFactors = FALSE)
+  )
+}
+
 # Column groups for UI / export presentation
 rcm_group_for_column <- function(col) {
   for (g in names(RCM_HEADER_GROUPS)) {

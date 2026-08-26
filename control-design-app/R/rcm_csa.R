@@ -637,9 +637,15 @@ count_filled_risk_attrs <- function(ctrl) {
 
 derive_sub_process_id <- function(ctrl, seq_no = 1L) {
   if (!is_blank(ctrl$sub_process_id)) return(trimws(ctrl$sub_process_id))
-  cycle <- ctrl$cycle %||% ""
-  if (grepl("資訊|電腦", cycle)) sprintf("EC-%03d", 100L + as.integer(seq_no))
-  else sprintf("SP-%03d", as.integer(seq_no))
+  cc <- trimws(ctrl$cycle_code %||% "")
+  if (!nzchar(cc) && nzchar(ctrl$cycle %||% "")) {
+    cc <- cycle_code_for(ctrl$cycle)
+  }
+  # 子作業編號 = [循環編號]-[子作業序號]
+  if (nzchar(cc)) {
+    return(compose_sub_process_id(cc, sprintf("%03d", 100L + as.integer(seq_no))))
+  }
+  sprintf("SP-%03d", as.integer(seq_no))
 }
 
 derive_risk_id <- function(ctrl, seq_no = 1L) {
@@ -649,11 +655,15 @@ derive_risk_id <- function(ctrl, seq_no = 1L) {
 }
 
 derive_control_id <- function(ctrl, seq_no = 1L) {
-  # Prefer Jinglian style: {子作業編號}-{序號} e.g. EC-101-01
+  # 控制編號 = [循環編號]-[子作業序號]-[控制序號] 例：EC-101-01
   if (!is_blank(ctrl$control_id) && !grepl("^CD-|^CP-|^IT-C", ctrl$control_id)) {
     return(trimws(ctrl$control_id))
   }
   sp <- derive_sub_process_id(ctrl, seq_no)
+  parts <- parse_rcm_id_parts(sp)
+  if (isTRUE(parts$ok) && nzchar(parts$cycle) && nzchar(parts$sub)) {
+    return(compose_control_id(parts$cycle, parts$sub, seq_no))
+  }
   sprintf("%s-%02d", sp, as.integer(seq_no))
 }
 

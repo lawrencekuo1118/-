@@ -564,7 +564,6 @@ import_control_library_file <- function(path, existing = list(), overwrite = TRU
       related_policy = "related_policy|相關政策或程序",
       related_law = "related_law|相關法令",
       related_document = paste0("related_document|", CONTROL_EVIDENCE_DOCUMENT_LABEL, "|相關文件"),
-      # 故意不映射公司現況／有效性／潛在風險／改善建議，避免污染設計庫
       inputs = "inputs|投入",
       review_steps = "review_steps|steps|步驟",
       outputs = "outputs|產出",

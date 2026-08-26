@@ -637,8 +637,7 @@ ui <- page_navbar(
             uiOutput("type_live_check"),
             div(
               class = "d-flex gap-1 flex-wrap mb-2",
-              actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary"),
-              actionButton("oa_swap", "對調目標/活動", class = "btn-sm btn-outline-secondary")
+              actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary")
             ),
             div(
               class = "assertions-side mb-2",
@@ -2615,13 +2614,6 @@ server <- function(input, output, session) {
       updateTextInput(session, "control_id",
                       value = next_rcm_control_id(spid, ids, cycle_code = cc))
     }
-  })
-
-  observeEvent(input$oa_swap, {
-    o <- input$control_objective %||% ""
-    a <- input$control_activity %||% ""
-    updateTextAreaInput(session, "control_objective", value = a)
-    updateTextAreaInput(session, "control_activity", value = o)
   })
 
   observeEvent(input$oa_split_suggest, {

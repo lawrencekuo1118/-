@@ -569,9 +569,8 @@ ui <- page_navbar(
                 plugins = list("remove_button")
               )
             ),
-            uiOutput("related_system_label"),
             textInput(
-              "related_system", label = NULL,
+              "related_system", lab_opt("相關系統"),
               placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
             ),
             uiOutput("related_system_hint"),
@@ -2069,9 +2068,11 @@ server <- function(input, output, session) {
     }
   })
 
-  output$related_system_label <- renderUI({
+  # 相關系統標籤與「相關政策或程序」同列排版（選填／必填 * 接在標題後）
+  observe({
     nature <- normalize_control_type_manual_auto(input$nature %||% "")
-    if (is_automatic_control(nature)) lab_req("相關系統") else lab_opt("相關系統")
+    lab <- if (is_automatic_control(nature)) lab_req("相關系統") else lab_opt("相關系統")
+    updateTextInput(session, "related_system", label = lab)
   })
 
   output$related_system_hint <- renderUI({

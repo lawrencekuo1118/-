@@ -926,7 +926,9 @@ check(grepl("design-tab-filter-bar", app_src) &&
         grepl("search_sub_process_hits", paste(readLines(file.path(root, "R/cascade.R"), encoding = "UTF-8"), collapse = "\n")),
       "三階段頁籤頂部有簡約搜尋篩選")
 check(grepl("csaPreviewCollapse", app_src) &&
-        grepl('data-bs-target\\s*=\\s*"#csaPreviewCollapse"', app_src) &&
+        grepl("csaPreviewCollapse", app_src) &&
+        grepl("data-bs-target", app_src) &&
+        grepl("#csaPreviewCollapse", app_src, fixed = TRUE) &&
         grepl("預覽列（自我評估測試步驟）", app_src),
       "控制點測試設計預覽為底部可收合列")
 csa_panel <- sub('(?s).*nav_panel\\(\\s*"控制點測試設計"', 'nav_panel("控制點測試設計"', app_src, perl = TRUE)

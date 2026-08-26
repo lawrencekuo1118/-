@@ -5,7 +5,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF101-1",
       "library_id": "PL-CF101-1",
@@ -52,7 +52,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF101-2",
       "library_id": "PL-CF101-2",
@@ -99,7 +99,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF101-3",
       "library_id": "PL-CF101-3",
@@ -146,7 +146,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF101-4",
       "library_id": "PL-CF101-4",
@@ -193,7 +193,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF101-5",
       "library_id": "PL-CF101-5",
@@ -240,7 +240,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF102-1",
       "library_id": "PL-CF102-1",
@@ -287,7 +287,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF102-2",
       "library_id": "PL-CF102-2",
@@ -334,7 +334,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF102-3",
       "library_id": "PL-CF102-3",
@@ -381,7 +381,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF102-4",
       "library_id": "PL-CF102-4",
@@ -428,7 +428,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF102-5",
       "library_id": "PL-CF102-5",
@@ -475,7 +475,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF103-1",
       "library_id": "PL-CF103-1",
@@ -522,7 +522,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF103-2",
       "library_id": "PL-CF103-2",
@@ -569,7 +569,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF103-3",
       "library_id": "PL-CF103-3",
@@ -616,7 +616,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF103-4",
       "library_id": "PL-CF103-4",
@@ -663,7 +663,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF103-5",
       "library_id": "PL-CF103-5",
@@ -710,7 +710,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF104-1",
       "library_id": "PL-CF104-1",
@@ -757,7 +757,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF104-2",
       "library_id": "PL-CF104-2",
@@ -804,7 +804,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF104-3",
       "library_id": "PL-CF104-3",
@@ -851,7 +851,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-1",
       "library_id": "PL-CF105-1",
@@ -898,7 +898,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-2",
       "library_id": "PL-CF105-2",
@@ -945,7 +945,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-3",
       "library_id": "PL-CF105-3",
@@ -992,7 +992,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-4",
       "library_id": "PL-CF105-4",
@@ -1039,7 +1039,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-5",
       "library_id": "PL-CF105-5",
@@ -1086,7 +1086,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-6",
       "library_id": "PL-CF105-6",
@@ -1133,7 +1133,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-7",
       "library_id": "PL-CF105-7",
@@ -1180,7 +1180,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-8",
       "library_id": "PL-CF105-8",
@@ -1227,7 +1227,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-9",
       "library_id": "PL-CF105-9",
@@ -1274,7 +1274,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-10",
       "library_id": "PL-CF105-10",
@@ -1321,7 +1321,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF105-11",
       "library_id": "PL-CF105-11",
@@ -1368,7 +1368,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-1",
       "library_id": "PL-CF106-1",
@@ -1415,7 +1415,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-2",
       "library_id": "PL-CF106-2",
@@ -1462,7 +1462,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-3",
       "library_id": "PL-CF106-3",
@@ -1509,7 +1509,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-4",
       "library_id": "PL-CF106-4",
@@ -1556,7 +1556,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-5",
       "library_id": "PL-CF106-5",
@@ -1603,7 +1603,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-6",
       "library_id": "PL-CF106-6",
@@ -1650,7 +1650,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-7",
       "library_id": "PL-CF106-7",
@@ -1697,7 +1697,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-8",
       "library_id": "PL-CF106-8",
@@ -1744,7 +1744,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-9",
       "library_id": "PL-CF106-9",
@@ -1791,7 +1791,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF106-10",
       "library_id": "PL-CF106-10",
@@ -1838,7 +1838,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-1",
       "library_id": "PL-CF107-1",
@@ -1885,7 +1885,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-2",
       "library_id": "PL-CF107-2",
@@ -1932,7 +1932,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-3",
       "library_id": "PL-CF107-3",
@@ -1979,7 +1979,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-4",
       "library_id": "PL-CF107-4",
@@ -2026,7 +2026,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-5",
       "library_id": "PL-CF107-5",
@@ -2073,7 +2073,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-6",
       "library_id": "PL-CF107-6",
@@ -2120,7 +2120,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-7",
       "library_id": "PL-CF107-7",
@@ -2167,7 +2167,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-8",
       "library_id": "PL-CF107-8",
@@ -2214,7 +2214,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-9",
       "library_id": "PL-CF107-9",
@@ -2261,7 +2261,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF107-10",
       "library_id": "PL-CF107-10",
@@ -2308,7 +2308,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF108-1",
       "library_id": "PL-CF108-1",
@@ -2355,7 +2355,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF108-2",
       "library_id": "PL-CF108-2",
@@ -2402,7 +2402,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF109-1",
       "library_id": "PL-CF109-1",
@@ -2449,7 +2449,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF109-2",
       "library_id": "PL-CF109-2",
@@ -2496,7 +2496,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF109-3",
       "library_id": "PL-CF109-3",
@@ -2543,7 +2543,7 @@
     "tags": ["RCM", "固定資產循環", "累積範本", "去識別範本"],
     "cycle": "固定資產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:03",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "CF109-4",
       "library_id": "PL-CF109-4",
@@ -2590,7 +2590,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-1",
       "library_id": "PL-EL10-1",
@@ -2637,7 +2637,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-2",
       "library_id": "PL-EL10-2",
@@ -2684,7 +2684,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-3",
       "library_id": "PL-EL10-3",
@@ -2731,7 +2731,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-4",
       "library_id": "PL-EL10-4",
@@ -2778,7 +2778,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-5",
       "library_id": "PL-EL10-5",
@@ -2825,7 +2825,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-6",
       "library_id": "PL-EL10-6",
@@ -2872,7 +2872,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-7",
       "library_id": "PL-EL10-7",
@@ -2919,7 +2919,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-8",
       "library_id": "PL-EL10-8",
@@ -2966,7 +2966,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-9",
       "library_id": "PL-EL10-9",
@@ -3013,7 +3013,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-10",
       "library_id": "PL-EL10-10",
@@ -3060,7 +3060,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-11",
       "library_id": "PL-EL10-11",
@@ -3107,7 +3107,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-12",
       "library_id": "PL-EL10-12",
@@ -3154,7 +3154,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-13",
       "library_id": "PL-EL10-13",
@@ -3201,7 +3201,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-14",
       "library_id": "PL-EL10-14",
@@ -3248,7 +3248,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-15",
       "library_id": "PL-EL10-15",
@@ -3295,7 +3295,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-16",
       "library_id": "PL-EL10-16",
@@ -3342,7 +3342,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-17",
       "library_id": "PL-EL10-17",
@@ -3389,7 +3389,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-18",
       "library_id": "PL-EL10-18",
@@ -3436,7 +3436,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-19",
       "library_id": "PL-EL10-19",
@@ -3483,7 +3483,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-20",
       "library_id": "PL-EL10-20",
@@ -3530,7 +3530,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-21",
       "library_id": "PL-EL10-21",
@@ -3577,7 +3577,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-22",
       "library_id": "PL-EL10-22",
@@ -3624,7 +3624,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-23",
       "library_id": "PL-EL10-23",
@@ -3671,7 +3671,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-24",
       "library_id": "PL-EL10-24",
@@ -3718,7 +3718,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-25",
       "library_id": "PL-EL10-25",
@@ -3765,7 +3765,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-26",
       "library_id": "PL-EL10-26",
@@ -3812,7 +3812,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL10-27",
       "library_id": "PL-EL10-27",
@@ -3859,7 +3859,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL20-1",
       "library_id": "PL-EL20-1",
@@ -3906,7 +3906,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL20-2",
       "library_id": "PL-EL20-2",
@@ -3953,7 +3953,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL20-3",
       "library_id": "PL-EL20-3",
@@ -4000,7 +4000,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL20-4",
       "library_id": "PL-EL20-4",
@@ -4047,7 +4047,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL20-5",
       "library_id": "PL-EL20-5",
@@ -4094,7 +4094,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL20-6",
       "library_id": "PL-EL20-6",
@@ -4141,7 +4141,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL30-1",
       "library_id": "PL-EL30-1",
@@ -4188,7 +4188,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL30-2",
       "library_id": "PL-EL30-2",
@@ -4235,7 +4235,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL30-3",
       "library_id": "PL-EL30-3",
@@ -4282,7 +4282,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-1",
       "library_id": "PL-EL40-1",
@@ -4329,7 +4329,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-2",
       "library_id": "PL-EL40-2",
@@ -4376,7 +4376,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-3",
       "library_id": "PL-EL40-3",
@@ -4423,7 +4423,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-4",
       "library_id": "PL-EL40-4",
@@ -4470,7 +4470,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-5",
       "library_id": "PL-EL40-5",
@@ -4517,7 +4517,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-6",
       "library_id": "PL-EL40-6",
@@ -4564,7 +4564,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-7",
       "library_id": "PL-EL40-7",
@@ -4611,7 +4611,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-8",
       "library_id": "PL-EL40-8",
@@ -4658,7 +4658,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:11",
     "control": {
       "control_id": "EL40-9",
       "library_id": "PL-EL40-9",
@@ -4705,7 +4705,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-10",
       "library_id": "PL-EL40-10",
@@ -4752,7 +4752,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-11",
       "library_id": "PL-EL40-11",
@@ -4799,7 +4799,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-12",
       "library_id": "PL-EL40-12",
@@ -4846,7 +4846,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-13",
       "library_id": "PL-EL40-13",
@@ -4893,7 +4893,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-14",
       "library_id": "PL-EL40-14",
@@ -4940,7 +4940,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-15",
       "library_id": "PL-EL40-15",
@@ -4987,7 +4987,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-16",
       "library_id": "PL-EL40-16",
@@ -5034,7 +5034,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-17",
       "library_id": "PL-EL40-17",
@@ -5081,7 +5081,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-18",
       "library_id": "PL-EL40-18",
@@ -5128,7 +5128,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-19",
       "library_id": "PL-EL40-19",
@@ -5175,7 +5175,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL40-20",
       "library_id": "PL-EL40-20",
@@ -5222,7 +5222,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-1",
       "library_id": "PL-EL50-1",
@@ -5269,7 +5269,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-2",
       "library_id": "PL-EL50-2",
@@ -5316,7 +5316,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-3",
       "library_id": "PL-EL50-3",
@@ -5363,7 +5363,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-4",
       "library_id": "PL-EL50-4",
@@ -5410,7 +5410,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-5",
       "library_id": "PL-EL50-5",
@@ -5457,7 +5457,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-6",
       "library_id": "PL-EL50-6",
@@ -5504,7 +5504,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-7",
       "library_id": "PL-EL50-7",
@@ -5551,7 +5551,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-8",
       "library_id": "PL-EL50-8",
@@ -5598,7 +5598,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-9",
       "library_id": "PL-EL50-9",
@@ -5645,7 +5645,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-10",
       "library_id": "PL-EL50-10",
@@ -5692,7 +5692,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-11",
       "library_id": "PL-EL50-11",
@@ -5739,7 +5739,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-12",
       "library_id": "PL-EL50-12",
@@ -5786,7 +5786,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-13",
       "library_id": "PL-EL50-13",
@@ -5833,7 +5833,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-14",
       "library_id": "PL-EL50-14",
@@ -5880,7 +5880,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-15",
       "library_id": "PL-EL50-15",
@@ -5927,7 +5927,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-16",
       "library_id": "PL-EL50-16",
@@ -5974,7 +5974,7 @@
     "tags": ["RCM", "企業層級", "累積範本", "去識別範本"],
     "cycle": "企業層級",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:04",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "EL50-17",
       "library_id": "PL-EL50-17",
@@ -6021,7 +6021,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI101-1",
       "library_id": "PL-CI101-1",
@@ -6068,7 +6068,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI102-1",
       "library_id": "PL-CI102-1",
@@ -6115,7 +6115,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI102-2",
       "library_id": "PL-CI102-2",
@@ -6162,7 +6162,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI102-3",
       "library_id": "PL-CI102-3",
@@ -6209,7 +6209,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI102-4",
       "library_id": "PL-CI102-4",
@@ -6256,7 +6256,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI102-5",
       "library_id": "PL-CI102-5",
@@ -6303,7 +6303,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI103-1",
       "library_id": "PL-CI103-1",
@@ -6350,7 +6350,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI104-1",
       "library_id": "PL-CI104-1",
@@ -6397,7 +6397,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI104-2",
       "library_id": "PL-CI104-2",
@@ -6444,7 +6444,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI104-3",
       "library_id": "PL-CI104-3",
@@ -6491,7 +6491,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI104-4",
       "library_id": "PL-CI104-4",
@@ -6538,7 +6538,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI105-1",
       "library_id": "PL-CI105-1",
@@ -6585,7 +6585,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI105-2",
       "library_id": "PL-CI105-2",
@@ -6632,7 +6632,7 @@
     "tags": ["RCM", "投資循環", "累積範本", "去識別範本"],
     "cycle": "投資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CI106-1",
       "library_id": "PL-CI106-1",
@@ -6679,7 +6679,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP101-1",
       "library_id": "PL-CP101-1",
@@ -6726,7 +6726,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP101-2",
       "library_id": "PL-CP101-2",
@@ -6773,7 +6773,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP101-3",
       "library_id": "PL-CP101-3",
@@ -6820,7 +6820,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP101-4",
       "library_id": "PL-CP101-4",
@@ -6867,7 +6867,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP102-1",
       "library_id": "PL-CP102-1",
@@ -6914,7 +6914,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-1",
       "library_id": "PL-CP103-1",
@@ -6961,7 +6961,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-2",
       "library_id": "PL-CP103-2",
@@ -7008,7 +7008,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-3",
       "library_id": "PL-CP103-3",
@@ -7055,7 +7055,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-4",
       "library_id": "PL-CP103-4",
@@ -7102,7 +7102,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-5",
       "library_id": "PL-CP103-5",
@@ -7149,7 +7149,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-6",
       "library_id": "PL-CP103-6",
@@ -7196,7 +7196,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-7",
       "library_id": "PL-CP103-7",
@@ -7243,7 +7243,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-8",
       "library_id": "PL-CP103-8",
@@ -7290,7 +7290,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-9",
       "library_id": "PL-CP103-9",
@@ -7337,7 +7337,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-10",
       "library_id": "PL-CP103-10",
@@ -7384,7 +7384,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-11",
       "library_id": "PL-CP103-11",
@@ -7431,7 +7431,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-12",
       "library_id": "PL-CP103-12",
@@ -7478,7 +7478,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-13",
       "library_id": "PL-CP103-13",
@@ -7525,7 +7525,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP103-14",
       "library_id": "PL-CP103-14",
@@ -7572,7 +7572,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP104-1",
       "library_id": "PL-CP104-1",
@@ -7619,7 +7619,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP104-2",
       "library_id": "PL-CP104-2",
@@ -7666,7 +7666,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP104-3",
       "library_id": "PL-CP104-3",
@@ -7713,7 +7713,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-1",
       "library_id": "PL-CP105-1",
@@ -7760,7 +7760,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-2",
       "library_id": "PL-CP105-2",
@@ -7807,7 +7807,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-3",
       "library_id": "PL-CP105-3",
@@ -7854,7 +7854,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-4",
       "library_id": "PL-CP105-4",
@@ -7901,7 +7901,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-5",
       "library_id": "PL-CP105-5",
@@ -7948,7 +7948,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-6",
       "library_id": "PL-CP105-6",
@@ -7995,7 +7995,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:12",
     "control": {
       "control_id": "CP105-7",
       "library_id": "PL-CP105-7",
@@ -8042,7 +8042,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-1",
       "library_id": "PL-CP106-1",
@@ -8089,7 +8089,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-2",
       "library_id": "PL-CP106-2",
@@ -8136,7 +8136,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-3",
       "library_id": "PL-CP106-3",
@@ -8183,7 +8183,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-4",
       "library_id": "PL-CP106-4",
@@ -8230,7 +8230,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-5",
       "library_id": "PL-CP106-5",
@@ -8260,13 +8260,13 @@
       "iuc_or_system": "ERP系統",
       "related_policy": "",
       "related_law": "",
-      "related_document": "1. ERP系統發票重覆立帳提醒\n2. ERP系統註記已付款畫面",
+      "related_document": "1. ERP系統發票重複立帳提醒\n2. ERP系統註記已付款畫面",
       "responsible_unit": "1. 會計單位\n2. 專案會計單位",
       "effectiveness": "",
       "residual_risk": "",
       "improvement": "",
-      "outputs": "1. ERP系統發票重覆立帳提醒\n2. ERP系統註記已付款畫面",
-      "detailed_description": "就公司現行採購及付款循環作業，為因應「會計」風險——防範舞弊的機制與控制不足（風險三大屬性—財務報導：[財務報導] 防範舞弊的機制與控制不足；營運：（未填）；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：應付帳款、應付設備款、應付薪資、應付租金、應付利息, 應付加工費用、應付模治具費、應付研發料款、應付員工費用、其他應付費用、薪資支出、其他管理費用、勞工退休金、就業安定費、仲介服務費、派遣、伙食費、訓練費、保險費、租金支出、文具用品、旅費、運費、郵電費、修繕費、廣告費、水電瓦斯費、交際費、折舊、各項攤提、進口費用、出口費用、保全費、雜項購置、交通費、勞務費、書報雜誌費、手續費、檢驗測試費、安規認證費、耗材、包裝費、消耗品費、託外進貨加工費、一般加工費、模具費、治具費、工具費、管理費、清潔費、餐費補助(免)、製程廢棄物清除費、網路服務費、職工福利、商標維持費、商標失效費、專利生效費、印刷費、軟體使用費、軟體維護費、稅捐、會議費、委託研究費、專利維持費、專利損失費、研-專利申請費(PCT)、專利其他費用、研發原料、製樣費、製公版費、試產費、研發成本、預付租金、預付保險費、其他預付費用、預付貨款、預付商標權款、預付專利權款、其他預付款／（聲明未填）），設計控制目標為「經驗收之物品或服務才予以付款。」。由1. 會計單位\n2. 專案會計單位以自動方式、採預防性控制取向、屬（類型未填）類型，依持續執行下列控制活動：應付帳款付款後，相關請款憑證應予註記，且取得請款人或廠商收款證明，避免重複請款或冒領情事。。控制執行時使用之 IUC／制度為「ERP系統」。投入（Inputs）：ERP系統。覆核／執行步驟（Specific activities）：應付帳款付款後，相關請款憑證應予註記，且取得請款人或廠商收款證明，避免重複請款或冒領情事。。產出（Outputs）：1. ERP系統發票重覆立帳提醒\n2. ERP系統註記已付款畫面。",
+      "outputs": "1. ERP系統發票重複立帳提醒\n2. ERP系統註記已付款畫面",
+      "detailed_description": "就公司現行採購及付款循環作業，為因應「會計」風險——防範舞弊的機制與控制不足（風險三大屬性—財務報導：[財務報導] 防範舞弊的機制與控制不足；營運：（未填）；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：應付帳款、應付設備款、應付薪資、應付租金、應付利息, 應付加工費用、應付模治具費、應付研發料款、應付員工費用、其他應付費用、薪資支出、其他管理費用、勞工退休金、就業安定費、仲介服務費、派遣、伙食費、訓練費、保險費、租金支出、文具用品、旅費、運費、郵電費、修繕費、廣告費、水電瓦斯費、交際費、折舊、各項攤提、進口費用、出口費用、保全費、雜項購置、交通費、勞務費、書報雜誌費、手續費、檢驗測試費、安規認證費、耗材、包裝費、消耗品費、託外進貨加工費、一般加工費、模具費、治具費、工具費、管理費、清潔費、餐費補助(免)、製程廢棄物清除費、網路服務費、職工福利、商標維持費、商標失效費、專利生效費、印刷費、軟體使用費、軟體維護費、稅捐、會議費、委託研究費、專利維持費、專利損失費、研-專利申請費(PCT)、專利其他費用、研發原料、製樣費、製公版費、試產費、研發成本、預付租金、預付保險費、其他預付費用、預付貨款、預付商標權款、預付專利權款、其他預付款／（聲明未填）），設計控制目標為「經驗收之物品或服務才予以付款。」。由1. 會計單位\n2. 專案會計單位以自動方式、採預防性控制取向、屬（類型未填）類型，依持續執行下列控制活動：應付帳款付款後，相關請款憑證應予註記，且取得請款人或廠商收款證明，避免重複請款或冒領情事。。控制執行時使用之 IUC／制度為「ERP系統」。投入（Inputs）：ERP系統。覆核／執行步驟（Specific activities）：應付帳款付款後，相關請款憑證應予註記，且取得請款人或廠商收款證明，避免重複請款或冒領情事。。產出（Outputs）：1. ERP系統發票重複立帳提醒\n2. ERP系統註記已付款畫面。",
       "key_control": "Y",
       "summary_description": "[採購及付款循環｜會計] 經驗收之物品或服務才予以付款。：應付帳款付款後，相關請款憑證應予註記，且取得請款人或廠商收款證明，避免重複請款或冒領情事。（頻率：持續；負責：1. 會計單位\n2. 專案會計單位；IUC：ERP系統）"
     }
@@ -8277,7 +8277,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-6",
       "library_id": "PL-CP106-6",
@@ -8324,7 +8324,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-7",
       "library_id": "PL-CP106-7",
@@ -8371,7 +8371,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-8",
       "library_id": "PL-CP106-8",
@@ -8418,7 +8418,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-9",
       "library_id": "PL-CP106-9",
@@ -8465,7 +8465,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-10",
       "library_id": "PL-CP106-10",
@@ -8512,7 +8512,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-11",
       "library_id": "PL-CP106-11",
@@ -8559,7 +8559,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-12",
       "library_id": "PL-CP106-12",
@@ -8606,7 +8606,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-13",
       "library_id": "PL-CP106-13",
@@ -8653,7 +8653,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-14",
       "library_id": "PL-CP106-14",
@@ -8700,7 +8700,7 @@
     "tags": ["RCM", "採購及付款循環", "累積範本", "去識別範本"],
     "cycle": "採購及付款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:05",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CP106-15",
       "library_id": "PL-CP106-15",
@@ -8747,7 +8747,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-1",
       "library_id": "PL-CO101-1",
@@ -8794,7 +8794,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-2",
       "library_id": "PL-CO101-2",
@@ -8841,7 +8841,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-3",
       "library_id": "PL-CO101-3",
@@ -8888,7 +8888,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-4",
       "library_id": "PL-CO101-4",
@@ -8935,7 +8935,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-5",
       "library_id": "PL-CO101-5",
@@ -8982,7 +8982,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-6",
       "library_id": "PL-CO101-6",
@@ -9029,7 +9029,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO101-7",
       "library_id": "PL-CO101-7",
@@ -9076,7 +9076,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO102-1",
       "library_id": "PL-CO102-1",
@@ -9123,7 +9123,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO102-2",
       "library_id": "PL-CO102-2",
@@ -9170,7 +9170,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO102-3",
       "library_id": "PL-CO102-3",
@@ -9217,7 +9217,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO103-1",
       "library_id": "PL-CO103-1",
@@ -9264,7 +9264,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO103-2",
       "library_id": "PL-CO103-2",
@@ -9311,7 +9311,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO103-3",
       "library_id": "PL-CO103-3",
@@ -9358,7 +9358,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-1",
       "library_id": "PL-CO104-1",
@@ -9405,7 +9405,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-2",
       "library_id": "PL-CO104-2",
@@ -9452,7 +9452,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-3",
       "library_id": "PL-CO104-3",
@@ -9499,7 +9499,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-4",
       "library_id": "PL-CO104-4",
@@ -9546,7 +9546,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-5",
       "library_id": "PL-CO104-5",
@@ -9593,7 +9593,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-6",
       "library_id": "PL-CO104-6",
@@ -9640,7 +9640,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-7",
       "library_id": "PL-CO104-7",
@@ -9687,7 +9687,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO104-8",
       "library_id": "PL-CO104-8",
@@ -9734,7 +9734,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-1",
       "library_id": "PL-CO105-1",
@@ -9781,7 +9781,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-2",
       "library_id": "PL-CO105-2",
@@ -9828,7 +9828,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-3",
       "library_id": "PL-CO105-3",
@@ -9875,7 +9875,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-4",
       "library_id": "PL-CO105-4",
@@ -9922,7 +9922,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-5",
       "library_id": "PL-CO105-5",
@@ -9969,7 +9969,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-6",
       "library_id": "PL-CO105-6",
@@ -10016,7 +10016,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO105-7",
       "library_id": "PL-CO105-7",
@@ -10063,7 +10063,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-1",
       "library_id": "PL-CO106-1",
@@ -10110,7 +10110,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-2",
       "library_id": "PL-CO106-2",
@@ -10157,7 +10157,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-3",
       "library_id": "PL-CO106-3",
@@ -10204,7 +10204,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-4",
       "library_id": "PL-CO106-4",
@@ -10251,7 +10251,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-5",
       "library_id": "PL-CO106-5",
@@ -10298,7 +10298,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-6",
       "library_id": "PL-CO106-6",
@@ -10345,7 +10345,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-7",
       "library_id": "PL-CO106-7",
@@ -10392,7 +10392,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-8",
       "library_id": "PL-CO106-8",
@@ -10439,7 +10439,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-9",
       "library_id": "PL-CO106-9",
@@ -10486,7 +10486,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-10",
       "library_id": "PL-CO106-10",
@@ -10533,7 +10533,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-11",
       "library_id": "PL-CO106-11",
@@ -10580,7 +10580,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-12",
       "library_id": "PL-CO106-12",
@@ -10627,7 +10627,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-13",
       "library_id": "PL-CO106-13",
@@ -10674,7 +10674,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-14",
       "library_id": "PL-CO106-14",
@@ -10721,7 +10721,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-15",
       "library_id": "PL-CO106-15",
@@ -10768,7 +10768,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-16",
       "library_id": "PL-CO106-16",
@@ -10815,7 +10815,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-17",
       "library_id": "PL-CO106-17",
@@ -10862,7 +10862,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-18",
       "library_id": "PL-CO106-18",
@@ -10909,7 +10909,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-19",
       "library_id": "PL-CO106-19",
@@ -10956,7 +10956,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-20",
       "library_id": "PL-CO106-20",
@@ -11003,7 +11003,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-21",
       "library_id": "PL-CO106-21",
@@ -11050,7 +11050,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-22",
       "library_id": "PL-CO106-22",
@@ -11097,7 +11097,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-23",
       "library_id": "PL-CO106-23",
@@ -11144,7 +11144,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-24",
       "library_id": "PL-CO106-24",
@@ -11191,7 +11191,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-25",
       "library_id": "PL-CO106-25",
@@ -11238,7 +11238,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-26",
       "library_id": "PL-CO106-26",
@@ -11285,7 +11285,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-27",
       "library_id": "PL-CO106-27",
@@ -11332,7 +11332,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-28",
       "library_id": "PL-CO106-28",
@@ -11379,7 +11379,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO106-29",
       "library_id": "PL-CO106-29",
@@ -11426,7 +11426,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-1",
       "library_id": "PL-CO107-1",
@@ -11473,7 +11473,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-2",
       "library_id": "PL-CO107-2",
@@ -11520,7 +11520,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-3",
       "library_id": "PL-CO107-3",
@@ -11567,7 +11567,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-4",
       "library_id": "PL-CO107-4",
@@ -11614,7 +11614,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-5",
       "library_id": "PL-CO107-5",
@@ -11661,7 +11661,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-6",
       "library_id": "PL-CO107-6",
@@ -11708,7 +11708,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-7",
       "library_id": "PL-CO107-7",
@@ -11755,7 +11755,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO107-8",
       "library_id": "PL-CO107-8",
@@ -11802,7 +11802,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-1",
       "library_id": "PL-CO108-1",
@@ -11849,7 +11849,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-2",
       "library_id": "PL-CO108-2",
@@ -11896,7 +11896,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-3",
       "library_id": "PL-CO108-3",
@@ -11943,7 +11943,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-4",
       "library_id": "PL-CO108-4",
@@ -11990,7 +11990,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-5",
       "library_id": "PL-CO108-5",
@@ -12037,7 +12037,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-6",
       "library_id": "PL-CO108-6",
@@ -12084,7 +12084,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-7",
       "library_id": "PL-CO108-7",
@@ -12131,7 +12131,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-8",
       "library_id": "PL-CO108-8",
@@ -12178,7 +12178,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-9",
       "library_id": "PL-CO108-9",
@@ -12225,7 +12225,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO108-10",
       "library_id": "PL-CO108-10",
@@ -12272,7 +12272,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO109-1",
       "library_id": "PL-CO109-1",
@@ -12319,7 +12319,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO109-2",
       "library_id": "PL-CO109-2",
@@ -12366,7 +12366,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO109-3",
       "library_id": "PL-CO109-3",
@@ -12413,7 +12413,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO109-4",
       "library_id": "PL-CO109-4",
@@ -12460,7 +12460,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-1",
       "library_id": "PL-CO110-1",
@@ -12507,7 +12507,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-2",
       "library_id": "PL-CO110-2",
@@ -12554,7 +12554,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-3",
       "library_id": "PL-CO110-3",
@@ -12601,7 +12601,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-4",
       "library_id": "PL-CO110-4",
@@ -12648,7 +12648,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-5",
       "library_id": "PL-CO110-5",
@@ -12695,7 +12695,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-6",
       "library_id": "PL-CO110-6",
@@ -12742,7 +12742,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-7",
       "library_id": "PL-CO110-7",
@@ -12789,7 +12789,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO110-8",
       "library_id": "PL-CO110-8",
@@ -12836,7 +12836,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO111-1",
       "library_id": "PL-CO111-1",
@@ -12883,7 +12883,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO111-2",
       "library_id": "PL-CO111-2",
@@ -12930,7 +12930,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO111-3",
       "library_id": "PL-CO111-3",
@@ -12977,7 +12977,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO112-1",
       "library_id": "PL-CO112-1",
@@ -13024,7 +13024,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO112-2",
       "library_id": "PL-CO112-2",
@@ -13071,7 +13071,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO112-3",
       "library_id": "PL-CO112-3",
@@ -13118,7 +13118,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO112-4",
       "library_id": "PL-CO112-4",
@@ -13165,7 +13165,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-1",
       "library_id": "PL-CO113-1",
@@ -13212,7 +13212,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-2",
       "library_id": "PL-CO113-2",
@@ -13259,7 +13259,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-3",
       "library_id": "PL-CO113-3",
@@ -13306,7 +13306,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-4",
       "library_id": "PL-CO113-4",
@@ -13353,7 +13353,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-5",
       "library_id": "PL-CO113-5",
@@ -13400,7 +13400,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-6",
       "library_id": "PL-CO113-6",
@@ -13447,7 +13447,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-7",
       "library_id": "PL-CO113-7",
@@ -13494,7 +13494,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-8",
       "library_id": "PL-CO113-8",
@@ -13541,7 +13541,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-9",
       "library_id": "PL-CO113-9",
@@ -13588,7 +13588,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO113-10",
       "library_id": "PL-CO113-10",
@@ -13635,7 +13635,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO114-1",
       "library_id": "PL-CO114-1",
@@ -13682,7 +13682,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO114-2",
       "library_id": "PL-CO114-2",
@@ -13729,7 +13729,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO114-3",
       "library_id": "PL-CO114-3",
@@ -13776,7 +13776,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO114-4",
       "library_id": "PL-CO114-4",
@@ -13823,7 +13823,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO115-1",
       "library_id": "PL-CO115-1",
@@ -13870,7 +13870,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO115-2",
       "library_id": "PL-CO115-2",
@@ -13917,7 +13917,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO115-3",
       "library_id": "PL-CO115-3",
@@ -13964,7 +13964,7 @@
     "tags": ["RCM", "生產循環", "累積範本", "去識別範本"],
     "cycle": "生產循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:13",
     "control": {
       "control_id": "CO115-4",
       "library_id": "PL-CO115-4",
@@ -14011,7 +14011,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD101-1",
       "library_id": "PL-CD101-1",
@@ -14058,7 +14058,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD101-2",
       "library_id": "PL-CD101-2",
@@ -14105,7 +14105,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD101-3",
       "library_id": "PL-CD101-3",
@@ -14152,7 +14152,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD101-4",
       "library_id": "PL-CD101-4",
@@ -14199,7 +14199,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD101-5",
       "library_id": "PL-CD101-5",
@@ -14246,7 +14246,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD102-1",
       "library_id": "PL-CD102-1",
@@ -14293,7 +14293,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD102-2",
       "library_id": "PL-CD102-2",
@@ -14340,7 +14340,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD103-1",
       "library_id": "PL-CD103-1",
@@ -14387,7 +14387,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD103-2",
       "library_id": "PL-CD103-2",
@@ -14434,7 +14434,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD103-3",
       "library_id": "PL-CD103-3",
@@ -14481,7 +14481,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD103-4",
       "library_id": "PL-CD103-4",
@@ -14528,7 +14528,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD104-1",
       "library_id": "PL-CD104-1",
@@ -14575,7 +14575,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:06",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD104-2",
       "library_id": "PL-CD104-2",
@@ -14622,7 +14622,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD104-3",
       "library_id": "PL-CD104-3",
@@ -14669,7 +14669,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD104-4",
       "library_id": "PL-CD104-4",
@@ -14716,7 +14716,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-1",
       "library_id": "PL-CD105-1",
@@ -14763,7 +14763,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-2",
       "library_id": "PL-CD105-2",
@@ -14810,7 +14810,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-3",
       "library_id": "PL-CD105-3",
@@ -14857,7 +14857,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-4",
       "library_id": "PL-CD105-4",
@@ -14904,7 +14904,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-5",
       "library_id": "PL-CD105-5",
@@ -14951,7 +14951,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-6",
       "library_id": "PL-CD105-6",
@@ -14998,7 +14998,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-7",
       "library_id": "PL-CD105-7",
@@ -15045,7 +15045,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-8",
       "library_id": "PL-CD105-8",
@@ -15092,7 +15092,7 @@
     "tags": ["RCM", "研發循環", "累積範本", "去識別範本"],
     "cycle": "研發循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CD105-9",
       "library_id": "PL-CD105-9",
@@ -15139,7 +15139,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-1",
       "library_id": "PL-CW101-1",
@@ -15186,7 +15186,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-2",
       "library_id": "PL-CW101-2",
@@ -15233,7 +15233,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-3",
       "library_id": "PL-CW101-3",
@@ -15280,7 +15280,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-4",
       "library_id": "PL-CW101-4",
@@ -15327,7 +15327,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-5",
       "library_id": "PL-CW101-5",
@@ -15374,7 +15374,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-6",
       "library_id": "PL-CW101-6",
@@ -15421,7 +15421,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-7",
       "library_id": "PL-CW101-7",
@@ -15468,7 +15468,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-8",
       "library_id": "PL-CW101-8",
@@ -15515,7 +15515,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-9",
       "library_id": "PL-CW101-9",
@@ -15562,7 +15562,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-10",
       "library_id": "PL-CW101-10",
@@ -15609,7 +15609,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-11",
       "library_id": "PL-CW101-11",
@@ -15656,7 +15656,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-12",
       "library_id": "PL-CW101-12",
@@ -15703,7 +15703,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-13",
       "library_id": "PL-CW101-13",
@@ -15750,7 +15750,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW101-14",
       "library_id": "PL-CW101-14",
@@ -15797,7 +15797,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW102-1",
       "library_id": "PL-CW102-1",
@@ -15844,7 +15844,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW102-2",
       "library_id": "PL-CW102-2",
@@ -15891,7 +15891,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:14",
     "control": {
       "control_id": "CW102-3",
       "library_id": "PL-CW102-3",
@@ -15938,7 +15938,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW103-1",
       "library_id": "PL-CW103-1",
@@ -15985,7 +15985,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW103-2",
       "library_id": "PL-CW103-2",
@@ -16032,7 +16032,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW103-3",
       "library_id": "PL-CW103-3",
@@ -16079,7 +16079,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW103-4",
       "library_id": "PL-CW103-4",
@@ -16126,7 +16126,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW103-5",
       "library_id": "PL-CW103-5",
@@ -16173,7 +16173,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-1",
       "library_id": "PL-CW104-1",
@@ -16220,7 +16220,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-2",
       "library_id": "PL-CW104-2",
@@ -16267,7 +16267,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-3",
       "library_id": "PL-CW104-3",
@@ -16314,7 +16314,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-4",
       "library_id": "PL-CW104-4",
@@ -16361,7 +16361,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-5",
       "library_id": "PL-CW104-5",
@@ -16408,7 +16408,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-6",
       "library_id": "PL-CW104-6",
@@ -16455,7 +16455,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-7",
       "library_id": "PL-CW104-7",
@@ -16502,7 +16502,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-8",
       "library_id": "PL-CW104-8",
@@ -16549,7 +16549,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-9",
       "library_id": "PL-CW104-9",
@@ -16596,7 +16596,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-10",
       "library_id": "PL-CW104-10",
@@ -16643,7 +16643,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-11",
       "library_id": "PL-CW104-11",
@@ -16690,7 +16690,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-12",
       "library_id": "PL-CW104-12",
@@ -16737,7 +16737,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-13",
       "library_id": "PL-CW104-13",
@@ -16784,7 +16784,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW104-14",
       "library_id": "PL-CW104-14",
@@ -16831,7 +16831,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW105-1",
       "library_id": "PL-CW105-1",
@@ -16878,7 +16878,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW105-2",
       "library_id": "PL-CW105-2",
@@ -16925,7 +16925,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW105-3",
       "library_id": "PL-CW105-3",
@@ -16972,7 +16972,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW105-4",
       "library_id": "PL-CW105-4",
@@ -17019,7 +17019,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW105-5",
       "library_id": "PL-CW105-5",
@@ -17066,7 +17066,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-1",
       "library_id": "PL-CW106-1",
@@ -17113,7 +17113,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-2",
       "library_id": "PL-CW106-2",
@@ -17160,7 +17160,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-3",
       "library_id": "PL-CW106-3",
@@ -17207,7 +17207,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-4",
       "library_id": "PL-CW106-4",
@@ -17254,7 +17254,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-5",
       "library_id": "PL-CW106-5",
@@ -17301,7 +17301,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-6",
       "library_id": "PL-CW106-6",
@@ -17348,7 +17348,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-7",
       "library_id": "PL-CW106-7",
@@ -17395,7 +17395,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW106-8",
       "library_id": "PL-CW106-8",
@@ -17442,7 +17442,7 @@
     "tags": ["RCM", "薪工循環", "累積範本", "去識別範本"],
     "cycle": "薪工循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:07",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CW107-1",
       "library_id": "PL-CW107-1",
@@ -17489,7 +17489,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR101-1",
       "library_id": "PL-CR101-1",
@@ -17536,7 +17536,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR101-2",
       "library_id": "PL-CR101-2",
@@ -17583,7 +17583,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR101-3",
       "library_id": "PL-CR101-3",
@@ -17630,7 +17630,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR101-4",
       "library_id": "PL-CR101-4",
@@ -17677,7 +17677,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR101-5",
       "library_id": "PL-CR101-5",
@@ -17724,7 +17724,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-1",
       "library_id": "PL-CR102-1",
@@ -17771,7 +17771,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-2",
       "library_id": "PL-CR102-2",
@@ -17818,7 +17818,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-3",
       "library_id": "PL-CR102-3",
@@ -17865,7 +17865,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-4",
       "library_id": "PL-CR102-4",
@@ -17912,7 +17912,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-5",
       "library_id": "PL-CR102-5",
@@ -17959,7 +17959,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-6",
       "library_id": "PL-CR102-6",
@@ -18006,7 +18006,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR102-7",
       "library_id": "PL-CR102-7",
@@ -18053,7 +18053,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR103-1",
       "library_id": "PL-CR103-1",
@@ -18100,7 +18100,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR104-1",
       "library_id": "PL-CR104-1",
@@ -18147,7 +18147,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR104-2",
       "library_id": "PL-CR104-2",
@@ -18194,7 +18194,7 @@
     "tags": ["RCM", "融資循環", "累積範本", "去識別範本"],
     "cycle": "融資循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:15",
     "control": {
       "control_id": "CR104-3",
       "library_id": "PL-CR104-3",
@@ -18241,7 +18241,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA101-1",
       "library_id": "PL-CA101-1",
@@ -18288,7 +18288,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA101-2",
       "library_id": "PL-CA101-2",
@@ -18335,7 +18335,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA101-3",
       "library_id": "PL-CA101-3",
@@ -18382,7 +18382,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA101-4",
       "library_id": "PL-CA101-4",
@@ -18429,7 +18429,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA101-5",
       "library_id": "PL-CA101-5",
@@ -18476,7 +18476,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-1",
       "library_id": "PL-CA102-1",
@@ -18523,7 +18523,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-2",
       "library_id": "PL-CA102-2",
@@ -18570,7 +18570,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-3",
       "library_id": "PL-CA102-3",
@@ -18617,7 +18617,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-4",
       "library_id": "PL-CA102-4",
@@ -18664,7 +18664,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-5",
       "library_id": "PL-CA102-5",
@@ -18711,7 +18711,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-6",
       "library_id": "PL-CA102-6",
@@ -18758,7 +18758,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA102-7",
       "library_id": "PL-CA102-7",
@@ -18805,7 +18805,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-1",
       "library_id": "PL-CA103-1",
@@ -18852,7 +18852,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-2",
       "library_id": "PL-CA103-2",
@@ -18899,7 +18899,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-3",
       "library_id": "PL-CA103-3",
@@ -18946,7 +18946,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-4",
       "library_id": "PL-CA103-4",
@@ -18993,7 +18993,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-5",
       "library_id": "PL-CA103-5",
@@ -19040,7 +19040,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-6",
       "library_id": "PL-CA103-6",
@@ -19087,7 +19087,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-7",
       "library_id": "PL-CA103-7",
@@ -19134,7 +19134,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA103-8",
       "library_id": "PL-CA103-8",
@@ -19181,7 +19181,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-1",
       "library_id": "PL-CA104-1",
@@ -19228,7 +19228,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-2",
       "library_id": "PL-CA104-2",
@@ -19275,7 +19275,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-3",
       "library_id": "PL-CA104-3",
@@ -19322,7 +19322,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-4",
       "library_id": "PL-CA104-4",
@@ -19369,7 +19369,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-5",
       "library_id": "PL-CA104-5",
@@ -19416,7 +19416,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-6",
       "library_id": "PL-CA104-6",
@@ -19463,7 +19463,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-7",
       "library_id": "PL-CA104-7",
@@ -19510,7 +19510,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-8",
       "library_id": "PL-CA104-8",
@@ -19557,7 +19557,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-9",
       "library_id": "PL-CA104-9",
@@ -19604,7 +19604,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-10",
       "library_id": "PL-CA104-10",
@@ -19651,7 +19651,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-11",
       "library_id": "PL-CA104-11",
@@ -19698,7 +19698,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-12",
       "library_id": "PL-CA104-12",
@@ -19745,7 +19745,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-13",
       "library_id": "PL-CA104-13",
@@ -19792,7 +19792,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA104-14",
       "library_id": "PL-CA104-14",
@@ -19839,7 +19839,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA105-1",
       "library_id": "PL-CA105-1",
@@ -19886,7 +19886,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA105-2",
       "library_id": "PL-CA105-2",
@@ -19933,7 +19933,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA106-1",
       "library_id": "PL-CA106-1",
@@ -19980,7 +19980,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA106-2",
       "library_id": "PL-CA106-2",
@@ -20027,7 +20027,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA106-3",
       "library_id": "PL-CA106-3",
@@ -20074,7 +20074,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA107-1",
       "library_id": "PL-CA107-1",
@@ -20121,7 +20121,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA107-2",
       "library_id": "PL-CA107-2",
@@ -20168,7 +20168,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA107-3",
       "library_id": "PL-CA107-3",
@@ -20215,7 +20215,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA107-4",
       "library_id": "PL-CA107-4",
@@ -20262,7 +20262,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA107-5",
       "library_id": "PL-CA107-5",
@@ -20309,7 +20309,7 @@
     "tags": ["RCM", "財務報導循環", "累積範本", "去識別範本"],
     "cycle": "財務報導循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:08",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "CA107-6",
       "library_id": "PL-CA107-6",
@@ -20356,7 +20356,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC101-1",
       "library_id": "PL-EC101-1",
@@ -20403,7 +20403,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC101-2",
       "library_id": "PL-EC101-2",
@@ -20450,7 +20450,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC101-3",
       "library_id": "PL-EC101-3",
@@ -20497,7 +20497,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC101-4",
       "library_id": "PL-EC101-4",
@@ -20544,7 +20544,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-1",
       "library_id": "PL-EC102-1",
@@ -20591,7 +20591,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-2",
       "library_id": "PL-EC102-2",
@@ -20638,7 +20638,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-3",
       "library_id": "PL-EC102-3",
@@ -20685,7 +20685,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-4",
       "library_id": "PL-EC102-4",
@@ -20732,7 +20732,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-5",
       "library_id": "PL-EC102-5",
@@ -20779,7 +20779,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-6",
       "library_id": "PL-EC102-6",
@@ -20826,7 +20826,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-7",
       "library_id": "PL-EC102-7",
@@ -20873,7 +20873,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-8",
       "library_id": "PL-EC102-8",
@@ -20920,7 +20920,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC102-9",
       "library_id": "PL-EC102-9",
@@ -20967,7 +20967,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC103-1",
       "library_id": "PL-EC103-1",
@@ -21014,7 +21014,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC103-2",
       "library_id": "PL-EC103-2",
@@ -21061,7 +21061,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC103-3",
       "library_id": "PL-EC103-3",
@@ -21108,7 +21108,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC103-4",
       "library_id": "PL-EC103-4",
@@ -21155,7 +21155,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-1",
       "library_id": "PL-EC104-1",
@@ -21202,7 +21202,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-2",
       "library_id": "PL-EC104-2",
@@ -21221,7 +21221,7 @@
       "risk_attr_compliance": "",
       "significant_account": "",
       "control_objective": "管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。",
-      "control_activity": "員工晉升、調職、或離職時，應有適當之系統帳戶新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。",
+      "control_activity": "員工晉升、調職、或離職時，應有適當之系統帳號新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。",
       "nature": "人工",
       "approach": "預防性控制",
       "frequency": "不定期/每日",
@@ -21238,9 +21238,9 @@
       "residual_risk": "",
       "improvement": "",
       "outputs": "1. 電子簽核系統 資訊服務申請單\n2. 間接人員離退及留停申請單",
-      "detailed_description": "就公司現行電腦化資訊系統循環作業，為因應「資訊安全」風險——無效果／無效率的存取控制（風險三大屬性—財務報導：（未填）；營運：[營運] 無效果／無效率的存取控制；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：（重大科目未填）／（聲明未填）），設計控制目標為「管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。」。由資訊單位以人工方式、採預防性控制取向、屬（類型未填）類型，依不定期/每日執行下列控制活動：員工晉升、調職、或離職時，應有適當之系統帳戶新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。。控制執行時使用之 IUC／制度為「電子簽核系統」。投入（Inputs）：電子簽核系統。覆核／執行步驟（Specific activities）：員工晉升、調職、或離職時，應有適當之系統帳戶新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。。產出（Outputs）：1. 電子簽核系統 資訊服務申請單\n2. 間接人員離退及留停申請單。",
+      "detailed_description": "就公司現行電腦化資訊系統循環作業，為因應「資訊安全」風險——無效果／無效率的存取控制（風險三大屬性—財務報導：（未填）；營運：[營運] 無效果／無效率的存取控制；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：（重大科目未填）／（聲明未填）），設計控制目標為「管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。」。由資訊單位以人工方式、採預防性控制取向、屬（類型未填）類型，依不定期/每日執行下列控制活動：員工晉升、調職、或離職時，應有適當之系統帳號新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。。控制執行時使用之 IUC／制度為「電子簽核系統」。投入（Inputs）：電子簽核系統。覆核／執行步驟（Specific activities）：員工晉升、調職、或離職時，應有適當之系統帳號新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。。產出（Outputs）：1. 電子簽核系統 資訊服務申請單\n2. 間接人員離退及留停申請單。",
       "key_control": "Y",
-      "summary_description": "[電腦化資訊系統循環｜資訊安全] 管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。：員工晉升、調職、或離職時，應有適當之系統帳戶新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。（頻率：不定期/每日；負責：資訊單位；IUC：電子簽核系統）"
+      "summary_description": "[電腦化資訊系統循環｜資訊安全] 管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。：員工晉升、調職、或離職時，應有適當之系統帳號新增、修改及刪除程序，以便依其新狀況調整資訊資源之授權。（頻率：不定期/每日；負責：資訊單位；IUC：電子簽核系統）"
     }
   },
   {
@@ -21249,7 +21249,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-3",
       "library_id": "PL-EC104-3",
@@ -21268,7 +21268,7 @@
       "risk_attr_compliance": "",
       "significant_account": "",
       "control_objective": "管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。",
-      "control_activity": "相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設置完成後立即修改。",
+      "control_activity": "相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設定完成後立即修改。",
       "nature": "人工",
       "approach": "預防性控制",
       "frequency": "持續",
@@ -21285,9 +21285,9 @@
       "residual_risk": "",
       "improvement": "",
       "outputs": "SAP 初次登入密碼修改畫面",
-      "detailed_description": "就公司現行電腦化資訊系統循環作業，為因應「資訊安全」風險——無效果／無效率的存取控制（風險三大屬性—財務報導：（未填）；營運：[營運] 無效果／無效率的存取控制；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：（重大科目未填）／（聲明未填）），設計控制目標為「管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。」。由資訊單位以人工方式、採預防性控制取向、屬（類型未填）類型，依持續執行下列控制活動：相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設置完成後立即修改。。控制執行時使用之 IUC／制度為「SAP 初次登入密碼修改畫面」。投入（Inputs）：SAP 初次登入密碼修改畫面。覆核／執行步驟（Specific activities）：相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設置完成後立即修改。。產出（Outputs）：SAP 初次登入密碼修改畫面。",
+      "detailed_description": "就公司現行電腦化資訊系統循環作業，為因應「資訊安全」風險——無效果／無效率的存取控制（風險三大屬性—財務報導：（未填）；營運：[營運] 無效果／無效率的存取控制；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：（重大科目未填）／（聲明未填）），設計控制目標為「管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。」。由資訊單位以人工方式、採預防性控制取向、屬（類型未填）類型，依持續執行下列控制活動：相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設定完成後立即修改。。控制執行時使用之 IUC／制度為「SAP 初次登入密碼修改畫面」。投入（Inputs）：SAP 初次登入密碼修改畫面。覆核／執行步驟（Specific activities）：相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設定完成後立即修改。。產出（Outputs）：SAP 初次登入密碼修改畫面。",
       "key_control": "Y",
-      "summary_description": "[電腦化資訊系統循環｜資訊安全] 管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。：相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設置完成後立即修改。（頻率：持續；負責：資訊單位；IUC：SAP 初次登入密碼修改畫面）"
+      "summary_description": "[電腦化資訊系統循環｜資訊安全] 管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。：相關作業系統、通訊與網路作業系統及應用系統之預設帳戶∕密碼，應於系統安裝或設定完成後立即修改。（頻率：持續；負責：資訊單位；IUC：SAP 初次登入密碼修改畫面）"
     }
   },
   {
@@ -21296,7 +21296,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-4",
       "library_id": "PL-EC104-4",
@@ -21315,7 +21315,7 @@
       "risk_attr_compliance": "",
       "significant_account": "",
       "control_objective": "管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。",
-      "control_activity": "應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重覆密碼控制），並符合密碼管理辦法之要求。",
+      "control_activity": "應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重複密碼控制），並符合密碼管理辦法之要求。",
       "nature": "",
       "approach": "預防性控制",
       "frequency": "持續",
@@ -21332,9 +21332,9 @@
       "residual_risk": "",
       "improvement": "",
       "outputs": "1. SAP密碼原則設定畫面\n2. 電子簽核系統密碼原則設定畫面\n3. HRM密碼原則設定畫面\n4. 檔案傳輸系統密碼原則設定畫面\n5. 流程管理系統密碼原則設定畫面\n6. AD Server密碼原則設定畫面",
-      "detailed_description": "就公司現行電腦化資訊系統循環作業，為因應「資訊安全」風險——無效果／無效率的存取控制（風險三大屬性—財務報導：（未填）；營運：[營運] 無效果／無效率的存取控制；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：（重大科目未填）／（聲明未填）），設計控制目標為「管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。」。由資訊單位以（性質未填）方式、採預防性控制取向、屬（類型未填）類型，依持續執行下列控制活動：應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重覆密碼控制），並符合密碼管理辦法之要求。。控制執行時使用之 IUC／制度為「All」。投入（Inputs）：All。覆核／執行步驟（Specific activities）：應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重覆密碼控制），並符合密碼管理辦法之要求。。產出（Outputs）：1. SAP密碼原則設定畫面\n2. 電子簽核系統密碼原則設定畫面\n3. HRM密碼原則設定畫面\n4. 檔案傳輸系統密碼原則設定畫面\n5. 流程管理系統密碼原則設定畫面\n6. AD Server密碼原則設定畫面。",
+      "detailed_description": "就公司現行電腦化資訊系統循環作業，為因應「資訊安全」風險——無效果／無效率的存取控制（風險三大屬性—財務報導：（未填）；營運：[營運] 無效果／無效率的存取控制；法令遵循：（未填）；RoMM：（RoMM 分類未填）；重大科目／聲明：（重大科目未填）／（聲明未填）），設計控制目標為「管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。」。由資訊單位以（性質未填）方式、採預防性控制取向、屬（類型未填）類型，依持續執行下列控制活動：應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重複密碼控制），並符合密碼管理辦法之要求。。控制執行時使用之 IUC／制度為「All」。投入（Inputs）：All。覆核／執行步驟（Specific activities）：應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重複密碼控制），並符合密碼管理辦法之要求。。產出（Outputs）：1. SAP密碼原則設定畫面\n2. 電子簽核系統密碼原則設定畫面\n3. HRM密碼原則設定畫面\n4. 檔案傳輸系統密碼原則設定畫面\n5. 流程管理系統密碼原則設定畫面\n6. AD Server密碼原則設定畫面。",
       "key_control": "Y",
-      "summary_description": "[電腦化資訊系統循環｜資訊安全] 管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。：應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重覆密碼控制），並符合密碼管理辦法之要求。（頻率：持續；負責：資訊單位；IUC：All）"
+      "summary_description": "[電腦化資訊系統循環｜資訊安全] 管理邏輯安全管理工具及相關設定，以限制人員對程式、資料及其他資訊之存取。：應用系統之存取應有適當密碼保護，同時設定適當之密碼規則（包含：密碼長度、密碼強度、密碼定期更換、可接受之密碼錯誤次數、重複密碼控制），並符合密碼管理辦法之要求。（頻率：持續；負責：資訊單位；IUC：All）"
     }
   },
   {
@@ -21343,7 +21343,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-5",
       "library_id": "PL-EC104-5",
@@ -21390,7 +21390,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-6",
       "library_id": "PL-EC104-6",
@@ -21437,7 +21437,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC104-7",
       "library_id": "PL-EC104-7",
@@ -21484,7 +21484,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC105-1",
       "library_id": "PL-EC105-1",
@@ -21531,7 +21531,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC105-2",
       "library_id": "PL-EC105-2",
@@ -21578,7 +21578,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC105-3",
       "library_id": "PL-EC105-3",
@@ -21625,7 +21625,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC105-4",
       "library_id": "PL-EC105-4",
@@ -21672,7 +21672,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-1",
       "library_id": "PL-EC106-1",
@@ -21719,7 +21719,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-2",
       "library_id": "PL-EC106-2",
@@ -21766,7 +21766,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-3",
       "library_id": "PL-EC106-3",
@@ -21813,7 +21813,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-4",
       "library_id": "PL-EC106-4",
@@ -21860,7 +21860,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-5",
       "library_id": "PL-EC106-5",
@@ -21907,7 +21907,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-6",
       "library_id": "PL-EC106-6",
@@ -21954,7 +21954,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-7",
       "library_id": "PL-EC106-7",
@@ -22001,7 +22001,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-8",
       "library_id": "PL-EC106-8",
@@ -22048,7 +22048,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-9",
       "library_id": "PL-EC106-9",
@@ -22095,7 +22095,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC106-10",
       "library_id": "PL-EC106-10",
@@ -22142,7 +22142,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-1",
       "library_id": "PL-EC107-1",
@@ -22189,7 +22189,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-2",
       "library_id": "PL-EC107-2",
@@ -22236,7 +22236,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-3",
       "library_id": "PL-EC107-3",
@@ -22283,7 +22283,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-4",
       "library_id": "PL-EC107-4",
@@ -22330,7 +22330,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-5",
       "library_id": "PL-EC107-5",
@@ -22377,7 +22377,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-6",
       "library_id": "PL-EC107-6",
@@ -22424,7 +22424,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC107-7",
       "library_id": "PL-EC107-7",
@@ -22471,7 +22471,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-1",
       "library_id": "PL-EC108-1",
@@ -22518,7 +22518,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-2",
       "library_id": "PL-EC108-2",
@@ -22565,7 +22565,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-3",
       "library_id": "PL-EC108-3",
@@ -22612,7 +22612,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-4",
       "library_id": "PL-EC108-4",
@@ -22659,7 +22659,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-5",
       "library_id": "PL-EC108-5",
@@ -22706,7 +22706,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-6",
       "library_id": "PL-EC108-6",
@@ -22753,7 +22753,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC108-7",
       "library_id": "PL-EC108-7",
@@ -22800,7 +22800,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC109-1",
       "library_id": "PL-EC109-1",
@@ -22847,7 +22847,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC109-2",
       "library_id": "PL-EC109-2",
@@ -22894,7 +22894,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC109-3",
       "library_id": "PL-EC109-3",
@@ -22941,7 +22941,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC109-4",
       "library_id": "PL-EC109-4",
@@ -22988,7 +22988,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC109-5",
       "library_id": "PL-EC109-5",
@@ -23035,7 +23035,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC109-6",
       "library_id": "PL-EC109-6",
@@ -23082,7 +23082,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-1",
       "library_id": "PL-EC110-1",
@@ -23129,7 +23129,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-2",
       "library_id": "PL-EC110-2",
@@ -23176,7 +23176,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-3",
       "library_id": "PL-EC110-3",
@@ -23223,7 +23223,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-4",
       "library_id": "PL-EC110-4",
@@ -23270,7 +23270,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-5",
       "library_id": "PL-EC110-5",
@@ -23317,7 +23317,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-6",
       "library_id": "PL-EC110-6",
@@ -23364,7 +23364,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-7",
       "library_id": "PL-EC110-7",
@@ -23411,7 +23411,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-8",
       "library_id": "PL-EC110-8",
@@ -23458,7 +23458,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-9",
       "library_id": "PL-EC110-9",
@@ -23505,7 +23505,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC110-10",
       "library_id": "PL-EC110-10",
@@ -23552,7 +23552,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC111-1",
       "library_id": "PL-EC111-1",
@@ -23599,7 +23599,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC111-2",
       "library_id": "PL-EC111-2",
@@ -23646,7 +23646,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC111-3",
       "library_id": "PL-EC111-3",
@@ -23693,7 +23693,7 @@
     "tags": ["RCM", "電腦化資訊系統循環", "累積範本", "去識別範本"],
     "cycle": "電腦化資訊系統循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:16",
     "control": {
       "control_id": "EC111-4",
       "library_id": "PL-EC111-4",
@@ -23740,7 +23740,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS101-1",
       "library_id": "PL-CS101-1",
@@ -23787,7 +23787,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS101-2",
       "library_id": "PL-CS101-2",
@@ -23834,7 +23834,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS101-3",
       "library_id": "PL-CS101-3",
@@ -23881,7 +23881,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS102-1",
       "library_id": "PL-CS102-1",
@@ -23928,7 +23928,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS102-2",
       "library_id": "PL-CS102-2",
@@ -23975,7 +23975,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS103-1",
       "library_id": "PL-CS103-1",
@@ -24022,7 +24022,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS103-2",
       "library_id": "PL-CS103-2",
@@ -24069,7 +24069,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS103-3",
       "library_id": "PL-CS103-3",
@@ -24116,7 +24116,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS104-1",
       "library_id": "PL-CS104-1",
@@ -24163,7 +24163,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS104-2",
       "library_id": "PL-CS104-2",
@@ -24210,7 +24210,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS104-3",
       "library_id": "PL-CS104-3",
@@ -24257,7 +24257,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS104-4",
       "library_id": "PL-CS104-4",
@@ -24304,7 +24304,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS104-5",
       "library_id": "PL-CS104-5",
@@ -24351,7 +24351,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS104-6",
       "library_id": "PL-CS104-6",
@@ -24398,7 +24398,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-1",
       "library_id": "PL-CS105-1",
@@ -24445,7 +24445,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-2",
       "library_id": "PL-CS105-2",
@@ -24492,7 +24492,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-3",
       "library_id": "PL-CS105-3",
@@ -24539,7 +24539,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-4",
       "library_id": "PL-CS105-4",
@@ -24586,7 +24586,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-5",
       "library_id": "PL-CS105-5",
@@ -24633,7 +24633,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-6",
       "library_id": "PL-CS105-6",
@@ -24680,7 +24680,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS105-7",
       "library_id": "PL-CS105-7",
@@ -24727,7 +24727,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-1",
       "library_id": "PL-CS106-1",
@@ -24774,7 +24774,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-2",
       "library_id": "PL-CS106-2",
@@ -24821,7 +24821,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-3",
       "library_id": "PL-CS106-3",
@@ -24868,7 +24868,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-4",
       "library_id": "PL-CS106-4",
@@ -24915,7 +24915,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-5",
       "library_id": "PL-CS106-5",
@@ -24962,7 +24962,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-6",
       "library_id": "PL-CS106-6",
@@ -25009,7 +25009,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS106-7",
       "library_id": "PL-CS106-7",
@@ -25056,7 +25056,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-1",
       "library_id": "PL-CS107-1",
@@ -25103,7 +25103,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-2",
       "library_id": "PL-CS107-2",
@@ -25150,7 +25150,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-3",
       "library_id": "PL-CS107-3",
@@ -25197,7 +25197,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-4",
       "library_id": "PL-CS107-4",
@@ -25244,7 +25244,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-5",
       "library_id": "PL-CS107-5",
@@ -25291,7 +25291,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-6",
       "library_id": "PL-CS107-6",
@@ -25338,7 +25338,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-7",
       "library_id": "PL-CS107-7",
@@ -25385,7 +25385,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-8",
       "library_id": "PL-CS107-8",
@@ -25432,7 +25432,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-9",
       "library_id": "PL-CS107-9",
@@ -25479,7 +25479,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-10",
       "library_id": "PL-CS107-10",
@@ -25526,7 +25526,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS107-11",
       "library_id": "PL-CS107-11",
@@ -25573,7 +25573,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS108-1",
       "library_id": "PL-CS108-1",
@@ -25620,7 +25620,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS108-2",
       "library_id": "PL-CS108-2",
@@ -25667,7 +25667,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS108-3",
       "library_id": "PL-CS108-3",
@@ -25714,7 +25714,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS108-4",
       "library_id": "PL-CS108-4",
@@ -25761,7 +25761,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS108-5",
       "library_id": "PL-CS108-5",
@@ -25808,7 +25808,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS109-1",
       "library_id": "PL-CS109-1",
@@ -25855,7 +25855,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS109-2",
       "library_id": "PL-CS109-2",
@@ -25902,7 +25902,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS109-3",
       "library_id": "PL-CS109-3",
@@ -25949,7 +25949,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS109-4",
       "library_id": "PL-CS109-4",
@@ -25996,7 +25996,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS109-5",
       "library_id": "PL-CS109-5",
@@ -26043,7 +26043,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS110-1",
       "library_id": "PL-CS110-1",
@@ -26090,7 +26090,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS110-2",
       "library_id": "PL-CS110-2",
@@ -26137,7 +26137,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS110-3",
       "library_id": "PL-CS110-3",
@@ -26184,7 +26184,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-1",
       "library_id": "PL-CS111-1",
@@ -26231,7 +26231,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-2",
       "library_id": "PL-CS111-2",
@@ -26278,7 +26278,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-3",
       "library_id": "PL-CS111-3",
@@ -26325,7 +26325,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-4",
       "library_id": "PL-CS111-4",
@@ -26372,7 +26372,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-5",
       "library_id": "PL-CS111-5",
@@ -26419,7 +26419,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-6",
       "library_id": "PL-CS111-6",
@@ -26466,7 +26466,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-7",
       "library_id": "PL-CS111-7",
@@ -26513,7 +26513,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS111-8",
       "library_id": "PL-CS111-8",
@@ -26560,7 +26560,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS112-1",
       "library_id": "PL-CS112-1",
@@ -26607,7 +26607,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS112-2",
       "library_id": "PL-CS112-2",
@@ -26654,7 +26654,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS112-3",
       "library_id": "PL-CS112-3",
@@ -26701,7 +26701,7 @@
     "tags": ["RCM", "銷售及收款循環", "累積範本", "去識別範本"],
     "cycle": "銷售及收款循環",
     "source": "rcm_import_batch",
-    "updated_at": "2026-08-26 15:59:09",
+    "updated_at": "2026-08-26 16:28:17",
     "control": {
       "control_id": "CS113-1",
       "library_id": "PL-CS113-1",

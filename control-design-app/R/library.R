@@ -20,6 +20,7 @@ LIBRARY_CONTROL_FIELDS <- c(
 )
 
 # 非控制點「設計」欄位：輸入檔／既有 RCM 常帶入，不可污染 APP 範本庫／參數庫
+# （對應 RCM「控制現況描述／差異說明」與「控制分析與評估」群組）
 NON_DESIGN_CONTROL_FIELDS <- c(
   "company_status",      # 控制現況描述／公司現況
   "design_gap_note",     # 控制設計差異說明
@@ -36,8 +37,28 @@ NON_PERSIST_CONTROL_ALIASES <- c(
   "控制現況描述", "控制設計差異說明", "控制有效性評估",
   "可能潛在風險", "建議改善方式", "現況描述", "差異說明",
   "差異缺失", "缺失說明", "有效性評估", "潛在風險", "改善建議",
-  "改善方式", "建議改善", "公司控制現況", "改善計畫", "改善計劃"
+  "改善方式", "建議改善", "公司控制現況", "公司現況", "控制現況",
+  "改善計畫", "改善計劃", "分析評估", "控制分析與評估"
 )
+
+# 參數庫禁止收錄的參數名（與上列意義雷同）
+PARAMETER_STORE_BLOCKED_PARAMS <- c(
+  "子作業編號", "控制編號",
+  "控制現況描述", "控制設計差異說明", "控制有效性評估",
+  "可能潛在風險", "建議改善方式",
+  "公司控制現況", "公司現況", "控制現況", "現況描述",
+  "差異說明", "差異缺失", "缺失說明",
+  "有效性評估", "潛在風險",
+  "改善建議", "改善方式", "建議改善", "改善計畫", "改善計劃",
+  "分析評估", "控制分析與評估"
+)
+
+is_blocked_parameter_name <- function(param) {
+  p <- trimws(as.character(param %||% ""))
+  if (!nzchar(p)) return(TRUE)
+  if (p %in% PARAMETER_STORE_BLOCKED_PARAMS) return(TRUE)
+  grepl("現況|改善建議|改善方式|建議改善|有效性評估|潛在風險|差異說明|差異缺失", p)
+}
 
 strip_runtime_id_fields <- function(ctrl) {
   ctrl <- as.list(ctrl)
@@ -61,12 +82,11 @@ strip_non_design_control_fields <- function(ctrl) {
   ctrl
 }
 
-# 寫入 JSON／CSV 前拿掉編號與非設計欄，避免空字串仍佔欄位
+# 寫入／回傳前拿掉編號與非設計欄（不重清 detailed_description，以免刪掉組裝結果）
 drop_non_persist_control_fields <- function(ctrl) {
-  ctrl <- strip_non_design_control_fields(as.list(ctrl))
-  ctrl <- strip_runtime_id_fields(ctrl)
+  ctrl <- as.list(ctrl)
   drop <- unique(c(NON_DESIGN_CONTROL_FIELDS, RUNTIME_ID_CONTROL_FIELDS,
-                   NON_PERSIST_CONTROL_ALIASES))
+                   NON_PERSIST_CONTROL_ALIASES, "company"))
   for (f in drop) ctrl[[f]] <- NULL
   ctrl
 }
@@ -467,9 +487,13 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
   if (isTRUE(deidentify) && grepl("prologium|輝能|jinglian|鯨鏈", src, ignore.case = TRUE)) {
     src <- "rcm_import_batch"
   }
+  # 記憶體物件亦不保留非設計／編號欄（空字串也不留）
+  ctrl <- drop_non_persist_control_fields(ctrl)
+  # 公司名一律不入庫
+  ctrl$company <- NULL
   list(
-    library_id = as.character(ctrl$library_id),
-    title = as.character(ctrl$title),
+    library_id = as.character(ctrl$library_id %||% ""),
+    title = as.character(ctrl$title %||% ""),
     tags = tags,
     cycle = as.character(ctrl$cycle %||% ""),
     source = src,

@@ -1222,6 +1222,23 @@ pcat_pollute <- parameter_catalog(
 check(!any(pcat_pollute$參數 == "控制現況描述"), "參數庫不收集控制現況描述")
 check(!any(grepl("公司目前實際做法", pcat_pollute$選項值)), "參數庫不含現況原文")
 check(!any(pcat_pollute$參數 == "控制有效性評估"), "參數庫不收集控制有效性評估")
+check(isTRUE(is_blocked_parameter_name("建議改善方式")), "建議改善方式列入參數黑名單")
+check(isTRUE(is_blocked_parameter_name("可能潛在風險")), "可能潛在風險列入參數黑名單")
+check(isTRUE(is_blocked_parameter_name("控制設計差異說明")), "差異說明列入參數黑名單")
+blocked_try <- upsert_parameter_row(empty_parameter_store(), "控制現況描述", "不應寫入")
+check(nrow(blocked_try) == 0L, "高權亦不可把控制現況寫入參數庫")
+ps_loaded <- load_parameter_store(file.path(root, "data", "parameter_store.json"))
+check(!any(vapply(ps_loaded$參數, is_blocked_parameter_name, logical(1))),
+      "已提交參數庫不含現況／改善／編號等禁收參數")
+jl_disk <- load_control_library(file.path(root, "data", "jinglian_it_rcm_batch.json"),
+                                fallback_seed = FALSE)
+check(length(jl_disk) >= 20 &&
+        all(vapply(jl_disk, function(x) {
+          is.null(x$control$company_status) && is.null(x$control$improvement) &&
+            is.null(x$control$effectiveness) && is.null(x$control$residual_risk) &&
+            is.null(x$control$design_gap_note)
+        }, logical(1))),
+      "已提交 JL 批次物件不含現況／改善等欄位鍵")
 
 # 企業專屬用語／文件編號去識別
 dei_raw <- list(

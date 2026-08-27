@@ -50,6 +50,10 @@ parameter_catalog <- function(library = list(), controls = list(),
   if (is.null(presets)) presets <- app_preset_parameters()
   rows <- list()
   add_vals <- function(param, values, source) {
+    if (exists("is_blocked_parameter_name", mode = "function") &&
+        isTRUE(is_blocked_parameter_name(param))) {
+      return(invisible(NULL))
+    }
     values <- .split_multi(values)
     ts <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
     for (v in values) {
@@ -87,7 +91,7 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("相關政策或程序", c$related_policy, source)
     add_vals(CONTROL_EVIDENCE_DOCUMENT_LABEL, c$related_document %||% c$outputs, source)
     add_vals("相關文件", c$related_document %||% c$outputs, source)
-    # 不收集公司現況／有效性等非設計欄，避免輸入檔污染參數庫
+    # 不收集公司現況／有效性／改善建議／編號等非設計欄
     add_vals("聲明", c$assertions, source)
     add_vals("Form 4120SR Type", c$type, source)
     add_vals("RoMM 分類", c$romm_classification, source)
@@ -167,6 +171,10 @@ load_parameter_store <- function(path) {
   df <- do.call(rbind, rows)
   df <- df[nzchar(df$參數) & nzchar(df$選項值), , drop = FALSE]
   if (!nrow(df)) return(empty_parameter_store())
+  if (exists("is_blocked_parameter_name", mode = "function")) {
+    df <- df[!vapply(df$參數, is_blocked_parameter_name, logical(1)), , drop = FALSE]
+  }
+  if (!nrow(df)) return(empty_parameter_store())
   merge_parameter_store(empty_parameter_store(), df)
 }
 
@@ -210,6 +218,10 @@ upsert_parameter_row <- function(df, param, value, source = "高權維護") {
   value <- trimws(as.character(value %||% ""))
   source <- trimws(as.character(source %||% "高權維護"))
   if (!nzchar(param) || !nzchar(value)) return(df)
+  if (exists("is_blocked_parameter_name", mode = "function") &&
+      isTRUE(is_blocked_parameter_name(param))) {
+    return(df)
+  }
   ts <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   key_match <- which(df$參數 == param & df$選項值 == value)
   if (length(key_match)) {

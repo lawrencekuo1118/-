@@ -308,6 +308,18 @@ ui <- page_navbar(
       #control_activity { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .assertions-side .alert { margin-bottom: 0.35rem; }
+      /* 控制方式／性質／頻率：桌面三欄並排；窄螢幕改單欄 */
+      .control-attr-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .control-attr-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .control-attr-row { grid-template-columns: 1fr; }
+      }
       .design-section-preview-bar {
         display: flex;
         justify-content: flex-end;
@@ -756,20 +768,23 @@ ui <- page_navbar(
               "control_activity", lab_req("控制活動"), rows = 3, width = "100%",
               placeholder = "How：具體執行行為（含誰／何時／如何）"
             ),
-            selectInput(
-              "approach", lab_req("控制方式"),
-              choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
-              selected = "", width = "100%"
-            ),
-            selectInput(
-              "nature", lab_req("控制性質"),
-              choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
-              selected = "", width = "100%"
-            ),
-            selectInput(
-              "frequency", lab_req("控制頻率"),
-              choices = c("請選擇…" = "", FREQUENCY_CHOICES),
-              selected = "", width = "100%"
+            div(
+              class = "control-attr-row",
+              selectInput(
+                "approach", lab_req("控制方式"),
+                choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
+                selected = "", width = "100%"
+              ),
+              selectInput(
+                "nature", lab_req("控制性質"),
+                choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
+                selected = "", width = "100%"
+              ),
+              selectInput(
+                "frequency", lab_req("控制頻率"),
+                choices = c("請選擇…" = "", FREQUENCY_CHOICES),
+                selected = "", width = "100%"
+              )
             ),
             textInput(
               "responsible_unit", lab_req("控制點負責單位"),

@@ -426,8 +426,10 @@ check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
+        grepl('download_interview[\\s\\S]{0,400}interview_live_box', app_txt, perl = TRUE) &&
+        !grepl('card\\([\\s\\S]{0,120}interview_live_box', app_txt, perl = TRUE) &&
         grepl("interview_paragraph", app_txt),
-      "訪談 7/5；風險控制點設計為分頁籤＋底部可收合預覽")
+      "訪談 7/5；題綱摘要移入引導區底部；右欄保留表格預覽")
 check(grepl("套用 IUC／PBC 命名", app_txt),
       "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
 check(!grepl("interview_source", app_txt) &&

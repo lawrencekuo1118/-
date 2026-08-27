@@ -561,6 +561,14 @@ reg2 <- upsert_pbc(reg, list(
 check(identical(apply_pbc_to_iuc(reg2, reg2$pbc_id[2]), "【EMAIL】核准信"), "PBC 證據類型標示套用")
 check(identical(format_pbc_reviewed_label("制度手冊", "政策制度"), "【政策制度】制度手冊"),
       "PBC 格式化標示")
+check("傳票" %in% PBC_KIND_VALUES, "PBC 證據類型含傳票")
+check(identical(format_pbc_reviewed_label("會計傳票", "傳票"), "【傳票】會計傳票"),
+      "PBC 傳票類型標示套用")
+check(identical(normalize_pbc_kind("傳票"), "傳票"), "PBC 傳票類型正規化")
+check("人工整理" %in% PBC_KIND_VALUES, "PBC 證據類型含人工整理")
+check(identical(format_pbc_reviewed_label("調節底稿", "人工整理"), "【人工整理】調節底稿"),
+      "PBC 人工整理類型標示套用")
+check(identical(normalize_pbc_kind("人工整理"), "人工整理"), "PBC 人工整理類型正規化")
 reg_fmt <- upsert_pbc(empty_pbc_registry(), list(
   client_pbc_name = "shot.png", reviewed_name = "權限畫面",
   pbc_kind = "螢幕截圖", pbc_file_format = "PNG"
@@ -568,6 +576,36 @@ reg_fmt <- upsert_pbc(empty_pbc_registry(), list(
 check(identical(reg_fmt$pbc_file_format[1], ".png"), "PBC 文件格式正規化為小寫副檔名")
 check(identical(normalize_pbc_file_format(".PPTX"), ".pptx"), "PBC 文件格式大小寫正規化")
 check("pbc_file_format" %in% names(empty_pbc_registry()), "PBC registry 含文件格式欄")
+check("pbc_spec" %in% names(empty_pbc_registry()), "PBC registry 含規格說明欄")
+reg_spec <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "系統清單", reviewed_name = "系統清單",
+  pbc_spec = "1. 含所有系統\n2. 檢附盤點表"
+))
+check(identical(reg_spec$pbc_spec[1], "1. 含所有系統\n2. 檢附盤點表"),
+      "PBC 規格說明可寫入 registry")
+seed_pbc <- file.path(root, "data", "pbc_registry.csv")
+if (file.exists(seed_pbc)) {
+  seeded <- load_pbc_registry(seed_pbc)
+  check(nrow(seeded) >= 90, sprintf("資訊循環 PBC 種子至少 90 筆（實際 %d）", nrow(seeded)))
+  check(any(nzchar(seeded$pbc_spec)), "資訊循環 PBC 種子含規格說明")
+  check(any(seeded$cycle == "電腦化資訊系統循環"), "資訊循環 PBC 種子標示循環")
+  check(sum(seeded$cycle == "財務報導循環") >= 60,
+        sprintf("財務報導循環 PBC 種子至少 60 筆（實際 %d）",
+                sum(seeded$cycle == "財務報導循環")))
+  check(any(seeded$cycle == "財務報導循環" & grepl("^PBC-CA-", seeded$pbc_id)),
+        "財務報導循環 PBC 使用 CA 編號前綴")
+  check(any(seeded$cycle == "財務報導循環" & nzchar(seeded$pbc_spec)),
+        "財務報導循環 PBC 種子含規格說明")
+  check(sum(seeded$cycle == "銷售及收款循環") >= 160,
+        sprintf("銷售及收款循環 PBC 種子至少 160 筆（實際 %d）",
+                sum(seeded$cycle == "銷售及收款循環")))
+  check(any(seeded$cycle == "銷售及收款循環" & grepl("^PBC-SC-", seeded$pbc_id)),
+        "銷售及收款循環 PBC 使用 SC 編號前綴")
+  check(any(seeded$cycle == "銷售及收款循環" & nzchar(seeded$pbc_spec)),
+        "銷售及收款循環 PBC 種子含規格說明")
+} else {
+  message("SKIP: data/pbc_registry.csv 尚未產出")
+}
 reg3 <- upsert_pbc(reg2, list(
   client_pbc_name = "policy.pdf", reviewed_name = "資訊安全政策", pbc_kind = "政策制度"))
 check(length(pbc_non_policy_choices(reg3)) == 2L, "IUC 選單排除政策制度 PBC")
@@ -579,9 +617,115 @@ app_src_pbc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8", war
 check(grepl("pbc-kind-format-row", app_src_pbc, fixed = TRUE),
       "PBC 證據類型與文件格式同列並排")
 check(grepl('selectizeInput\\(\\s*"pbc_file_format"', app_src_pbc, perl = TRUE),
-      "PBC 原始取得文件格式輸入存在")
-check(grepl("原始取得文件格式", app_src_pbc, fixed = TRUE),
-      "PBC 原始取得文件格式標籤存在")
+      "PBC 樣本檔案格式輸入存在")
+check(grepl("樣本檔案格式", app_src_pbc, fixed = TRUE),
+      "PBC 樣本檔案格式標籤存在")
+check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
+        grepl("PBC規格說明", app_src_pbc, fixed = TRUE),
+      "PBC 規格說明輸入位於整理表單")
+check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
+      "PBC 規格說明在證據類型／文件格式上方")
+check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&
+        grepl("pbc-name-map-arrow", app_src_pbc, fixed = TRUE) &&
+        grepl("客戶原始取得PBC名稱", app_src_pbc, fixed = TRUE) &&
+        grepl("檢視後新命名", app_src_pbc, fixed = TRUE),
+      "PBC 原名與檢視後命名 1:1 並排含右箭頭")
+check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE),
+      "PBC 規格說明在名稱並排列正下方")
+pbc_panel <- sub('(?s).*nav_panel\\(\\s*"PBC資料庫"', 'nav_panel("PBC資料庫"', app_src_pbc, perl = TRUE)
+pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE)
+check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
+        grepl("PBC 清單預覽", pbc_panel, fixed = TRUE) &&
+        grepl('card_header\\(\\s*"PBC 資料庫"', pbc_panel) &&
+        regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]] <
+          regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]],
+      "PBC 預覽列在設定畫面正下方（非左右雙欄）")
+check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
+check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
+        grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),
+      "PBC 互相勾稽選單與 Walkthrough 預覽存在")
+wt_reg <- empty_pbc_registry()
+wt_reg <- upsert_pbc(wt_reg, list(
+  pbc_id = "PBC-EC-001", client_pbc_name = "系統清單", reviewed_name = "系統清單",
+  pbc_spec = "基準清單"
+))
+wt_reg <- upsert_pbc(wt_reg, list(
+  pbc_id = "PBC-EC-002", client_pbc_name = "系統關聯圖", reviewed_name = "系統關聯圖",
+  pbc_spec = "與#1「系統清單」相關。"
+))
+wt_reg <- enrich_related_pbc_from_specs(wt_reg)
+check("PBC-EC-001" %in% parse_pbc_id_values(wt_reg$related_pbc_ids[2]),
+      "規格說明 #1／名稱可自動解析勾稽")
+wt <- pbc_walkthrough(wt_reg, "PBC-EC-001")
+check("PBC-EC-002" %in% wt$inbound, "Walkthrough 可顯示入鏈勾稽")
+wt2 <- pbc_walkthrough(wt_reg, "PBC-EC-002")
+check("PBC-EC-001" %in% wt2$outbound, "Walkthrough 可顯示出鏈勾稽")
+ca_reg <- empty_pbc_registry()
+ca_reg <- upsert_pbc(ca_reg, list(
+  pbc_id = "PBC-EC-013", client_pbc_name = "IT-13", reviewed_name = "IT-13",
+  cycle = "電腦化資訊系統循環", pbc_spec = ""
+))
+ca_reg <- upsert_pbc(ca_reg, list(
+  pbc_id = "PBC-CA-013", client_pbc_name = "匯率截圖", reviewed_name = "匯率截圖",
+  cycle = "財務報導循環", pbc_spec = ""
+))
+ca_reg <- upsert_pbc(ca_reg, list(
+  pbc_id = "PBC-CA-014", client_pbc_name = "匯率傳票", reviewed_name = "匯率傳票",
+  cycle = "財務報導循環", pbc_spec = "與#13「匯率截圖」相關。"
+))
+ca_reg <- enrich_related_pbc_from_specs(ca_reg)
+check(identical(parse_pbc_id_values(ca_reg$related_pbc_ids[3]), "PBC-CA-013"),
+      "財務報導 #N 勾稽優先同循環 CA 編號")
+check(grepl("匯入 CSV／Excel", app_src_pbc, fixed = TRUE) &&
+        grepl('accept\\s*=\\s*c\\(\\s*"\\.csv"\\s*,\\s*"\\.xlsx"', app_src_pbc, perl = TRUE),
+      "PBC 匯入接受 CSV 與 Excel")
+check(exists("import_pbc_file", mode = "function") &&
+        exists("read_pbc_import_table", mode = "function"),
+      "PBC 匯入支援檔案讀取函式存在")
+tmp_pbc_csv <- tempfile(fileext = ".csv")
+utils::write.csv(
+  data.frame(
+    文件名稱 = "測試PBC原名",
+    檢視後命名 = "測試PBC新名",
+    規格說明 = "csv規格",
+    循環 = "銷售及收款循環",
+    stringsAsFactors = FALSE
+  ),
+  tmp_pbc_csv, row.names = FALSE, fileEncoding = "UTF-8"
+)
+imp_csv <- import_pbc_file(tmp_pbc_csv, empty_pbc_registry())
+check(nrow(imp_csv) == 1L && identical(imp_csv$reviewed_name[1], "測試PBC新名") &&
+        identical(imp_csv$pbc_spec[1], "csv規格"),
+      "PBC CSV 匯入可對應中文欄名")
+if (requireNamespace("readxl", quietly = TRUE) &&
+    nzchar(Sys.which("python3"))) {
+  tmp_pbc_xlsx <- tempfile(fileext = ".xlsx")
+  py_script <- tempfile(fileext = ".py")
+  writeLines(c(
+    "import openpyxl, sys",
+    "wb = openpyxl.Workbook()",
+    "ws = wb.active",
+    "ws.append(['文件／檔案名稱', '樣本需求說明', '循環'])",
+    "ws.append(['Excel樣本PBC', 'xlsx規格說明', '財務報導循環'])",
+    "wb.save(sys.argv[1])"
+  ), py_script, useBytes = FALSE)
+  st <- system2("python3", c(py_script, tmp_pbc_xlsx), stdout = TRUE, stderr = TRUE)
+  if (file.exists(tmp_pbc_xlsx) && file.info(tmp_pbc_xlsx)$size > 0) {
+    imp_xlsx <- import_pbc_file(
+      tmp_pbc_xlsx, empty_pbc_registry(),
+      original_name = "pbc_sample.xlsx"
+    )
+    check(nrow(imp_xlsx) == 1L &&
+            identical(imp_xlsx$client_pbc_name[1], "Excel樣本PBC") &&
+            identical(imp_xlsx$pbc_spec[1], "xlsx規格說明") &&
+            identical(imp_xlsx$cycle[1], "財務報導循環"),
+          "PBC Excel 匯入可讀取 xlsx 與樣本需求說明欄")
+  } else {
+    message("SKIP: 無法產出測試用 xlsx（", paste(st, collapse = " "), "）")
+  }
+} else {
+  message("SKIP: readxl／python3 不可用以測 xlsx 匯入")
+}
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

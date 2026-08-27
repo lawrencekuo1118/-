@@ -403,6 +403,27 @@ ui <- page_navbar(
         padding: 0.85rem 1rem 1rem;
         border-top: 1px solid #E5E5E5;
       }
+      .design-rcm-preview-panel {
+        margin-top: 0.65rem;
+        padding: 0.55rem 0.65rem;
+        background: rgba(0, 91, 170, 0.03);
+        border: 1px solid rgba(0, 91, 170, 0.1);
+        border-radius: 0.35rem;
+      }
+      .design-rcm-preview-panel .preview-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--brand-blue);
+        margin-bottom: 0.35rem;
+      }
+      .design-rcm-preview-panel table { margin-bottom: 0; font-size: 0.82rem; }
+      .design-rcm-preview-panel th {
+        width: 42%;
+        vertical-align: top;
+        font-weight: 600;
+        background: rgba(255,255,255,0.65);
+      }
+      .design-rcm-preview-panel td.na-cell { color: #ADB5BD; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
@@ -583,13 +604,6 @@ ui <- page_navbar(
           id = "rcm_design_tabs",
           nav_panel(
             "① 基礎設定",
-            div(
-              class = "design-tab-filter-bar",
-              tags$div(class = "filter-title", "關鍵字篩選 — 快速找出相關子作業名稱"),
-              textInput("filter_basic_kw", NULL, value = "", width = "100%",
-                        placeholder = "輸入子作業名稱或編號關鍵字…"),
-              uiOutput("filter_basic_hits")
-            ),
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。",
               tags$br(),
@@ -604,9 +618,17 @@ ui <- page_navbar(
                       placeholder = "循環編號-子作業序號（例：EC-101）",
                       width = "100%"),
             uiOutput("sub_process_select_ui"),
+            div(
+              class = "design-tab-filter-bar",
+              tags$div(class = "filter-title", "關鍵字篩選 — 快速找出相關子作業名稱"),
+              textInput("filter_basic_kw", NULL, value = "", width = "100%",
+                        placeholder = "輸入子作業名稱或編號關鍵字…"),
+              uiOutput("filter_basic_hits")
+            ),
             textInput("control_id", "控制編號", value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("control_id_compose_hint"),
+            uiOutput("design_preview_basic"),
             div(
               class = "design-section-preview-bar",
               actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
@@ -688,6 +710,7 @@ ui <- page_navbar(
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
             selectInput("romm_classification", "RoMM 分類（抽樣輔助；不入 RCM 範本欄）",
                         choices = ROMM_CLASS_CHOICES, width = "100%"),
+            uiOutput("design_preview_risk"),
             div(
               class = "design-section-preview-bar",
               actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
@@ -796,6 +819,7 @@ ui <- page_navbar(
               actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
             ),
             uiOutput("related_document_hint"),
+            uiOutput("design_preview_control"),
             div(
               class = "design-section-preview-bar",
               actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
@@ -820,7 +844,7 @@ ui <- page_navbar(
         `aria-expanded` = "false",
         `aria-controls` = "designPreviewCollapse",
         tags$span(class = "chevron", "▸"),
-        "預覽列（不變條件／即時描述／已定稿控制點）— 點擊展開或收回"
+        "預覽列（範本 RCM 欄位順序）— 點擊展開或收回"
       ),
       div(
         id = "designPreviewCollapse",
@@ -828,7 +852,7 @@ ui <- page_navbar(
         div(
           class = "design-preview-body",
           uiOutput("rcm_parity_box"),
-          verbatimTextOutput("live_preview"),
+          uiOutput("live_preview"),
           DTOutput("control_table"),
           verbatimTextOutput("control_paragraph")
         )
@@ -2462,7 +2486,48 @@ server <- function(input, output, session) {
     )
   }
 
-  output$live_preview <- renderText(assemble_control_paragraph(current_draft_from_inputs()))
+  render_design_rcm_preview <- function(ctrl, section = NULL, saved_sections = NULL, title = NULL) {
+    df <- design_rcm_preview_fields(ctrl, section = section, saved_sections = saved_sections)
+    if (!nrow(df)) return(NULL)
+    hdr <- title %||% if (!is.null(section) && nzchar(section)) {
+      sprintf("預覽列（%s｜範本 RCM 欄位順序）", section)
+    } else {
+      "預覽列（範本 RCM 欄位順序）"
+    }
+    tags$div(
+      class = "design-rcm-preview-panel",
+      tags$div(class = "preview-title", hdr),
+      tags$table(
+        class = "table table-sm table-bordered",
+        tags$tbody(
+          lapply(seq_len(nrow(df)), function(i) {
+            val <- as.character(df$內容[[i]])
+            tags$tr(
+              tags$th(df$欄位[[i]]),
+              tags$td(
+                class = if (identical(val, "NA")) "na-cell" else NULL,
+                val
+              )
+            )
+          })
+        )
+      )
+    )
+  }
+
+  output$design_preview_basic <- renderUI({
+    render_design_rcm_preview(current_draft_from_inputs(), section = "基礎設定")
+  })
+  output$design_preview_risk <- renderUI({
+    render_design_rcm_preview(current_draft_from_inputs(), section = "風險辨識")
+  })
+  output$design_preview_control <- renderUI({
+    render_design_rcm_preview(current_draft_from_inputs(), section = "控制設計")
+  })
+
+  output$live_preview <- renderUI({
+    render_design_rcm_preview(current_draft_from_inputs(), section = NULL)
+  })
 
   push_rcm_section_preview <- function(section) {
     if (!nzchar(trimws(input$cycle %||% ""))) {

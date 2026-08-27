@@ -801,6 +801,8 @@ DESIGN_SECTION_CTRL_FIELDS <- list(
   )
 )
 
+DESIGN_PREVIEW_SECTIONS <- c("基礎設定", "風險辨識", "控制設計")
+
 rcm_preview_section_columns <- function(section) {
   sec <- trimws(as.character(section %||% ""))
   cols <- switch(
@@ -817,6 +819,46 @@ rcm_preview_section_columns <- function(section) {
     character()
   )
   intersect(cols, RCM_HEADERS)
+}
+
+# 累積至某設計階段之 RCM 欄（維持範本順序）
+rcm_preview_columns_through_section <- function(section) {
+  sec <- trimws(as.character(section %||% ""))
+  idx <- match(sec, DESIGN_PREVIEW_SECTIONS)
+  if (is.na(idx)) return(character())
+  cols <- unlist(
+    lapply(DESIGN_PREVIEW_SECTIONS[seq_len(idx)], rcm_preview_section_columns),
+    use.names = FALSE
+  )
+  intersect(RCM_HEADERS, unique(cols))
+}
+
+# 設計頁預覽：依範本欄序輸出欄位名稱與值（缺值＝NA）
+design_rcm_preview_fields <- function(ctrl, section = NULL, saved_sections = NULL) {
+  row <- control_to_rcm_row(ctrl, seq_no = 0L)
+  cols <- if (is.null(section) || !nzchar(section)) {
+    RCM_HEADERS
+  } else {
+    rcm_preview_columns_through_section(section)
+  }
+  saved <- trimws(as.character(saved_sections %||% character()))
+  saved <- saved[nzchar(saved)]
+  saved_cols <- if (length(saved)) {
+    unlist(lapply(saved, rcm_preview_section_columns), use.names = FALSE)
+  } else {
+    character()
+  }
+  labels <- unname(RCM_HEADER_LABELS[cols])
+  vals <- vapply(cols, function(cn) {
+    if (length(saved) && length(saved_cols) && !cn %in% saved_cols) return("NA")
+    as.character(row[[cn]][[1]] %||% "NA")
+  }, character(1))
+  data.frame(
+    欄位 = labels,
+    內容 = vals,
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
 }
 
 merge_design_preview_section <- function(existing, draft, section) {

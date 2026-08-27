@@ -1410,9 +1410,9 @@ server <- function(input, output, session) {
       }
     }
   }
-  pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
-  # 既有庫若缺財務報導／銷售循環種子，補齊一次
-  reg0 <- pbc_reg()
+  # 先以普通物件載入／補種子，勿在 reactiveVal 建立後於非 reactive 脈絡讀取
+  # （Shiny 1.14+ 會拋 "Operation not allowed without an active reactive context"）
+  reg0 <- load_pbc_registry(pbc_path_csv, pbc_path_json)
   seed_if_missing_cycle <- function(cycle_nm, seed_file) {
     has <- is.data.frame(reg0) && nrow(reg0) > 0 && any(reg0$cycle == cycle_nm)
     if (has) return(invisible(NULL))
@@ -1421,11 +1421,11 @@ server <- function(input, output, session) {
     tryCatch({
       sys.source(seed_path, envir = new.env(parent = globalenv()))
       reg0 <<- load_pbc_registry(pbc_path_csv, pbc_path_json)
-      pbc_reg(reg0)
     }, error = function(e) NULL)
   }
   seed_if_missing_cycle("財務報導循環", "seed_fr_cycle_pbc.R")
   seed_if_missing_cycle("銷售及收款循環", "seed_sc_cycle_pbc.R")
+  pbc_reg <- reactiveVal(reg0)
   lib_path_json <- file.path(data_dir, "control_library.json")
   lib_path_csv <- file.path(data_dir, "control_library.csv")
   param_path_json <- file.path(data_dir, "parameter_store.json")

@@ -11,7 +11,7 @@ if (!file.exists(file.path(root, "R", "library.R"))) {
   alt <- file.path(root, "control-design-app")
   if (file.exists(file.path(alt, "R", "library.R"))) root <- alt
 }
-source(file.path(root, "R", "constants.R"), local = TRUE)
+source(file.path(root, "R", "00_constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
 source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "rcm_csa.R"), local = TRUE)

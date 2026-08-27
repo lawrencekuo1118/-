@@ -10,7 +10,7 @@ if (!file.exists(file.path(root, "R", "assemble.R"))) {
   alt <- file.path(root, "control-design-app")
   if (file.exists(file.path(alt, "R", "assemble.R"))) root <- alt
 }
-source(file.path(root, "R", "constants.R"), local = TRUE)
+source(file.path(root, "R", "00_constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
 source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
@@ -1329,7 +1329,7 @@ locale_scan_files <- c(
   file.path(root, "app.R"),
   file.path(root, "R", "rcm_csa.R"),
   file.path(root, "R", "cascade.R"),
-  file.path(root, "R", "constants.R"),
+  file.path(root, "R", "00_constants.R"),
   file.path(root, "data", "jinglian_it_rcm_batch.json")
 )
 locale_hits <- character()

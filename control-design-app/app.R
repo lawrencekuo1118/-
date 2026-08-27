@@ -20,7 +20,7 @@ root <- .source_root
 data_dir <- file.path(root, "data")
 dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
 
-source(file.path(root, "R", "constants.R"), local = TRUE)
+source(file.path(root, "R", "00_constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
 source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)

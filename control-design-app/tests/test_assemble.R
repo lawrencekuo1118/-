@@ -672,6 +672,56 @@ ca_reg <- upsert_pbc(ca_reg, list(
 ca_reg <- enrich_related_pbc_from_specs(ca_reg)
 check(identical(parse_pbc_id_values(ca_reg$related_pbc_ids[3]), "PBC-CA-013"),
       "財務報導 #N 勾稽優先同循環 CA 編號")
+check(grepl("匯入 CSV／Excel", app_src_pbc, fixed = TRUE) &&
+        grepl('accept\\s*=\\s*c\\(\\s*"\\.csv"\\s*,\\s*"\\.xlsx"', app_src_pbc, perl = TRUE),
+      "PBC 匯入接受 CSV 與 Excel")
+check(exists("import_pbc_file", mode = "function") &&
+        exists("read_pbc_import_table", mode = "function"),
+      "PBC 匯入支援檔案讀取函式存在")
+tmp_pbc_csv <- tempfile(fileext = ".csv")
+utils::write.csv(
+  data.frame(
+    文件名稱 = "測試PBC原名",
+    檢視後命名 = "測試PBC新名",
+    規格說明 = "csv規格",
+    循環 = "銷售及收款循環",
+    stringsAsFactors = FALSE
+  ),
+  tmp_pbc_csv, row.names = FALSE, fileEncoding = "UTF-8"
+)
+imp_csv <- import_pbc_file(tmp_pbc_csv, empty_pbc_registry())
+check(nrow(imp_csv) == 1L && identical(imp_csv$reviewed_name[1], "測試PBC新名") &&
+        identical(imp_csv$pbc_spec[1], "csv規格"),
+      "PBC CSV 匯入可對應中文欄名")
+if (requireNamespace("readxl", quietly = TRUE) &&
+    nzchar(Sys.which("python3"))) {
+  tmp_pbc_xlsx <- tempfile(fileext = ".xlsx")
+  py_script <- tempfile(fileext = ".py")
+  writeLines(c(
+    "import openpyxl, sys",
+    "wb = openpyxl.Workbook()",
+    "ws = wb.active",
+    "ws.append(['文件／檔案名稱', '樣本需求說明', '循環'])",
+    "ws.append(['Excel樣本PBC', 'xlsx規格說明', '財務報導循環'])",
+    "wb.save(sys.argv[1])"
+  ), py_script, useBytes = FALSE)
+  st <- system2("python3", c(py_script, tmp_pbc_xlsx), stdout = TRUE, stderr = TRUE)
+  if (file.exists(tmp_pbc_xlsx) && file.info(tmp_pbc_xlsx)$size > 0) {
+    imp_xlsx <- import_pbc_file(
+      tmp_pbc_xlsx, empty_pbc_registry(),
+      original_name = "pbc_sample.xlsx"
+    )
+    check(nrow(imp_xlsx) == 1L &&
+            identical(imp_xlsx$client_pbc_name[1], "Excel樣本PBC") &&
+            identical(imp_xlsx$pbc_spec[1], "xlsx規格說明") &&
+            identical(imp_xlsx$cycle[1], "財務報導循環"),
+          "PBC Excel 匯入可讀取 xlsx 與樣本需求說明欄")
+  } else {
+    message("SKIP: 無法產出測試用 xlsx（", paste(st, collapse = " "), "）")
+  }
+} else {
+  message("SKIP: readxl／python3 不可用以測 xlsx 匯入")
+}
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

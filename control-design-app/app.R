@@ -1153,7 +1153,8 @@ ui <- page_navbar(
         actionButton("pbc_apply_to_design", "套用至控制設計",
                      class = "btn-sm btn-outline-success")
       ),
-      fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
+      fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV／Excel",
+                accept = c(".csv", ".xlsx", ".xls")),
       downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
       tags$hr(),
       tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
@@ -3549,7 +3550,10 @@ server <- function(input, output, session) {
     f <- input$upload_pbc
     if (is.null(f)) return()
     tryCatch({
-      reg <- import_pbc_csv(f$datapath, pbc_reg())
+      reg <- import_pbc_file(
+        f$datapath, pbc_reg(),
+        original_name = f$name %||% f$datapath
+      )
       reg <- enrich_related_pbc_from_specs(reg)
       pbc_reg(reg)
       persist_pbc(reg)

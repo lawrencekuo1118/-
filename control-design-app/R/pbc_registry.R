@@ -562,10 +562,56 @@ normalize_pbc_df <- function(df) {
   df[, need, drop = FALSE]
 }
 
-# Import loose CSV with flexible column aliases
-import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
-  raw <- utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+# 讀取 PBC 匯入表（CSV 或 Excel 第一個工作表）
+read_pbc_import_table <- function(path, original_name = NULL) {
+  path <- as.character(path %||% "")
+  if (!nzchar(path) || !file.exists(path)) {
+    stop("找不到匯入檔案")
+  }
+  label <- trimws(as.character(original_name %||% ""))
+  if (!nzchar(label)) label <- path
+  ext <- tolower(tools::file_ext(label))
+  if (!nzchar(ext)) ext <- tolower(tools::file_ext(path))
+
+  if (ext %in% c("xlsx", "xls")) {
+    if (!requireNamespace("readxl", quietly = TRUE)) {
+      stop("需要 readxl 套件以匯入 Excel：install.packages(\"readxl\")")
+    }
+    sheets <- readxl::excel_sheets(path)
+    if (!length(sheets)) stop("Excel 檔沒有工作表")
+    prefer <- which(tolower(sheets) %in% c("pbc", "pbc資料庫", "pbc_registry", "sheet1"))
+    sheet <- if (length(prefer)) sheets[[prefer[[1]]]] else sheets[[1]]
+    raw <- as.data.frame(
+      readxl::read_excel(path, sheet = sheet, col_names = TRUE),
+      stringsAsFactors = FALSE
+    )
+  } else if (ext %in% c("csv", "txt") || !nzchar(ext)) {
+    raw <- tryCatch(
+      utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8"),
+      error = function(e) {
+        utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM")
+      }
+    )
+  } else {
+    stop("僅支援 CSV 或 Excel（.xlsx／.xls）匯入")
+  }
+
+  if (!is.data.frame(raw) || !nrow(raw)) {
+    stop("匯入檔沒有資料列")
+  }
+  # Excel 常把空值讀成 NA
+  for (nm in names(raw)) {
+    raw[[nm]] <- as.character(raw[[nm]])
+    raw[[nm]][is.na(raw[[nm]])] <- ""
+  }
   names(raw) <- tolower(gsub("[\\s　]+", "_", names(raw)))
+  raw
+}
+
+# Import loose CSV／Excel with flexible column aliases
+import_pbc_file <- function(path, existing = empty_pbc_registry(),
+                            original_name = NULL) {
+  raw <- read_pbc_import_table(path, original_name = original_name)
   alias <- list(
     pbc_id = c("pbc_id", "id", "編號"),
     client_pbc_name = c(
@@ -580,7 +626,7 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
     ),
     pbc_spec = c(
       "pbc_spec", "spec", "specification", "規格說明", "pbc規格說明",
-      "pbc_規格說明", "規格", "取得要求", "備註"
+      "pbc_規格說明", "規格", "取得要求", "備註", "樣本需求說明", "樣本需求"
     ),
     related_pbc_ids = c(
       "related_pbc_ids", "related_pbc", "related", "links", "walkthrough",
@@ -611,4 +657,10 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
     ))
   }
   existing
+}
+
+# 相容舊呼叫名稱
+import_pbc_csv <- function(path, existing = empty_pbc_registry(),
+                           original_name = NULL) {
+  import_pbc_file(path, existing = existing, original_name = original_name)
 }

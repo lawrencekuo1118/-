@@ -503,6 +503,8 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
                          raw <- trimws(as.character(ctrl$related_law %||% ""))
                          if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
                        })
+  updateTextInput(session, "related_law_url",
+                  value = trimws(as.character(ctrl$related_law_url %||% "")))
   doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
   doc_sel <- expand_pbc_selection(
     ctrl$related_document %||% ctrl$outputs %||% "",

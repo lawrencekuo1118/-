@@ -742,7 +742,15 @@ control_to_rcm_row <- function(ctrl, seq_no = 1L) {
       ctrl$frequency
     )),
     `控制點負責單位` = rcm_na_value(ctrl$responsible_unit),
-    `相關法規` = rcm_na_value(ctrl$related_law),
+    `相關法規` = {
+      law <- rcm_na_value(ctrl$related_law)
+      url <- trimws(as.character(ctrl$related_law_url %||% ""))
+      if (!nzchar(url) || identical(law, "NA")) {
+        law
+      } else {
+        paste0(law, "｜", url)
+      }
+    },
     `相關政策與制度` = rcm_na_value(ctrl$related_policy),
     `相關系統` = rcm_na_value(ctrl_related_system_value(ctrl)),
     `相關文件` = rcm_na_value(ctrl$related_documents),
@@ -794,6 +802,7 @@ DESIGN_SECTION_CTRL_FIELDS <- list(
   `控制設計` = c(
     "control_objective", "control_activity", "frequency", "responsible_unit",
     "iuc", "iuc_or_system", "related_system", "related_policy", "related_law",
+    "related_law_url",
     "related_documents", "related_document", "related_document_pbc_ids",
     "related_document_manual",
     "nature", "approach", "control_type", "control_activity_type", "type",
@@ -2044,6 +2053,9 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   # 相關法令：遵循面保留；其他類別強制清空
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
+    ctrl$related_law_url <- ""
+  } else {
+    ctrl$related_law_url <- trimws(as.character(ctrl$related_law_url %||% ""))
   }
   # 控制佐證文件：自動控制或遵循面強制清空；否則保留 PBC 選取＋手動輸入
   if (identical(related_document_mode_for_ctrl(ctrl), "locked")) {

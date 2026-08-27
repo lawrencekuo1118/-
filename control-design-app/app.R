@@ -99,6 +99,16 @@ ui <- page_navbar(
       } else {
         el.disabled = !msg.enabled;
       }
+      var url = document.getElementById('related_law_url');
+      if (url) {
+        url.disabled = !msg.enabled;
+        url.readOnly = !msg.enabled;
+        url.classList.toggle('bg-light', !msg.enabled);
+        if (!msg.enabled) url.value = '';
+        if (!msg.enabled) {
+          try { Shiny.setInputValue('related_law_url', '', {priority: 'event'}); } catch (e) {}
+        }
+      }
     });
     Shiny.addCustomMessageHandler('toggleAssertions', function(msg) {
       var el = document.getElementById('assertions');
@@ -333,6 +343,18 @@ ui <- page_navbar(
       }
       .rcm-design-tabs .selectize-control .item:hover {
         outline: 1px dashed rgba(0, 91, 170, 0.35);
+      }
+      /* 相關法規｜法規連結：左 1 : 右 2 */
+      .related-law-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .related-law-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .related-law-row { grid-template-columns: 1fr; }
       }
 
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
@@ -850,15 +872,23 @@ ui <- page_navbar(
                 placeholder = "一般相關文件；可選建議或雙擊修改自訂"
               )
             ),
-            selectizeInput(
-              "related_law", "相關法規",
-              choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
-              multiple = TRUE, width = "100%",
-              options = list(
-                create = TRUE,
-                createOnBlur = TRUE,
-                placeholder = "僅遵循面可填；可多選／自訂；選後可雙擊修改",
-                plugins = list("remove_button")
+            div(
+              class = "related-law-row",
+              selectizeInput(
+                "related_law", "相關法規",
+                choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
+                multiple = TRUE, width = "100%",
+                options = list(
+                  create = TRUE,
+                  createOnBlur = TRUE,
+                  placeholder = "僅遵循面可填；可多選／自訂；選後可雙擊修改",
+                  plugins = list("remove_button")
+                )
+              ),
+              textInput(
+                "related_law_url", "法規有效網址連結",
+                value = "", width = "100%",
+                placeholder = "https://…（選填；該法規之有效連結）"
               )
             ),
             uiOutput("related_law_hint"),
@@ -2281,6 +2311,8 @@ server <- function(input, output, session) {
       },
       "相關法規" = function() updateSelectizeInput(session, "related_law", selected = val),
       "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
+      "法規有效網址連結" = function() updateTextInput(session, "related_law_url", value = val),
+      "相關法規連結" = function() updateTextInput(session, "related_law_url", value = val),
       "相關政策與制度" = function() {
         sel <- expand_pbc_selection(val, pbc_reg())
         updateSelectizeInput(session, "related_policy", selected = sel)
@@ -2621,6 +2653,7 @@ server <- function(input, output, session) {
         v <- input$related_law %||% character(0)
         paste(unique(trimws(as.character(v))), collapse = "；")
       },
+      related_law_url = trimws(input$related_law_url %||% ""),
       related_document_pbc_ids = {
         parts <- split_pbc_selection(input$related_document_pbc %||% character(), pbc_reg())
         parts$ids
@@ -2982,6 +3015,10 @@ server <- function(input, output, session) {
       if (length(isolate(input$related_law))) {
         freezeReactiveValue(input, "related_law")
         updateSelectizeInput(session, "related_law", selected = character(0))
+      }
+      if (nzchar(trimws(isolate(input$related_law_url %||% "")))) {
+        freezeReactiveValue(input, "related_law_url")
+        updateTextInput(session, "related_law_url", value = "")
       }
     }
   }

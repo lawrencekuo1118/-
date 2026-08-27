@@ -110,6 +110,13 @@ check(all(c("風險面向", "風險範疇", "控制聲明", "控制點負責單�
             "相關政策與制度", "相關文件-控制佐證文件") %in% names(rcm)),
       "RCM 含範本核心欄位")
 check(identical(as.character(rcm[["會計科目"]]), "NA"), "非報導面會計科目暫列 NA")
+rcm_law <- control_to_rcm_row(modifyList(d1, list(
+  risk_category = "遵循面", related_law = "證券交易法",
+  related_law_url = "https://law.moj.gov.tw/example",
+  significant_account = ""
+)))
+check(grepl("證券交易法｜https://law.moj.gov.tw/example", as.character(rcm_law[["相關法規"]])),
+      "RCM 相關法規可附有效網址連結")
 
 # 風險屬性三擇一
 multi_attr <- modifyList(d1, list(
@@ -902,6 +909,11 @@ if (length(jl)) {
 
 # 按鈕／下載皆須有對應 handler（防呆回歸）
 app_src <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("related-law-row", app_src) &&
+        grepl("minmax\\(0, 1fr\\) minmax\\(0, 2fr\\)", app_src) &&
+        grepl('textInput\\(\\s*"related_law_url"', app_src) &&
+        grepl("法規有效網址連結", app_src),
+      "相關法規與法規連結同列並排（左1右2）")
 check(grepl("dblclick\\.editSelectizeItem|editSelectizeItem", app_src) &&
         grepl("persist_design_custom_params", app_src) &&
         grepl("ingest_ctrl_parameters", app_src) &&

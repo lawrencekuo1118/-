@@ -13,6 +13,7 @@ LIBRARY_CONTROL_FIELDS <- c(
   "romm_classification", "significant_account", "assertions",
   "control_objective", "control_activity", "frequency", "responsible_unit",
   "iuc_or_system", "related_system", "related_policy", "related_law",
+  "related_law_url",
   "related_documents", "related_document",
   "related_document_pbc_ids",
   "company_status", "design_gap_note", "effectiveness", "residual_risk", "improvement",
@@ -176,6 +177,7 @@ deidentify_control_fields <- function(ctrl) {
     "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
     "control_objective", "control_activity", "responsible_unit",
     "iuc", "iuc_or_system", "related_system", "related_policy", "related_law",
+    "related_law_url",
     "related_document", "inputs", "review_steps", "outputs",
     "investigation_threshold", "dependent_controls",
     "detailed_description", "summary_description", "sub_process"
@@ -902,6 +904,19 @@ rcm_row_to_control <- function(row, sheet_name = "", id_prefix = "PL") {
                          CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件"),
     related_policy = getv("相關政策與制度", "相關政策或程序", "相關政策及程序"),
     related_law = getv("相關法規", "相關法令"),
+    related_law_url = {
+      url <- getv("相關法規連結", "法規有效網址連結")
+      if (nzchar(trimws(url))) {
+        trimws(url)
+      } else {
+        law_raw <- getv("相關法規", "相關法令")
+        if (grepl("｜", law_raw, fixed = TRUE)) {
+          trimws(sub("^.*｜", "", law_raw))
+        } else {
+          ""
+        }
+      }
+    },
     related_documents = "",
     related_document = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件", "相關文件", "佐證文件"),
     responsible_unit = getv("控制點負責單位", "流程負責單位"),

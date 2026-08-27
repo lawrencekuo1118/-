@@ -90,6 +90,7 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals(CONTROL_IUC_DOCUMENT_LABEL, ctrl_iuc_value(c), source)
     add_vals("相關系統", ctrl_related_system_value(c), source)
     add_vals("相關法規", c$related_law, source)
+    add_vals("相關法規連結", c$related_law_url, source)
     add_vals("相關政策與制度", c$related_policy, source)
     add_vals("相關文件", c$related_documents, source)
     add_vals(CONTROL_EVIDENCE_DOCUMENT_LABEL, c$related_document %||% c$outputs, source)
@@ -282,12 +283,12 @@ DESIGN_PARAM_FIELD_MAP <- function() {
     c(
       "sub_process", "risk_description", "control_objective", "control_activity",
       "responsible_unit", "iuc_or_system", "related_documents", "related_document",
-      "related_system", "related_policy", "related_law"
+      "related_system", "related_policy", "related_law", "related_law_url"
     ),
     c(
       "子作業名稱", "風險描述", "控制目標", "控制活動",
       "控制點負責單位", iuc_lab, "相關文件", ev_lab,
-      "相關系統", "相關政策與制度", "相關法規"
+      "相關系統", "相關政策與制度", "相關法規", "相關法規連結"
     )
   )
 }

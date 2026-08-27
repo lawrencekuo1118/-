@@ -482,7 +482,10 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
       }
     }
   )
-  updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
+  updateSelectizeInput(
+    session, "related_policy",
+    selected = expand_pbc_selection(ctrl$related_policy %||% "", pbc_registry)
+  )
   updateTextInput(session, "related_documents", value = ctrl$related_documents %||% "")
   updateSelectizeInput(session, "related_law",
                        selected = {
@@ -684,13 +687,21 @@ cascade_iuc_choices <- function(rows, pbc_df = NULL) {
   iucs <- unique(vapply(rows, function(r) r$iuc_or_system, character(1)))
   iucs <- iucs[nzchar(iucs)]
   if (!is.null(pbc_df) && nrow(pbc_df)) {
+    pbc_use <- pbc_df
+    if (exists("filter_pbc_registry", mode = "function")) {
+      pbc_use <- filter_pbc_registry(pbc_df, exclude_kinds = PBC_KIND_POLICY)
+    } else if (exists("PBC_KIND_POLICY", mode = "variable")) {
+      pbc_use <- pbc_df[!vapply(pbc_df$pbc_kind, function(k) {
+        identical(trimws(as.character(k %||% "")), PBC_KIND_POLICY)
+      }, logical(1)), , drop = FALSE]
+    }
     extra <- unique(c(
-      as.character(pbc_df$reviewed_name),
-      as.character(pbc_df$client_pbc_name),
-      as.character(pbc_df$iuc_or_system),
+      as.character(pbc_use$reviewed_name),
+      as.character(pbc_use$client_pbc_name),
+      as.character(pbc_use$iuc_or_system),
       if (exists("format_pbc_reviewed_label", mode = "function")) {
-        vapply(seq_len(nrow(pbc_df)), function(i) {
-          format_pbc_reviewed_label(pbc_df$reviewed_name[i], pbc_df$pbc_kind[i])
+        vapply(seq_len(nrow(pbc_use)), function(i) {
+          format_pbc_reviewed_label(pbc_use$reviewed_name[i], pbc_use$pbc_kind[i])
         }, character(1))
       } else character()
     ))

@@ -771,7 +771,16 @@ ui <- page_navbar(
               placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
             ),
             uiOutput("related_system_hint"),
-            textInput("related_policy", lab_opt("相關政策與制度"), width = "100%"),
+            selectizeInput(
+              "related_policy", lab_opt("相關政策與制度"),
+              choices = NULL, multiple = TRUE, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "政策制度類 PBC；可選建議或手動輸入",
+                plugins = list("remove_button")
+              )
+            ),
             textInput("related_documents", lab_opt("相關文件"), width = "100%",
                       placeholder = "一般相關文件（與 IUC／佐證文件分開）"),
             selectizeInput(
@@ -965,7 +974,7 @@ ui <- page_navbar(
         tags$hr(),
         tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
         p(class = "small text-muted mb-2",
-          "將命名對照套用至「風險控制點設計」之 IUC（公司現況整理）。"),
+          "將命名對照套用至「風險控制點設計」：非政策制度 → IUC；政策制度 → 相關政策與制度。"),
         selectizeInput(
           "pbc_apply", NULL, choices = NULL, multiple = TRUE,
           options = list(placeholder = "原名→新名")
@@ -1646,22 +1655,26 @@ server <- function(input, output, session) {
 
   refresh_pbc_choices <- function() {
     cy <- input$cycle %||% ""
-    ch <- pbc_choices(pbc_reg(), cycle_filter = if (nzchar(cy)) cy else NULL)
-    merge_selected <- function(cur) {
+    reg <- pbc_reg()
+    cf <- if (nzchar(cy)) cy else NULL
+    ch_iuc <- pbc_non_policy_choices(reg, cycle_filter = cf)
+    ch_policy <- pbc_policy_choices(reg, cycle_filter = cf)
+    merge_selected <- function(cur, ch) {
       cur <- parse_text_list_values(cur)
       if (!length(cur)) return(cur)
       extra <- cur[!cur %in% unname(ch)]
       if (length(extra)) ch <<- c(ch, stats::setNames(extra, extra))
       cur
     }
-    update_selectize <- function(input_id) {
-      cur <- merge_selected(input[[input_id]] %||% character())
+    update_selectize <- function(input_id, ch) {
+      cur <- merge_selected(input[[input_id]] %||% character(), ch)
       updateSelectizeInput(session, input_id, choices = ch, server = TRUE, selected = cur)
     }
-    update_selectize("pbc_apply")
-    update_selectize("interview_pbc_link")
-    update_selectize("related_document_pbc")
-    update_selectize("iuc")
+    update_selectize("pbc_apply", ch_iuc)
+    update_selectize("interview_pbc_link", ch_iuc)
+    update_selectize("related_document_pbc", ch_iuc)
+    update_selectize("iuc", ch_iuc)
+    update_selectize("related_policy", ch_policy)
   }
 
   interview_worksheet <- function() {
@@ -1915,6 +1928,30 @@ server <- function(input, output, session) {
     if (!length(ids)) {
       return(showNotification("請先選擇要套用的 PBC 命名", type = "warning"))
     }
+    reg <- pbc_reg()
+    rows <- lookup_pbc(reg, ids)
+    if (!nrow(rows)) {
+      return(showNotification("找不到所選 PBC 項目", type = "warning"))
+    }
+    is_policy <- vapply(rows$pbc_kind, is_pbc_policy_kind, logical(1))
+    policy_ids <- rows$pbc_id[is_policy]
+    iuc_ids <- rows$pbc_id[!is_policy]
+    if (length(policy_ids) && length(iuc_ids)) {
+      return(showNotification(
+        "請分次套用：政策制度與其他證據類型不可同批套用。",
+        type = "warning", duration = 6
+      ))
+    }
+    if (length(policy_ids)) {
+      cur_pol <- parse_text_list_values(input$related_policy)
+      updateSelectizeInput(
+        session, "related_policy",
+        selected = unique(c(cur_pol, policy_ids))
+      )
+      showNotification("已套用 PBC 至「相關政策與制度」", type = "message")
+      bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
+      return(invisible(NULL))
+    }
     cur_iuc <- parse_text_list_values(input$iuc)
     updateSelectizeInput(
       session, "iuc",
@@ -2104,8 +2141,14 @@ server <- function(input, output, session) {
       },
       "相關法規" = function() updateSelectizeInput(session, "related_law", selected = val),
       "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
-      "相關政策與制度" = function() updateTextInput(session, "related_policy", value = val),
-      "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
+      "相關政策與制度" = function() {
+        sel <- expand_pbc_selection(val, pbc_reg())
+        updateSelectizeInput(session, "related_policy", selected = sel)
+      },
+      "相關政策或程序" = function() {
+        sel <- expand_pbc_selection(val, pbc_reg())
+        updateSelectizeInput(session, "related_policy", selected = sel)
+      },
       "相關文件" = function() updateTextInput(session, "related_documents", value = val),
       "風險面向" = function() {
         updateSelectizeInput(session, "risk_principle",
@@ -2426,7 +2469,7 @@ server <- function(input, output, session) {
         resolve_multi_pbc_text(iuc_sel, pbc_reg())
       },
       related_system = trimws(input$related_system %||% ""),
-      related_policy = input$related_policy %||% "",
+      related_policy = resolve_multi_pbc_text(input$related_policy %||% character(), pbc_reg()),
       related_documents = trimws(input$related_documents %||% ""),
       related_law = {
         v <- input$related_law %||% character(0)

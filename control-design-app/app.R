@@ -38,9 +38,10 @@ lab_opt <- function(txt) {
   tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
 }
 
-fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry = NULL) {
+fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry = NULL,
+                                  current_cycle = NULL) {
   if (is.null(ctrl)) return()
-  apply_ctrl_to_cascade(session, ctrl)
+  apply_ctrl_to_cascade(session, ctrl, current_cycle = current_cycle)
   apply_supplement_from_ctrl(session, ctrl, pbc_registry = pbc_registry)
 }
 
@@ -1081,6 +1082,8 @@ server <- function(input, output, session) {
   rcm_revision <- reactiveVal(0L)
   last_saved_control <- reactiveVal(NULL)
   rcm_preview_ctrl <- reactiveVal(NULL)
+  applying_template <- reactiveVal(FALSE)
+  lib_revision <- reactiveVal(0L)
 
   bump_rcm_views <- function(ctrl = NULL) {
     rcm_revision(rcm_revision() + 1L)
@@ -1387,7 +1390,8 @@ server <- function(input, output, session) {
       freezeReactiveValue(input, "sub_process_id")
       updateTextInput(session, "sub_process_id", value = id)
     }
-    refresh_sub_process_choices()
+    freezeReactiveValue(input, "sub_process")
+    refresh_sub_process_choices(force = TRUE)
     updateSelectizeInput(session, "sub_process", selected = nm)
     showNotification(sprintf("已帶入子作業：%s", nm), type = "message", duration = 3)
   })
@@ -1428,9 +1432,15 @@ server <- function(input, output, session) {
     if (nzchar(desc)) {
       refresh_risk_description_choices(selected_keep = desc)
     }
-    if (nzchar(cat)) updateSelectInput(session, "risk_category", selected = cat)
+    if (nzchar(cat)) {
+      freezeReactiveValue(input, "risk_category")
+      updateSelectInput(session, "risk_category", selected = cat)
+    }
     if (nzchar(rf)) {
-      updateSelectizeInput(session, "risk_factor", selected = rf)
+      sel <- parse_risk_factor_values(rf)
+      refresh_risk_factor_choices()
+      freezeReactiveValue(input, "risk_factor")
+      updateSelectizeInput(session, "risk_factor", selected = sel)
     }
     showNotification("已帶入風險描述", type = "message", duration = 3)
   })
@@ -1551,15 +1561,31 @@ server <- function(input, output, session) {
   })
 
   refresh_lib_choices <- function() {
-    ch <- library_choices(lib(), cycle_filter = input$cycle, query = input$lib_query)
+    ch <- library_choices(isolate(lib()), cycle_filter = isolate(input$cycle %||% ""),
+                          query = isolate(input$lib_query %||% ""))
+    cur <- isolate(input$lib_pick %||% "")
+    sel <- if (nzchar(cur) && cur %in% unname(ch)) cur else ""
     updateSelectInput(
       session, "lib_pick",
       choices = c("未套用範本…" = "", ch),
-      selected = {
-        cur <- input$lib_pick %||% ""
-        if (nzchar(cur) && cur %in% unname(ch)) cur else ""
-      }
+      selected = sel
     )
+  }
+
+  apply_template_to_form <- function(ctrl) {
+    if (is.null(ctrl)) return(invisible(NULL))
+    applying_template(TRUE)
+    on.exit(applying_template(FALSE), add = TRUE)
+    fill_inputs_from_ctrl(
+      session, ctrl,
+      lib_items = isolate(lib()),
+      pbc_registry = isolate(pbc_reg()),
+      current_cycle = isolate(input$cycle %||% "")
+    )
+    refresh_sub_process_choices(force = TRUE)
+    refresh_pbc_choices()
+    refresh_risk_factor_choices()
+    invisible(NULL)
   }
 
   # 子作業名稱以 renderUI 重建 selectize（choices 寫入 HTML），
@@ -1711,9 +1737,13 @@ server <- function(input, output, session) {
     )
   }
 
+  # PBC／Assertions 選單快取：避免同內容反覆 update 造成跳閃
+  pbc_choices_cache <- new.env(parent = emptyenv())
+  assertions_ui_cache <- new.env(parent = emptyenv())
+
   refresh_pbc_choices <- function() {
-    cy <- input$cycle %||% ""
-    reg <- pbc_reg()
+    cy <- isolate(input$cycle %||% "")
+    reg <- isolate(pbc_reg())
     cf <- if (nzchar(cy)) cy else NULL
     ch_iuc <- pbc_non_policy_choices(reg, cycle_filter = cf)
     ch_policy <- pbc_policy_choices(reg, cycle_filter = cf)
@@ -1725,7 +1755,13 @@ server <- function(input, output, session) {
       cur
     }
     update_selectize <- function(input_id, ch) {
-      cur <- merge_selected(input[[input_id]] %||% character(), ch)
+      cur <- merge_selected(isolate(input[[input_id]] %||% character()), ch)
+      cache_key <- input_id
+      prev <- pbc_choices_cache[[cache_key]] %||% list(ch = NULL, sel = NULL)
+      same_ch <- identical(unname(ch), unname(prev$ch)) && identical(names(ch), names(prev$ch))
+      same_sel <- identical(as.character(cur), as.character(prev$sel))
+      if (same_ch && same_sel) return(invisible(NULL))
+      pbc_choices_cache[[cache_key]] <- list(ch = ch, sel = cur)
       updateSelectizeInput(session, input_id, choices = ch, server = TRUE, selected = cur)
     }
     update_selectize("pbc_apply", ch_iuc)
@@ -1816,15 +1852,18 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$cycle, {
+    if (isTRUE(applying_template())) return()
     # 切換循環時清空子作業編號；名稱選單由 renderUI 依循環重掛載
     freezeReactiveValue(input, "sub_process")
     freezeReactiveValue(input, "sub_process_id")
     sub_process_ui_state$cycle <- NULL
     updateTextInput(session, "sub_process_id", value = "")
-    refresh_pbc_choices()
     refresh_sub_process_choices(force = TRUE)
-    refresh_risk_factor_choices()
   }, ignoreNULL = FALSE)
+
+  observeEvent(lib(), {
+    lib_revision(isolate(lib_revision()) + 1L)
+  }, ignoreInit = TRUE)
 
   # 一律以內建＋使用者庫候選為訪談來源（側邊欄循環→直接選子作業）
   interview_pool_controls <- reactive({
@@ -1835,7 +1874,6 @@ server <- function(input, output, session) {
   observeEvent(input$main_nav, {
     if (identical(input$main_nav, "風險控制點設計")) {
       refresh_sub_process_choices(force = TRUE)
-      refresh_risk_factor_choices()
     }
   }, ignoreInit = TRUE)
 
@@ -1848,14 +1886,11 @@ server <- function(input, output, session) {
   observeEvent(input$sub_process, {
     val <- trimws(input$sub_process %||% "")
     nm <- sub_process_name_from_value(val)
-    if (!nzchar(nm)) {
-      refresh_risk_factor_choices()
-      return()
-    }
+    if (!nzchar(nm)) return()
     # 選名稱後由範本庫帶入關聯編號（畫面名稱與編號脫鉤）
     cy <- isolate(input$cycle) %||% ""
     if (nzchar(cy)) {
-      rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+      rows <- library_controls_flat(cascade_source_library(isolate(lib())), cycle = cy)
       cur_id <- trimws(isolate(input$sub_process_id) %||% "")
       new_id <- lookup_sub_process_id_for_name(rows, nm, preferred_id = cur_id)
       if (nzchar(new_id) && !identical(new_id, cur_id)) {
@@ -1878,7 +1913,6 @@ server <- function(input, output, session) {
       freezeReactiveValue(input, "sub_process")
       updateSelectizeInput(session, "sub_process", selected = nm)
     }
-    refresh_risk_factor_choices()
   }, ignoreInit = TRUE)
 
   observeEvent(input$risk_factor, {
@@ -1909,6 +1943,7 @@ server <- function(input, output, session) {
     if (length(cats) == 1L) {
       cur_cat <- trimws(isolate(input$risk_category %||% ""))
       if (!identical(cur_cat, cats[[1]])) {
+        freezeReactiveValue(input, "risk_category")
         updateSelectInput(session, "risk_category", selected = cats[[1]])
       }
     }
@@ -1916,17 +1951,20 @@ server <- function(input, output, session) {
     if (length(romms) == 1L) {
       cur_romm <- trimws(isolate(input$romm_classification %||% ""))
       if (!identical(cur_romm, romms[[1]])) {
+        freezeReactiveValue(input, "romm_classification")
         updateSelectInput(session, "romm_classification", selected = romms[[1]])
       }
     }
   }, ignoreInit = TRUE)
 
   observe({
-    # 僅依循環／子作業刷新建議 TAG；勿追蹤 risk_factor 本身
+    # 僅依循環／子作業／範本庫修訂刷新建議 TAG 與 PBC 選單
     input$cycle
     input$sub_process
     input$sub_process_id
+    lib_revision()
     isolate(refresh_risk_factor_choices())
+    isolate(refresh_pbc_choices())
   })
 
   observe({
@@ -1983,10 +2021,6 @@ server <- function(input, output, session) {
     input$cycle
     input$lib_query
     refresh_lib_choices()
-  })
-  observe({
-    input$cycle
-    refresh_pbc_choices()
   })
 
   # 啟動時循環維持未選（selectInput 預設已是 ""）；勿再延遲 updateSelectInput 清空，
@@ -2074,10 +2108,16 @@ server <- function(input, output, session) {
   })
 
   observe({
-    st <- parameter_store_stats(param_store())
-    updateSelectInput(session, "param_filter",
-                      choices = c("全部" = "", stats::setNames(st$params, st$params)),
-                      selected = input$param_filter %||% "")
+    st <- parameter_store_stats(isolate(param_store()))
+    new_choices <- c("全部" = "", stats::setNames(st$params, st$params))
+    cur <- isolate(input$param_filter %||% "")
+    if (identical(new_choices, assertions_ui_cache$param_filter_choices)) return()
+    assertions_ui_cache$param_filter_choices <- new_choices
+    updateSelectInput(
+      session, "param_filter",
+      choices = new_choices,
+      selected = if (nzchar(cur) && cur %in% unname(new_choices)) cur else ""
+    )
   })
 
   output$param_stats <- renderUI({
@@ -2142,6 +2182,7 @@ server <- function(input, output, session) {
       },
       "風險因素" = function() {
         sel <- parse_risk_factor_values(val)
+        freezeReactiveValue(input, "risk_factor")
         updateSelectizeInput(session, "risk_factor", selected = sel)
         refresh_risk_factor_choices()
       },
@@ -2280,7 +2321,7 @@ server <- function(input, output, session) {
     if (!nzchar(id %||% "")) return(showNotification("請先選擇範本（或跳過此步驟）", type = "warning"))
     item <- get_library_item(lib(), id)
     if (is.null(item)) return()
-    fill_inputs_from_ctrl(session, item$control, lib_items = lib(), pbc_registry = pbc_reg())
+    apply_template_to_form(item$control)
     bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
@@ -2292,7 +2333,7 @@ server <- function(input, output, session) {
       return(showNotification("請先在表格選取一列範本", type = "warning"))
     }
     item <- items[[s[[1]]]]
-    fill_inputs_from_ctrl(session, item$control, lib_items = lib(), pbc_registry = pbc_reg())
+    apply_template_to_form(item$control)
     bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
     showNotification(paste("已套用範本：", item$title), type = "message")
   })
@@ -2681,13 +2722,14 @@ server <- function(input, output, session) {
     )
   })
   observeEvent(input$significant_account, {
-    cat <- trimws(input$risk_category %||% "")
+    cat <- trimws(isolate(input$risk_category %||% ""))
     if (!is_reporting_risk_category(cat)) return()
     sel <- parse_account_values(input$significant_account)
     if (!(ACCOUNT_ALL_OPTION %in% sel)) return()
     # 選到「全部適用」時展開為全科目（避免只留標籤卻漏存）
     desired <- expand_account_selection(ACCOUNT_ALL_OPTION)
     if (!setequal(sel, desired)) {
+      freezeReactiveValue(input, "significant_account")
       updateSelectizeInput(
         session, "significant_account",
         choices = account_select_choices(),
@@ -2830,7 +2872,8 @@ server <- function(input, output, session) {
     if (identical(input$nature, "自動")) {
       updateSelectInput(session, "frequency", selected = "持續")
       session$sendCustomMessage("toggleFrequency", list(enabled = FALSE))
-      if (length(input$related_document_pbc %||% character())) {
+      if (length(isolate(input$related_document_pbc %||% character()))) {
+        freezeReactiveValue(input, "related_document_pbc")
         updateSelectizeInput(session, "related_document_pbc", selected = character(0))
       }
     } else {
@@ -2838,9 +2881,9 @@ server <- function(input, output, session) {
     }
   }, ignoreNULL = FALSE)
 
-  # 風險類別驅動欄位鎖定；子作業編號就緒且控制編號空白時自動順編
-  observe({
-    cat <- trimws(input$risk_category %||% "")
+  sync_category_driven_fields <- function(cat, nature) {
+    cat <- trimws(as.character(cat %||% ""))
+    nature <- trimws(as.character(nature %||% ""))
     session$sendCustomMessage(
       "toggleAccount",
       list(enabled = is_reporting_risk_category(cat))
@@ -2851,30 +2894,34 @@ server <- function(input, output, session) {
     )
     as_mode <- assertion_mode_for_category(cat)
     as_choices <- assertion_choices_for_category(cat)
-    cur_as <- parse_assertion_values(input$assertions)
+    cur_as <- parse_assertion_values(isolate(input$assertions))
     keep_as <- if (length(as_choices)) intersect(cur_as, as_choices) else character(0)
-    updateSelectizeInput(
-      session, "assertions",
-      choices = as_choices,
-      selected = keep_as,
-      options = list(
-        create = FALSE,
-        placeholder = switch(
-          as_mode,
-          reporting = "報導面：可複選八種 Assertions",
-          operations = "營運面：完整性／正確性／即時性",
-          locked = "遵循面：無 Assertions 可選",
-          "請先選擇風險類別"
+    cache_key <- paste(cat, as_mode, paste(as_choices, collapse = "\t"), paste(keep_as, collapse = "\t"), sep = "|")
+    if (!identical(cache_key, assertions_ui_cache$assertions_key)) {
+      assertions_ui_cache$assertions_key <- cache_key
+      updateSelectizeInput(
+        session, "assertions",
+        choices = as_choices,
+        selected = keep_as,
+        options = list(
+          create = FALSE,
+          placeholder = switch(
+            as_mode,
+            reporting = "報導面：可複選八種 Assertions",
+            operations = "營運面：完整性／正確性／即時性",
+            locked = "遵循面：無 Assertions 可選",
+            "請先選擇風險類別"
+          )
         )
       )
-    )
+    }
     session$sendCustomMessage(
       "toggleAssertions",
       list(enabled = identical(as_mode, "reporting") || identical(as_mode, "operations"))
     )
     doc_mode <- related_document_mode_for_ctrl(list(
-      nature = input$nature,
-      control_type = input$nature,
+      nature = nature,
+      control_type = nature,
       risk_category = cat
     ))
     session$sendCustomMessage(
@@ -2882,29 +2929,46 @@ server <- function(input, output, session) {
       list(enabled = identical(doc_mode, "required"))
     )
     if (identical(doc_mode, "locked")) {
-      if (length(input$related_document_pbc %||% character())) {
+      if (length(isolate(input$related_document_pbc %||% character()))) {
+        freezeReactiveValue(input, "related_document_pbc")
         updateSelectizeInput(session, "related_document_pbc", selected = character(0))
       }
     }
     if (nzchar(cat) && !is_reporting_risk_category(cat)) {
-      if (length(parse_account_values(input$significant_account))) {
+      if (length(parse_account_values(isolate(input$significant_account)))) {
+        freezeReactiveValue(input, "significant_account")
         updateSelectizeInput(session, "significant_account", selected = character(0))
       }
     }
     if (nzchar(cat) && !is_compliance_risk_category(cat)) {
-      if (length(input$related_law)) {
+      if (length(isolate(input$related_law))) {
+        freezeReactiveValue(input, "related_law")
         updateSelectizeInput(session, "related_law", selected = character(0))
       }
     }
+  }
+
+  observeEvent(
+    list(input$risk_category, input$nature),
+    {
+      sync_category_driven_fields(input$risk_category, input$nature)
+    },
+    ignoreInit = FALSE
+  )
+
+  observeEvent(input$sub_process_id, {
     spid <- trimws(input$sub_process_id %||% "")
-    if (nzchar(spid) && !nzchar(trimws(input$control_id %||% ""))) {
-      ids <- collect_existing_control_ids(lists = list(lib(), controls()))
-      cc <- trimws(input$cycle_code %||% "")
-      if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
-      updateTextInput(session, "control_id",
-                      value = next_rcm_control_id(spid, ids, cycle_code = cc))
+    if (!nzchar(spid) || nzchar(trimws(input$control_id %||% ""))) return()
+    ids <- collect_existing_control_ids(lists = list(isolate(lib()), isolate(controls())))
+    cc <- trimws(isolate(input$cycle_code %||% ""))
+    if (!nzchar(cc)) cc <- cycle_code_for(isolate(input$cycle %||% ""))
+    new_cid <- next_rcm_control_id(spid, ids, cycle_code = cc)
+    cur_cid <- trimws(isolate(input$control_id %||% ""))
+    if (nzchar(new_cid) && !identical(new_cid, cur_cid)) {
+      freezeReactiveValue(input, "control_id")
+      updateTextInput(session, "control_id", value = new_cid)
     }
-  })
+  }, ignoreInit = TRUE)
 
   observeEvent(input$oa_split_suggest, {
     blob <- paste(c(input$control_objective %||% "", input$control_activity %||% ""),

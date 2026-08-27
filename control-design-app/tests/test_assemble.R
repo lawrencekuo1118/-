@@ -1121,6 +1121,15 @@ check(grepl("isolate\\(refresh_risk_factor_choices", app_src) &&
         grepl("isolate\\(input\\$risk_factor", app_src) &&
         grepl("risk_factor_choices_cache", app_src),
       "風險因素多選不因 observe 誤追蹤而反覆重建選單")
+check(grepl("applying_template|apply_template_to_form", app_src) &&
+        grepl("applying_template\\(\\)\\) return\\(\\)", app_src),
+      "套用範本時不觸發循環清空子作業")
+check(grepl("lib_revision", app_src) &&
+        grepl("pbc_choices_cache", app_src) &&
+        grepl("sync_category_driven_fields", app_src),
+      "PBC／風險類別連動選單具快取與範本庫修訂追蹤")
+check(grepl("current_cycle", paste(readLines(file.path(root, "R/cascade.R"), encoding = "UTF-8"), collapse = "\n")),
+      "套用範本時相同循環不重設 cycle 避免連鎖刷新")
 check(identical(
   format_risk_factor_text(c("密碼管理 / 制度與程序", "密碼管理")),
   "密碼管理"

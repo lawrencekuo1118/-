@@ -679,6 +679,12 @@ check(identical(parse_pbc_id_values(ca_reg$related_pbc_ids[3]), "PBC-CA-013"),
 check(grepl("匯入 CSV／Excel", app_src_pbc, fixed = TRUE) &&
         grepl('accept\\s*=\\s*c\\(\\s*"\\.csv"\\s*,\\s*"\\.xlsx"', app_src_pbc, perl = TRUE),
       "PBC 匯入接受 CSV 與 Excel")
+# Shiny 1.14+：server 啟動時不可在非 reactive 脈絡讀取 reactiveVal（會斷線 Reload）
+check(grepl("reg0 <- load_pbc_registry\\(", app_src_pbc, perl = TRUE) &&
+        grepl("pbc_reg <- reactiveVal\\(reg0\\)", app_src_pbc, perl = TRUE) &&
+        !grepl("pbc_reg <- reactiveVal\\([^\\n]+\\)\\s*\\n\\s*reg0 <- pbc_reg\\(",
+               app_src_pbc, perl = TRUE),
+      "PBC 種子補齊在 reactiveVal 建立前完成（避免 Reload 斷線）")
 check(exists("import_pbc_file", mode = "function") &&
         exists("read_pbc_import_table", mode = "function"),
       "PBC 匯入支援檔案讀取函式存在")

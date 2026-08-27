@@ -561,12 +561,27 @@ reg2 <- upsert_pbc(reg, list(
 check(identical(apply_pbc_to_iuc(reg2, reg2$pbc_id[2]), "【EMAIL】核准信"), "PBC 證據類型標示套用")
 check(identical(format_pbc_reviewed_label("制度手冊", "政策制度"), "【政策制度】制度手冊"),
       "PBC 格式化標示")
+reg_fmt <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "shot.png", reviewed_name = "權限畫面",
+  pbc_kind = "螢幕截圖", pbc_file_format = "PNG"
+))
+check(identical(reg_fmt$pbc_file_format[1], ".png"), "PBC 文件格式正規化為小寫副檔名")
+check(identical(normalize_pbc_file_format(".PPTX"), ".pptx"), "PBC 文件格式大小寫正規化")
+check("pbc_file_format" %in% names(empty_pbc_registry()), "PBC registry 含文件格式欄")
 reg3 <- upsert_pbc(reg2, list(
   client_pbc_name = "policy.pdf", reviewed_name = "資訊安全政策", pbc_kind = "政策制度"))
 check(length(pbc_non_policy_choices(reg3)) == 2L, "IUC 選單排除政策制度 PBC")
 check(length(pbc_policy_choices(reg3)) == 1L, "政策制度 PBC 僅出現在相關政策與制度選單")
 check(!reg3$pbc_id[3] %in% unname(pbc_non_policy_choices(reg3)), "政策 PBC id 不在 IUC 選單")
 check(reg3$pbc_id[3] %in% unname(pbc_policy_choices(reg3)), "政策 PBC id 在政策選單")
+app_src_pbc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8", warn = FALSE),
+                     collapse = "\n")
+check(grepl("pbc-kind-format-row", app_src_pbc, fixed = TRUE),
+      "PBC 證據類型與文件格式同列並排")
+check(grepl('selectizeInput\\(\\s*"pbc_file_format"', app_src_pbc, perl = TRUE),
+      "PBC 原始取得文件格式輸入存在")
+check(grepl("原始取得文件格式", app_src_pbc, fixed = TRUE),
+      "PBC 原始取得文件格式標籤存在")
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

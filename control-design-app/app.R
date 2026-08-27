@@ -357,6 +357,19 @@ ui <- page_navbar(
         .related-law-row { grid-template-columns: 1fr; }
       }
 
+      /* PBC：證據類型｜原始取得文件格式 同列並排 */
+      .pbc-kind-format-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .pbc-kind-format-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .pbc-kind-format-row { grid-template-columns: 1fr; }
+      }
+
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
         display: grid !important;
@@ -1061,7 +1074,19 @@ ui <- page_navbar(
           "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
-        selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
+        tags$div(
+          class = "pbc-kind-format-row",
+          selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
+          selectizeInput(
+            "pbc_file_format", "原始取得文件格式",
+            choices = PBC_FILE_FORMAT_CHOICES,
+            options = list(
+              placeholder = "例如 .jpg／.png／.pptx",
+              create = TRUE,
+              createOnBlur = TRUE
+            )
+          )
+        ),
         textInput("pbc_id", NULL, placeholder = "ID（可空）"),
         uiOutput("pbc_cycle_readonly"),
         textInput("pbc_notes", NULL, placeholder = "備註"),
@@ -3265,6 +3290,7 @@ server <- function(input, output, session) {
       reg <- upsert_pbc(pbc_reg(), list(
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
         reviewed_name = input$pbc_reviewed, pbc_kind = input$pbc_kind,
+        pbc_file_format = input$pbc_file_format,
         iuc_or_system = input$pbc_reviewed,
         cycle = input$cycle %||% "", notes = input$pbc_notes
       ))
@@ -3275,6 +3301,7 @@ server <- function(input, output, session) {
       updateTextInput(session, "pbc_client", value = "")
       updateTextInput(session, "pbc_reviewed", value = "")
       updateSelectInput(session, "pbc_kind", selected = "")
+      updateSelectizeInput(session, "pbc_file_format", selected = "")
       updateTextInput(session, "pbc_notes", value = "")
       showNotification("已登錄 PBC", type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
@@ -3283,8 +3310,9 @@ server <- function(input, output, session) {
     df <- pbc_reg()
     if (!nrow(df)) {
       empty <- data.frame(
-        ID = character(), 證據類型 = character(), 客戶原名 = character(),
-        檢視後 = character(), 循環 = character(), 備註 = character(),
+        ID = character(), 證據類型 = character(), 文件格式 = character(),
+        客戶原名 = character(), 檢視後 = character(), 循環 = character(),
+        備註 = character(),
         stringsAsFactors = FALSE
       )
       return(datatable(empty, selection = "single", rownames = FALSE,
@@ -3293,6 +3321,7 @@ server <- function(input, output, session) {
     show <- data.frame(
       ID = df$pbc_id,
       證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
+      文件格式 = ifelse(nzchar(df$pbc_file_format), df$pbc_file_format, "—"),
       客戶原名 = df$client_pbc_name,
       檢視後 = vapply(seq_len(nrow(df)), function(i) {
         format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
@@ -3330,6 +3359,13 @@ server <- function(input, output, session) {
     updateTextInput(session, "pbc_reviewed", value = row$reviewed_name[[1]])
     updateSelectInput(session, "pbc_kind",
                       selected = normalize_pbc_kind(row$pbc_kind[[1]]))
+    fmt <- normalize_pbc_file_format(row$pbc_file_format[[1]])
+    fmt_choices <- PBC_FILE_FORMAT_CHOICES
+    if (nzchar(fmt) && !(fmt %in% unname(fmt_choices))) {
+      fmt_choices <- c(fmt_choices, stats::setNames(fmt, fmt))
+    }
+    updateSelectizeInput(session, "pbc_file_format",
+                         choices = fmt_choices, selected = fmt)
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
   }, ignoreInit = TRUE)
   observeEvent(input$pbc_delete, {

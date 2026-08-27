@@ -2,6 +2,7 @@
 # client_pbc_name = 客戶取得之原始 PBC 名稱
 # reviewed_name   = 檢視後標準化命名（控制設計／現況撰寫時優先套用）
 # pbc_kind        = 證據類型特別標示（螢幕截圖／EMAIL／系統表單／政策制度）
+# pbc_file_format = 原始取得文件格式（.jpg／.png／.pptx 等）
 
 PBC_KIND_CHOICES <- c(
   "請選擇證據類型…" = "",
@@ -14,9 +15,47 @@ PBC_KIND_CHOICES <- c(
 PBC_KIND_VALUES <- unname(PBC_KIND_CHOICES[nzchar(unname(PBC_KIND_CHOICES))])
 PBC_KIND_POLICY <- "政策制度"
 
+PBC_FILE_FORMAT_CHOICES <- c(
+  "請選擇格式…" = "",
+  ".jpg" = ".jpg",
+  ".jpeg" = ".jpeg",
+  ".png" = ".png",
+  ".gif" = ".gif",
+  ".webp" = ".webp",
+  ".pdf" = ".pdf",
+  ".pptx" = ".pptx",
+  ".ppt" = ".ppt",
+  ".docx" = ".docx",
+  ".doc" = ".doc",
+  ".xlsx" = ".xlsx",
+  ".xls" = ".xls",
+  ".csv" = ".csv",
+  ".msg" = ".msg",
+  ".eml" = ".eml",
+  ".mp4" = ".mp4",
+  ".mov" = ".mov",
+  ".zip" = ".zip",
+  ".txt" = ".txt"
+)
+
+PBC_FILE_FORMAT_VALUES <- unname(
+  PBC_FILE_FORMAT_CHOICES[nzchar(unname(PBC_FILE_FORMAT_CHOICES))]
+)
+
 normalize_pbc_kind <- function(x) {
   v <- trimws(as.character(x %||% ""))
   if (v %in% PBC_KIND_VALUES) v else ""
+}
+
+# 允許預設清單或自訂副檔名（如 .heic）；一律小寫並補上前導點
+normalize_pbc_file_format <- function(x) {
+  v <- tolower(trimws(as.character(x %||% "")))
+  if (!nzchar(v)) return("")
+  v <- sub("^\\*+", "", v)
+  if (!startsWith(v, ".") && grepl("^[A-Za-z0-9]+$", v)) {
+    v <- paste0(".", v)
+  }
+  v
 }
 
 # 檢視後命名加上【類型】前綴，供 IUC／PBC 對照特別標示
@@ -34,6 +73,7 @@ empty_pbc_registry <- function() {
     client_pbc_name = character(),
     reviewed_name = character(),
     pbc_kind = character(),
+    pbc_file_format = character(),
     iuc_or_system = character(),
     cycle = character(),
     source = character(),
@@ -54,6 +94,7 @@ upsert_pbc <- function(registry, row) {
   }
   if (!nzchar(reviewed)) reviewed <- client
   kind <- normalize_pbc_kind(row$pbc_kind)
+  file_fmt <- normalize_pbc_file_format(row$pbc_file_format)
   display <- format_pbc_reviewed_label(reviewed, kind)
 
   # Match existing by id, else by same client_pbc_name (reuse / update mapping)
@@ -73,6 +114,7 @@ upsert_pbc <- function(registry, row) {
     client_pbc_name = client,
     reviewed_name = reviewed,
     pbc_kind = kind,
+    pbc_file_format = file_fmt,
     iuc_or_system = trimws(as.character(row$iuc_or_system %||% display)),
     cycle = trimws(as.character(row$cycle %||% "")),
     source = trimws(as.character(row$source %||% "client")),
@@ -351,6 +393,10 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
     client_pbc_name = c("client_pbc_name", "client_name", "pbc_name", "客戶原名", "原名", "pbc"),
     reviewed_name = c("reviewed_name", "new_name", "standard_name", "檢視後命名", "新命名", "iuc"),
     pbc_kind = c("pbc_kind", "kind", "證據類型", "pbc_type", "類型"),
+    pbc_file_format = c(
+      "pbc_file_format", "file_format", "format", "ext", "extension",
+      "原始取得文件格式", "文件格式", "副檔名"
+    ),
     iuc_or_system = c("iuc_or_system", "iuc", "system"),
     cycle = c("cycle", "循環"),
     source = c("source", "來源"),
@@ -366,6 +412,7 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
       client_pbc_name = pick(alias$client_pbc_name)[i],
       reviewed_name = pick(alias$reviewed_name)[i],
       pbc_kind = pick(alias$pbc_kind)[i],
+      pbc_file_format = pick(alias$pbc_file_format)[i],
       iuc_or_system = pick(alias$iuc_or_system)[i],
       cycle = pick(alias$cycle)[i],
       source = pick(alias$source)[i],

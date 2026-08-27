@@ -34,7 +34,12 @@ app_preset_parameters <- function() {
     "Form 4120SR Type" = if (exists("TYPE_CHOICES")) TYPE_CHOICES else character(),
     "RoMM 分類" = if (exists("ROMM_CLASS_CHOICES")) ROMM_CLASS_CHOICES else character(),
     # 不提供「控制有效性評估」等非設計參數預設，避免寫入參數庫
-    "PBC 證據類型" = if (exists("PBC_KIND_VALUES")) PBC_KIND_VALUES else character()
+    "PBC 證據類型" = if (exists("PBC_KIND_VALUES")) PBC_KIND_VALUES else character(),
+    "PBC 原始取得文件格式" = if (exists("PBC_FILE_FORMAT_VALUES")) {
+      PBC_FILE_FORMAT_VALUES
+    } else {
+      character()
+    }
   )
 }
 
@@ -105,6 +110,9 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("PBC 客戶原名", pbc$client_pbc_name, "PBC命名庫")
     add_vals("PBC 檢視後命名", pbc$reviewed_name, "PBC命名庫")
     add_vals("PBC 證據類型", pbc$pbc_kind, "PBC命名庫")
+    if ("pbc_file_format" %in% names(pbc)) {
+      add_vals("PBC 原始取得文件格式", pbc$pbc_file_format, "PBC命名庫")
+    }
     if (exists("is_pbc_policy_kind", mode = "function")) {
       pol_mask <- vapply(pbc$pbc_kind, is_pbc_policy_kind, logical(1))
       add_vals("相關政策與制度", pbc$iuc_or_system[pol_mask], "PBC命名庫")

@@ -585,10 +585,10 @@ ui <- page_navbar(
         div(
           class = "d-flex gap-1 flex-wrap mt-2",
           downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-success btn-sm")
-        )
+        ),
+        uiOutput("interview_live_box")
       ),
       card(
-        uiOutput("interview_live_box"),
         uiOutput("interview_scaffold_preview"),
         DTOutput("interview_table"),
         verbatimTextOutput("interview_paragraph")

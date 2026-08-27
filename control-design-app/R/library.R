@@ -20,6 +20,7 @@ LIBRARY_CONTROL_FIELDS <- c(
 )
 
 # 非控制點「設計」欄位：輸入檔／既有 RCM 常帶入，不可污染 APP 範本庫／參數庫
+# （對應 RCM「控制現況描述／差異說明」與「控制分析與評估」群組）
 NON_DESIGN_CONTROL_FIELDS <- c(
   "company_status",      # 控制現況描述／公司現況
   "design_gap_note",     # 控制設計差異說明
@@ -27,6 +28,45 @@ NON_DESIGN_CONTROL_FIELDS <- c(
   "residual_risk",       # 可能潛在風險
   "improvement"          # 建議改善方式
 )
+
+# 執行階段組出的編號：僅設計頁／RCM 使用，不寫入範本庫
+RUNTIME_ID_CONTROL_FIELDS <- c("sub_process_id", "control_id")
+
+NON_PERSIST_CONTROL_ALIASES <- c(
+  "control_status", "status_description", "design_gap", "gap_analysis",
+  "控制現況描述", "控制設計差異說明", "控制有效性評估",
+  "可能潛在風險", "建議改善方式", "現況描述", "差異說明",
+  "差異缺失", "缺失說明", "有效性評估", "潛在風險", "改善建議",
+  "改善方式", "建議改善", "公司控制現況", "公司現況", "控制現況",
+  "改善計畫", "改善計劃", "分析評估", "控制分析與評估"
+)
+
+# 參數庫禁止收錄的參數名（與上列意義雷同）
+PARAMETER_STORE_BLOCKED_PARAMS <- c(
+  "子作業編號", "控制編號",
+  "控制現況描述", "控制設計差異說明", "控制有效性評估",
+  "可能潛在風險", "建議改善方式",
+  "公司控制現況", "公司現況", "控制現況", "現況描述",
+  "差異說明", "差異缺失", "缺失說明",
+  "有效性評估", "潛在風險",
+  "改善建議", "改善方式", "建議改善", "改善計畫", "改善計劃",
+  "分析評估", "控制分析與評估"
+)
+
+is_blocked_parameter_name <- function(param) {
+  p <- trimws(as.character(param %||% ""))
+  if (!nzchar(p)) return(TRUE)
+  if (p %in% PARAMETER_STORE_BLOCKED_PARAMS) return(TRUE)
+  grepl("現況|改善建議|改善方式|建議改善|有效性評估|潛在風險|差異說明|差異缺失", p)
+}
+
+strip_runtime_id_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  for (f in RUNTIME_ID_CONTROL_FIELDS) {
+    ctrl[[f]] <- ""
+  }
+  ctrl
+}
 
 strip_non_design_control_fields <- function(ctrl) {
   ctrl <- as.list(ctrl)
@@ -36,16 +76,37 @@ strip_non_design_control_fields <- function(ctrl) {
   # 匯入檔常把「控制現況描述」誤塞進 detailed_description；設計庫一律清空後由組裝函式重建
   ctrl$detailed_description <- ""
   # 常見別名一併清空（含差異缺失／現況相關欄）
-  for (alias in c(
-    "control_status", "status_description", "design_gap", "gap_analysis",
-    "控制現況描述", "控制設計差異說明", "控制有效性評估",
-    "可能潛在風險", "建議改善方式", "現況描述", "差異說明",
-    "差異缺失", "缺失說明", "有效性評估", "潛在風險", "改善建議",
-    "改善方式", "建議改善"
-  )) {
+  for (alias in NON_PERSIST_CONTROL_ALIASES) {
     if (!is.null(ctrl[[alias]])) ctrl[[alias]] <- ""
   }
   ctrl
+}
+
+# 寫入／回傳前拿掉編號與非設計欄（不重清 detailed_description，以免刪掉組裝結果）
+drop_non_persist_control_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  drop <- unique(c(NON_DESIGN_CONTROL_FIELDS, RUNTIME_ID_CONTROL_FIELDS,
+                   NON_PERSIST_CONTROL_ALIASES, "company"))
+  for (f in drop) ctrl[[f]] <- NULL
+  ctrl
+}
+
+# 範本鍵依內容特徵穩定累積（不含子作業／控制編號）
+library_content_id <- function(ctrl) {
+  rf <- trimws(as.character(ctrl$risk_factor %||% ctrl$risk_name %||% ""))
+  if (exists("format_risk_factor_text", mode = "function")) {
+    rf <- format_risk_factor_text(rf)
+  }
+  raw <- paste(c(
+    trimws(as.character(ctrl$cycle %||% "")),
+    trimws(as.character(ctrl$sub_process %||% "")),
+    rf,
+    trimws(as.character(ctrl$risk_description %||% "")),
+    trimws(as.character(ctrl$control_objective %||% "")),
+    trimws(as.character(ctrl$control_activity %||% "")),
+    trimws(as.character(ctrl$iuc %||% ctrl$iuc_or_system %||% ""))
+  ), collapse = "|")
+  sprintf("LIB-%08x", sum(utf8ToInt(enc2utf8(raw))) %% as.integer(1e8))
 }
 
 # 企業專屬用語／文件編號／系統商品名 → 通用表述（入庫前去識別）
@@ -385,17 +446,11 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
   if (isTRUE(deidentify)) {
     ctrl <- deidentify_control_fields(ctrl)
   }
-  # Stable accumulative ID: prefer real RCM 控制編號 so re-save updates same template
+  # 包裝鍵：匯入可沿用 JL-/PL-；其餘依內容雜湊。編號本身不入庫。
   if (is.null(ctrl$library_id) || !nzchar(as.character(ctrl$library_id %||% ""))) {
-    cid <- trimws(as.character(ctrl$control_id %||% ""))
-    if (nzchar(cid) && !grepl("^CD-", cid)) {
-      ctrl$library_id <- if (grepl("^JL-", cid)) cid else paste0("LIB-", cid)
-    } else {
-      raw <- paste(c(ctrl$cycle, ctrl$sub_process_id, ctrl$risk_factor %||% ctrl$risk_name,
-                     ctrl$control_objective, ctrl$iuc_or_system), collapse = "|")
-      ctrl$library_id <- sprintf("LIB-%08x", sum(utf8ToInt(enc2utf8(raw))) %% as.integer(1e8))
-    }
+    ctrl$library_id <- library_content_id(ctrl)
   }
+  ctrl <- strip_runtime_id_fields(ctrl)
   if (is.null(ctrl$title) || !nzchar(as.character(ctrl$title %||% ""))) {
     ctrl$title <- sprintf(
       "%s｜%s",
@@ -432,9 +487,13 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
   if (isTRUE(deidentify) && grepl("prologium|輝能|jinglian|鯨鏈", src, ignore.case = TRUE)) {
     src <- "rcm_import_batch"
   }
+  # 記憶體物件亦不保留非設計／編號欄（空字串也不留）
+  ctrl <- drop_non_persist_control_fields(ctrl)
+  # 公司名一律不入庫
+  ctrl$company <- NULL
   list(
-    library_id = as.character(ctrl$library_id),
-    title = as.character(ctrl$title),
+    library_id = as.character(ctrl$library_id %||% ""),
+    title = as.character(ctrl$title %||% ""),
     tags = tags,
     cycle = as.character(ctrl$cycle %||% ""),
     source = src,
@@ -564,15 +623,19 @@ merge_libraries <- function(base, incoming, overwrite = TRUE) {
 }
 
 library_to_flat_df <- function(library) {
+  fields <- setdiff(
+    LIBRARY_CONTROL_FIELDS,
+    c(NON_DESIGN_CONTROL_FIELDS, RUNTIME_ID_CONTROL_FIELDS)
+  )
   if (!length(library)) {
-    return(data.frame(matrix(ncol = length(LIBRARY_CONTROL_FIELDS) + 2, nrow = 0,
-                             dimnames = list(NULL, c(LIBRARY_CONTROL_FIELDS, "tags", "updated_at"))),
+    return(data.frame(matrix(ncol = length(fields) + 2, nrow = 0,
+                             dimnames = list(NULL, c(fields, "tags", "updated_at"))),
                       stringsAsFactors = FALSE))
   }
   rows <- lapply(library, function(item) {
     ctrl <- item$control
-    vals <- lapply(LIBRARY_CONTROL_FIELDS, function(f) as.character(ctrl[[f]] %||% item[[f]] %||% ""))
-    names(vals) <- LIBRARY_CONTROL_FIELDS
+    vals <- lapply(fields, function(f) as.character(ctrl[[f]] %||% item[[f]] %||% ""))
+    names(vals) <- fields
     vals$tags <- paste(item$tags %||% character(), collapse = ";")
     vals$updated_at <- item$updated_at %||% ""
     as.data.frame(vals, stringsAsFactors = FALSE)
@@ -596,7 +659,7 @@ flat_row_to_library_item <- function(row) {
 
 save_control_library <- function(library, path_json, path_csv = NULL) {
   payload <- lapply(library, function(item) {
-    ctrl <- strip_non_design_control_fields(item$control %||% list())
+    ctrl <- drop_non_persist_control_fields(item$control %||% list())
     if (!nzchar(trimws(as.character(ctrl$detailed_description %||% ""))) &&
         exists("assemble_control_paragraph", mode = "function")) {
       ctrl$detailed_description <- tryCatch(

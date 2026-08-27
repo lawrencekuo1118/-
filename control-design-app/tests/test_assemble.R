@@ -282,7 +282,10 @@ pcat <- parameter_catalog(list(), list(), list(), presets = list("相關法令" 
 check(nrow(pcat) >= 20 && any(pcat$參數 == "相關法令"), "參數庫可查詢預設法令")
 seeded <- seed_control_library(TRUE)
 pcat2 <- parameter_catalog(seeded, list(), list())
-check(any(pcat2$參數 == "子作業編號") && any(grepl("EC-101", pcat2$選項值)), "參數庫含資訊循環子作業")
+check(any(pcat2$參數 == "子作業名稱") && any(nzchar(pcat2$選項值[pcat2$參數 == "子作業名稱"])),
+      "參數庫含子作業名稱")
+check(!any(pcat2$參數 == "子作業編號"), "參數庫不收錄子作業編號")
+check(!any(pcat2$參數 == "控制編號"), "參數庫不收錄控制編號")
 check(any(pcat2$參數 == "控制目標"), "參數庫含控制目標選項")
 pcat_iuc <- parameter_catalog(list(), list(modifyList(d1, list(
   iuc = "使用者權限清冊", iuc_or_system = "使用者權限清冊", related_system = "Active Directory"
@@ -562,12 +565,24 @@ check(length(imported) >= 4, "CSV 匯入含資訊循環範本")
 ctrl_a <- with_pbc_doc(modifyList(base, list(control_id = "EC-101-99", sub_process_id = "EC-101")))
 res1 <- collect_controls_to_library(list(), list(ctrl_a), source = "test", quality_gate = TRUE)
 check(res1$added == 1L, "品質通過的控制點可收集入庫")
-check(!is.null(get_library_item(res1$library, "LIB-EC-101-99")), "穩定 ID 依控制編號累積")
-# second save updates same id
+lid1 <- res1$library[[1]]$library_id
+check(grepl("^LIB-[0-9a-f]{8}$", lid1), "穩定 ID 依內容雜湊而非控制編號")
+check(!nzchar(trimws(res1$library[[1]]$control$control_id %||% "")), "入庫不存控制編號")
+check(!nzchar(trimws(res1$library[[1]]$control$sub_process_id %||% "")), "入庫不存子作業編號")
+check(!nzchar(trimws(res1$library[[1]]$control$company_status %||% "")), "入庫不存控制現況")
+check(!nzchar(trimws(res1$library[[1]]$control$improvement %||% "")), "入庫不存改善建議")
+# second save updates same content key
 ctrl_a2 <- modifyList(ctrl_a, list(company_status = "完善後現況描述"))
 res2 <- collect_controls_to_library(res1$library, list(ctrl_a2), source = "test", quality_gate = TRUE)
-check(res2$updated == 1L && res2$added == 0L, "同 ID 覆寫為累積更新")
+check(res2$updated == 1L && res2$added == 0L, "同內容覆寫為累積更新")
 check(length(res2$library) == 1L, "累積不產生重複筆")
+tmp_gov <- tempfile(fileext = ".json")
+save_control_library(res2$library, tmp_gov)
+gov_json <- paste(readLines(tmp_gov, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+check(!grepl("\"control_id\"", gov_json) && !grepl("\"sub_process_id\"", gov_json),
+      "範本 JSON 不含子作業／控制編號欄")
+check(!grepl("\"company_status\"", gov_json) && !grepl("\"improvement\"", gov_json),
+      "範本 JSON 不含控制現況／改善建議欄")
 bad_collect <- collect_controls_to_library(
   list(), list(modifyList(ctrl_a, list(control_activity = ctrl_a$control_objective))),
   quality_gate = TRUE
@@ -586,7 +601,11 @@ if (file.exists(xlsx)) {
   )
   check(length(jl) >= 20, sprintf("資訊循環 RCM 匯入至少 20 筆（實際 %d）", length(jl)))
   check(any(vapply(jl, function(x) grepl("^JL-EC-", x$library_id %||% ""), logical(1))),
-        "匯入控制編號帶 JL-EC- 前綴")
+        "匯入包裝鍵帶 JL-EC- 前綴")
+  check(all(vapply(jl, function(x) !nzchar(trimws(x$control$control_id %||% "")), logical(1))),
+        "匯入範本不持久化控制編號")
+  check(all(vapply(jl, function(x) !nzchar(trimws(x$control$sub_process_id %||% "")), logical(1))),
+        "匯入範本不持久化子作業編號")
   check(!any(vapply(jl, function(x) grepl("控制編號", x$library_id %||% ""), logical(1))),
         "匯入不含標題列雜訊")
   check(all(vapply(jl, function(x) !nzchar(trimws(x$control$company_status %||% "")), logical(1))),
@@ -635,7 +654,11 @@ if (file.exists(pl_xlsx)) {
   )
   check(length(pl_it) >= 20, sprintf("資訊循環匯入至少 20 筆（實際 %d）", length(pl_it)))
   check(any(vapply(pl_it, function(x) grepl("^PL-", x$library_id %||% ""), logical(1))),
-        "匯入控制編號帶 PL- 前綴")
+        "匯入包裝鍵帶 PL- 前綴")
+  check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$control_id %||% "")), logical(1))),
+        "PL 匯入不持久化控制編號")
+  check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$sub_process_id %||% "")), logical(1))),
+        "PL 匯入不持久化子作業編號")
   check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$company_status %||% "")), logical(1))),
         "匯入清空控制現況（非設計欄）")
   check(all(vapply(pl_it, function(x) !nzchar(trimws(x$control$company %||% "")), logical(1))),
@@ -753,6 +776,18 @@ check(!any(grepl("\\[|\\]", names(it_risks))), "風險因素選項標籤不含[]
 check(all(nchar(names(it_risks)) <= 28), "風險因素選項標籤簡短")
 check(identical(risk_factor_tag("密碼管理 / 制度與程序"), "密碼管理"), "風險因素tag取主段")
 check(identical(risk_factor_tag("[報導面] 測試"), "報導面 測試"), "風險因素tag移除[]")
+tag_rows <- list(
+  list(risk_factor = "不當權限", risk_description = "離職未停權"),
+  list(risk_factor = "不當權限", risk_description = "權限過寬"),
+  list(risk_factor = "密碼管理", risk_description = "密碼未定期更換")
+)
+check(setequal(cascade_risk_description_choices(tag_rows, "不當權限"),
+               c("離職未停權", "權限過寬")),
+      "選 TAG 推薦曾標記的風險描述")
+check("密碼未定期更換" %in% cascade_risk_description_choices(tag_rows, character()),
+      "未選 TAG 時描述仍可從範圍挑選")
+check("自訂新描述" %in% c(cascade_risk_description_choices(tag_rows, "不當權限"), "自訂新描述"),
+      "風險描述可自訂新增（不卡控必須擇一）")
 ch <- build_risk_factor_choices(it_rows, extra_selected = "不存在風險")
 check("不存在風險" %in% unname(ch), "自訂/額外風險可併入選單")
 check("__custom__" %in% unname(ch), "風險選單含自訂選項")
@@ -798,10 +833,11 @@ if (length(jl)) {
   akp <- parse_activity_key(ak)
   sp_name <- sub1
   sp_id <- lookup_sub_process_id_for_name(rows, sp_name)
-  check(nzchar(sp_id), "純名稱可反查子作業編號")
+  check(!nzchar(sp_id), "範本列不帶子作業編號（設計頁即時組號）")
   sel_full <- list(
     cycle = "電腦化資訊系統循環",
-    sub_process_id = sp_id, sub_process = sp_name,
+    sub_process_id = compose_sub_process_id(cycle_code_for("電腦化資訊系統循環"), "101"),
+    sub_process = sp_name,
     risk_factor = rk, control_objective = obj1,
     control_activity = akp$activity, approach = akp$approach,
     iuc_or_system = if (length(iucs)) unname(iucs)[[1]] else "自訂IUC-測試"
@@ -1051,9 +1087,17 @@ check(isTRUE(design_required_check(modifyList(d1, list(
   risk_factor = "密碼管理；使用者帳號管理", risk_name = "密碼管理；使用者帳號管理"
 )))$ok),
       "風險因素複選可通過必填")
-check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述")
-check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*textAreaInput\\(\\s*"risk_description"', app_src, perl = TRUE),
+check(grepl('selectizeInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述選單")
+check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*selectizeInput\\(\\s*"risk_description"', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
+check(grepl("風險因素是風險描述上的標記", app_src), "風險因素以 TAG 說明")
+check(grepl('selectizeInput\\(\\s*"risk_description"[\\s\\S]{0,400}create\\s*=\\s*TRUE', app_src, perl = TRUE),
+      "風險描述可自訂新增")
+check(grepl('selectizeInput\\(\\s*"risk_factor"[\\s\\S]{0,400}create\\s*=\\s*TRUE', app_src, perl = TRUE),
+      "風險因素可自訂新增")
+check(grepl("refresh_risk_description_choices", app_src) &&
+        !grepl("updateTextAreaInput\\(session, \"risk_description\"", app_src),
+      "選 TAG 只刷新推薦描述、不強制覆寫")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
 check(grepl('significant_account[\\s\\S]*romm_classification', app_src, perl = TRUE),
@@ -1178,6 +1222,23 @@ pcat_pollute <- parameter_catalog(
 check(!any(pcat_pollute$參數 == "控制現況描述"), "參數庫不收集控制現況描述")
 check(!any(grepl("公司目前實際做法", pcat_pollute$選項值)), "參數庫不含現況原文")
 check(!any(pcat_pollute$參數 == "控制有效性評估"), "參數庫不收集控制有效性評估")
+check(isTRUE(is_blocked_parameter_name("建議改善方式")), "建議改善方式列入參數黑名單")
+check(isTRUE(is_blocked_parameter_name("可能潛在風險")), "可能潛在風險列入參數黑名單")
+check(isTRUE(is_blocked_parameter_name("控制設計差異說明")), "差異說明列入參數黑名單")
+blocked_try <- upsert_parameter_row(empty_parameter_store(), "控制現況描述", "不應寫入")
+check(nrow(blocked_try) == 0L, "高權亦不可把控制現況寫入參數庫")
+ps_loaded <- load_parameter_store(file.path(root, "data", "parameter_store.json"))
+check(!any(vapply(ps_loaded$參數, is_blocked_parameter_name, logical(1))),
+      "已提交參數庫不含現況／改善／編號等禁收參數")
+jl_disk <- load_control_library(file.path(root, "data", "jinglian_it_rcm_batch.json"),
+                                fallback_seed = FALSE)
+check(length(jl_disk) >= 20 &&
+        all(vapply(jl_disk, function(x) {
+          is.null(x$control$company_status) && is.null(x$control$improvement) &&
+            is.null(x$control$effectiveness) && is.null(x$control$residual_risk) &&
+            is.null(x$control$design_gap_note)
+        }, logical(1))),
+      "已提交 JL 批次物件不含現況／改善等欄位鍵")
 
 # 企業專屬用語／文件編號去識別
 dei_raw <- list(

@@ -303,7 +303,6 @@ ui <- page_navbar(
         align-items: start;
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
-      .objective-assertions-row #risk_description { min-height: 5.5rem; resize: vertical; }
       #control_objective { min-height: 7.5rem; resize: vertical; }
       #control_activity { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
@@ -628,20 +627,31 @@ ui <- page_navbar(
               uiOutput("filter_risk_hits")
             ),
             p(class = "small text-muted mb-2",
-              "包含：風險因素、風險描述、風險類別、RoMM 分類。風險因素可複選建議項目或手動輸入；同一控制點僅一種風險類別。"),
+              "風險因素是風險描述上的標記（TAG）。選取標記後會推薦曾被標記的風險描述，可自訂新增描述，亦可自訂新增風險因素。同一控制點僅一種風險類別。"),
             selectizeInput(
               "risk_factor", lab_req("風險因素"),
               choices = NULL, multiple = TRUE, width = "100%",
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
-                placeholder = "可多選；依循環／子作業載入建議，或手動輸入",
+                placeholder = "可複選建議 TAG 或手動新增風險因素",
                 plugins = list("remove_button")
               )
             ),
             uiOutput("risk_factor_hint"),
-            textAreaInput("risk_description", lab_req("風險描述"), rows = 3,
-                          width = "100%", placeholder = "風險情境與影響描述"),
+            selectizeInput(
+              "risk_description", lab_req("風險描述"),
+              choices = NULL, multiple = FALSE, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                maxItems = 1,
+                placeholder = "選建議描述或自行輸入；不強制從清單擇一",
+                openOnFocus = TRUE,
+                maxOptions = 1000,
+                closeAfterSelect = TRUE
+              )
+            ),
             selectInput(
               "risk_category", lab_req("風險類別"),
               choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
@@ -1364,7 +1374,9 @@ server <- function(input, output, session) {
     desc <- as.character(v$desc %||% "")
     rf <- as.character(v$rf %||% "")
     cat <- as.character(v$cat %||% "")
-    if (nzchar(desc)) updateTextAreaInput(session, "risk_description", value = desc)
+    if (nzchar(desc)) {
+      refresh_risk_description_choices(selected_keep = desc)
+    }
     if (nzchar(cat)) updateSelectInput(session, "risk_category", selected = cat)
     if (nzchar(rf)) {
       updateSelectizeInput(session, "risk_factor", selected = rf)
@@ -1454,13 +1466,15 @@ server <- function(input, output, session) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
     }
     n_risk <- length(cascade_risk_choices(rows))
+    n_desc <- length(cascade_risk_description_choices(rows, input$risk_factor %||% character()))
     if (n_risk > 0) {
       scope <- if (nzchar(sub_key)) "所選子作業" else "本循環"
       div(class = "alert alert-success py-1 mb-2 small",
-          sprintf("%s已載入 %d 個建議風險因素，可複選或手動新增。", scope, n_risk))
+          sprintf("%s已載入 %d 個建議風險因素 TAG、%d 則曾標記描述；均可自訂新增。",
+                  scope, n_risk, n_desc))
     } else {
       div(class = "alert alert-secondary py-1 mb-2 small",
-          "暫無建議風險因素，請直接輸入或先選子作業。")
+          "暫無建議風險因素，請直接輸入 TAG 或先選子作業；風險描述亦可自訂。")
     }
   })
 
@@ -1580,7 +1594,36 @@ server <- function(input, output, session) {
         ch <- c(ch, stats::setNames(extra, vapply(extra, risk_factor_tag, character(1))))
       }
     }
-    updateSelectizeInput(session, "risk_factor", choices = ch, server = TRUE, selected = cur)
+    updateSelectizeInput(session, "risk_factor", choices = ch, server = FALSE, selected = cur)
+    refresh_risk_description_choices()
+  }
+
+  refresh_risk_description_choices <- function(selected_keep = NULL) {
+    cy <- input$cycle %||% ""
+    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
+    rows <- if (nzchar(cy)) {
+      r <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+      if (nzchar(sub_key)) {
+        r <- filter_cascade_rows(r, sub_key = sub_key)
+      }
+      r
+    } else {
+      list()
+    }
+    facs <- parse_risk_factor_values(input$risk_factor %||% character())
+    ch <- cascade_risk_description_choices(rows, facs)
+    cur <- if (!is.null(selected_keep)) {
+      trimws(as.character(selected_keep)[[1]])
+    } else {
+      trimws(as.character(input$risk_description %||% "")[[1]])
+    }
+    if (nzchar(cur) && !(cur %in% ch)) ch <- c(ch, cur)
+    updateSelectizeInput(
+      session, "risk_description",
+      choices = risk_description_select_choices(ch),
+      selected = if (nzchar(cur)) cur else "",
+      server = FALSE
+    )
   }
 
   refresh_pbc_choices <- function() {
@@ -1750,6 +1793,7 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$risk_factor, {
+    refresh_risk_description_choices()
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return()
     sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
@@ -1759,21 +1803,15 @@ server <- function(input, output, session) {
     }
     sel <- input$risk_factor %||% character()
     if (!length(sel)) return()
-    descs <- character()
     cats <- character()
     romms <- character()
     for (rf in sel) {
       det <- cascade_risk_detail(rows, rf)
-      if (nzchar(det$risk_description)) descs <- c(descs, det$risk_description)
       if (nzchar(det$risk_category)) cats <- c(cats, det$risk_category)
       r <- det$sample
       if (is.list(r) && length(r) && nzchar(trimws(r$romm_classification %||% ""))) {
         romms <- c(romms, r$romm_classification)
       }
-    }
-    descs <- unique(descs[nzchar(descs)])
-    if (length(descs)) {
-      updateTextAreaInput(session, "risk_description", value = paste(descs, collapse = "；"))
     }
     cats <- unique(cats[nzchar(cats)])
     if (length(cats) == 1L) {
@@ -1984,7 +2022,7 @@ server <- function(input, output, session) {
         refresh_risk_factor_choices()
       },
       "風險描述" = function() {
-        updateTextAreaInput(session, "risk_description", value = val)
+        refresh_risk_description_choices(selected_keep = val)
       },
       "風險類別" = function() {
         updateSelectInput(session, "risk_category", selected = val)

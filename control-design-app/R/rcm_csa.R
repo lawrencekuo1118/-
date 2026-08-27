@@ -1512,7 +1512,6 @@ controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
 # 會計科目：僅風險類別＝報導面時必填；其餘類別鎖定不可填
 DESIGN_REQUIRED_FIELDS <- c(
   cycle = "循環名稱",
-  sub_process_id = "子作業編號",
   sub_process = "子作業名稱",
   risk_factor = "風險因素",
   risk_description = "風險描述",

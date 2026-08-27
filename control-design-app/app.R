@@ -615,7 +615,7 @@ ui <- page_navbar(
               "（例：EC-101、EC-101-01）。"),
             uiOutput("design_cycle_readonly"),
             uiOutput("sub_process_hint"),
-            textInput("sub_process_id", lab_req("子作業編號"), value = "",
+            textInput("sub_process_id", lab_opt("子作業編號"), value = "",
                       placeholder = "循環編號-子作業序號（例：EC-101）",
                       width = "100%"),
             uiOutput("sub_process_select_ui"),
@@ -626,7 +626,7 @@ ui <- page_navbar(
                         placeholder = "輸入子作業名稱或編號關鍵字…"),
               uiOutput("filter_basic_hits")
             ),
-            textInput("control_id", "控制編號", value = "", width = "100%",
+            textInput("control_id", lab_opt("控制編號"), value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("control_id_compose_hint"),
             uiOutput("design_preview_basic"),

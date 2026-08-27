@@ -188,7 +188,6 @@ validate_control_design <- function(ctrl) {
   missing <- character()
   req <- list(
     cycle = "循環名稱",
-    sub_process_id = "子作業編號",
     sub_process = "子作業名稱",
     risk_factor = "風險因素",
     risk_description = "風險描述",

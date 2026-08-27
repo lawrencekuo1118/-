@@ -718,7 +718,7 @@ cascade_iuc_choices <- function(rows, pbc_df = NULL) {
 
 # Selection completeness for unlocking 公司現況
 cascade_selection_ready <- function(sel) {
-  req <- c("cycle", "sub_process_id", "risk_factor", "control_objective",
+  req <- c("cycle", "risk_factor", "control_objective",
            "control_activity", "approach", "iuc_or_system")
   missing <- character()
   for (f in req) {

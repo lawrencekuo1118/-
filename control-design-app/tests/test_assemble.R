@@ -193,11 +193,13 @@ req_grouped <- design_required_check(modifyList(d1, list(
   control_objective = ""
 )))
 check(
-  grepl("基礎設定：子作業編號", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
+  grepl("基礎設定：子作業名稱", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
     grepl("風險辨識：風險因素", format_design_required_by_accordion(req_grouped$missing_by_group)) &&
     grepl("控制設計：控制目標", format_design_required_by_accordion(req_grouped$missing_by_group)),
   "必填缺漏依 accordion 分組顯示"
 )
+req_no_spid <- design_required_check(modifyList(d1, list(sub_process_id = "", control_id = "")))
+check(isTRUE(req_no_spid$ok), "子作業編號與控制編號可留空")
 fin_req <- finalize_control_as_rcm_row(modifyList(d1, list(responsible_unit = "")))
 check(!isTRUE(fin_req$ok) && grepl("必填", fin_req$msg), "缺負責單位不可定稿")
 

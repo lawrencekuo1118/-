@@ -113,6 +113,9 @@ parameter_catalog <- function(library = list(), controls = list(),
     if ("pbc_file_format" %in% names(pbc)) {
       add_vals("PBC 原始取得文件格式", pbc$pbc_file_format, "PBC命名庫")
     }
+    if ("pbc_spec" %in% names(pbc)) {
+      add_vals("PBC 規格說明", pbc$pbc_spec, "PBC命名庫")
+    }
     if (exists("is_pbc_policy_kind", mode = "function")) {
       pol_mask <- vapply(pbc$pbc_kind, is_pbc_policy_kind, logical(1))
       add_vals("相關政策與制度", pbc$iuc_or_system[pol_mask], "PBC命名庫")

@@ -1079,6 +1079,10 @@ ui <- page_navbar(
           "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
         textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
         textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
+        textAreaInput(
+          "pbc_spec", lab_opt("PBC規格說明"), rows = 3, width = "100%",
+          placeholder = "選填：取得／檢附要求與規格說明"
+        ),
         tags$div(
           class = "pbc-kind-format-row",
           selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
@@ -1343,6 +1347,14 @@ server <- function(input, output, session) {
 
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
+  # 若尚無 PBC 庫，先以資訊循環種子清單初始化
+  if (!file.exists(pbc_path_csv) && !file.exists(pbc_path_json)) {
+    seed_script <- file.path(root, "data", "seed_it_cycle_pbc.R")
+    if (file.exists(seed_script)) {
+      tryCatch(sys.source(seed_script, envir = new.env(parent = globalenv())),
+               error = function(e) NULL)
+    }
+  }
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
   lib_path_json <- file.path(data_dir, "control_library.json")
   lib_path_csv <- file.path(data_dir, "control_library.csv")
@@ -3305,7 +3317,8 @@ server <- function(input, output, session) {
     tryCatch({
       reg <- upsert_pbc(pbc_reg(), list(
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
-        reviewed_name = input$pbc_reviewed, pbc_kind = input$pbc_kind,
+        reviewed_name = input$pbc_reviewed, pbc_spec = input$pbc_spec,
+        pbc_kind = input$pbc_kind,
         pbc_file_format = input$pbc_file_format,
         iuc_or_system = input$pbc_reviewed,
         cycle = input$cycle %||% "", notes = input$pbc_notes
@@ -3316,6 +3329,7 @@ server <- function(input, output, session) {
       updateTextInput(session, "pbc_id", value = "")
       updateTextInput(session, "pbc_client", value = "")
       updateTextInput(session, "pbc_reviewed", value = "")
+      updateTextAreaInput(session, "pbc_spec", value = "")
       updateSelectInput(session, "pbc_kind", selected = "")
       updateSelectizeInput(session, "pbc_file_format", selected = "")
       updateTextInput(session, "pbc_notes", value = "")
@@ -3326,9 +3340,9 @@ server <- function(input, output, session) {
     df <- pbc_reg()
     if (!nrow(df)) {
       empty <- data.frame(
-        ID = character(), 證據類型 = character(), 文件格式 = character(),
-        客戶原名 = character(), 檢視後 = character(), 循環 = character(),
-        備註 = character(),
+        ID = character(), 規格說明 = character(), 證據類型 = character(),
+        文件格式 = character(), 客戶原名 = character(), 檢視後 = character(),
+        循環 = character(), 備註 = character(),
         stringsAsFactors = FALSE
       )
       return(datatable(empty, selection = "single", rownames = FALSE,
@@ -3336,6 +3350,10 @@ server <- function(input, output, session) {
     }
     show <- data.frame(
       ID = df$pbc_id,
+      規格說明 = {
+        sp <- if ("pbc_spec" %in% names(df)) df$pbc_spec else rep("", nrow(df))
+        ifelse(nzchar(sp), substr(sp, 1L, 48L), "—")
+      },
       證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
       文件格式 = ifelse(nzchar(df$pbc_file_format), df$pbc_file_format, "—"),
       客戶原名 = df$client_pbc_name,
@@ -3373,6 +3391,10 @@ server <- function(input, output, session) {
     updateTextInput(session, "pbc_id", value = row$pbc_id[[1]])
     updateTextInput(session, "pbc_client", value = row$client_pbc_name[[1]])
     updateTextInput(session, "pbc_reviewed", value = row$reviewed_name[[1]])
+    updateTextAreaInput(
+      session, "pbc_spec",
+      value = if ("pbc_spec" %in% names(row)) normalize_pbc_spec(row$pbc_spec[[1]]) else ""
+    )
     updateSelectInput(session, "pbc_kind",
                       selected = normalize_pbc_kind(row$pbc_kind[[1]]))
     fmt <- normalize_pbc_file_format(row$pbc_file_format[[1]])

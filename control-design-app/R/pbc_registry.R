@@ -1,6 +1,7 @@
 # IUC / PBC naming registry
 # client_pbc_name = 客戶取得之原始 PBC 名稱
 # reviewed_name   = 檢視後標準化命名（控制設計／現況撰寫時優先套用）
+# pbc_spec        = PBC 規格說明（選填；取得／檢附要求）
 # pbc_kind        = 證據類型特別標示（螢幕截圖／EMAIL／系統表單／政策制度）
 # pbc_file_format = 原始取得文件格式（.jpg／.png／.pptx 等）
 
@@ -58,6 +59,10 @@ normalize_pbc_file_format <- function(x) {
   v
 }
 
+normalize_pbc_spec <- function(x) {
+  trimws(as.character(x %||% ""))
+}
+
 # 檢視後命名加上【類型】前綴，供 IUC／PBC 對照特別標示
 format_pbc_reviewed_label <- function(reviewed_name, pbc_kind = "") {
   reviewed <- trimws(as.character(reviewed_name %||% ""))
@@ -72,6 +77,7 @@ empty_pbc_registry <- function() {
     pbc_id = character(),
     client_pbc_name = character(),
     reviewed_name = character(),
+    pbc_spec = character(),
     pbc_kind = character(),
     pbc_file_format = character(),
     iuc_or_system = character(),
@@ -85,6 +91,7 @@ empty_pbc_registry <- function() {
 
 upsert_pbc <- function(registry, row) {
   stopifnot(is.data.frame(registry))
+  registry <- normalize_pbc_df(registry)
   row <- as.list(row)
   id <- trimws(as.character(row$pbc_id %||% ""))
   client <- trimws(as.character(row$client_pbc_name %||% ""))
@@ -95,6 +102,7 @@ upsert_pbc <- function(registry, row) {
   if (!nzchar(reviewed)) reviewed <- client
   kind <- normalize_pbc_kind(row$pbc_kind)
   file_fmt <- normalize_pbc_file_format(row$pbc_file_format)
+  spec <- normalize_pbc_spec(row$pbc_spec)
   display <- format_pbc_reviewed_label(reviewed, kind)
 
   # Match existing by id, else by same client_pbc_name (reuse / update mapping)
@@ -113,6 +121,7 @@ upsert_pbc <- function(registry, row) {
     pbc_id = id,
     client_pbc_name = client,
     reviewed_name = reviewed,
+    pbc_spec = spec,
     pbc_kind = kind,
     pbc_file_format = file_fmt,
     iuc_or_system = trimws(as.character(row$iuc_or_system %||% display)),
@@ -390,17 +399,24 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
   names(raw) <- tolower(gsub("[\\s　]+", "_", names(raw)))
   alias <- list(
     pbc_id = c("pbc_id", "id", "編號"),
-    client_pbc_name = c("client_pbc_name", "client_name", "pbc_name", "客戶原名", "原名", "pbc"),
+    client_pbc_name = c(
+      "client_pbc_name", "client_name", "pbc_name", "客戶原名", "原名", "pbc",
+      "文件／檔案名稱", "文件_檔案名稱", "文件名稱", "檔案名稱"
+    ),
     reviewed_name = c("reviewed_name", "new_name", "standard_name", "檢視後命名", "新命名", "iuc"),
     pbc_kind = c("pbc_kind", "kind", "證據類型", "pbc_type", "類型"),
     pbc_file_format = c(
       "pbc_file_format", "file_format", "format", "ext", "extension",
       "原始取得文件格式", "文件格式", "副檔名"
     ),
+    pbc_spec = c(
+      "pbc_spec", "spec", "specification", "規格說明", "pbc規格說明",
+      "pbc_規格說明", "規格", "取得要求", "備註"
+    ),
     iuc_or_system = c("iuc_or_system", "iuc", "system"),
     cycle = c("cycle", "循環"),
     source = c("source", "來源"),
-    notes = c("notes", "備註", "note")
+    notes = c("notes", "note", "其他備註")
   )
   pick <- function(keys) {
     for (k in keys) if (k %in% names(raw)) return(raw[[k]])
@@ -411,6 +427,7 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
       pbc_id = pick(alias$pbc_id)[i],
       client_pbc_name = pick(alias$client_pbc_name)[i],
       reviewed_name = pick(alias$reviewed_name)[i],
+      pbc_spec = pick(alias$pbc_spec)[i],
       pbc_kind = pick(alias$pbc_kind)[i],
       pbc_file_format = pick(alias$pbc_file_format)[i],
       iuc_or_system = pick(alias$iuc_or_system)[i],

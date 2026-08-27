@@ -568,6 +568,22 @@ reg_fmt <- upsert_pbc(empty_pbc_registry(), list(
 check(identical(reg_fmt$pbc_file_format[1], ".png"), "PBC 文件格式正規化為小寫副檔名")
 check(identical(normalize_pbc_file_format(".PPTX"), ".pptx"), "PBC 文件格式大小寫正規化")
 check("pbc_file_format" %in% names(empty_pbc_registry()), "PBC registry 含文件格式欄")
+check("pbc_spec" %in% names(empty_pbc_registry()), "PBC registry 含規格說明欄")
+reg_spec <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "系統清單", reviewed_name = "系統清單",
+  pbc_spec = "1. 含所有系統\n2. 檢附盤點表"
+))
+check(identical(reg_spec$pbc_spec[1], "1. 含所有系統\n2. 檢附盤點表"),
+      "PBC 規格說明可寫入 registry")
+seed_pbc <- file.path(root, "data", "pbc_registry.csv")
+if (file.exists(seed_pbc)) {
+  seeded <- load_pbc_registry(seed_pbc)
+  check(nrow(seeded) >= 90, sprintf("資訊循環 PBC 種子至少 90 筆（實際 %d）", nrow(seeded)))
+  check(any(nzchar(seeded$pbc_spec)), "資訊循環 PBC 種子含規格說明")
+  check(any(seeded$cycle == "電腦化資訊系統循環"), "資訊循環 PBC 種子標示循環")
+} else {
+  message("SKIP: data/pbc_registry.csv 尚未產出")
+}
 reg3 <- upsert_pbc(reg2, list(
   client_pbc_name = "policy.pdf", reviewed_name = "資訊安全政策", pbc_kind = "政策制度"))
 check(length(pbc_non_policy_choices(reg3)) == 2L, "IUC 選單排除政策制度 PBC")
@@ -582,6 +598,11 @@ check(grepl('selectizeInput\\(\\s*"pbc_file_format"', app_src_pbc, perl = TRUE),
       "PBC 原始取得文件格式輸入存在")
 check(grepl("原始取得文件格式", app_src_pbc, fixed = TRUE),
       "PBC 原始取得文件格式標籤存在")
+check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
+        grepl("PBC規格說明", app_src_pbc, fixed = TRUE),
+      "PBC 規格說明輸入位於整理表單")
+check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
+      "PBC 規格說明在證據類型／文件格式上方")
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

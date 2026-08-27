@@ -626,7 +626,7 @@ ui <- page_navbar(
             "檢視／下載已定稿 RCM 列與缺漏表。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
-            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
+            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／傳票／政策制度。"),
         div(class = "home-tab-card",
             strong("範本庫"),
             "可跳過套用；寫入／直接編輯時才需高權登入。"),
@@ -3478,6 +3478,7 @@ server <- function(input, output, session) {
                  "螢幕截圖" = "#E8EEF8",
                  "EMAIL" = "#F4F9E8",
                  "系統表單" = "#EAF4D4",
+                 "傳票" = "#F8EDE8",
                  "政策制度" = "#F0F0F0",
                  "#FFFFFF")
         ),

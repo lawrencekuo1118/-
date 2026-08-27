@@ -561,6 +561,10 @@ reg2 <- upsert_pbc(reg, list(
 check(identical(apply_pbc_to_iuc(reg2, reg2$pbc_id[2]), "【EMAIL】核准信"), "PBC 證據類型標示套用")
 check(identical(format_pbc_reviewed_label("制度手冊", "政策制度"), "【政策制度】制度手冊"),
       "PBC 格式化標示")
+check("傳票" %in% PBC_KIND_VALUES, "PBC 證據類型含傳票")
+check(identical(format_pbc_reviewed_label("會計傳票", "傳票"), "【傳票】會計傳票"),
+      "PBC 傳票類型標示套用")
+check(identical(normalize_pbc_kind("傳票"), "傳票"), "PBC 傳票類型正規化")
 reg_fmt <- upsert_pbc(empty_pbc_registry(), list(
   client_pbc_name = "shot.png", reviewed_name = "權限畫面",
   pbc_kind = "螢幕截圖", pbc_file_format = "PNG"

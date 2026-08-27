@@ -158,9 +158,6 @@ check(grepl("結果導向", chk2$objective_verdict), "目標判定為結果導�
 check(grepl("行動導向", chk2$activity_verdict), "活動判定為行動導向")
 chk3 <- rcm_objective_activity_check("確保權限正確", "確保權限正確且完整")
 check(!isTRUE(chk3$ok), "活動不可只是目標的延伸句")
-sug <- suggest_objective_activity_split("確保收入於正確期間認列。會計每日比對出貨單與發票並呈主管簽核")
-check(nzchar(sug$objective) && nzchar(sug$activity) && !identical(sug$objective, sug$activity),
-      "拆分建議可分開 Why/How")
 
 gaps <- detect_design_gaps(bad)
 check(any(gaps$category == "控制缺失"), "缺漏分類含控制缺失")

@@ -603,6 +603,21 @@ check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
       "PBC 規格說明輸入位於整理表單")
 check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
       "PBC 規格說明在證據類型／文件格式上方")
+check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&
+        grepl("pbc-name-map-arrow", app_src_pbc, fixed = TRUE) &&
+        grepl("客戶原始取得PBC名稱", app_src_pbc, fixed = TRUE) &&
+        grepl("檢視後新命名", app_src_pbc, fixed = TRUE),
+      "PBC 原名與檢視後命名 1:1 並排含右箭頭")
+check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE),
+      "PBC 規格說明在名稱並排列正下方")
+pbc_panel <- sub('(?s).*nav_panel\\(\\s*"PBC資料庫"', 'nav_panel("PBC資料庫"', app_src_pbc, perl = TRUE)
+pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE)
+check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
+        grepl("PBC 清單預覽", pbc_panel, fixed = TRUE) &&
+        grepl('card_header\\(\\s*"PBC 資料庫"', pbc_panel) &&
+        regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]] <
+          regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]],
+      "PBC 預覽列在設定畫面正下方（非左右雙欄）")
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

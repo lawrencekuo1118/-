@@ -357,6 +357,37 @@ ui <- page_navbar(
         .related-law-row { grid-template-columns: 1fr; }
       }
 
+      /* PBC：客戶原名 → 檢視後新命名（1:1，中間右箭頭） */
+      .pbc-name-map-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        gap: 0.35rem 0.75rem;
+        align-items: end;
+        margin-bottom: 0.5rem;
+      }
+      .pbc-name-map-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      .pbc-name-map-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-bottom: 0.45rem;
+        font-size: 1.35rem;
+        line-height: 1;
+        color: var(--brand-blue, #005baa);
+        font-weight: 700;
+        user-select: none;
+      }
+      @media (max-width: 768px) {
+        .pbc-name-map-row {
+          grid-template-columns: 1fr;
+          gap: 0.35rem;
+        }
+        .pbc-name-map-arrow {
+          padding: 0.15rem 0;
+          transform: rotate(90deg);
+        }
+      }
+
       /* PBC：證據類型｜原始取得文件格式 同列並排 */
       .pbc-kind-format-row {
         display: grid;
@@ -1071,54 +1102,65 @@ ui <- page_navbar(
   ),
   nav_panel(
     "PBC資料庫",
-    layout_columns(
-      col_widths = c(4, 8),
-      card(
-        card_header("PBC 資料庫"),
-        p(class = "small text-muted mb-2",
-          "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
-        textInput("pbc_client", NULL, placeholder = "客戶取得原名"),
-        textInput("pbc_reviewed", NULL, placeholder = "檢視後新命名"),
-        textAreaInput(
-          "pbc_spec", lab_opt("PBC規格說明"), rows = 3, width = "100%",
-          placeholder = "選填：取得／檢附要求與規格說明"
+    card(
+      card_header("PBC 資料庫"),
+      p(class = "small text-muted mb-2",
+        "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
+      tags$div(
+        class = "pbc-name-map-row",
+        textInput(
+          "pbc_client", "客戶原始取得PBC名稱", value = "",
+          placeholder = "客戶取得原名", width = "100%"
         ),
-        tags$div(
-          class = "pbc-kind-format-row",
-          selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
-          selectizeInput(
-            "pbc_file_format", "原始取得文件格式",
-            choices = PBC_FILE_FORMAT_CHOICES,
-            options = list(
-              placeholder = "例如 .jpg／.png／.pptx",
-              create = TRUE,
-              createOnBlur = TRUE
-            )
-          )
-        ),
-        textInput("pbc_id", NULL, placeholder = "ID（可空）"),
-        uiOutput("pbc_cycle_readonly"),
-        textInput("pbc_notes", NULL, placeholder = "備註"),
-        div(
-          class = "d-flex gap-1 flex-wrap",
-          actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
-          actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
-          actionButton("pbc_apply_to_design", "套用至控制設計",
-                       class = "btn-sm btn-outline-success")
-        ),
-        fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
-        downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
-        tags$hr(),
-        tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
-        p(class = "small text-muted mb-2",
-          "將命名對照套用至「風險控制點設計」：非政策制度 → IUC；政策制度 → 相關政策與制度。"),
-        selectizeInput(
-          "pbc_apply", NULL, choices = NULL, multiple = TRUE,
-          options = list(placeholder = "原名→新名")
-        ),
-        checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
+        tags$div(class = "pbc-name-map-arrow", `aria-hidden` = "true", "→"),
+        textInput(
+          "pbc_reviewed", "檢視後新命名", value = "",
+          placeholder = "檢視後新命名", width = "100%"
+        )
       ),
-      card(DTOutput("pbc_table"), verbatimTextOutput("pbc_all_status"))
+      textAreaInput(
+        "pbc_spec", lab_opt("PBC規格說明"), rows = 3, width = "100%",
+        placeholder = "選填：取得／檢附要求與規格說明"
+      ),
+      tags$div(
+        class = "pbc-kind-format-row",
+        selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
+        selectizeInput(
+          "pbc_file_format", "原始取得文件格式",
+          choices = PBC_FILE_FORMAT_CHOICES,
+          options = list(
+            placeholder = "例如 .jpg／.png／.pptx",
+            create = TRUE,
+            createOnBlur = TRUE
+          )
+        )
+      ),
+      textInput("pbc_id", NULL, placeholder = "ID（可空）"),
+      uiOutput("pbc_cycle_readonly"),
+      textInput("pbc_notes", NULL, placeholder = "備註"),
+      div(
+        class = "d-flex gap-1 flex-wrap",
+        actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
+        actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
+        actionButton("pbc_apply_to_design", "套用至控制設計",
+                     class = "btn-sm btn-outline-success")
+      ),
+      fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV", accept = ".csv"),
+      downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
+      tags$hr(),
+      tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
+      p(class = "small text-muted mb-2",
+        "將命名對照套用至「風險控制點設計」：非政策制度 → IUC；政策制度 → 相關政策與制度。"),
+      selectizeInput(
+        "pbc_apply", NULL, choices = NULL, multiple = TRUE,
+        options = list(placeholder = "原名→新名")
+      ),
+      checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
+    ),
+    card(
+      card_header("PBC 清單預覽"),
+      DTOutput("pbc_table"),
+      verbatimTextOutput("pbc_all_status")
     )
   ),
   nav_panel(

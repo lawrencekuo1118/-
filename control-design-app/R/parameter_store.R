@@ -17,11 +17,11 @@ app_preset_parameters <- function() {
   list(
     "循環" = unname(if (exists("CYCLES_NINE_CHOICES")) CYCLES_NINE_CHOICES else CYCLES_NINE),
     "風險類別" = if (exists("RISK_CATEGORY_CHOICES")) RISK_CATEGORY_CHOICES else c("報導面", "營運面", "遵循面"),
-    "控制類型" = if (exists("CONTROL_TYPE_MANUAL_AUTO")) CONTROL_TYPE_MANUAL_AUTO else character(),
-    "控制活動類型" = if (exists("CONTROL_ACTIVITY_TYPE_PD")) CONTROL_ACTIVITY_TYPE_PD else character(),
+    "控制性質" = if (exists("CONTROL_TYPE_MANUAL_AUTO")) CONTROL_TYPE_MANUAL_AUTO else character(),
+    "控制方式" = if (exists("CONTROL_ACTIVITY_TYPE_PD")) CONTROL_ACTIVITY_TYPE_PD else character(),
     "控制頻率" = if (exists("FREQUENCY_CHOICES")) FREQUENCY_CHOICES else character(),
-    "相關法令" = unname(if (exists("RELATED_LAW_CHOICES")) RELATED_LAW_CHOICES else character()),
-    "聲明" = {
+    "相關法規" = unname(if (exists("RELATED_LAW_CHOICES")) RELATED_LAW_CHOICES else character()),
+    "控制聲明" = {
       rep <- if (exists("ASSERTION_CHOICES_REPORTING")) ASSERTION_CHOICES_REPORTING else character()
       ops <- if (exists("ASSERTION_CHOICES_OPERATIONS")) ASSERTION_CHOICES_OPERATIONS else character()
       unique(c(rep, ops))
@@ -77,22 +77,24 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("子作業名稱", c$sub_process, source)
     add_vals("風險因素", c$risk_factor %||% c$risk_name, source)
     add_vals("風險描述", c$risk_description, source)
+    add_vals("風險面向", c$risk_principle, source)
+    add_vals("風險範疇", c$risk_area, source)
     add_vals("風險類別", c$risk_category, source)
     add_vals("會計科目", c$significant_account, source)
     add_vals("控制目標", c$control_objective, source)
     add_vals("控制活動", c$control_activity, source)
-    add_vals("控制類型", c$nature %||% c$control_type, source)
-    add_vals("控制活動類型", c$approach %||% c$control_activity_type, source)
+    add_vals("控制性質", c$nature %||% c$control_type, source)
+    add_vals("控制方式", c$approach %||% c$control_activity_type, source)
     add_vals("控制頻率", c$frequency, source)
-    add_vals("流程負責單位", c$responsible_unit, source)
-    add_vals("IUC", ctrl_iuc_value(c), source)
+    add_vals("控制點負責單位", c$responsible_unit, source)
+    add_vals(CONTROL_IUC_DOCUMENT_LABEL, ctrl_iuc_value(c), source)
     add_vals("相關系統", ctrl_related_system_value(c), source)
-    add_vals("相關法令", c$related_law, source)
-    add_vals("相關政策或程序", c$related_policy, source)
+    add_vals("相關法規", c$related_law, source)
+    add_vals("相關政策與制度", c$related_policy, source)
+    add_vals("相關文件", c$related_documents, source)
     add_vals(CONTROL_EVIDENCE_DOCUMENT_LABEL, c$related_document %||% c$outputs, source)
-    add_vals("相關文件", c$related_document %||% c$outputs, source)
     # 不收集公司現況／有效性／改善建議／編號等非設計欄
-    add_vals("聲明", c$assertions, source)
+    add_vals("控制聲明", c$assertions, source)
     add_vals("Form 4120SR Type", c$type, source)
     add_vals("RoMM 分類", c$romm_classification, source)
   }

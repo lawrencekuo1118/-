@@ -13,9 +13,16 @@ BRAND_GRAY <- "#F5F5F5"
 # Do not use Mainland China / Hong Kong / Macau equivalents of the above.
 # Keep English proper nouns as-is: SOX, RCM, CSA, PBC, IUC, Form 4120SR, RoMM, Assertions, Inputs/Steps/Outputs, Type.
 
-# 設計表單欄位（自 PBC 選取之控制佐證）；RCM 鯨鏈匯出欄名仍保留「相關文件」
-CONTROL_EVIDENCE_DOCUMENT_LABEL <- "控制佐證文件"
+# 設計表單／RCM 範本欄名（對齊 Internal Control Lab「範本_RCM」）
+CONTROL_EVIDENCE_DOCUMENT_LABEL <- "相關文件-控制佐證文件"
+CONTROL_IUC_DOCUMENT_LABEL <- "相關文件-控制用文件"
 RCM_COLUMN_RELATED_DOCUMENT <- "相關文件"
+RCM_COLUMN_CONTROL_ASSERTION <- "控制聲明"
+RCM_COLUMN_CONTROL_NATURE <- "控制性質"
+RCM_COLUMN_CONTROL_APPROACH <- "控制方式"
+RCM_COLUMN_CONTROL_OWNER <- "控制點負責單位"
+RCM_COLUMN_RELATED_REGULATION <- "相關法規"
+RCM_COLUMN_RELATED_POLICY <- "相關政策與制度"
 
 CYCLES_NINE <- c(
   "銷售及收款循環",

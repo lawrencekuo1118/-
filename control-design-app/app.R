@@ -1398,15 +1398,30 @@ server <- function(input, output, session) {
 
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
-  # 若尚無 PBC 庫，先以資訊循環種子清單初始化
+  # 若尚無 PBC 庫，先以資訊循環／財務報導循環種子清單初始化
   if (!file.exists(pbc_path_csv) && !file.exists(pbc_path_json)) {
-    seed_script <- file.path(root, "data", "seed_it_cycle_pbc.R")
-    if (file.exists(seed_script)) {
-      tryCatch(sys.source(seed_script, envir = new.env(parent = globalenv())),
-               error = function(e) NULL)
+    for (seed_nm in c("seed_it_cycle_pbc.R", "seed_fr_cycle_pbc.R")) {
+      seed_script <- file.path(root, "data", seed_nm)
+      if (file.exists(seed_script)) {
+        tryCatch(sys.source(seed_script, envir = new.env(parent = globalenv())),
+                 error = function(e) NULL)
+      }
     }
   }
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
+  # 既有庫若缺財務報導循環種子，補齊一次
+  reg0 <- pbc_reg()
+  has_fr <- is.data.frame(reg0) && nrow(reg0) > 0 &&
+    any(reg0$cycle == "財務報導循環")
+  if (!has_fr) {
+    seed_fr <- file.path(root, "data", "seed_fr_cycle_pbc.R")
+    if (file.exists(seed_fr)) {
+      tryCatch({
+        sys.source(seed_fr, envir = new.env(parent = globalenv()))
+        pbc_reg(load_pbc_registry(pbc_path_csv, pbc_path_json))
+      }, error = function(e) NULL)
+    }
+  }
   lib_path_json <- file.path(data_dir, "control_library.json")
   lib_path_csv <- file.path(data_dir, "control_library.csv")
   param_path_json <- file.path(data_dir, "parameter_store.json")

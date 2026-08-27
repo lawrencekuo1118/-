@@ -161,13 +161,14 @@ normalize_related_pbc_ids <- function(x) {
 }
 
 # 從規格說明文字解析可勾稽之 PBC（#N／PBC#N／PBC-…／「名稱」）
-parse_pbc_cross_refs_from_text <- function(text, registry) {
+parse_pbc_cross_refs_from_text <- function(text, registry, prefer_cycle = "") {
   raw <- as.character(text %||% "")
   if (!nzchar(trimws(raw)) || !is.data.frame(registry) || !nrow(registry)) {
     return(character())
   }
   known <- unique(trimws(as.character(registry$pbc_id)))
   hits <- character()
+  prefer_cycle <- trimws(as.character(prefer_cycle %||% ""))
 
   id_pat <- gregexpr("PBC-[A-Za-z0-9]+-\\d{2,4}|PBC-\\d{2,4}", raw, perl = TRUE, ignore.case = TRUE)
   if (id_pat[[1]][1] > 0) {
@@ -183,9 +184,22 @@ parse_pbc_cross_refs_from_text <- function(text, registry) {
   if (hash_pat[[1]][1] > 0) {
     nums <- unique(as.integer(gsub("\\D", "", regmatches(raw, hash_pat)[[1]])))
     nums <- nums[is.finite(nums) & nums >= 1L & nums <= 999L]
+    id_cycle <- if ("cycle" %in% names(registry)) {
+      stats::setNames(trimws(as.character(registry$cycle)), registry$pbc_id)
+    } else {
+      character()
+    }
     for (n in nums) {
-      cand <- c(sprintf("PBC-EC-%03d", n), sprintf("PBC-%03d", n))
-      hit <- cand[cand %in% known]
+      suffix <- sprintf("-%03d", n)
+      hit <- known[grepl(paste0(suffix, "$"), known, perl = TRUE)]
+      if (nzchar(prefer_cycle) && length(hit)) {
+        same <- hit[unname(id_cycle[hit]) == prefer_cycle]
+        if (length(same)) hit <- same
+      }
+      if (length(hit) > 1L) {
+        pref <- hit[grepl("^PBC-[A-Za-z]+-\\d{3}$", hit, perl = TRUE)]
+        if (length(pref)) hit <- pref
+      }
       if (length(hit)) hits <- c(hits, hit[[1]])
     }
   }
@@ -201,6 +215,10 @@ parse_pbc_cross_refs_from_text <- function(text, registry) {
           grepl(q, registry$client_pbc_name, fixed = TRUE) |
           grepl(q, registry$reviewed_name, fixed = TRUE)
       )
+      if (nzchar(prefer_cycle) && length(idx) && "cycle" %in% names(registry)) {
+        same <- idx[registry$cycle[idx] == prefer_cycle]
+        if (length(same)) idx <- same
+      }
       if (length(idx)) hits <- c(hits, registry$pbc_id[idx[[1]]])
     }
   }
@@ -287,7 +305,10 @@ enrich_related_pbc_from_specs <- function(registry) {
   registry <- normalize_pbc_df(registry)
   if (!nrow(registry)) return(registry)
   for (i in seq_len(nrow(registry))) {
-    auto <- parse_pbc_cross_refs_from_text(registry$pbc_spec[i], registry)
+    auto <- parse_pbc_cross_refs_from_text(
+      registry$pbc_spec[i], registry,
+      prefer_cycle = registry$cycle[i]
+    )
     auto <- setdiff(auto, registry$pbc_id[i])
     cur <- parse_pbc_id_values(registry$related_pbc_ids[i])
     registry$related_pbc_ids[i] <- normalize_related_pbc_ids(c(cur, auto))

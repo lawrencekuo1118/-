@@ -585,6 +585,13 @@ if (file.exists(seed_pbc)) {
   check(nrow(seeded) >= 90, sprintf("資訊循環 PBC 種子至少 90 筆（實際 %d）", nrow(seeded)))
   check(any(nzchar(seeded$pbc_spec)), "資訊循環 PBC 種子含規格說明")
   check(any(seeded$cycle == "電腦化資訊系統循環"), "資訊循環 PBC 種子標示循環")
+  check(sum(seeded$cycle == "財務報導循環") >= 60,
+        sprintf("財務報導循環 PBC 種子至少 60 筆（實際 %d）",
+                sum(seeded$cycle == "財務報導循環")))
+  check(any(seeded$cycle == "財務報導循環" & grepl("^PBC-CA-", seeded$pbc_id)),
+        "財務報導循環 PBC 使用 CA 編號前綴")
+  check(any(seeded$cycle == "財務報導循環" & nzchar(seeded$pbc_spec)),
+        "財務報導循環 PBC 種子含規格說明")
 } else {
   message("SKIP: data/pbc_registry.csv 尚未產出")
 }
@@ -642,6 +649,22 @@ wt <- pbc_walkthrough(wt_reg, "PBC-EC-001")
 check("PBC-EC-002" %in% wt$inbound, "Walkthrough 可顯示入鏈勾稽")
 wt2 <- pbc_walkthrough(wt_reg, "PBC-EC-002")
 check("PBC-EC-001" %in% wt2$outbound, "Walkthrough 可顯示出鏈勾稽")
+ca_reg <- empty_pbc_registry()
+ca_reg <- upsert_pbc(ca_reg, list(
+  pbc_id = "PBC-EC-013", client_pbc_name = "IT-13", reviewed_name = "IT-13",
+  cycle = "電腦化資訊系統循環", pbc_spec = ""
+))
+ca_reg <- upsert_pbc(ca_reg, list(
+  pbc_id = "PBC-CA-013", client_pbc_name = "匯率截圖", reviewed_name = "匯率截圖",
+  cycle = "財務報導循環", pbc_spec = ""
+))
+ca_reg <- upsert_pbc(ca_reg, list(
+  pbc_id = "PBC-CA-014", client_pbc_name = "匯率傳票", reviewed_name = "匯率傳票",
+  cycle = "財務報導循環", pbc_spec = "與#13「匯率截圖」相關。"
+))
+ca_reg <- enrich_related_pbc_from_specs(ca_reg)
+check(identical(parse_pbc_id_values(ca_reg$related_pbc_ids[3]), "PBC-CA-013"),
+      "財務報導 #N 勾稽優先同循環 CA 編號")
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

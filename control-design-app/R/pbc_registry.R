@@ -2,7 +2,7 @@
 # client_pbc_name = 客戶取得之原始 PBC 名稱
 # reviewed_name   = 檢視後標準化命名（控制設計／現況撰寫時優先套用）
 # pbc_spec        = PBC 規格說明（選填；取得／檢附要求）
-# pbc_kind        = 證據類型特別標示（螢幕截圖／EMAIL／系統表單／傳票／政策制度）
+# pbc_kind        = 證據類型特別標示（螢幕截圖／EMAIL／系統表單／傳票／人工整理／政策制度）
 # pbc_file_format = 樣本檔案格式（.jpg／.png／.pptx 等）
 
 PBC_KIND_CHOICES <- c(
@@ -11,6 +11,7 @@ PBC_KIND_CHOICES <- c(
   "EMAIL" = "EMAIL",
   "系統表單" = "系統表單",
   "傳票" = "傳票",
+  "人工整理" = "人工整理",
   "政策制度" = "政策制度"
 )
 

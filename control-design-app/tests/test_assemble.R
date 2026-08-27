@@ -565,6 +565,10 @@ check("傳票" %in% PBC_KIND_VALUES, "PBC 證據類型含傳票")
 check(identical(format_pbc_reviewed_label("會計傳票", "傳票"), "【傳票】會計傳票"),
       "PBC 傳票類型標示套用")
 check(identical(normalize_pbc_kind("傳票"), "傳票"), "PBC 傳票類型正規化")
+check("人工整理" %in% PBC_KIND_VALUES, "PBC 證據類型含人工整理")
+check(identical(format_pbc_reviewed_label("調節底稿", "人工整理"), "【人工整理】調節底稿"),
+      "PBC 人工整理類型標示套用")
+check(identical(normalize_pbc_kind("人工整理"), "人工整理"), "PBC 人工整理類型正規化")
 reg_fmt <- upsert_pbc(empty_pbc_registry(), list(
   client_pbc_name = "shot.png", reviewed_name = "權限畫面",
   pbc_kind = "螢幕截圖", pbc_file_format = "PNG"

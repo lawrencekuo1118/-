@@ -1117,6 +1117,10 @@ check(isTRUE(design_required_check(modifyList(d1, list(
 check(grepl('selectizeInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素複選選單")
 check(grepl('multiple\\s*=\\s*TRUE', app_src) && grepl('"risk_factor"', app_src),
       "風險因素為複選 selectize")
+check(grepl("isolate\\(refresh_risk_factor_choices", app_src) &&
+        grepl("isolate\\(input\\$risk_factor", app_src) &&
+        grepl("risk_factor_choices_cache", app_src),
+      "風險因素多選不因 observe 誤追蹤而反覆重建選單")
 check(identical(
   format_risk_factor_text(c("密碼管理 / 制度與程序", "密碼管理")),
   "密碼管理"

@@ -57,7 +57,7 @@ base <- list(
   control_objective = "確保系統使用者權限與現職一致",
   control_activity = "每季覆核權限清冊並完成異動", frequency = "每季",
   responsible_unit = "資訊部", nature = "人工",
-  approach = "偵測性控制", type = TYPE_CHOICES[[6]],
+  approach = "偵測性", type = TYPE_CHOICES[[6]],
   inputs = "在職名單、權限清冊", review_steps = "產製清冊\n主管覆核\n完成異動",
   outputs = "簽回清冊、異動 log", investigation_threshold = "任何不當權限均須異動",
   dependent_controls = "", control_id = "", iuc_or_system = "使用者權限清冊",
@@ -71,19 +71,18 @@ check(length(split_controls_by_iuc(list(d1, d2))) == 2L, "IUC 分拆")
 
 # RCM row = designed control; objective ≠ activity (Jinglian headers)
 rcm <- controls_to_rcm(list(d1))
-check(all(RCM_HEADERS %in% names(rcm)), "RCM 含鯨鏈標準標題列")
-check(identical(as.character(rcm[["IUC"]]), "使用者權限清冊"), "RCM 含 IUC 欄")
+check(all(RCM_HEADERS %in% names(rcm)), "RCM 含範本標準標題列")
+check(identical(as.character(rcm[["相關文件-控制用文件"]]), "使用者權限清冊"), "RCM 含 IUC（控制用文件）欄")
 empty_disp <- empty_rcm_display_df()
 check(nrow(empty_disp) == 0L && all(RCM_HEADERS %in% names(empty_disp)) &&
         "儲存時間" %in% names(empty_disp),
       "空 RCM 顯示表仍含標題列（含儲存時間）")
-check(identical(as.character(rcm[["RoMM 分類"]]), ROMM_CLASS_CHOICES[[1]]), "RCM 含 RoMM 分類欄")
-check(identical(as.character(rcm[["聲明"]]), "完整性 (Completeness)"), "RCM 含聲明欄")
+check(!"RoMM 分類" %in% names(rcm), "RCM 範本不含 RoMM 分類欄")
+check(identical(as.character(rcm[["控制聲明"]]), "完整性 (Completeness)"), "RCM 含控制聲明欄")
 check(identical(as.character(rcm[["控制目標"]]), "確保系統使用者權限與現職一致"), "RCM 目標欄獨立")
 check(identical(as.character(rcm[["控制活動"]]), "每季覆核權限清冊並完成異動"), "RCM 活動欄獨立")
 check(!identical(as.character(rcm[["控制目標"]]), as.character(rcm[["控制活動"]])), "目標≠活動")
-check(grepl("^EC-101-", as.character(rcm[["控制編號"]])), "資訊循環控制編號格式 EC-101-##")
-check(identical(as.character(rcm[["控制類型"]]), "人工"), "控制類型＝人工/自動")
+check(identical(as.character(rcm[["控制性質"]]), "人工"), "控制性質＝人工/自動")
 check(!nzchar(normalize_control_type_manual_auto("人工＋自動")), "混合控制類型不允許")
 check(!nzchar(normalize_control_type_manual_auto("人工＋自動化混合")), "混合控制類型不允許")
 check(identical(resolve_control_frequency("自動", "每季"), "持續"), "自動控制頻率＝持續")
@@ -104,9 +103,13 @@ check(!isTRUE(design_required_check(without_pbc_doc(modifyList(d1, list(
 check(isTRUE(design_required_check(modifyList(d1, list(
   nature = "人工", related_system = ""
 )))$ok), "人工控制相關系統仍可空")
-check(identical(as.character(rcm[["控制活動類型"]]), "偵測性控制"), "控制活動類型＝預防/偵測")
+check(identical(as.character(rcm[["控制方式"]]), "偵測性"), "控制方式＝預防/偵測/矯正")
 check(identical(as.character(rcm[["風險類別"]]), "營運面"), "風險類別映射")
-check(grepl("^通過", as.character(rcm[["設計檢核"]])), "設計檢核通過")
+check(!"設計檢核" %in% names(rcm), "RCM 範本不含設計檢核欄")
+check(all(c("風險面向", "風險範疇", "控制聲明", "控制點負責單位", "相關法規",
+            "相關政策與制度", "相關文件-控制佐證文件") %in% names(rcm)),
+      "RCM 含範本核心欄位")
+check(identical(as.character(rcm[["會計科目"]]), "NA"), "非報導面會計科目暫列 NA")
 
 # 風險屬性三擇一
 multi_attr <- modifyList(d1, list(
@@ -134,7 +137,11 @@ check(!isTRUE(tchk$ok), "類型欄對調時防呆失敗")
 
 bad <- modifyList(d1, list(control_activity = d1$control_objective))
 rcm_bad <- controls_to_rcm(list(bad))
-check(grepl("待修", as.character(rcm_bad[["設計檢核"]])), "目標活動相同時設計檢核失敗")
+check(!"設計檢核" %in% names(rcm_bad), "RCM 範本不含設計檢核欄")
+check(!isTRUE(rcm_objective_activity_check(bad$control_objective, bad$control_activity)$ok),
+      "目標活動相同時設計檢核失敗")
+check(!isTRUE(finalize_control_as_rcm_row(bad)$ok),
+      "目標活動相同時不可定稿")
 
 # Extra OA cleanliness cases
 chk1 <- rcm_objective_activity_check(
@@ -178,7 +185,7 @@ req_bad <- design_required_check(modifyList(d1, list(
 )))
 check(!isTRUE(req_bad$ok), "缺頻率／單位／類型／類別＝必填未齊")
 check(any(grepl("控制頻率", req_bad$missing)), "必填清單含控制頻率")
-check(any(grepl("流程負責單位", req_bad$missing)), "必填清單含負責單位")
+check(any(grepl("控制點負責單位", req_bad$missing)), "必填清單含負責單位")
 check(any(grepl("風險類別", req_bad$missing)), "必填清單含風險類別")
 req_grouped <- design_required_check(modifyList(d1, list(
   sub_process_id = "", sub_process = "",
@@ -263,23 +270,23 @@ comp_bad <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "", significant_account = "",
   assertions = ""
 ))))
-check(!isTRUE(comp_bad$ok) && any(grepl("相關法令", comp_bad$missing)), "遵循面缺法令不可過")
+check(!isTRUE(comp_bad$ok) && any(grepl("相關法規", comp_bad$missing)), "遵循面缺法規不可過")
 comp_as_bad <- design_required_check(without_pbc_doc(modifyList(d1, list(
   risk_category = "遵循面", related_law = "證券交易法", significant_account = "",
   assertions = "完整性 (Completeness)"
 ))))
-check(!isTRUE(comp_as_bad$ok) && any(grepl("聲明", comp_as_bad$missing)),
+check(!isTRUE(comp_as_bad$ok) && any(grepl("控制聲明|聲明", comp_as_bad$missing)),
       "遵循面填聲明應擋下")
 comp_lock <- design_required_check(modifyList(d1, list(
   risk_category = "營運面", related_law = "SOX", significant_account = ""
 )))
-check(!isTRUE(comp_lock$ok) && any(grepl("法令", comp_lock$missing)), "營運面填法令應擋下")
+check(!isTRUE(comp_lock$ok) && any(grepl("法規", comp_lock$missing)), "營運面填法令應擋下")
 check(length(RELATED_LAW_CHOICES_TW) >= 15 && length(RELATED_LAW_CHOICES_US) >= 10,
       sprintf("相關法令預設含台美（台%d／美%d）", length(RELATED_LAW_CHOICES_TW), length(RELATED_LAW_CHOICES_US)))
 check(any(grepl("證券交易法", RELATED_LAW_CHOICES_TW)) && any(grepl("Sarbanes-Oxley", RELATED_LAW_CHOICES_US)),
       "預設含證交法與 SOX")
-pcat <- parameter_catalog(list(), list(), list(), presets = list("相關法令" = unname(RELATED_LAW_CHOICES)))
-check(nrow(pcat) >= 20 && any(pcat$參數 == "相關法令"), "參數庫可查詢預設法令")
+pcat <- parameter_catalog(list(), list(), list(), presets = list("相關法規" = unname(RELATED_LAW_CHOICES)))
+check(nrow(pcat) >= 20 && any(pcat$參數 == "相關法規"), "參數庫可查詢預設法規")
 seeded <- seed_control_library(TRUE)
 pcat2 <- parameter_catalog(seeded, list(), list())
 check(any(pcat2$參數 == "子作業名稱") && any(nzchar(pcat2$選項值[pcat2$參數 == "子作業名稱"])),
@@ -290,7 +297,7 @@ check(any(pcat2$參數 == "控制目標"), "參數庫含控制目標選項")
 pcat_iuc <- parameter_catalog(list(), list(modifyList(d1, list(
   iuc = "使用者權限清冊", iuc_or_system = "使用者權限清冊", related_system = "Active Directory"
 ))), list())
-check(any(pcat_iuc$參數 == "IUC" & grepl("使用者權限清冊", pcat_iuc$選項值)), "參數庫 IUC 獨立收錄")
+check(any(pcat_iuc$參數 == CONTROL_IUC_DOCUMENT_LABEL & grepl("使用者權限清冊", pcat_iuc$選項值)), "參數庫控制用文件（IUC）獨立收錄")
 check(any(pcat_iuc$參數 == "相關系統" & grepl("Active Directory", pcat_iuc$選項值)), "參數庫相關系統獨立收錄")
 check(!any(pcat_iuc$參數 == "相關系統／IUC"), "參數庫不再合併 IUC／相關系統")
 tmp_ps <- tempfile(fileext = ".json")
@@ -312,8 +319,8 @@ check(isTRUE(ready$ready), "完整控制點可視為 RCM 列就緒")
 fin <- finalize_control_as_rcm_row(d1, existing_ids = character(), seq_hint = 1L)
 check(isTRUE(fin$ok), "finalize 成功＝寫入 RCM 一列")
 check(!is.null(fin$rcm_row), "finalize 產出 rcm_row")
-check(identical(fin$control$control_id, as.character(fin$rcm_row[["控制編號"]])),
-      "控制點編號＝RCM 控制編號")
+check(nzchar(fin$control$control_id) && identical(nrow(fin$rcm_row), 1L),
+      "定稿保留控制點編號且產出一列 RCM")
 check(nrow(controls_to_rcm(list(fin$control))) == 1L, "一控制點對應一 RCM 列")
 parity <- assert_design_rcm_parity(list(fin$control, finalize_control_as_rcm_row(
   modifyList(d1, list(control_id = "", iuc_or_system = "另一IUC",
@@ -441,8 +448,8 @@ fin_ok <- finalize_control_as_rcm_row(d1, existing_ids = character())$control
 check(isTRUE(finalize_control_as_rcm_row(modifyList(d1, list(company_status = "")), existing_ids = character())$ok),
       "無公司現況亦可定稿")
 fin_blank <- finalize_control_as_rcm_row(modifyList(d1, list(company_status = "")), existing_ids = character())
-check(!nzchar(trimws(as.character(fin_blank$rcm_row[["控制現況描述"]] %||% ""))),
-      "定稿 RCM 控制現況描述留空")
+check(!"控制現況描述" %in% names(fin_blank$rcm_row),
+      "定稿 RCM 不含控制現況描述欄")
 iv_multi <- controls_to_interview(list(fin_ok, not_ready), finalized_only = TRUE)
 check(all(iv_multi[["控制編號"]] == fin_ok$control_id), "訪談僅取已定稿 RCM 列")
 
@@ -630,7 +637,7 @@ if (file.exists(xlsx)) {
         "JL 批次不含控制現況")
   sample_ctrl <- jl[[1]]$control
   rcm_jl <- control_to_rcm_row(sample_ctrl, 1L)
-  check(all(c("控制目標", "控制活動", "控制類型", "控制活動類型") %in% names(rcm_jl)),
+  check(all(c("控制目標", "控制活動", "控制性質", "控制方式") %in% names(rcm_jl)),
         "JL 列可映射回 RCM 標題")
   check(!identical(as.character(rcm_jl[["控制目標"]]), as.character(rcm_jl[["控制活動"]])) ||
           grepl("待修", as.character(rcm_jl[["設計檢核"]])),
@@ -687,8 +694,9 @@ if (file.exists(pl_batch)) {
 }
 
 # Cascade engine: cycle → sub → risk → objective → activity(single PD) → IUC
-check(identical(normalize_single_activity_type("預防性控制"), "預防性控制"), "單一預防屬性")
-check(identical(normalize_single_activity_type("偵測性 (Detective)"), "偵測性控制"), "單一偵測屬性")
+check(identical(normalize_single_activity_type("預防性控制"), "預防性"), "單一預防屬性")
+check(identical(normalize_single_activity_type("偵測性 (Detective)"), "偵測性"), "單一偵測屬性")
+check(identical(normalize_single_activity_type("矯正性"), "矯正性"), "單一矯正屬性")
 check(!activity_type_ok("預防＋偵測"), "混合屬性不允許")
 check(identical(next_rcm_control_id("EC-101", c("EC-101-01", "EC-101-03")), "EC-101-04"),
       "控制編號自動順編")
@@ -846,7 +854,7 @@ if (length(jl)) {
   six_bad <- six_status_rules_check(list())
   check(!six_bad$ok, "空控制六大未齊")
   six_ok <- six_status_rules_check(list(
-    nature = "人工", approach = "預防性控制", frequency = "持續",
+    nature = "人工", approach = "預防性", frequency = "持續",
     responsible_unit = "資訊部", iuc_or_system = "AD",
     control_activity = "劃分職責"
   ))
@@ -941,12 +949,12 @@ check(grepl('selectizeInput\\(\\s*"iuc"', app_src) &&
         !grepl('textAreaInput\\(\\s*"iuc_or_system"', app_src),
       "IUC 與相關系統分開設定（IUC 為可多選 selectize）")
 check(grepl('textInput\\(\\s*"related_system"\\s*,\\s*lab_opt\\(\\s*"相關系統"', app_src) &&
-        grepl('textInput\\(\\s*"related_policy"\\s*,\\s*lab_opt\\(\\s*"相關政策或程序"', app_src) &&
+        grepl('textInput\\(\\s*"related_policy"\\s*,\\s*lab_opt\\(\\s*"相關政策與制度"', app_src) &&
         grepl("updateTextInput\\(session, \"related_system\", label", app_src) &&
         grepl('related_system_mode_for_ctrl', app_src),
-      "相關系統選填標籤與相關政策或程序同列排版")
+      "相關系統選填標籤與相關政策與制度同列排版")
 check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
-      "控制目標不再與聲明設定並排（改全寬）")
+      "控制目標不再與控制聲明並排（改全寬）")
 # 僅檢查「風險控制點設計」分頁內不再用雙欄排子作業／類型／頻率
 design_panel <- sub('(?s).*nav_panel\\(\\s*"風險控制點設計"', "", app_src, perl = TRUE)
 design_panel <- sub('(?s)nav_panel\\(\\s*"控制點測試設計".*', "", design_panel, perl = TRUE)
@@ -955,7 +963,7 @@ check(!grepl("layout_columns", design_panel, fixed = TRUE) &&
         grepl('textInput\\(\\s*"sub_process_id"[\\s\\S]*width\\s*=\\s*"100%"', app_src, perl = TRUE),
       "風險控制點設計輸入列皆滿版單欄")
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
-      "聲明設定在控制目標上方")
+      "控制聲明在控制目標上方")
 check(grepl('placeholder-shown', app_src) &&
         grepl('selectize-input\\.has-items', app_src) &&
         grepl('--input-placeholder:\\s*#ADB5BD', app_src) &&
@@ -969,7 +977,7 @@ check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
         grepl('"② 風險辨識"', app_src) &&
         grepl('"③ 控制設計"', app_src),
       "風險控制點設計以三階段分頁籤排版")
-check(grepl('"聲明設定"', app_src), "聲明欄位標籤為聲明設定")
+check(grepl('"控制聲明"', app_src), "聲明欄位標籤為控制聲明")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
 check(grepl("empty_rcm_display_df", app_src) &&
@@ -1057,7 +1065,7 @@ check(identical(related_document_mode_for_ctrl(list(nature = "自動", risk_cate
       "自動控制：控制佐證文件鎖定")
 check(identical(related_document_mode_for_ctrl(list(nature = "人工", risk_category = "遵循面")), "locked"),
       "遵循面：控制佐證文件鎖定")
-check(identical(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件"), "控制佐證文件標籤常數")
+check(identical(CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件-控制佐證文件"), "控制佐證文件標籤常數")
 check(!isTRUE(design_required_check(without_pbc_doc(d1))$ok),
       "未選 PBC 文件且無手動輸入時必填檢核失敗")
 check(isTRUE(design_required_check(modifyList(without_pbc_doc(d1), list(
@@ -1204,16 +1212,16 @@ rcm_pollute <- control_to_rcm_row(modifyList(polluted, list(
   design_gap_note = "差異說明",
   effectiveness = "有效", residual_risk = "風險", improvement = "改善"
 )))
-check(!nzchar(trimws(as.character(rcm_pollute[["控制現況描述"]] %||% ""))),
-      "RCM 控制現況描述一律留空")
-check(!nzchar(trimws(as.character(rcm_pollute[["控制設計差異說明"]] %||% ""))),
-      "RCM 控制設計差異說明一律留空")
-check(!nzchar(trimws(as.character(rcm_pollute[["控制有效性評估"]] %||% ""))),
-      "RCM 控制有效性評估一律留空")
-check(!nzchar(trimws(as.character(rcm_pollute[["可能潛在風險"]] %||% ""))),
-      "RCM 可能潛在風險一律留空")
-check(!nzchar(trimws(as.character(rcm_pollute[["建議改善方式"]] %||% ""))),
-      "RCM 建議改善方式一律留空")
+check(!"控制現況描述" %in% names(rcm_pollute),
+      "RCM 範本不含控制現況描述")
+check(!"控制設計差異說明" %in% names(rcm_pollute),
+      "RCM 範本不含控制設計差異說明")
+check(!"控制有效性評估" %in% names(rcm_pollute),
+      "RCM 範本不含控制有效性評估")
+check(!"可能潛在風險" %in% names(rcm_pollute),
+      "RCM 範本不含可能潛在風險")
+check(!"建議改善方式" %in% names(rcm_pollute),
+      "RCM 範本不含建議改善方式")
 pcat_pollute <- parameter_catalog(
   list(clean_item),
   list(modifyList(polluted, list(control_id = "X-1"))),

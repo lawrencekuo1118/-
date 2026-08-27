@@ -197,10 +197,10 @@ validate_control_design <- function(ctrl) {
     control_objective = "控制目標",
     control_activity = "控制活動",
     frequency = "控制頻率",
-    responsible_unit = "流程負責單位",
-    iuc_or_system = "IUC",
-    nature = "控制類型",
-    approach = "控制活動類型"
+    responsible_unit = "控制點負責單位",
+    iuc_or_system = CONTROL_IUC_DOCUMENT_LABEL,
+    nature = "控制性質",
+    approach = "控制方式"
   )
   for (nm in names(req)) {
     if (!nzchar(trimws(as.character(ctrl[[nm]] %||% "")))) {

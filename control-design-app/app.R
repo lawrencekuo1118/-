@@ -640,6 +640,22 @@ ui <- page_navbar(
             ),
             uiOutput("risk_factor_hint"),
             selectizeInput(
+              "risk_principle", "風險面向",
+              choices = NULL, multiple = FALSE, width = "100%",
+              options = list(
+                create = TRUE, createOnBlur = TRUE, maxItems = 1,
+                placeholder = "Risk Principle；可選建議或自訂"
+              )
+            ),
+            selectizeInput(
+              "risk_area", "風險範疇",
+              choices = NULL, multiple = FALSE, width = "100%",
+              options = list(
+                create = TRUE, createOnBlur = TRUE, maxItems = 1,
+                placeholder = "Risk Area；可選建議或自訂"
+              )
+            ),
+            selectizeInput(
               "risk_description", lab_req("風險描述"),
               choices = NULL, multiple = FALSE, width = "100%",
               options = list(
@@ -670,7 +686,7 @@ ui <- page_navbar(
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
-            selectInput("romm_classification", "RoMM 分類",
+            selectInput("romm_classification", "RoMM 分類（抽樣輔助；不入 RCM 範本欄）",
                         choices = ROMM_CLASS_CHOICES, width = "100%"),
             div(
               class = "design-section-preview-bar",
@@ -681,15 +697,15 @@ ui <- page_navbar(
             "③ 控制設計",
             div(
               class = "design-tab-filter-bar",
-              tags$div(class = "filter-title", "控制活動類型／控制類型篩選 — 快速找出相關控制活動"),
+              tags$div(class = "filter-title", "控制方式／控制性質篩選 — 快速找出相關控制活動"),
               selectInput(
                 "filter_ctrl_approach", NULL,
-                choices = c("全部控制活動類型…" = "", CONTROL_ACTIVITY_TYPE_PD),
+                choices = c("全部控制方式…" = "", CONTROL_ACTIVITY_TYPE_PD),
                 selected = "", width = "100%"
               ),
               selectInput(
                 "filter_ctrl_nature", NULL,
-                choices = c("全部控制類型…" = "", CONTROL_TYPE_MANUAL_AUTO),
+                choices = c("全部控制性質…" = "", CONTROL_TYPE_MANUAL_AUTO),
                 selected = "", width = "100%"
               ),
               uiOutput("filter_ctrl_hits")
@@ -703,7 +719,7 @@ ui <- page_navbar(
             div(
               class = "assertions-side mb-2",
               selectizeInput(
-                "assertions", "聲明設定",
+                "assertions", "控制聲明",
                 choices = character(0), multiple = TRUE, selected = character(0),
                 width = "100%",
                 options = list(
@@ -722,12 +738,12 @@ ui <- page_navbar(
               placeholder = "How：具體執行行為（含誰／何時／如何）"
             ),
             selectInput(
-              "approach", lab_req("控制活動類型"),
+              "approach", lab_req("控制方式"),
               choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
               selected = "", width = "100%"
             ),
             selectInput(
-              "nature", lab_req("控制類型"),
+              "nature", lab_req("控制性質"),
               choices = c("請選擇…" = "", CONTROL_TYPE_MANUAL_AUTO),
               selected = "", width = "100%"
             ),
@@ -737,16 +753,16 @@ ui <- page_navbar(
               selected = "", width = "100%"
             ),
             textInput(
-              "responsible_unit", lab_req("流程負責單位"),
+              "responsible_unit", lab_req("控制點負責單位"),
               value = "", width = "100%", placeholder = "例：資訊安全單位"
             ),
             selectizeInput(
-              "iuc", lab_req("IUC"),
+              "iuc", lab_req(CONTROL_IUC_DOCUMENT_LABEL),
               choices = NULL, multiple = TRUE, width = "100%",
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
-                placeholder = "可多選；自 PBC 資料庫選取或手動輸入",
+                placeholder = "IUC；可多選；自 PBC 資料庫選取或手動輸入",
                 plugins = list("remove_button")
               )
             ),
@@ -755,9 +771,11 @@ ui <- page_navbar(
               placeholder = "例：ERP、AD、權限管理系統（IT／應用系統，與 IUC 不同）"
             ),
             uiOutput("related_system_hint"),
-            textInput("related_policy", lab_opt("相關政策或程序"), width = "100%"),
+            textInput("related_policy", lab_opt("相關政策與制度"), width = "100%"),
+            textInput("related_documents", lab_opt("相關文件"), width = "100%",
+                      placeholder = "一般相關文件（與 IUC／佐證文件分開）"),
             selectizeInput(
-              "related_law", "相關法令",
+              "related_law", "相關法規",
               choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
               multiple = TRUE, width = "100%",
               options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
@@ -769,7 +787,7 @@ ui <- page_navbar(
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
-                placeholder = "可多選；自 PBC 資料庫選取或手動輸入",
+                placeholder = "Control Evidences；可多選；自 PBC 選取或手動輸入",
                 plugins = list("remove_button")
               )
             ),
@@ -2030,6 +2048,9 @@ server <- function(input, output, session) {
       "RoMM 分類" = function() {
         updateSelectInput(session, "romm_classification", selected = val)
       },
+      "控制聲明" = function() {
+        updateSelectizeInput(session, "assertions", selected = val)
+      },
       "聲明" = function() {
         updateSelectizeInput(session, "assertions", selected = val)
       },
@@ -2046,14 +2067,23 @@ server <- function(input, output, session) {
       "控制活動" = function() {
         updateTextAreaInput(session, "control_activity", value = val)
       },
+      "控制性質" = function() {
+        updateSelectInput(session, "nature", selected = val)
+      },
       "控制類型" = function() {
         updateSelectInput(session, "nature", selected = val)
+      },
+      "控制方式" = function() {
+        updateSelectInput(session, "approach", selected = val)
       },
       "控制活動類型" = function() {
         updateSelectInput(session, "approach", selected = val)
       },
       "控制頻率" = function() {
         updateSelectInput(session, "frequency", selected = val)
+      },
+      "控制點負責單位" = function() {
+        updateTextInput(session, "responsible_unit", value = val)
       },
       "流程負責單位" = function() {
         updateTextInput(session, "responsible_unit", value = val)
@@ -2068,14 +2098,29 @@ server <- function(input, output, session) {
         sel <- expand_pbc_selection(val, pbc_reg())
         updateSelectizeInput(session, "iuc", selected = sel)
       },
-      "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
-      "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
-      "相關文件" = function() {
+      "相關文件-控制用文件" = function() {
         sel <- expand_pbc_selection(val, pbc_reg())
-        updateSelectizeInput(session, "related_document_pbc", selected = sel)
+        updateSelectizeInput(session, "iuc", selected = sel)
+      },
+      "相關法規" = function() updateSelectizeInput(session, "related_law", selected = val),
+      "相關法令" = function() updateSelectizeInput(session, "related_law", selected = val),
+      "相關政策與制度" = function() updateTextInput(session, "related_policy", value = val),
+      "相關政策或程序" = function() updateTextInput(session, "related_policy", value = val),
+      "相關文件" = function() updateTextInput(session, "related_documents", value = val),
+      "風險面向" = function() {
+        updateSelectizeInput(session, "risk_principle",
+                             choices = stats::setNames(val, val), selected = val, server = FALSE)
+      },
+      "風險範疇" = function() {
+        updateSelectizeInput(session, "risk_area",
+                             choices = stats::setNames(val, val), selected = val, server = FALSE)
       }
     )
-    mapped[[CONTROL_EVIDENCE_DOCUMENT_LABEL]] <- mapped[["相關文件"]]
+    mapped[[CONTROL_EVIDENCE_DOCUMENT_LABEL]] <- function() {
+      sel <- expand_pbc_selection(val, pbc_reg())
+      updateSelectizeInput(session, "related_document_pbc", selected = sel)
+    }
+    mapped[["控制佐證文件"]] <- mapped[[CONTROL_EVIDENCE_DOCUMENT_LABEL]]
     fn <- mapped[[param]]
     if (is.null(fn)) {
       return(showNotification(sprintf("「%s」無對應表單欄（已複製概念：%s）", param, val),
@@ -2356,6 +2401,8 @@ server <- function(input, output, session) {
         if (nzchar(id)) id else sub_process_id_from_value(sp_val)
       },
       sub_process = sub_process_name_from_value(input$sub_process %||% ""),
+      risk_principle = trimws(input$risk_principle %||% ""),
+      risk_area = trimws(input$risk_area %||% ""),
       risk_factor = rf_tag,
       risk_name = rf_tag,
       risk_description = trimws(input$risk_description %||% ""),
@@ -2380,6 +2427,7 @@ server <- function(input, output, session) {
       },
       related_system = trimws(input$related_system %||% ""),
       related_policy = input$related_policy %||% "",
+      related_documents = trimws(input$related_documents %||% ""),
       related_law = {
         v <- input$related_law %||% character(0)
         paste(unique(trimws(as.character(v))), collapse = "；")
@@ -2514,12 +2562,12 @@ server <- function(input, output, session) {
           paste0("無法設定", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（", paste(reason, collapse = "／"), "）。"))
     } else {
       helpText(class = "text-muted small",
-               paste0("請先選控制類型與風險類別；人工且非法遵面時，", CONTROL_EVIDENCE_DOCUMENT_LABEL,
+               paste0("請先選控制性質與風險類別；人工且非法遵面時，", CONTROL_EVIDENCE_DOCUMENT_LABEL,
                       "可多選（PBC 選取或手動輸入）。"))
     }
   })
 
-  # 相關系統標籤與「相關政策或程序」同列排版（選填／必填 * 接在標題後）
+  # 相關系統標籤與「相關政策與制度」同列排版（選填／必填 * 接在標題後）
   observe({
     nature <- normalize_control_type_manual_auto(input$nature %||% "")
     lab <- if (is_automatic_control(nature)) lab_req("相關系統") else lab_opt("相關系統")
@@ -2536,7 +2584,7 @@ server <- function(input, output, session) {
       helpText(class = "text-muted small",
                "人工控制：相關系統為選填（例：ERP、AD）。")
     } else {
-      helpText(class = "text-muted small", "請先選控制類型；自動控制時相關系統必填。")
+      helpText(class = "text-muted small", "請先選控制性質；自動控制時相關系統必填。")
     }
   })
 
@@ -2544,12 +2592,12 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("遵循面"), " — 相關法令為必填（可多選台灣／美國預設或自訂）。")
+          lab_req("遵循面"), " — 相關法規為必填（可多選台灣／美國預設或自訂）。")
     } else if (nzchar(cat)) {
       div(class = "alert alert-secondary py-1 mb-2 small",
-          "非遵循面：相關法令已鎖定不可填（將自動清空）。")
+          "非遵循面：相關法規已鎖定不可填（將自動清空）。")
     } else {
-      helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法令。")
+      helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法規。")
     }
   })
 

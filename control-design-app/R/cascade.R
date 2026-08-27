@@ -6,11 +6,11 @@
 SIX_CONTROL_STATUS_RULES <- c(
   control_objective = "控制目標",
   control_activity = "控制活動",
-  nature = "控制類型（人工／自動）",
-  approach = "控制活動類型（預防／偵測）",
+  nature = "控制性質（人工／自動）",
+  approach = "控制方式（預防／偵測／矯正）",
   frequency = "控制頻率",
-  responsible_unit = "流程負責單位",
-  iuc_or_system = "IUC"
+  responsible_unit = "控制點負責單位",
+  iuc_or_system = CONTROL_IUC_DOCUMENT_LABEL
 )
 # Note: objective+activity are cascade-selected; the six operational items for
 # status scaffolding are nature/approach/frequency/owner/IUC + steps derived from activity.
@@ -25,22 +25,27 @@ nzchar_trim <- function(x) {
   x[[1]]
 }
 
-# Enforce: one activity ↔ exactly one 預防/偵測 attribute
+# Enforce: one activity ↔ exactly one 預防/偵測/矯正 attribute
 normalize_single_activity_type <- function(approach) {
   raw <- nzchar_trim(approach)
   if (!nzchar(raw)) return("")
   # Reject mixed before normalizing
-  if (grepl("預防|Preventive", raw, ignore.case = TRUE) &&
-      grepl("偵測|Detective", raw, ignore.case = TRUE)) {
-    return("")
-  }
+  n_hit <- sum(c(
+    grepl("預防|Preventive", raw, ignore.case = TRUE),
+    grepl("偵測|Detective", raw, ignore.case = TRUE),
+    grepl("矯正|Corrective", raw, ignore.case = TRUE)
+  ))
+  if (n_hit > 1L) return("")
   if (grepl("預防\\+|預防＋|Preventive\\s*\\+", raw, ignore.case = TRUE)) return("")
   at <- if (exists("normalize_control_activity_type_pd", mode = "function")) {
     normalize_control_activity_type_pd(raw)
   } else raw
-  if (at %in% c("預防性控制", "偵測性控制")) return(at)
-  if (grepl("預防", at)) return("預防性控制")
-  if (grepl("偵測", at)) return("偵測性控制")
+  if (at %in% c("預防性", "偵測性", "矯正性", "預防性控制", "偵測性控制")) {
+    return(normalize_control_activity_type_pd(at))
+  }
+  if (grepl("預防", at)) return("預防性")
+  if (grepl("偵測", at)) return("偵測性")
+  if (grepl("矯正", at)) return("矯正性")
   ""
 }
 
@@ -67,6 +72,8 @@ library_controls_flat <- function(library, cycle = NULL) {
       sub_process = nzchar_trim(c$sub_process),
       risk_factor = nzchar_trim(c$risk_factor %||% c$risk_name),
       risk_name = nzchar_trim(c$risk_name %||% c$risk_factor),
+      risk_principle = nzchar_trim(c$risk_principle),
+      risk_area = nzchar_trim(c$risk_area),
       risk_description = nzchar_trim(c$risk_description),
       risk_category = {
         if (exists("normalize_risk_category", mode = "function")) {
@@ -441,6 +448,16 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   updateSelectizeInput(session, "sub_process", selected = sp_sel)
   rf_sel <- risk_factor_selection_from_ctrl(ctrl)
   updateSelectizeInput(session, "risk_factor", selected = rf_sel)
+  if (nzchar(trimws(ctrl$risk_principle %||% ""))) {
+    rp <- trimws(ctrl$risk_principle)
+    updateSelectizeInput(session, "risk_principle",
+                         choices = stats::setNames(rp, rp), selected = rp, server = FALSE)
+  }
+  if (nzchar(trimws(ctrl$risk_area %||% ""))) {
+    ra <- trimws(ctrl$risk_area)
+    updateSelectizeInput(session, "risk_area",
+                         choices = stats::setNames(ra, ra), selected = ra, server = FALSE)
+  }
   rd <- trimws(as.character(ctrl$risk_description %||% ""))
   if (nzchar(rd)) {
     updateSelectizeInput(session, "risk_description",
@@ -466,6 +483,7 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     }
   )
   updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
+  updateTextInput(session, "related_documents", value = ctrl$related_documents %||% "")
   updateSelectizeInput(session, "related_law",
                        selected = {
                          raw <- trimws(as.character(ctrl$related_law %||% ""))
@@ -699,12 +717,12 @@ cascade_selection_ready <- function(sel) {
 # Six-rule gate for status writing (前置六大控制項目)
 six_status_rules_check <- function(ctrl) {
   missing <- character()
-  labels <- c(
-    nature = "控制類型（人工／自動）",
-    approach = "控制活動類型（預防／偵測・單一）",
+    labels <- c(
+    nature = "控制性質（人工／自動）",
+    approach = "控制方式（預防／偵測／矯正）",
     frequency = "控制頻率",
-    responsible_unit = "流程負責單位",
-    iuc_or_system = "IUC",
+    responsible_unit = "控制點負責單位",
+    iuc_or_system = CONTROL_IUC_DOCUMENT_LABEL,
     control_activity = "控制活動"
   )
   for (f in names(labels)) {

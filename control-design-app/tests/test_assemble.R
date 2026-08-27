@@ -719,6 +719,20 @@ check(identical(recode_id_cycle_prefix("EC-101-01", "SC"), "SC-101-01"),
       "循環編號變更時控制編號前綴同步")
 check(identical(recode_id_cycle_prefix("EC-101", "SC"), "SC-101"),
       "循環編號變更時子作業編號前綴同步")
+check(identical(sync_sub_process_id_value("", "CS"), "CS-"),
+      "循環編號已填 → 子作業預填 CS-")
+check(identical(sync_control_id_value("", "CS", ""), "CS-"),
+      "循環編號已填 → 控制編號預填 CS-")
+check(identical(sync_control_id_value("CS-", "CS", "CS-102"), "CS-102-"),
+      "子作業完整 → 控制編號預填 CS-102-")
+check(identical(sync_control_id_value("CS-099-02", "CS", "CS-102"), "CS-102-02"),
+      "子作業變更時控制編號中段同步並保留序號")
+check(identical(sub_process_id_from_control_id("EC-101-02", "EC"), "EC-101"),
+      "控制編號完整 → 回推子作業編號")
+check(identical(sync_control_id_value("EC-101-02", "CS", ""), "CS-101-02"),
+      "控制編號不可改寫循環節（強制為基準循環）")
+check(identical(sync_sub_process_id_value("EC-101", "CS"), "CS-101"),
+      "子作業編號不可改寫循環節")
 
 seeded <- seed_control_library(TRUE)
 it_rows <- cycle_risk_rows(seeded, "電腦化資訊系統循環")
@@ -736,6 +750,9 @@ check(length(cascade_sub_process_choices(
   library_controls_flat(empty_user, cycle = "生產循環")
 )) >= 1L, "空使用者庫時生產循環仍可直接選子作業")
 app_casc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("sync_sub_process_id_value|sync_control_id_value", app_casc) &&
+        grepl("sub_process_id_from_control_id", app_casc),
+      "設計頁以循環編號為基準同步子作業／控制編號")
 check(exists("cascade_builtin_library", mode = "function"),
       "cascade_builtin_library 快取種子")
 check(grepl("refresh_sub_process_choices\\(force", app_casc) &&

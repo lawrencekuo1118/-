@@ -296,6 +296,101 @@ recode_id_cycle_prefix <- function(id, new_cycle_code) {
   }
 }
 
+# 寬鬆解析（含未完成 stub：CS-、CS-102-）
+parse_rcm_id_loose <- function(id) {
+  raw <- trimws(as.character(id %||% ""))
+  trailing_dash <- grepl("-$", raw)
+  core <- sub("-+$", "", raw)
+  if (!nzchar(core)) {
+    return(list(cycle = "", sub = "", ctrl = "", kind = "empty", trailing_dash = trailing_dash))
+  }
+  m3 <- regmatches(core, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)-([0-9]+)$", core, perl = TRUE))[[1]]
+  if (length(m3) >= 4L) {
+    return(list(cycle = m3[[2]], sub = m3[[3]], ctrl = m3[[4]], kind = "control", trailing_dash = FALSE))
+  }
+  m2 <- regmatches(core, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)$", core, perl = TRUE))[[1]]
+  if (length(m2) >= 3L) {
+    return(list(
+      cycle = m2[[2]], sub = m2[[3]], ctrl = "",
+      kind = if (trailing_dash) "control_stub" else "sub",
+      trailing_dash = trailing_dash
+    ))
+  }
+  if (grepl("^[A-Za-z0-9]+$", core)) {
+    return(list(cycle = core, sub = "", ctrl = "", kind = "cycle_only", trailing_dash = TRUE))
+  }
+  list(cycle = "", sub = core, ctrl = "", kind = "opaque", trailing_dash = trailing_dash)
+}
+
+# 循環編號為基準：子作業編號至少為「CC-」；不可改寫循環節
+sync_sub_process_id_value <- function(current, cycle_code) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  cur <- trimws(as.character(current %||% ""))
+  if (!nzchar(cc)) return(cur)
+  prefix <- paste0(cc, "-")
+  if (!nzchar(cur)) return(prefix)
+  if (startsWith(cur, prefix) || identical(cur, cc)) {
+    if (identical(cur, cc)) return(prefix)
+    p <- parse_rcm_id_loose(cur)
+    # 誤把控制編號貼進子作業欄時，截成兩節
+    if (identical(p$kind, "control") && nzchar(p$sub)) {
+      return(compose_sub_process_id(cc, p$sub))
+    }
+    return(cur)
+  }
+  p <- parse_rcm_id_loose(cur)
+  if (!nzchar(p$sub)) return(prefix)
+  compose_sub_process_id(cc, p$sub)
+}
+
+# 循環編號為基準：控制編號預填「CC-」或「CC-子作業-」；完整則保留控制序號
+sync_control_id_value <- function(current, cycle_code, sub_process_id = "") {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  cur <- trimws(as.character(current %||% ""))
+  sp <- trimws(as.character(sub_process_id %||% ""))
+  if (!nzchar(cc)) return(cur)
+  prefix <- paste0(cc, "-")
+  sn_sp <- parse_rcm_id_loose(sp)$sub
+  if (!nzchar(cur)) {
+    if (nzchar(sn_sp)) return(paste0(prefix, sn_sp, "-"))
+    return(prefix)
+  }
+  cp <- parse_rcm_id_loose(cur)
+  sn <- if (nzchar(sn_sp)) sn_sp else cp$sub
+  wrong_prefix <- !startsWith(cur, prefix) && !identical(cur, cc)
+  if (wrong_prefix) {
+    if (nzchar(sn) && nzchar(cp$ctrl)) return(compose_control_id(cc, sn, cp$ctrl))
+    if (nzchar(sn)) return(paste0(prefix, sn, "-"))
+    return(prefix)
+  }
+  if (!nzchar(sn)) {
+    if (identical(cur, cc) || identical(cur, prefix)) return(prefix)
+    return(cur)
+  }
+  if (nzchar(cp$ctrl)) {
+    if (nzchar(sn_sp) && !identical(cp$sub, sn_sp)) {
+      return(compose_control_id(cc, sn_sp, cp$ctrl))
+    }
+    return(cur)
+  }
+  base <- paste0(prefix, sn)
+  stub <- paste0(base, "-")
+  if (identical(cur, cc) || identical(cur, prefix) || identical(cur, base)) return(stub)
+  if (startsWith(cur, stub)) return(cur)
+  if (nzchar(sn_sp)) return(stub)
+  if (identical(cp$kind, "sub") || identical(cp$kind, "control_stub")) return(stub)
+  cur
+}
+
+# 控制編號已含子作業序號時，回推子作業編號（循環節仍以 cycle_code 為準）
+sub_process_id_from_control_id <- function(control_id, cycle_code) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  if (!nzchar(cc)) return(NA_character_)
+  p <- parse_rcm_id_loose(control_id)
+  if (!nzchar(p$sub)) return(NA_character_)
+  compose_sub_process_id(cc, p$sub)
+}
+
 sub_process_choice_label <- function(key) {
   key <- trimws(as.character(key %||% ""))
   if (!nzchar(key)) return("")

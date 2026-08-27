@@ -713,17 +713,6 @@ ui <- page_navbar(
             p(class = "small text-muted mb-2",
               "風險因素是風險描述上的標記（TAG）。風險描述為質性文字（同控制目標／控制活動），可手動撰寫；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
             selectizeInput(
-              "risk_factor", lab_req("風險因素"),
-              choices = NULL, multiple = TRUE, width = "100%",
-              options = list(
-                create = TRUE,
-                createOnBlur = TRUE,
-                placeholder = "可複選建議 TAG 或手動新增風險因素",
-                plugins = list("remove_button")
-              )
-            ),
-            uiOutput("risk_factor_hint"),
-            selectizeInput(
               "risk_principle", "風險面向",
               choices = NULL, multiple = FALSE, width = "100%",
               options = list(
@@ -739,6 +728,17 @@ ui <- page_navbar(
                 placeholder = "Risk Area；可選建議或自訂"
               )
             ),
+            selectizeInput(
+              "risk_factor", lab_req("風險因素"),
+              choices = NULL, multiple = TRUE, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "可複選建議 TAG 或手動新增風險因素",
+                plugins = list("remove_button")
+              )
+            ),
+            uiOutput("risk_factor_hint"),
             textAreaInput(
               "risk_description", lab_req("風險描述"), rows = 3, width = "100%",
               placeholder = "質性描述此控制點對應之風險內涵（非下拉選項）"
@@ -2858,7 +2858,7 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("遵循面"), " — 相關法規為必填（可多選台灣／美國預設或自訂）。")
+          lab_req("遵循面"), " — 相關法規為必填（可多選）；右側可填該法規有效網址連結（選填）。")
     } else if (nzchar(cat)) {
       div(class = "alert alert-secondary py-1 mb-2 small",
           "非遵循面：相關法規已鎖定不可填（將自動清空）。")

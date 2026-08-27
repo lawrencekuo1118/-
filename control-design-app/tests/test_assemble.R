@@ -1190,6 +1190,10 @@ check(isTRUE(design_required_check(modifyList(d1, list(
 )))$ok),
       "風險因素複選可通過必填")
 check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述質性輸入")
+check(grepl(
+  'risk_area[\\s\\S]{0,500}risk_factor[\\s\\S]{0,500}risk_description',
+  app_src, perl = TRUE
+), "風險因素位於風險範疇與風險描述之間")
 check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*textAreaInput\\(\\s*"risk_description"', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
 check(grepl("風險因素是風險描述上的標記", app_src), "風險因素以 TAG 說明")

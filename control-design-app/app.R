@@ -1137,6 +1137,14 @@ ui <- page_navbar(
       ),
       textInput("pbc_id", NULL, placeholder = "ID（可空）"),
       uiOutput("pbc_cycle_readonly"),
+      selectizeInput(
+        "pbc_related", lab_opt("互相勾稽（Walkthrough）"),
+        choices = NULL, multiple = TRUE, width = "100%",
+        options = list(
+          placeholder = "選取相關 PBC（可多選；亦可由規格說明自動解析）",
+          plugins = list("remove_button")
+        )
+      ),
       textInput("pbc_notes", NULL, placeholder = "備註"),
       div(
         class = "d-flex gap-1 flex-wrap",
@@ -1160,6 +1168,7 @@ ui <- page_navbar(
     card(
       card_header("PBC 清單預覽"),
       DTOutput("pbc_table"),
+      uiOutput("pbc_walkthrough_box"),
       verbatimTextOutput("pbc_all_status")
     )
   ),
@@ -1906,6 +1915,24 @@ server <- function(input, output, session) {
     update_selectize("related_document_pbc", ch_iuc)
     update_selectize("iuc", ch_iuc)
     update_selectize("related_policy", ch_policy)
+    # 勾稽選單：排除目前編輯中的 ID
+    excl <- trimws(isolate(input$pbc_id %||% ""))
+    ch_rel <- pbc_related_link_choices(reg, exclude_id = excl)
+    cur_rel <- parse_pbc_id_values(isolate(input$pbc_related %||% character()))
+    cur_rel <- cur_rel[cur_rel %in% unname(ch_rel) | cur_rel %in% known_pbc_ids(reg)]
+    extra_rel <- cur_rel[!cur_rel %in% unname(ch_rel)]
+    if (length(extra_rel)) {
+      ch_rel <- c(ch_rel, stats::setNames(extra_rel, extra_rel))
+    }
+    prev_rel <- pbc_choices_cache[["pbc_related"]] %||% list(ch = NULL, sel = NULL)
+    same_ch <- identical(unname(ch_rel), unname(prev_rel$ch)) &&
+      identical(names(ch_rel), names(prev_rel$ch))
+    same_sel <- identical(as.character(cur_rel), as.character(prev_rel$sel))
+    if (!(same_ch && same_sel)) {
+      pbc_choices_cache[["pbc_related"]] <- list(ch = ch_rel, sel = cur_rel)
+      updateSelectizeInput(session, "pbc_related", choices = ch_rel,
+                           server = TRUE, selected = cur_rel)
+    }
   }
 
   interview_worksheet <- function() {
@@ -2214,6 +2241,28 @@ server <- function(input, output, session) {
   output$pbc_all_status <- renderText({
     lines <- format_pbc_status_lines(pbc_reg())
     if (!length(lines)) "（命名庫尚無資料）" else paste(lines, collapse = "\n")
+  })
+
+  output$pbc_walkthrough_box <- renderUI({
+    s <- input$pbc_table_rows_selected
+    reg <- pbc_reg()
+    if (is.null(s) || !length(s) || !nrow(reg)) {
+      return(tags$div(
+        class = "small text-muted mt-2 mb-1",
+        "選取一列以檢視 Walkthrough 勾稽鏈。"
+      ))
+    }
+    pid <- reg$pbc_id[s[[1]]]
+    lines <- format_pbc_walkthrough_lines(reg, pid)
+    tags$div(
+      class = "alert alert-secondary py-2 mt-2 mb-1 small",
+      tags$div(class = "fw-bold mb-1", sprintf("Walkthrough｜%s", pid)),
+      tags$pre(
+        class = "mb-0 small",
+        style = "white-space: pre-wrap; background: transparent; border: 0; padding: 0;",
+        paste(lines, collapse = "\n")
+      )
+    )
   })
 
   output$lib_count_badge <- renderUI({
@@ -3362,9 +3411,12 @@ server <- function(input, output, session) {
         reviewed_name = input$pbc_reviewed, pbc_spec = input$pbc_spec,
         pbc_kind = input$pbc_kind,
         pbc_file_format = input$pbc_file_format,
+        related_pbc_ids = input$pbc_related,
         iuc_or_system = input$pbc_reviewed,
         cycle = input$cycle %||% "", notes = input$pbc_notes
       ))
+      # 規格說明內 #N／「名稱」自動補勾稽
+      reg <- enrich_related_pbc_from_specs(reg)
       pbc_reg(reg)
       persist_pbc(reg)
       refresh_pbc_choices()
@@ -3374,6 +3426,7 @@ server <- function(input, output, session) {
       updateTextAreaInput(session, "pbc_spec", value = "")
       updateSelectInput(session, "pbc_kind", selected = "")
       updateSelectizeInput(session, "pbc_file_format", selected = "")
+      updateSelectizeInput(session, "pbc_related", selected = character(0))
       updateTextInput(session, "pbc_notes", value = "")
       showNotification("已登錄 PBC", type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
@@ -3382,9 +3435,9 @@ server <- function(input, output, session) {
     df <- pbc_reg()
     if (!nrow(df)) {
       empty <- data.frame(
-        ID = character(), 規格說明 = character(), 證據類型 = character(),
-        文件格式 = character(), 客戶原名 = character(), 檢視後 = character(),
-        循環 = character(), 備註 = character(),
+        ID = character(), 規格說明 = character(), 勾稽 = character(),
+        證據類型 = character(), 文件格式 = character(), 客戶原名 = character(),
+        檢視後 = character(), 循環 = character(), 備註 = character(),
         stringsAsFactors = FALSE
       )
       return(datatable(empty, selection = "single", rownames = FALSE,
@@ -3395,6 +3448,13 @@ server <- function(input, output, session) {
       規格說明 = {
         sp <- if ("pbc_spec" %in% names(df)) df$pbc_spec else rep("", nrow(df))
         ifelse(nzchar(sp), substr(sp, 1L, 48L), "—")
+      },
+      勾稽 = {
+        rel <- if ("related_pbc_ids" %in% names(df)) df$related_pbc_ids else rep("", nrow(df))
+        vapply(rel, function(x) {
+          ids <- parse_pbc_id_values(x)
+          if (!length(ids)) "—" else paste(ids, collapse = "；")
+        }, character(1))
       },
       證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
       文件格式 = ifelse(nzchar(df$pbc_file_format), df$pbc_file_format, "—"),
@@ -3446,6 +3506,16 @@ server <- function(input, output, session) {
     }
     updateSelectizeInput(session, "pbc_file_format",
                          choices = fmt_choices, selected = fmt)
+    rel_ids <- if ("related_pbc_ids" %in% names(row)) {
+      parse_pbc_id_values(row$related_pbc_ids[[1]])
+    } else {
+      character()
+    }
+    ch_rel <- pbc_related_link_choices(pbc_reg(), exclude_id = row$pbc_id[[1]])
+    extra <- rel_ids[!rel_ids %in% unname(ch_rel)]
+    if (length(extra)) ch_rel <- c(ch_rel, stats::setNames(extra, extra))
+    updateSelectizeInput(session, "pbc_related", choices = ch_rel,
+                         selected = rel_ids)
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
   }, ignoreInit = TRUE)
   observeEvent(input$pbc_delete, {
@@ -3461,6 +3531,7 @@ server <- function(input, output, session) {
     if (is.null(f)) return()
     tryCatch({
       reg <- import_pbc_csv(f$datapath, pbc_reg())
+      reg <- enrich_related_pbc_from_specs(reg)
       pbc_reg(reg)
       persist_pbc(reg)
       refresh_pbc_choices()

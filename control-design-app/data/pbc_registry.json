@@ -6,11 +6,12 @@
     "pbc_spec": "1. 含公司維護之所有系統，以及各系統的登入方式。\n2. 請參考回填附檔「玩美移動_資訊循環樣本文件_Server盤點表」。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統清單 (Server盤點清單)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-002",
@@ -19,11 +20,12 @@
     "pbc_spec": "與#1「系統清單 (Server盤點清單)」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-001",
     "iuc_or_system": "系統關聯圖 Corporate Infrastructure Overview",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-003",
@@ -32,11 +34,12 @@
     "pbc_spec": "須包含資安相關單位在內。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "組職職掌表",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-004",
@@ -45,11 +48,12 @@
     "pbc_spec": "(若有)請提供線上修課畫面或實體課程通知。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "IT人員專業技能教育訓練計畫",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-005",
@@ -58,11 +62,12 @@
     "pbc_spec": "1. 與#4「IT人員專業技能教育訓練計畫」相關。\n2. (若有)請提供人員受訓時數紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-004",
     "iuc_or_system": "IT人員教育訓練相關測驗紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-006",
@@ -71,11 +76,12 @@
     "pbc_spec": "1.與#3「組職職掌表」相關。\n2.(若有)請檢附相關職能衝突討論或分析。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-003",
     "iuc_or_system": "IT人員之代理人制度",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-007",
@@ -84,11 +90,12 @@
     "pbc_spec": "與#6「IT人員之代理人制度」相關，若有請提供。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-006",
     "iuc_or_system": "IT人員代理人之代理工作教育訓練",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-008",
@@ -97,11 +104,12 @@
     "pbc_spec": "請檢附簽核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資訊部年度計劃",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-009",
@@ -110,11 +118,12 @@
     "pbc_spec": "1. 請檢附與外包服務供應商的合約，包括稽核權相關條款。\n2. 須檢附「委外CyberLink」之相關IT合約、雲端服務(AWS)所有合約、機房委外管理合約等。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "IT委外項目列表",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-010",
@@ -123,11 +132,12 @@
     "pbc_spec": "1. 與#9「IT委外項目列表」相關。\n2. 請檢附每家委外供應商(含AWS、機房管理)之SOC 1 (Type1, Type2)，若無則提供SOC 2。須更新至2024年版本。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-009",
     "iuc_or_system": "IT委外供應商之SOC報告 (更新至2024年)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-011",
@@ -136,11 +146,12 @@
     "pbc_spec": "(若有)請提供參照ISO-27001之分級結果。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "所有系統之重要性分級定義結果",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-012",
@@ -149,11 +160,12 @@
     "pbc_spec": "1. 與#11「所有系統之重要性分級定義結果」相關，須可辨識帳號為獨立可區分身份。\n2. 含PF Domain User與Domain Controller帳號。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-011",
     "iuc_or_system": "核心系統帳號權限清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-013",
@@ -162,11 +174,12 @@
     "pbc_spec": "1. 請分別提供新進及調職同仁。\n2. 須含開通相關帳號之流程說明，顯示資料如何被串接、如何評估合理性。\n3. 請檢附已被核准之申請紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Email／AD網域／公用夾權限申請",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-014",
@@ -175,11 +188,12 @@
     "pbc_spec": "請分別提供新進及調職同仁。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle帳號權限申請流程",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-015",
@@ -188,11 +202,12 @@
     "pbc_spec": "1. 請檢附用於顯示密碼政策與使用者驗證記錄的證據。\n2. 須含AD網域密碼原則。\n3. 其它請參考附檔「玩美移動_資訊循環樣本文件_AD網域」檢附樣本文件。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "AD網域控管紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-016",
@@ -201,11 +216,12 @@
     "pbc_spec": "1. 請檢附有維護需求時，公司供應商權限受限制之暫時性帳號申請、設定與關閉相關實施證據\n2. (若有)請檢附顯示證明該申請對象(供應商)為符合資格。\n3. 請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "對外暫時性帳號 - 權限申請/設定與關閉實施證據",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-017",
@@ -214,11 +230,12 @@
     "pbc_spec": "1. 若有請提供。\n2. (若有)須顯示綁定到HR帳號申請流程。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "重要系統權限變更 policy",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-018",
@@ -227,11 +244,12 @@
     "pbc_spec": "1. 與#17「重要系統權限變更 policy」相關，請提供任一核心系統。\n2. 請分別提供新進及調職同仁。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-017",
     "iuc_or_system": "特殊情況下之權限申請",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-019",
@@ -240,11 +258,12 @@
     "pbc_spec": "1. 請提供任一核心系統。\n2. 離職同仁。\n3. (若有)請見附「關閉權限檢查清單」。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統權限停用",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-020",
@@ -253,11 +272,12 @@
     "pbc_spec": "1.  請檢附覆核紀錄。\n2. 剩下其它系統將於之後再視情況進一步了解。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle相關使用者(user)帳號清查紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-021",
@@ -266,11 +286,12 @@
     "pbc_spec": "1. 含OD/Database/Network。\n2. 請檢附覆核紀錄，紀錄上須顯示擁有者與其取得權限目的/原因。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統管理者(admin)帳號清查紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-022",
@@ -279,11 +300,12 @@
     "pbc_spec": "1.(若有開啟Super user存取log記錄功能)請提供。\n2.請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統管理者(admin)存取申請紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-023",
@@ -292,11 +314,12 @@
     "pbc_spec": "請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統資料庫存取申請紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-024",
@@ -305,11 +328,12 @@
     "pbc_spec": "請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統資料庫管理者(admin)存取活動紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-025",
@@ -318,11 +342,12 @@
     "pbc_spec": "須可辨識帳號為獨立可區分身份。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle GL/AP/AR模組之人員權限清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-026",
@@ -331,11 +356,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle系統密碼原則",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-027",
@@ -344,11 +370,12 @@
     "pbc_spec": "請提供非使用AD身分驗證機制之作業系統。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統密碼原則",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-028",
@@ -357,11 +384,12 @@
     "pbc_spec": "請提供非使用AD身分驗證機制之資料庫。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫密碼原則",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-029",
@@ -370,11 +398,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆密碼原則",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-030",
@@ -383,11 +412,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統綁定MFA之設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-031",
@@ -396,11 +426,12 @@
     "pbc_spec": "含公司維護之所有系統。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "公私網域防火牆配置圖 NetworkArchitecture",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-032",
@@ -409,11 +440,12 @@
     "pbc_spec": "1. (若有)須含定期覆核久未使用之「防火牆policy」紀錄。\n2. 請檢附簽核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆 policy",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-033",
@@ -422,11 +454,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆侵入通知機制(SOP)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-034",
@@ -435,11 +468,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆管理員帳號清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-035",
@@ -448,11 +482,12 @@
     "pbc_spec": "請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆管理員權限清查紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-036",
@@ -461,11 +496,12 @@
     "pbc_spec": "請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆管理者(admin)存取紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-037",
@@ -474,11 +510,12 @@
     "pbc_spec": "1. (若有設定log追蹤)請提供。\n2. 請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "電腦主機之作業系統 audit log",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-038",
@@ -487,11 +524,12 @@
     "pbc_spec": "1. (若有設定log追蹤)請提供。\n2. 請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "應用系統之作業系統 audit log",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-039",
@@ -500,11 +538,12 @@
     "pbc_spec": "1. (若有設定log追蹤)請提供。\n2. 請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫管理系統 audit log",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-040",
@@ -513,11 +552,12 @@
     "pbc_spec": "1. (若有設定log追蹤)請提供。\n2. 請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆 audit log",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-041",
@@ -526,11 +566,12 @@
     "pbc_spec": "若有請提供。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫資料傳輸(報表產出)流程(SOP)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-042",
@@ -539,11 +580,12 @@
     "pbc_spec": "請提供任一核心系統。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料錯誤更正申請",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-043",
@@ -552,11 +594,12 @@
     "pbc_spec": "含公司維護之所有系統。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "協助訪談當日所有資訊overview相關文件",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-044",
@@ -565,11 +608,12 @@
     "pbc_spec": "1.請檢附覆核紀錄。\n2.與「IT Request Form系統」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資訊需求申請單 (IT Request Form系統)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-045",
@@ -578,11 +622,12 @@
     "pbc_spec": "1. 與#44「資訊需求申請單」相關。\n2. 請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-044",
     "iuc_or_system": "可行性評估紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-046",
@@ -591,11 +636,12 @@
     "pbc_spec": "請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "程式上線申請單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-047",
@@ -604,11 +650,12 @@
     "pbc_spec": "1.與#46「程式上線申請單」相關。\n2.應為新程式或功能「上線前」之測試。\n3.須顯示簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-046",
     "iuc_or_system": "上線前測試報告",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-048",
@@ -617,11 +664,12 @@
     "pbc_spec": "1.與#46「程式上線申請單」相關。\n2.應為新程式或功能「上線前」之測試。\n3.須顯示簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-046；PBC-EC-047",
     "iuc_or_system": "使用者驗收報告/紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-049",
@@ -630,11 +678,12 @@
     "pbc_spec": "1.請提供最新版本。\n2.應顯示完整的掃測項目，包含(若有)：滲透測試、單元測試、平行測試等。\n3.若非同一機構或委外檢測，請各提供一份報告樣本。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "委外年度資安掃測報告",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-050",
@@ -643,11 +692,12 @@
     "pbc_spec": "請檢附覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資安通報單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-051",
@@ -656,11 +706,12 @@
     "pbc_spec": "須顯示ISO27001認證範圍與時間區間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "ISO27001證書與申請文件",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-052",
@@ -669,11 +720,12 @@
     "pbc_spec": "1. 與#50「資安通報單」相關；若相同，請擇一提供。\n2.須顯示針對內部稽核、第三方機構報告之發現與缺失檢討。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-050",
     "iuc_or_system": "資安通報暨矯正措施單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-053",
@@ -682,11 +734,12 @@
     "pbc_spec": "1.若有，請提供最新版本。\n2.須顯示簽核軌跡或覆核紀錄。\n3.可能與「資產管理系統 (GTS)」相關。\n4.與PBC#51「ISO27001證書與申請文件」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-051",
     "iuc_or_system": "IT資產風險評鑑清冊",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-054",
@@ -695,11 +748,12 @@
     "pbc_spec": "1.若有，請提供最新版本。\n2.與PBC#51「ISO27001證書與申請文件」, #53「IT資產風險評鑑清冊」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-051；PBC-EC-053",
     "iuc_or_system": "IT資訊資產相關管理政策",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-055",
@@ -708,11 +762,12 @@
     "pbc_spec": "與#30「系統綁定MFA之設定畫面」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-030",
     "iuc_or_system": "綁定MFA之系統清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-056",
@@ -721,11 +776,12 @@
     "pbc_spec": "1.若有，請提供最新版本。\n2.若無，請註明相關規定制定於哪一份政策或內部文件中。\n3.可能與「ePurchase系統」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "IT類資產採購辦法",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-057",
@@ -734,11 +790,12 @@
     "pbc_spec": "1.若有，請提供最新版本。\n2.若無，請註明相關規定制定於哪一份政策或內部文件中。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "密碼規則相關公司政策",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-058",
@@ -747,11 +804,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統權限帳號首次設定之預設密碼變更_畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-059",
@@ -760,11 +818,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle系統權限帳號首次設定之預設密碼變更畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-060",
@@ -773,11 +832,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "EPF系統權限帳號首次設定之預設密碼變更畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-061",
@@ -786,11 +846,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "網路權限帳號首次設定之預設密碼變更畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-062",
@@ -799,11 +860,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆權限帳號首次設定之預設密碼變更畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-063",
@@ -812,11 +874,12 @@
     "pbc_spec": "若有，請提供最新版本。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "軟硬體管理政策/規則",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-064",
@@ -825,11 +888,12 @@
     "pbc_spec": "1.須顯示簽核軌跡或覆核紀錄。\n2.與「eOnBoarding系統」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "新進人員新增帳戶權限設定螢幕截圖 (eOnBoarding系統)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-065",
@@ -838,11 +902,12 @@
     "pbc_spec": "1.須顯示簽核軌跡或覆核紀錄。\n2.與「TR系統」相關。\n3.與PBC#44「資訊需求申請單 (IT Request Form)」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-044",
     "iuc_or_system": "新開發系統/程式測試申請單 (TR系統)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-066",
@@ -851,11 +916,12 @@
     "pbc_spec": "形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle ERP後門程式被關閉_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-067",
@@ -864,11 +930,12 @@
     "pbc_spec": "1.若有，請提供最新版本。\n2.含公司維護之所有系統與其掃測項目。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "公司內部年度系統掃測計畫",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-068",
@@ -877,11 +944,12 @@
     "pbc_spec": "1.與#68「公司內部年度系統掃測計畫」相關。\n2.含公司維護之所有系統 (OS, AP, DB)。\n3.形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-067",
     "iuc_or_system": "每週例行性系統掃測紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-069",
@@ -890,11 +958,12 @@
     "pbc_spec": "1.應至少含Windows與Linux作業系統。\n2.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統變更需求申請單_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-070",
@@ -903,11 +972,12 @@
     "pbc_spec": "1.應至少含Oracle ERP與EPF(任一)應用系統。\n2.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "應用系統變更需求申請單_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-071",
@@ -916,11 +986,12 @@
     "pbc_spec": "1.應至少含Oracle DB、EPF DB與Linux DB。\n2.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫結構變更需求申請單_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-072",
@@ -929,11 +1000,12 @@
     "pbc_spec": "若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "網路系統變更需求申請單_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-073",
@@ -942,11 +1014,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "新增系統工作排程申請紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-074",
@@ -955,11 +1028,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "所有系統工作排程_定期覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-075",
@@ -968,11 +1042,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "工作排程運行異常通知_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-076",
@@ -981,11 +1056,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "背景作業工作排程表 (若有)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-077",
@@ -994,11 +1070,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "每日工作排程異常檢查與覆核紀錄 (若有)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-078",
@@ -1007,11 +1084,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "每月工作排程異常檢查與覆核紀錄 (若有)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-079",
@@ -1020,11 +1098,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.須顯示簽核軌跡或覆核紀錄。\n3.與PBC#76「工作排程運行異常通知_系統畫面」相關。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-076；PBC-EC-075",
     "iuc_or_system": "工作排程異常排除相關處理紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-080",
@@ -1033,11 +1112,12 @@
     "pbc_spec": "1.若有，請提供最新版本。\n2.若無，請註明相關規定制定於哪一份政策或內部文件中。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統過版相關公司政策",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-081",
@@ -1046,11 +1126,12 @@
     "pbc_spec": "1.與PBC#60「Oracle系統權限帳號首次設定之預設密碼變更畫面」相關。\n2. 請檢附覆核紀錄。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-060；PBC-EC-059",
     "iuc_or_system": "Oracle作業系統_預設帳號停用_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-082",
@@ -1059,11 +1140,12 @@
     "pbc_spec": "1.與PBC#59「作業系統權限帳號首次設定之預設密碼變更_畫面」相關。\n2. 請檢附覆核紀錄。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-059；PBC-EC-058",
     "iuc_or_system": "Linux作業系統_預設帳號停用_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-083",
@@ -1072,11 +1154,12 @@
     "pbc_spec": "1.與PBC#38「應用系統之作業系統 audit log」相關。\n2.請檢附覆核紀錄；若無，請說明權責主管檢查存取紀錄方式與頻率。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-038",
     "iuc_or_system": "Oracle ERP-FINANCE 權限帳號_存取覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-084",
@@ -1085,11 +1168,12 @@
     "pbc_spec": "1.與PBC#38「應用系統之作業系統 audit log」相關。\n2.請檢附覆核紀錄；若無，請說明權責主管檢查存取紀錄方式與頻率。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-038",
     "iuc_or_system": "Oracle MIS 權限帳號_存取覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-085",
@@ -1098,11 +1182,12 @@
     "pbc_spec": "1. (若有設定log追蹤)請提供\n2. 請檢附覆核紀錄。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle作業系統_特權帳號(superuser)_存取日誌(access log)覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-086",
@@ -1111,11 +1196,12 @@
     "pbc_spec": "1. (若有設定log追蹤)請提供\n2. 請檢附覆核紀錄。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Linux作業系統_特權帳號(superuser)_存取日誌(access log)覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-087",
@@ -1124,11 +1210,12 @@
     "pbc_spec": "1.與PBC#39「資料庫管理系統 audit log」相關。\n2.請檢附覆核紀錄；若無，請說明權責主管檢查存取紀錄方式與頻率。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-039",
     "iuc_or_system": "EPF DB (Microsoft)_權限帳號(admin)_存取覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-088",
@@ -1137,11 +1224,12 @@
     "pbc_spec": "1.與PBC#39「資料庫管理系統 audit log」相關。\n2.請檢附覆核紀錄；若無，請說明權責主管檢查存取紀錄方式與頻率。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-039",
     "iuc_or_system": "EPF DB2 (Oracle)_權限帳號(admin)_存取日誌(access log)覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-089",
@@ -1150,11 +1238,12 @@
     "pbc_spec": "1.(若有)請提供。\n2.與PBC#86「Oracle作業系統_特權帳號(superuser)_存取日誌(access log)覆核紀錄」相關。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-086；PBC-EC-085",
     "iuc_or_system": "Oracle作業系統_異常存取警示_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-090",
@@ -1163,11 +1252,12 @@
     "pbc_spec": "1.(若有)請提供。\n2.與PBC#87「Linux作業系統_特權帳號(superuser)_存取日誌(access log)覆核紀錄」相關。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-087；PBC-EC-086",
     "iuc_or_system": "Linux作業系統_異常存取警示_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-091",
@@ -1176,11 +1266,12 @@
     "pbc_spec": "1.(若有)請提供。\n2.與PBC#88「EPF DB (Microsoft)_權限帳號(admin)_存取日誌(access log)覆核紀錄」相關。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-088",
     "iuc_or_system": "EPF DB (Microsoft)_異常存取警示_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-092",
@@ -1189,11 +1280,12 @@
     "pbc_spec": "1.(若有)請提供。\n2.與PBC#89「EPF DB2 (Oracle)_權限帳號(admin)_存取日誌(access log)覆核紀錄」相關。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-089；PBC-EC-088",
     "iuc_or_system": "EPF DB2 (Oracle)_異常存取警示_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-093",
@@ -1202,11 +1294,12 @@
     "pbc_spec": "1.(若有)請提供。\n2.與PBC#84「Oracle ERP-FINANCE 權限帳號_存取日誌(access log)覆核紀錄」相關。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-084",
     "iuc_or_system": "Oracle ERP-FINANCE_異常存取警示_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-094",
@@ -1215,11 +1308,12 @@
     "pbc_spec": "1.(若有)請提供。\n2.與PBC#85「Oracle MIS 權限帳號_存取日誌(access log)覆核紀錄」相關。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-085",
     "iuc_or_system": "Oracle MIS_異常存取警示_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-095",
@@ -1228,11 +1322,12 @@
     "pbc_spec": "1.強調為「內部人員」申請「內部機敏資訊」。\n2.須顯示簽核軌跡或覆核紀錄。\n3.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-096",
     "iuc_or_system": "公司內部機敏資訊存取申請_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-096",
@@ -1241,11 +1336,12 @@
     "pbc_spec": "1.與PBC#90「申請存取公司內部機敏資訊_系統畫面」相關。\n2.與PBC「對外暫時性帳號 - 權限申請/設定與關閉實施證據」區別。\n3.須顯示簽核軌跡或覆核紀錄。\n4.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-090；PBC-EC-016",
     "iuc_or_system": "內部人員暫時帳號權限申請_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-097",
@@ -1254,11 +1350,12 @@
     "pbc_spec": "1.與PBC#91「內部人員暫時帳號權限停用_系統畫面」相關。\n2.與PBC「對外暫時性帳號 - 權限申請/設定與關閉實施證據」區別。\n3.須顯示簽核軌跡或覆核紀錄。\n4.若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-091；PBC-EC-016",
     "iuc_or_system": "內部人員暫時帳號權限停用_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-098",
@@ -1267,11 +1364,12 @@
     "pbc_spec": "1.若無，請提供來自委外廠商之樣本。\n2.形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "委外廠商管理公司網路系統之預設帳號密碼_已修改證明",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-099",
@@ -1280,11 +1378,12 @@
     "pbc_spec": "1.若無，請提供來自委外廠商之樣本。\n2.建議顯示委外廠商管理之特權帳號異動(新增)。\n3.形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "委外廠商管理公司網路系統之特權帳號_已清查證明",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-100",
@@ -1293,11 +1392,12 @@
     "pbc_spec": "1.若無，請提供來自委外廠商之樣本。\n2.形式不拘；若為螢幕截圖，須顯示截圖時間。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "委外廠商對公司網路系統之權限帳號存取活動_已覆核證明",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-101",
@@ -1306,11 +1406,12 @@
     "pbc_spec": "1.形式不拘；若為螢幕截圖，須顯示截圖時間。\n2.來自委外廠商之通聯記錄亦可。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "公司網路系統遭異常存取之警示通知",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-102",
@@ -1319,11 +1420,12 @@
     "pbc_spec": "1.包含產品開發部、產品測試部、產品企劃部及企業e化部人員清單\n2.請註明各人員之所屬團隊,如Server團隊/APP團隊/雲團隊/引擎團隊/或其他自行補充(若有跨團隊也一併註明)\n3.請註明各人員之角色,如主管/程式開發/上版人員/資料庫管理者/應用系統管理員/作業系統管理者/測試人員/ＰＭ/或其他自行補充(若有兼任多角色也一併註明)",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "產品研發中心人員清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-103",
@@ -1332,11 +1434,12 @@
     "pbc_spec": "由財務部門於Budget系統發起之預算調查及更新紀錄",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "IT年度預算與季更新記錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-104",
@@ -1345,11 +1448,12 @@
     "pbc_spec": "ePF系統重分類後之系統清單\n包含但不限於先前提供之「玩美移動_資訊循環樣本文件_Server盤點表」、「11-系統之重要性分級」及「53-IT資產風險評鑑清冊」",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-105",
@@ -1358,11 +1462,12 @@
     "pbc_spec": "請提供下列資訊請採購相關完整單據各一筆\n1.硬體設備（如電腦、螢幕、伺服器或其他）\n2.軟體授權（如微軟授權、資料庫授權或其他）\n3.維護合約\n4.費用類採購（如鍵盤、滑鼠、網路線或其他）",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "請購單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-106",
@@ -1371,11 +1476,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "報價單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-107",
@@ -1384,11 +1490,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "採購單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-108",
@@ -1397,11 +1504,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "驗收單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-109",
@@ -1410,11 +1518,12 @@
     "pbc_spec": "請提供下列需求來源各一筆完整流程之相關單據（如：資訊開發需求申請單、TR單、DR單、mail及會議記錄)，所謂完整流程，表示某一需求的一開始到結束，全部的過程）\n1.各部門需求\n2.CEO需求\n3.PM需求\n4.IT自行解決或IT自提問題",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統開發/程式修改相關單據及記錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-110",
@@ -1423,11 +1532,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統工作分配排程看板（Excel）",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-111",
@@ -1436,11 +1546,12 @@
     "pbc_spec": "截圖須含桌面日期時間",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "EPF系統(含所有子系統)之正式環境及測試環境畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-112",
@@ -1449,11 +1560,12 @@
     "pbc_spec": "1.清單產製時須提供篩選條件或SQL條件截圖畫面並含桌面日期時間(SQL語法: select * from 帳號權限相關之table表)\n2.須註明各帳號之使用者及部門",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "EPF系統(含所有子系統)帳號權限清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-113",
@@ -1462,11 +1574,12 @@
     "pbc_spec": "如：請購單／採購單／驗收單／TR單／其他可佐證之相關所有單據",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle ERP重新導入之完整單據",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-114",
@@ -1475,11 +1588,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "原始碼掃毒與資安檢測報告（Sonacube/Tenable.io）",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-115",
@@ -1488,11 +1602,12 @@
     "pbc_spec": "由外部廠商提供之系統操作手冊",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "外購系統操作手冊",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-116",
@@ -1501,11 +1616,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Github Cloud版本歷程記錄畫面截圖",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-117",
@@ -1514,11 +1630,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Oracle ERP帳號清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-118",
@@ -1527,11 +1644,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "MSSQL, MYSQL資料庫帳號清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-119",
@@ -1540,11 +1658,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "Windows, Linux作業系統帳號清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-120",
@@ -1553,11 +1672,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆帳號清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-121",
@@ -1566,11 +1686,12 @@
     "pbc_spec": "請提供相關帳號權限申請單據 (含Oracle ERP, EPF系統)\n1.新進: 帳號權限申請單(須含簽核)\n2.調職: 帳號權限申請單(須含簽核)\n3.在職: 帳號權限申請單(須含簽核)\n4.離職: 相關離職程序單(須含簽核)及其相關系統帳號已刪除或停用之畫面(含AD帳號)",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "帳號權限申請單據 (含Oracle ERP, EPF系統)",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-122",
@@ -1579,11 +1700,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫帳號密碼狀態",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-123",
@@ -1592,11 +1714,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統帳號密碼狀態",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-124",
@@ -1605,11 +1728,12 @@
     "pbc_spec": "1.密碼原則，含密碼長度、密碼週期、密碼複雜度、密碼錯誤次數鎖定、密碼歷程\n2.設定畫面截圖須含桌面日期及時間\n3.可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "EPF系統、Oracle ERP之密碼原則設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-125",
@@ -1618,11 +1742,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫（含MSSQL, MySQL）之密碼原則設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-126",
@@ -1631,11 +1756,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統（含Windows, AD Server, Linux）之密碼原則設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-127",
@@ -1644,11 +1770,12 @@
     "pbc_spec": "設定畫面截圖須含桌面日期及時間",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "綁定MFA之設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-128",
@@ -1657,11 +1784,12 @@
     "pbc_spec": "須含主管覆核，應包含如下:\n1.Oracle ERP\n2.EPF系統(含所有子系統)\n3.資料庫(含MSSQL, MYSQL)\n4.作業系統(含AD Server)\n5.Github\n6.防火牆",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統帳號權限定期清查紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-129",
@@ -1670,11 +1798,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "WindowsAD使用者帳號狀態",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-130",
@@ -1683,11 +1812,12 @@
     "pbc_spec": "可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "WindowsAD網域管理員清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-131",
@@ -1696,11 +1826,12 @@
     "pbc_spec": "可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "WindowsAD網域OU群組權限設置",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-132",
@@ -1709,11 +1840,12 @@
     "pbc_spec": "可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "WIndowsAD信任網域",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-133",
@@ -1722,11 +1854,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "備份排程結果通知MAIL",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-134",
@@ -1735,11 +1868,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "系統參數變更_線上申請單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-135",
@@ -1748,11 +1882,12 @@
     "pbc_spec": "備份內容應含應用系統(Oracle ERP, EPF系統)/資料庫/作業系統",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "備份設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-136",
@@ -1761,11 +1896,12 @@
     "pbc_spec": "備份內容應含應用系統(Oracle ERP, EPF系統)/資料庫/作業系統",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "備份結果存放路徑畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-137",
@@ -1774,11 +1910,12 @@
     "pbc_spec": "備份內容應含應用系統(Oracle ERP, EPF系統)/資料庫/作業系統",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "備份結果通知MAIL",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-138",
@@ -1787,11 +1924,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "每日資料庫備份回復測試紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-139",
@@ -1800,11 +1938,12 @@
     "pbc_spec": "含Windows Update, 版本Patch更新",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統變更之申請評估記錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-140",
@@ -1813,11 +1952,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "作業系統更新紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-141",
@@ -1826,11 +1966,12 @@
     "pbc_spec": "須透過指令取得，可參考附件說明檔案",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資料庫更新紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-142",
@@ -1839,11 +1980,12 @@
     "pbc_spec": "含防火牆設備汰渙, 韌體更新, 版本更新",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防火牆變更申請紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-143",
@@ -1852,11 +1994,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "可進出遠傳IDC機房之人員名單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-144",
@@ -1865,11 +2008,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "遠傳IDC機房定期提供機房進出紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-145",
@@ -1878,11 +2022,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "遠傳IDC機房異常狀況通知MAIL",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-146",
@@ -1891,11 +2036,12 @@
     "pbc_spec": "應包含\n1.Oracle ERP維護合約\n2.硬體設備(如:伺服器)維護合約 X\n3.資訊安全工具維護合約\n4.資料庫維護合約 X\n5.防火牆維護合約 X\n6.訊連科技委外維護合約\n7.其他維護合約 X",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "維護合約",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-147",
@@ -1904,11 +2050,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "硬體報廢單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-148",
@@ -1917,11 +2064,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資安管理定期會議紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-149",
@@ -1930,11 +2078,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "員工資訊安全訓練記錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-150",
@@ -1943,11 +2092,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "公司AI相關管理制度",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-151",
@@ -1956,11 +2106,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "防毒軟體設定畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-152",
@@ -1969,11 +2120,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "病毒碼已更新到最新之畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-153",
@@ -1982,11 +2134,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "弱點掃描定期執行報告",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-154",
@@ -1995,11 +2148,12 @@
     "pbc_spec": "包含：防火牆系統、入侵偵測/保護系統",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資訊安全系統參數設定變更及覆核紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-155",
@@ -2008,11 +2162,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "客戶資料編輯權限清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-156",
@@ -2021,11 +2176,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "TBR狀態之Perfect Console帳號_系統畫面",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-157",
@@ -2034,11 +2190,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "與銷售相關的所有關鍵系統圖",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-158",
@@ -2047,11 +2204,12 @@
     "pbc_spec": "",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "銷售相關系統之使用者與admin權限清單",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-159",
@@ -2060,11 +2218,12 @@
     "pbc_spec": "如有，請提供與前面「請購單 - IT設備」對應之供應商問卷。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "供應商問卷 - IT設備",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-160",
@@ -2073,11 +2232,12 @@
     "pbc_spec": "請提供與前面「e-Expense - 線上／雲端服務」對應之供應商主檔新增畫面。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "VMS供應商主檔資料（新增） - 線上／雲端服務",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-161",
@@ -2086,11 +2246,12 @@
     "pbc_spec": "如有，請提供與前面「e-Expense - 線上／雲端服務」對應之供應商主檔變更畫面。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "VMS供應商主檔資料（變更） - 線上／雲端服務",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-162",
@@ -2099,11 +2260,12 @@
     "pbc_spec": "請提供與前面「請購單 - IT設備」對應之供應商主檔新增畫面。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "VMS供應商主檔資料（新增） - IT設備",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-163",
@@ -2112,11 +2274,12 @@
     "pbc_spec": "如有，請提供與前面「請購單 - IT設備」對應之供應商主檔變更畫面。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "VMS供應商主檔資料（變更） - IT設備",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-164",
@@ -2125,11 +2288,12 @@
     "pbc_spec": "請提供與前面「請購單 - IT設備」對應之出貨單。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "出貨單 - IT設備",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-165",
@@ -2138,11 +2302,12 @@
     "pbc_spec": "請提供與前面「請購單 - IT設備」對應之發票。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "收貨發票 - IT設備",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-166",
@@ -2151,11 +2316,12 @@
     "pbc_spec": "根據訪談得知，請購者在請購時選填的資產類別，會在後續收貨時產生出對應的財產編號。顧問想瞭解請購者選擇哪幾種資產類別會產生出財產編號，請提供相關的說明文件或是依據（例如公司規範／系統設定畫面）。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "資產類別及使用年限設定依據文件（如資產分類表）",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-167",
@@ -2164,11 +2330,12 @@
     "pbc_spec": "請提供過去任何一筆移出申請，並請包含完整簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "IT設備或機房內設備移出公司之申請紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-168",
@@ -2177,11 +2344,12 @@
     "pbc_spec": "請提供過去任何一筆移入的申請，並請包含完整簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "IT設備或機房內設備移入公司之申請紀錄",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-169",
@@ -2190,11 +2358,12 @@
     "pbc_spec": "請提供過去任何一筆IT設備或機房的維修／保養的e-Purchase請購紀錄，並請包含完整簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "維護作業相關之請購資訊 - IT設備或機房",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-170",
@@ -2203,11 +2372,12 @@
     "pbc_spec": "請提供與「維護作業相關之請購資訊 - IT設備或機房」對應之採購資訊。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-169",
     "iuc_or_system": "維護作業相關之採購資訊 - IT設備或機房",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-171",
@@ -2216,11 +2386,12 @@
     "pbc_spec": "請提供與「維護作業相關之請購資訊 - IT設備或機房」對應的支出紀錄，並請包含完整簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-169",
     "iuc_or_system": "維護作業相關之e-Expense 報支單據 - IT設備或機房",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-172",
@@ -2229,11 +2400,12 @@
     "pbc_spec": "請提供與「維護作業相關之請購資訊 - IT設備或機房」對應之驗收紀錄（例如照片或結果評估），並請包含完整簽核軌跡。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "PBC-EC-169",
     "iuc_or_system": "維護作業驗收紀錄 - IT設備或機房",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   },
   {
     "pbc_id": "PBC-EC-173",
@@ -2242,10 +2414,11 @@
     "pbc_spec": "請提供過去任何一筆相關的申請表或報廢評估的紀錄（例如Email通知或系統紀錄），並檢附報廢時的照片或其他處理紀錄，以及移出公司的申請與覆核紀錄。",
     "pbc_kind": "",
     "pbc_file_format": "",
+    "related_pbc_ids": "",
     "iuc_or_system": "設備報廢評估與報廢時影像紀錄 - IT設備或機房",
     "cycle": "電腦化資訊系統循環",
     "source": "it_cycle_pbc_seed",
     "notes": "",
-    "updated_at": "2026-08-27 08:39:08"
+    "updated_at": "2026-08-27 08:45:36"
   }
 ]

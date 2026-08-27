@@ -618,6 +618,26 @@ check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
         regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]] <
           regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]],
       "PBC 預覽列在設定畫面正下方（非左右雙欄）")
+check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
+check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
+        grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),
+      "PBC 互相勾稽選單與 Walkthrough 預覽存在")
+wt_reg <- empty_pbc_registry()
+wt_reg <- upsert_pbc(wt_reg, list(
+  pbc_id = "PBC-EC-001", client_pbc_name = "系統清單", reviewed_name = "系統清單",
+  pbc_spec = "基準清單"
+))
+wt_reg <- upsert_pbc(wt_reg, list(
+  pbc_id = "PBC-EC-002", client_pbc_name = "系統關聯圖", reviewed_name = "系統關聯圖",
+  pbc_spec = "與#1「系統清單」相關。"
+))
+wt_reg <- enrich_related_pbc_from_specs(wt_reg)
+check("PBC-EC-001" %in% parse_pbc_id_values(wt_reg$related_pbc_ids[2]),
+      "規格說明 #1／名稱可自動解析勾稽")
+wt <- pbc_walkthrough(wt_reg, "PBC-EC-001")
+check("PBC-EC-002" %in% wt$inbound, "Walkthrough 可顯示入鏈勾稽")
+wt2 <- pbc_walkthrough(wt_reg, "PBC-EC-002")
+check("PBC-EC-001" %in% wt2$outbound, "Walkthrough 可顯示出鏈勾稽")
 
 # Library seeds + import（不再內建「存取管理／變更管理」短名子作業）
 lib <- seed_control_library()

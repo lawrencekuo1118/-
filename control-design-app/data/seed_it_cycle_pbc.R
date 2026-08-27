@@ -46,8 +46,12 @@ existing <- load_pbc_registry(out_csv, out_json)
 for (i in seq_len(nrow(reg))) {
   existing <- upsert_pbc(existing, as.list(reg[i, , drop = FALSE]))
 }
+existing <- enrich_related_pbc_from_specs(existing)
 save_pbc_registry(existing, out_csv, out_json)
+n_linked <- sum(vapply(existing$related_pbc_ids, function(x) {
+  length(parse_pbc_id_values(x)) > 0L
+}, logical(1)))
 message(sprintf(
-  "Seeded IT-cycle PBC: %d rows (registry total %d) → %s",
-  nrow(reg), nrow(existing), out_csv
+  "Seeded IT-cycle PBC: %d rows (registry total %d, linked %d) → %s",
+  nrow(reg), nrow(existing), n_linked, out_csv
 ))

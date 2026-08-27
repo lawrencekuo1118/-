@@ -80,6 +80,7 @@ empty_pbc_registry <- function() {
     pbc_spec = character(),
     pbc_kind = character(),
     pbc_file_format = character(),
+    related_pbc_ids = character(),
     iuc_or_system = character(),
     cycle = character(),
     source = character(),
@@ -103,6 +104,7 @@ upsert_pbc <- function(registry, row) {
   kind <- normalize_pbc_kind(row$pbc_kind)
   file_fmt <- normalize_pbc_file_format(row$pbc_file_format)
   spec <- normalize_pbc_spec(row$pbc_spec)
+  related <- normalize_related_pbc_ids(row$related_pbc_ids)
   display <- format_pbc_reviewed_label(reviewed, kind)
 
   # Match existing by id, else by same client_pbc_name (reuse / update mapping)
@@ -124,6 +126,7 @@ upsert_pbc <- function(registry, row) {
     pbc_spec = spec,
     pbc_kind = kind,
     pbc_file_format = file_fmt,
+    related_pbc_ids = related,
     iuc_or_system = trimws(as.character(row$iuc_or_system %||% display)),
     cycle = trimws(as.character(row$cycle %||% "")),
     source = trimws(as.character(row$source %||% "client")),
@@ -147,6 +150,148 @@ delete_pbc <- function(registry, pbc_ids) {
 
 is_pbc_policy_kind <- function(kind) {
   identical(normalize_pbc_kind(kind), PBC_KIND_POLICY)
+}
+
+# 勾稽 ID 清單（分號／逗號分隔）
+normalize_related_pbc_ids <- function(x) {
+  vals <- parse_pbc_id_values(x)
+  if (!length(vals)) return("")
+  paste(unique(vals), collapse = "；")
+}
+
+# 從規格說明文字解析可勾稽之 PBC（#N／PBC#N／PBC-…／「名稱」）
+parse_pbc_cross_refs_from_text <- function(text, registry) {
+  raw <- as.character(text %||% "")
+  if (!nzchar(trimws(raw)) || !is.data.frame(registry) || !nrow(registry)) {
+    return(character())
+  }
+  known <- unique(trimws(as.character(registry$pbc_id)))
+  hits <- character()
+
+  id_pat <- gregexpr("PBC-[A-Za-z0-9]+-\\d{2,4}|PBC-\\d{2,4}", raw, perl = TRUE, ignore.case = TRUE)
+  if (id_pat[[1]][1] > 0) {
+    found <- unique(toupper(regmatches(raw, id_pat)[[1]]))
+    # restore original casing from known ids
+    for (f in found) {
+      hit <- known[toupper(known) == f]
+      if (length(hit)) hits <- c(hits, hit[[1]])
+    }
+  }
+
+  hash_pat <- gregexpr("#\\s*\\d{1,3}", raw, perl = TRUE)
+  if (hash_pat[[1]][1] > 0) {
+    nums <- unique(as.integer(gsub("\\D", "", regmatches(raw, hash_pat)[[1]])))
+    nums <- nums[is.finite(nums) & nums >= 1L & nums <= 999L]
+    for (n in nums) {
+      cand <- c(sprintf("PBC-EC-%03d", n), sprintf("PBC-%03d", n))
+      hit <- cand[cand %in% known]
+      if (length(hit)) hits <- c(hits, hit[[1]])
+    }
+  }
+
+  name_pat <- gregexpr("「[^」]{1,120}」", raw, perl = TRUE)
+  if (name_pat[[1]][1] > 0) {
+    quoted <- gsub("[「」]", "", regmatches(raw, name_pat)[[1]])
+    for (q in unique(trimws(quoted))) {
+      if (!nzchar(q)) next
+      idx <- which(
+        registry$client_pbc_name == q |
+          registry$reviewed_name == q |
+          grepl(q, registry$client_pbc_name, fixed = TRUE) |
+          grepl(q, registry$reviewed_name, fixed = TRUE)
+      )
+      if (length(idx)) hits <- c(hits, registry$pbc_id[idx[[1]]])
+    }
+  }
+  unique(hits[nzchar(hits)])
+}
+
+# 勾稽選單（排除自身）
+pbc_related_link_choices <- function(registry, exclude_id = "") {
+  if (!is.data.frame(registry) || !nrow(registry)) return(character())
+  excl <- trimws(as.character(exclude_id %||% ""))
+  df <- registry
+  if (nzchar(excl)) df <- df[df$pbc_id != excl, , drop = FALSE]
+  if (!nrow(df)) return(character())
+  labels <- sprintf(
+    "%s｜%s",
+    df$pbc_id,
+    ifelse(nzchar(df$reviewed_name), df$reviewed_name,
+           ifelse(nzchar(df$client_pbc_name), df$client_pbc_name, "—"))
+  )
+  stats::setNames(df$pbc_id, labels)
+}
+
+# Walkthrough：出鏈（本列勾稽）＋入鏈（他列勾稽至本列）
+pbc_walkthrough <- function(registry, pbc_id) {
+  empty <- list(
+    focus_id = "",
+    outbound = character(),
+    inbound = character(),
+    related_rows = if (is.data.frame(registry)) registry[0, , drop = FALSE] else empty_pbc_registry()
+  )
+  id <- trimws(as.character(pbc_id %||% ""))
+  if (!nzchar(id) || !is.data.frame(registry) || !nrow(registry)) return(empty)
+  if (!"related_pbc_ids" %in% names(registry)) {
+    registry$related_pbc_ids <- ""
+  }
+  focus <- registry[registry$pbc_id == id, , drop = FALSE]
+  if (!nrow(focus)) return(empty)
+  outbound <- parse_pbc_id_values(focus$related_pbc_ids[[1]])
+  outbound <- outbound[outbound %in% registry$pbc_id & outbound != id]
+  inbound <- character()
+  for (i in seq_len(nrow(registry))) {
+    oid <- registry$pbc_id[i]
+    if (identical(oid, id)) next
+    rel <- parse_pbc_id_values(registry$related_pbc_ids[i])
+    if (id %in% rel) inbound <- c(inbound, oid)
+  }
+  inbound <- unique(inbound)
+  all_ids <- unique(c(outbound, inbound))
+  list(
+    focus_id = id,
+    outbound = outbound,
+    inbound = inbound,
+    related_rows = registry[registry$pbc_id %in% all_ids, , drop = FALSE]
+  )
+}
+
+format_pbc_walkthrough_lines <- function(registry, pbc_id) {
+  wt <- pbc_walkthrough(registry, pbc_id)
+  if (!nzchar(wt$focus_id)) return(character())
+  label_of <- function(ids) {
+    if (!length(ids)) return(character())
+    vapply(ids, function(rid) {
+      row <- registry[registry$pbc_id == rid, , drop = FALSE]
+      if (!nrow(row)) return(rid)
+      nm <- ifelse(nzchar(row$reviewed_name[[1]]), row$reviewed_name[[1]], row$client_pbc_name[[1]])
+      sprintf("%s｜%s", rid, ifelse(nzchar(nm), nm, "—"))
+    }, character(1))
+  }
+  lines <- character()
+  if (length(wt$outbound)) {
+    lines <- c(lines, "→ 往下勾稽（本 PBC 指向）：", paste0("  • ", label_of(wt$outbound)))
+  }
+  if (length(wt$inbound)) {
+    lines <- c(lines, "← 往上勾稽（他 PBC 指向本列）：", paste0("  • ", label_of(wt$inbound)))
+  }
+  if (!length(lines)) {
+    return("尚無勾稽連結（可於「互相勾稽」選取，或由規格說明中的 #N／「名稱」自動解析）。")
+  }
+  lines
+}
+
+# 依規格說明自動補齊勾稽（保留既有手動連結）
+enrich_related_pbc_from_specs <- function(registry) {
+  registry <- normalize_pbc_df(registry)
+  if (!nrow(registry)) return(registry)
+  for (i in seq_len(nrow(registry))) {
+    auto <- parse_pbc_cross_refs_from_text(registry$pbc_spec[i], registry)
+    auto <- setdiff(auto, registry$pbc_id[i])
+    cur <- parse_pbc_id_values(registry$related_pbc_ids[i])
+    registry$related_pbc_ids[i] <- normalize_related_pbc_ids(c(cur, auto))
+  }
+  registry
 }
 
 filter_pbc_registry <- function(registry, cycle_filter = NULL,
@@ -218,14 +363,16 @@ lookup_pbc <- function(registry, pbc_ids) {
 }
 
 parse_pbc_id_values <- function(x) {
-  if (is.null(x)) return(character())
+  if (is.null(x) || !length(x)) return(character())
   if (length(x) > 1L) {
     vals <- trimws(as.character(x))
+    vals <- vals[!is.na(vals)]
     return(unique(vals[nzchar(vals)]))
   }
-  raw <- trimws(as.character(x %||% ""))
-  if (!nzchar(raw)) return(character())
+  raw <- trimws(as.character(if (is.null(x)) "" else x))
+  if (length(raw) != 1L || is.na(raw) || !nzchar(raw)) return(character())
   vals <- trimws(unlist(strsplit(raw, "[;；|/、,，]+")))
+  vals <- vals[!is.na(vals)]
   unique(vals[nzchar(vals)])
 }
 
@@ -413,6 +560,10 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
       "pbc_spec", "spec", "specification", "規格說明", "pbc規格說明",
       "pbc_規格說明", "規格", "取得要求", "備註"
     ),
+    related_pbc_ids = c(
+      "related_pbc_ids", "related_pbc", "related", "links", "walkthrough",
+      "勾稽", "互相勾稽", "相關pbc", "相關_pbc"
+    ),
     iuc_or_system = c("iuc_or_system", "iuc", "system"),
     cycle = c("cycle", "循環"),
     source = c("source", "來源"),
@@ -430,6 +581,7 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
       pbc_spec = pick(alias$pbc_spec)[i],
       pbc_kind = pick(alias$pbc_kind)[i],
       pbc_file_format = pick(alias$pbc_file_format)[i],
+      related_pbc_ids = pick(alias$related_pbc_ids)[i],
       iuc_or_system = pick(alias$iuc_or_system)[i],
       cycle = pick(alias$cycle)[i],
       source = pick(alias$source)[i],

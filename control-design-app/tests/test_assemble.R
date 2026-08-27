@@ -446,7 +446,7 @@ check(!grepl("interview_source", app_txt) &&
         !grepl("interview_cycle", app_txt) &&
         grepl("interview_sub", app_txt) &&
         grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt) &&
-        grepl("循環（全域）", app_txt) &&
+        grepl('lab_req\\("循環"\\)', app_txt) &&
         length(gregexpr('selectInput\\(\\s*"cycle"', app_txt, perl = TRUE)[[1]]) == 1L,
       "訪談／設計共用側邊欄循環（無題綱來源、無頁內循環選框）")
 
@@ -814,9 +814,10 @@ check(!grepl("updateSelectInput\\(session, \"cycle\", selected = \"\"\\)", app_c
 
 check(grepl("cascade_source_library", app_casc),
       "訪談引導仍採內建範本庫候選")
-check(grepl("控制編號＝循環編號-子作業序號-控制序號", app_casc) &&
-        !grepl("control_id_compose_hint", app_casc),
-      "基礎設定說明控制編號組成規則（無動態提示列）")
+check(grepl("placeholder = \"循環編號-子作業序號-控制序號", app_casc) &&
+        !grepl("control_id_compose_hint", app_casc) &&
+        !grepl("編號組成：", app_casc),
+      "基礎設定以 placeholder 提示編號格式（無優化註解／動態提示列）")
 check(!grepl('selectInput\\(\\s*"design_sub"|selectInput\\(\\s*"cascade_sub"', app_casc) &&
         grepl('selectizeInput\\(\\s*"sub_process"', app_casc) &&
         grepl("sub_process_hint", app_casc) &&
@@ -1101,7 +1102,7 @@ check(grepl("design_preview_basic", app_src) &&
         grepl("design_preview_control", app_src) &&
         grepl("design_rcm_preview_fields", app_src) &&
         grepl("uiOutput\\(\"live_preview\"\\)", app_src),
-      "各階段預覽列依範本 RCM 欄位順序")
+      "各階段有設計預覽列")
 check(identical(
   rcm_preview_columns_through_section("基礎設定"),
   c("循環名稱", "子作業名稱")
@@ -1129,9 +1130,18 @@ csa_panel <- sub('(?s)nav_panel\\(\\s*"RCM".*', "", csa_panel, perl = TRUE)
 check(!grepl("layout_columns", csa_panel, fixed = TRUE) &&
         grepl("design-preview-drawer", csa_panel, fixed = TRUE),
       "CSA 頁不再用右側雙欄，改底部收合預覽")
-check(grepl('lab_req\\("循環（全域）"\\)', app_src) &&
-        grepl("循環（全域）為必填", app_src),
-      "循環（全域）標示必填並於儲存／定稿門檻檢查")
+check(grepl('lab_req\\("循環"\\)', app_src) &&
+        grepl("循環為必填", app_src) &&
+        !grepl("循環（全域）", app_src),
+      "循環標示必填並於儲存／定稿門檻檢查（無優化註解）")
+check(!grepl("不變條件", app_src) &&
+        !grepl("類型欄防呆", app_src) &&
+        !grepl("不入 RCM 範本欄", app_src) &&
+        !grepl("自訂選項已入參數庫", app_src) &&
+        !grepl("寫入 What／建議串接PBC", app_src) &&
+        !grepl("台灣用語", app_src) &&
+        !grepl("對齊鯨鏈", app_src),
+      "介面不顯示優化／實作相關註解")
 check(grepl("rcm_preview_ctrl|push_rcm_section_preview", app_src),
       "RCM 預覽合併邏輯")
 check(!grepl("push_rcm_section_preview[\\s\\S]{0,400}nav_select\\(\\s*\"main_nav\"\\s*,\\s*selected\\s*=\\s*\"RCM\"", app_src, perl = TRUE),

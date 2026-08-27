@@ -512,7 +512,7 @@ ui <- page_navbar(
       div(
         textInput("company", NULL, placeholder = "公司名稱"),
         tags$hr(class = "my-2"),
-        tags$div(class = "small fw-bold mb-1", lab_req("循環（全域）")),
+        tags$div(class = "small fw-bold mb-1", lab_req("循環")),
         selectInput(
           "cycle", NULL,
           choices = c("請選擇循環…" = "", CYCLES_NINE_CHOICES),
@@ -540,15 +540,14 @@ ui <- page_navbar(
     div(
       class = "home-hero",
       tags$h2("尬電SOX"),
-      p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。",
-        " RCM 標題列對齊鯨鏈資訊循環格式。")
+      p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。")
     ),
     card(
       class = "home-section",
       card_header("整體設計流程"),
       tags$ol(
         class = "home-steps mb-0",
-        tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "（全域必選）與公司名稱；循環選定後各頁共用。"),
+        tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "與公司名稱；循環選定後各頁共用。"),
         tags$li(tags$strong("風險控制點設計"), "：",
                 tags$span(class = "text-danger", "須先選側邊欄循環"),
                 "，於表單填寫 ",
@@ -557,16 +556,12 @@ ui <- page_navbar(
                 tags$span(class = "text-danger", "*"), " 為設計必填）。"),
         tags$li("可自 ", strong("範本庫"), " 或 ", strong("參數庫"), " 套用欄位，再覆寫調整。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"),
-                "（1 控制點 ↔ 1 RCM 列；控制編號＝循環編號-子作業序號-控制序號，如 EC-101-01）。"),
+                "（1 控制點 ↔ 1 RCM 列；控制編號如 EC-101-01）。"),
         tags$li(tags$strong("訪談問項設計"),
                 "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
         tags$li(tags$strong("控制點測試設計"),
                 "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
-      ),
-      p(class = "small text-muted mb-0 mt-2",
-        "本 APP 僅產出設計欄位；輸入檔之控制現況／分析評估等不寫入範本庫與參數庫。",
-        "介面用語採", strong("台灣用語"), "與", strong("美式英文專有名詞"),
-        "（如 SOX、RCM、CSA、PBC、IUC、Form 4120SR）；不使用港澳或中國用語。")
+      )
     ),
     card(
       class = "home-section",
@@ -584,16 +579,16 @@ ui <- page_navbar(
             "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
         div(class = "home-tab-card",
             strong("RCM"),
-            "檢視／下載已定稿 RCM 列與缺漏表（設計欄位群組對齊鯨鏈標題列）。"),
+            "檢視／下載已定稿 RCM 列與缺漏表。"),
         div(class = "home-tab-card",
             strong("PBC資料庫"),
             "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／政策制度。"),
         div(class = "home-tab-card",
             strong("範本庫"),
-            "可跳過套用；寫入／直接編輯時才需高權登入（側邊欄進入）。"),
+            "可跳過套用；寫入／直接編輯時才需高權登入。"),
         div(class = "home-tab-card",
             strong("參數庫"),
-            "查詢／套用表單；新增刪除／重建時才需高權登入（側邊欄進入）。")
+            "查詢／套用表單；新增刪除／重建時才需高權登入。")
       )
     )
   ),
@@ -640,7 +635,7 @@ ui <- page_navbar(
           accordion_panel(
             "5W1H／PBC",
             p(class = "small text-muted mb-2",
-              "模組化拼湊回答架構與探針題；可套用 PBC 資料庫命名。"),
+              "勾選模組組成回答架構與追問題；可套用 PBC 命名。"),
             checkboxGroupInput(
               "interview_5w1h", NULL,
               choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
@@ -653,7 +648,7 @@ ui <- page_navbar(
             selectizeInput(
               "interview_pbc_link", "套用 IUC／PBC 命名",
               choices = NULL, multiple = TRUE,
-              options = list(placeholder = "原名→新名（寫入建議串接PBC／What）")
+              options = list(placeholder = "原名→新名（套用至訪談）")
             )
           )
         ),
@@ -681,13 +676,7 @@ ui <- page_navbar(
           nav_panel(
             "① 基礎設定",
             p(class = "small text-muted mb-2",
-              "循環於左側側邊欄設定（全域共用）。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。",
-              tags$br(),
-              "編號組成：",
-              tags$code("子作業編號＝循環編號-子作業序號"),
-              "；",
-              tags$code("控制編號＝循環編號-子作業序號-控制序號"),
-              "（例：EC-101、EC-101-01）。"),
+              "循環於左側側邊欄設定。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
             uiOutput("design_cycle_readonly"),
             uiOutput("sub_process_hint"),
             textInput("sub_process_id", lab_opt("子作業編號"), value = "",
@@ -724,7 +713,7 @@ ui <- page_navbar(
               uiOutput("filter_risk_hits")
             ),
             p(class = "small text-muted mb-2",
-              "風險因素是風險描述上的標記（TAG）。風險描述為質性文字（同控制目標／控制活動），可手動撰寫；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
+              "風險因素是風險描述上的標記（TAG）。風險描述可手動撰寫；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
             selectizeInput(
               "risk_principle", "風險面向",
               choices = NULL, multiple = FALSE, width = "100%",
@@ -754,7 +743,7 @@ ui <- page_navbar(
             uiOutput("risk_factor_hint"),
             textAreaInput(
               "risk_description", lab_req("風險描述"), rows = 3, width = "100%",
-              placeholder = "質性描述此控制點對應之風險內涵（非下拉選項）"
+              placeholder = "描述此控制點對應之風險內涵"
             ),
             selectInput(
               "risk_category", lab_req("風險類別"),
@@ -774,7 +763,7 @@ ui <- page_navbar(
               )
             ),
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
-            selectInput("romm_classification", "RoMM 分類（抽樣輔助；不入 RCM 範本欄）",
+            selectInput("romm_classification", "RoMM 分類（抽樣輔助）",
                         choices = ROMM_CLASS_CHOICES, width = "100%"),
             uiOutput("design_preview_risk"),
             div(
@@ -824,7 +813,7 @@ ui <- page_navbar(
             ),
             p(class = "small text-muted mb-2",
               "具選單之欄位：可從建議選取後，", tags$strong("雙擊已選項目"),
-              "即可修改文字；儲存成功後會寫入參數庫為自訂選項。"),
+              "即可修改文字。"),
             selectInput(
               "approach", lab_req("控制方式"),
               choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
@@ -945,7 +934,7 @@ ui <- page_navbar(
         `aria-expanded` = "false",
         `aria-controls` = "designPreviewCollapse",
         tags$span(class = "chevron", "▸"),
-        "預覽列（範本 RCM 欄位順序）— 點擊展開或收回"
+        "預覽列 — 點擊展開或收回"
       ),
       div(
         id = "designPreviewCollapse",
@@ -1881,9 +1870,9 @@ server <- function(input, output, session) {
     n_pbc <- length(input$interview_pbc_link %||% character())
     tags$div(
       class = "small border rounded p-2 mb-2 bg-light",
-      tags$strong("5W1H 拼湊預覽："), sc,
+      tags$strong("5W1H 預覽："), sc,
       if (n_pbc > 0) tags$div(class = "text-muted mt-1",
-                              sprintf("已套用 PBC %d 筆（寫入 What／建議串接PBC）。", n_pbc))
+                              sprintf("已套用 PBC %d 筆。", n_pbc))
     )
   })
 
@@ -2715,9 +2704,9 @@ server <- function(input, output, session) {
     df <- design_rcm_preview_fields(ctrl, section = section, saved_sections = saved_sections)
     if (!nrow(df)) return(NULL)
     hdr <- title %||% if (!is.null(section) && nzchar(section)) {
-      sprintf("預覽列（%s｜範本 RCM 欄位順序）", section)
+      sprintf("預覽列（%s）", section)
     } else {
-      "預覽列（範本 RCM 欄位順序）"
+      "預覽列"
     }
     tags$div(
       class = "design-rcm-preview-panel",
@@ -2756,7 +2745,7 @@ server <- function(input, output, session) {
 
   push_rcm_section_preview <- function(section) {
     if (!nzchar(trimws(input$cycle %||% ""))) {
-      return(showNotification("循環（全域）為必填：請先於側邊欄選定循環。", type = "error"))
+      return(showNotification("循環為必填：請先於側邊欄選定循環。", type = "error"))
     }
     draft <- current_draft_from_inputs()
     merged <- merge_design_preview_section(rcm_preview_ctrl(), draft, section)
@@ -2765,7 +2754,7 @@ server <- function(input, output, session) {
     persist_design_custom_params(merged)
     cols <- rcm_preview_section_columns(section)
     showNotification(
-      sprintf("已儲存「%s」至 RCM 表格：%s（自訂選項已入參數庫）",
+      sprintf("已儲存「%s」至 RCM 表格：%s",
               section, paste(cols, collapse = "、")),
       type = "message", duration = 5
     )
@@ -2790,7 +2779,7 @@ server <- function(input, output, session) {
     d <- current_draft_from_inputs()
     tchk <- rcm_type_fields_check(d$nature, d$approach)
     cls <- if (isTRUE(tchk$ok)) "alert alert-secondary py-1 mb-2" else "alert alert-warning py-1 mb-2"
-    div(class = cls, tags$small(tags$strong("類型欄防呆："), tchk$msg))
+    div(class = cls, tags$small(tags$strong("類型欄檢核："), tchk$msg))
   })
 
   # 風險類別驅動會計科目／法令／聲明鎖定；子作業編號就緒時自動順編控制編號
@@ -3140,7 +3129,7 @@ server <- function(input, output, session) {
     parity <- assert_design_rcm_parity(controls())
     cls <- if (isTRUE(parity$ok)) "alert alert-secondary py-1 mb-2 small" else "alert alert-danger py-1 mb-2 small"
     div(class = cls,
-        sprintf("不變條件：設計控制點 %d ＝ RCM 列 %d", parity$n_controls, parity$n_rcm_rows),
+        sprintf("已定稿控制點 %d ＝ RCM 列 %d", parity$n_controls, parity$n_rcm_rows),
         if (!parity$ok) "（不一致，請重新定稿）")
   })
   output$rcm_count_box <- renderUI({
@@ -3210,8 +3199,7 @@ server <- function(input, output, session) {
       ),
       if (!is.null(row) && nrow(row)) {
         tags$div(class = "text-muted mt-1",
-                 "RCM 列已同步｜子作業：", row[["子作業名稱"]] %||% "—",
-                 "｜檢核：", substr(as.character(row[["設計檢核"]] %||% ""), 1, 40))
+                 "已寫入 RCM｜子作業：", row[["子作業名稱"]] %||% "—")
       }
     )
   })
@@ -3219,7 +3207,7 @@ server <- function(input, output, session) {
   # Primary path: 設計完成 → 直接寫入一筆控制點／RCM 列（1:1）
   observeEvent(input$finalize_rcm_row, {
     if (!nzchar(trimws(input$cycle %||% ""))) {
-      return(showNotification("循環（全域）為必填：請先於側邊欄選定循環。", type = "error"))
+      return(showNotification("循環為必填：請先於側邊欄選定循環。", type = "error"))
     }
     d <- current_draft_from_inputs()
     req <- design_required_check(d)

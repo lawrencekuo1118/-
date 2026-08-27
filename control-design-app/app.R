@@ -1398,9 +1398,10 @@ server <- function(input, output, session) {
 
   pbc_path_csv <- file.path(data_dir, "pbc_registry.csv")
   pbc_path_json <- file.path(data_dir, "pbc_registry.json")
-  # 若尚無 PBC 庫，先以資訊循環／財務報導循環種子清單初始化
+  # 若尚無 PBC 庫，先以資訊／財務報導／銷售循環種子清單初始化
   if (!file.exists(pbc_path_csv) && !file.exists(pbc_path_json)) {
-    for (seed_nm in c("seed_it_cycle_pbc.R", "seed_fr_cycle_pbc.R")) {
+    for (seed_nm in c("seed_it_cycle_pbc.R", "seed_fr_cycle_pbc.R",
+                      "seed_sc_cycle_pbc.R")) {
       seed_script <- file.path(root, "data", seed_nm)
       if (file.exists(seed_script)) {
         tryCatch(sys.source(seed_script, envir = new.env(parent = globalenv())),
@@ -1409,19 +1410,21 @@ server <- function(input, output, session) {
     }
   }
   pbc_reg <- reactiveVal(load_pbc_registry(pbc_path_csv, pbc_path_json))
-  # 既有庫若缺財務報導循環種子，補齊一次
+  # 既有庫若缺財務報導／銷售循環種子，補齊一次
   reg0 <- pbc_reg()
-  has_fr <- is.data.frame(reg0) && nrow(reg0) > 0 &&
-    any(reg0$cycle == "財務報導循環")
-  if (!has_fr) {
-    seed_fr <- file.path(root, "data", "seed_fr_cycle_pbc.R")
-    if (file.exists(seed_fr)) {
-      tryCatch({
-        sys.source(seed_fr, envir = new.env(parent = globalenv()))
-        pbc_reg(load_pbc_registry(pbc_path_csv, pbc_path_json))
-      }, error = function(e) NULL)
-    }
+  seed_if_missing_cycle <- function(cycle_nm, seed_file) {
+    has <- is.data.frame(reg0) && nrow(reg0) > 0 && any(reg0$cycle == cycle_nm)
+    if (has) return(invisible(NULL))
+    seed_path <- file.path(root, "data", seed_file)
+    if (!file.exists(seed_path)) return(invisible(NULL))
+    tryCatch({
+      sys.source(seed_path, envir = new.env(parent = globalenv()))
+      reg0 <<- load_pbc_registry(pbc_path_csv, pbc_path_json)
+      pbc_reg(reg0)
+    }, error = function(e) NULL)
   }
+  seed_if_missing_cycle("財務報導循環", "seed_fr_cycle_pbc.R")
+  seed_if_missing_cycle("銷售及收款循環", "seed_sc_cycle_pbc.R")
   lib_path_json <- file.path(data_dir, "control_library.json")
   lib_path_csv <- file.path(data_dir, "control_library.csv")
   param_path_json <- file.path(data_dir, "parameter_store.json")

@@ -592,6 +592,13 @@ if (file.exists(seed_pbc)) {
         "財務報導循環 PBC 使用 CA 編號前綴")
   check(any(seeded$cycle == "財務報導循環" & nzchar(seeded$pbc_spec)),
         "財務報導循環 PBC 種子含規格說明")
+  check(sum(seeded$cycle == "銷售及收款循環") >= 160,
+        sprintf("銷售及收款循環 PBC 種子至少 160 筆（實際 %d）",
+                sum(seeded$cycle == "銷售及收款循環")))
+  check(any(seeded$cycle == "銷售及收款循環" & grepl("^PBC-SC-", seeded$pbc_id)),
+        "銷售及收款循環 PBC 使用 SC 編號前綴")
+  check(any(seeded$cycle == "銷售及收款循環" & nzchar(seeded$pbc_spec)),
+        "銷售及收款循環 PBC 種子含規格說明")
 } else {
   message("SKIP: data/pbc_registry.csv 尚未產出")
 }

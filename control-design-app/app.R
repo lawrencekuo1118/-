@@ -1625,11 +1625,22 @@ server <- function(input, output, session) {
     )
   })
 
+  # 風險因素／描述選單快取：避免同內容反覆 updateSelectize 造成跳閃
+  risk_factor_choices_cache <- new.env(parent = emptyenv())
+  risk_factor_choices_cache$ch <- NULL
+  risk_factor_choices_cache$sel <- NULL
+  risk_desc_choices_cache <- new.env(parent = emptyenv())
+  risk_desc_choices_cache$ch <- NULL
+  risk_desc_choices_cache$sel <- NULL
+
   refresh_risk_factor_choices <- function() {
-    cy <- input$cycle %||% ""
-    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
+    cy <- isolate(input$cycle %||% "")
+    sub_key <- sub_process_filter_key(
+      isolate(input$sub_process_id %||% ""),
+      isolate(input$sub_process %||% "")
+    )
     rows <- if (nzchar(cy)) {
-      r <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+      r <- library_controls_flat(cascade_source_library(isolate(lib())), cycle = cy)
       if (nzchar(sub_key)) {
         r <- filter_cascade_rows(r, sub_key = sub_key)
       }
@@ -1638,22 +1649,37 @@ server <- function(input, output, session) {
       list()
     }
     ch <- if (length(rows)) cascade_risk_choices(rows) else character()
-    cur <- parse_risk_factor_values(input$risk_factor %||% character())
+    # isolate：避免 observe(cycle/sub) 誤追蹤 risk_factor，多選時反覆重建選單跳閃
+    cur <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
     if (length(cur)) {
       extra <- cur[!cur %in% unname(ch)]
       if (length(extra)) {
         ch <- c(ch, stats::setNames(extra, vapply(extra, risk_factor_tag, character(1))))
       }
     }
+    prev_ch <- risk_factor_choices_cache$ch
+    prev_sel <- risk_factor_choices_cache$sel
+    same_ch <- identical(unname(ch), unname(prev_ch)) &&
+      identical(names(ch), names(prev_ch))
+    same_sel <- identical(as.character(cur), as.character(prev_sel))
+    if (same_ch && same_sel) {
+      refresh_risk_description_choices()
+      return(invisible(NULL))
+    }
+    risk_factor_choices_cache$ch <- ch
+    risk_factor_choices_cache$sel <- cur
     updateSelectizeInput(session, "risk_factor", choices = ch, server = FALSE, selected = cur)
     refresh_risk_description_choices()
   }
 
   refresh_risk_description_choices <- function(selected_keep = NULL) {
-    cy <- input$cycle %||% ""
-    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
+    cy <- isolate(input$cycle %||% "")
+    sub_key <- sub_process_filter_key(
+      isolate(input$sub_process_id %||% ""),
+      isolate(input$sub_process %||% "")
+    )
     rows <- if (nzchar(cy)) {
-      r <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+      r <- library_controls_flat(cascade_source_library(isolate(lib())), cycle = cy)
       if (nzchar(sub_key)) {
         r <- filter_cascade_rows(r, sub_key = sub_key)
       }
@@ -1661,14 +1687,22 @@ server <- function(input, output, session) {
     } else {
       list()
     }
-    facs <- parse_risk_factor_values(input$risk_factor %||% character())
+    facs <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
     ch <- cascade_risk_description_choices(rows, facs)
     cur <- if (!is.null(selected_keep)) {
       trimws(as.character(selected_keep)[[1]])
     } else {
-      trimws(as.character(input$risk_description %||% "")[[1]])
+      trimws(as.character(isolate(input$risk_description %||% "")[[1]]))
     }
     if (nzchar(cur) && !(cur %in% ch)) ch <- c(ch, cur)
+    prev_ch <- risk_desc_choices_cache$ch
+    prev_sel <- risk_desc_choices_cache$sel
+    same_ch <- identical(unname(ch), unname(prev_ch)) &&
+      identical(names(ch), names(prev_ch))
+    same_sel <- identical(as.character(cur), as.character(prev_sel))
+    if (same_ch && same_sel) return(invisible(NULL))
+    risk_desc_choices_cache$ch <- ch
+    risk_desc_choices_cache$sel <- cur
     updateSelectizeInput(
       session, "risk_description",
       choices = risk_description_select_choices(ch),
@@ -1849,14 +1883,17 @@ server <- function(input, output, session) {
 
   observeEvent(input$risk_factor, {
     refresh_risk_description_choices()
-    cy <- input$cycle %||% ""
+    cy <- isolate(input$cycle %||% "")
     if (!nzchar(cy)) return()
-    sub_key <- sub_process_filter_key(input$sub_process_id %||% "", input$sub_process %||% "")
-    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    sub_key <- sub_process_filter_key(
+      isolate(input$sub_process_id %||% ""),
+      isolate(input$sub_process %||% "")
+    )
+    rows <- library_controls_flat(cascade_source_library(isolate(lib())), cycle = cy)
     if (nzchar(sub_key)) {
       rows <- filter_cascade_rows(rows, sub_key = sub_key)
     }
-    sel <- input$risk_factor %||% character()
+    sel <- isolate(input$risk_factor %||% character())
     if (!length(sel)) return()
     cats <- character()
     romms <- character()
@@ -1870,13 +1907,27 @@ server <- function(input, output, session) {
     }
     cats <- unique(cats[nzchar(cats)])
     if (length(cats) == 1L) {
-      updateSelectInput(session, "risk_category", selected = cats[[1]])
+      cur_cat <- trimws(isolate(input$risk_category %||% ""))
+      if (!identical(cur_cat, cats[[1]])) {
+        updateSelectInput(session, "risk_category", selected = cats[[1]])
+      }
     }
     romms <- unique(romms[nzchar(romms)])
     if (length(romms) == 1L) {
-      updateSelectInput(session, "romm_classification", selected = romms[[1]])
+      cur_romm <- trimws(isolate(input$romm_classification %||% ""))
+      if (!identical(cur_romm, romms[[1]])) {
+        updateSelectInput(session, "romm_classification", selected = romms[[1]])
+      }
     }
   }, ignoreInit = TRUE)
+
+  observe({
+    # 僅依循環／子作業刷新建議 TAG；勿追蹤 risk_factor 本身
+    input$cycle
+    input$sub_process
+    input$sub_process_id
+    isolate(refresh_risk_factor_choices())
+  })
 
   observe({
     cy <- input$cycle %||% ""
@@ -1932,12 +1983,6 @@ server <- function(input, output, session) {
     input$cycle
     input$lib_query
     refresh_lib_choices()
-  })
-  observe({
-    input$cycle
-    input$sub_process
-    input$sub_process_id
-    refresh_risk_factor_choices()
   })
   observe({
     input$cycle

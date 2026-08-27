@@ -12,6 +12,7 @@ PBC_KIND_CHOICES <- c(
 )
 
 PBC_KIND_VALUES <- unname(PBC_KIND_CHOICES[nzchar(unname(PBC_KIND_CHOICES))])
+PBC_KIND_POLICY <- "政策制度"
 
 normalize_pbc_kind <- function(x) {
   v <- trimws(as.character(x %||% ""))
@@ -93,24 +94,67 @@ delete_pbc <- function(registry, pbc_ids) {
   registry[!registry$pbc_id %in% pbc_ids, , drop = FALSE]
 }
 
-# Choices for design UI: value = pbc_id (stable); label shows both names
-pbc_choices <- function(registry, cycle_filter = NULL) {
-  if (!nrow(registry)) return(character())
+is_pbc_policy_kind <- function(kind) {
+  identical(normalize_pbc_kind(kind), PBC_KIND_POLICY)
+}
+
+filter_pbc_registry <- function(registry, cycle_filter = NULL,
+                                include_kinds = NULL, exclude_kinds = NULL) {
+  if (!is.data.frame(registry) || !nrow(registry)) return(empty_pbc_registry())
   df <- registry
   if (!is.null(cycle_filter) && nzchar(cycle_filter)) {
     keep <- !nzchar(df$cycle) | df$cycle == cycle_filter
     df <- df[keep, , drop = FALSE]
   }
+  inc <- trimws(as.character(include_kinds %||% character()))
+  inc <- inc[nzchar(inc)]
+  if (length(inc)) {
+    df <- df[vapply(df$pbc_kind, function(k) normalize_pbc_kind(k) %in% inc, logical(1)), , drop = FALSE]
+  }
+  exc <- trimws(as.character(exclude_kinds %||% character()))
+  exc <- exc[nzchar(exc)]
+  if (length(exc)) {
+    df <- df[!vapply(df$pbc_kind, function(k) normalize_pbc_kind(k) %in% exc, logical(1)), , drop = FALSE]
+  }
+  df
+}
+
+# Choices for design UI: value = pbc_id (stable); label shows both names
+pbc_choices <- function(registry, cycle_filter = NULL,
+                          include_kinds = NULL, exclude_kinds = NULL) {
+  df <- filter_pbc_registry(
+    registry,
+    cycle_filter = cycle_filter,
+    include_kinds = include_kinds,
+    exclude_kinds = exclude_kinds
+  )
   if (!nrow(df)) return(character())
+  kind_tag <- vapply(df$pbc_kind, function(k) {
+    k <- trimws(as.character(k %||% ""))
+    if (nzchar(k)) paste0("【", k, "】") else ""
+  }, character(1))
+  reviewed_lbl <- vapply(seq_len(nrow(df)), function(i) {
+    format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
+  }, character(1))
   labels <- sprintf(
     "%s%s｜原名「%s」→ 檢視後「%s」%s",
     df$pbc_id,
-    if (nzchar(df$pbc_kind)) paste0("【", df$pbc_kind, "】") else "",
+    kind_tag,
     ifelse(nzchar(df$client_pbc_name), df$client_pbc_name, "—"),
-    format_pbc_reviewed_label(df$reviewed_name, df$pbc_kind),
+    reviewed_lbl,
     ifelse(nzchar(df$cycle), paste0("〔", df$cycle, "〕"), "")
   )
   stats::setNames(df$pbc_id, labels)
+}
+
+# IUC／控制佐證文件／訪談 PBC 串接：排除政策制度
+pbc_non_policy_choices <- function(registry, cycle_filter = NULL) {
+  pbc_choices(registry, cycle_filter = cycle_filter, exclude_kinds = PBC_KIND_POLICY)
+}
+
+# 相關政策與制度：僅政策制度類 PBC
+pbc_policy_choices <- function(registry, cycle_filter = NULL) {
+  pbc_choices(registry, cycle_filter = cycle_filter, include_kinds = PBC_KIND_POLICY)
 }
 
 lookup_pbc <- function(registry, pbc_ids) {

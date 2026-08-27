@@ -104,7 +104,13 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("PBC 客戶原名", pbc$client_pbc_name, "PBC命名庫")
     add_vals("PBC 檢視後命名", pbc$reviewed_name, "PBC命名庫")
     add_vals("PBC 證據類型", pbc$pbc_kind, "PBC命名庫")
-    add_vals("IUC", pbc$iuc_or_system, "PBC命名庫")
+    if (exists("is_pbc_policy_kind", mode = "function")) {
+      pol_mask <- vapply(pbc$pbc_kind, is_pbc_policy_kind, logical(1))
+      add_vals("相關政策與制度", pbc$iuc_or_system[pol_mask], "PBC命名庫")
+      add_vals("IUC", pbc$iuc_or_system[!pol_mask], "PBC命名庫")
+    } else {
+      add_vals("IUC", pbc$iuc_or_system, "PBC命名庫")
+    }
   }
   if (!length(rows)) return(empty_parameter_store())
   df <- do.call(rbind, rows)

@@ -70,7 +70,6 @@ parameter_catalog <- function(library = list(), controls = list(),
     if (is.null(ctrl)) return()
     c <- if (!is.null(ctrl$control)) ctrl$control else ctrl
     add_vals("循環", c$cycle %||% ctrl$cycle, source)
-    add_vals("子作業編號", c$sub_process_id, source)
     add_vals("子作業名稱", c$sub_process, source)
     add_vals("風險因素", c$risk_factor %||% c$risk_name, source)
     add_vals("風險描述", c$risk_description, source)
@@ -92,7 +91,6 @@ parameter_catalog <- function(library = list(), controls = list(),
     add_vals("聲明", c$assertions, source)
     add_vals("Form 4120SR Type", c$type, source)
     add_vals("RoMM 分類", c$romm_classification, source)
-    add_vals("控制編號", c$control_id, source)
   }
   for (it in library) collect_ctrl(it, "範本庫")
   for (it in controls) collect_ctrl(it, "已定稿RCM")

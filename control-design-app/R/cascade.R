@@ -318,10 +318,9 @@ filter_cascade_rows <- function(rows,
         (nzchar(sp$name) && identical(r$sub_process, sp$name))
     }, out)
   }
-  if (!is.null(risk_factor) && nzchar(risk_factor) && !identical(risk_factor, "__custom__")) {
-    out <- Filter(function(r) {
-      identical(r$risk_factor, risk_factor) || identical(r$risk_name, risk_factor)
-    }, out)
+  if (!is.null(risk_factor) && !identical(risk_factor, "__custom__") &&
+      length(parse_risk_factor_values(risk_factor))) {
+    out <- Filter(function(r) row_matches_risk_factor(r, risk_factor), out)
   }
   if (!is.null(objective) && nzchar(objective) && !identical(objective, "__custom__")) {
     out <- Filter(function(r) identical(r$control_objective, objective), out)
@@ -354,6 +353,23 @@ risk_factor_tag <- function(x) {
   if (!length(parts)) return("")
   tag <- parts[[1]]
   if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
+}
+
+row_risk_factor_tags <- function(r) {
+  vals <- parse_risk_factor_values(r$risk_factor %||% r$risk_name %||% "")
+  tags <- unique(c(vals, vapply(vals, risk_factor_tag, character(1))))
+  tags[nzchar(tags)]
+}
+
+row_matches_risk_factor <- function(r, risk_factors) {
+  want <- unique(c(
+    parse_risk_factor_values(risk_factors),
+    vapply(parse_risk_factor_values(risk_factors), risk_factor_tag, character(1))
+  ))
+  want <- want[nzchar(want) & want != "__custom__"]
+  if (!length(want)) return(FALSE)
+  have <- row_risk_factor_tags(r)
+  any(want %in% have)
 }
 
 # 風險因素複選：僅以；分隔（保留名稱中的 /）
@@ -407,18 +423,30 @@ apply_ctrl_to_cascade <- function(session, ctrl) {
 
 apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   ctrl <- as.list(ctrl)
-  updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
+  # 範本庫不回填子作業／控制編號；僅當來源本身已有執行階段編號時才帶入
+  cid <- trimws(as.character(ctrl$control_id %||% ""))
+  if (nzchar(cid) && !grepl("^(LIB|JL|PL)-", cid)) {
+    updateTextInput(session, "control_id", value = cid)
+  }
   updateTextInput(session, "cycle_code", value = {
     cc <- trimws(ctrl$cycle_code %||% "")
     if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
   })
-  updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
+  spid <- trimws(as.character(ctrl$sub_process_id %||% ""))
+  if (nzchar(spid)) {
+    updateTextInput(session, "sub_process_id", value = spid)
+  }
   # 選單永遠只選純名稱（編號另欄維護）
   sp_sel <- sub_process_name_from_value(ctrl$sub_process %||% "")
   updateSelectizeInput(session, "sub_process", selected = sp_sel)
   rf_sel <- risk_factor_selection_from_ctrl(ctrl)
   updateSelectizeInput(session, "risk_factor", selected = rf_sel)
-  updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
+  rd <- trimws(as.character(ctrl$risk_description %||% ""))
+  if (nzchar(rd)) {
+    updateSelectizeInput(session, "risk_description",
+                         choices = stats::setNames(rd, rd),
+                         selected = rd, server = FALSE)
+  }
   if (nzchar(trimws(ctrl$risk_category %||% ""))) {
     updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
   }
@@ -521,8 +549,14 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
   }
   det <- cascade_risk_detail(rows, risk_factor)
   updateSelectizeInput(session, "risk_factor", selected = risk_factor)
-  if (nzchar(det$risk_description)) {
-    updateTextAreaInput(session, "risk_description", value = det$risk_description)
+  # 風險因素是 TAG：只推薦描述，不強制覆寫使用者已填／自訂內容
+  rec <- cascade_risk_description_choices(rows, risk_factor)
+  cur <- trimws(as.character(det$risk_description %||% ""))
+  ch <- unique(c(rec, if (nzchar(cur)) cur else character()))
+  if (length(ch)) {
+    updateSelectizeInput(session, "risk_description",
+                         choices = stats::setNames(ch, ch),
+                         selected = "", server = FALSE)
   }
   if (nzchar(det$risk_category)) {
     updateSelectInput(session, "risk_category", selected = det$risk_category)
@@ -535,27 +569,47 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
 }
 
 cascade_risk_choices <- function(rows) {
-  # value = canonical risk_factor; label = short tag（不含 []、不附描述）
-  factors <- unique(vapply(rows, function(r) r$risk_factor, character(1)))
-  factors <- factors[nzchar(factors)]
-  tags <- vapply(factors, risk_factor_tag, character(1))
-  labels <- tags
-  dup <- unique(tags[duplicated(tags) | duplicated(tags, fromLast = TRUE)])
-  if (length(dup)) {
-    for (i in seq_along(factors)) {
-      if (tags[i] %in% dup) {
-        alt <- gsub("\\[|\\]", "", factors[i])
-        labels[i] <- if (nchar(alt) > 28) paste0(substr(alt, 1, 27), "…") else alt
-      }
-    }
+  # 風險因素＝風險描述上的 TAG；選單 value／label 皆為短標記，可自訂新增
+  if (!length(rows)) return(character())
+  tags <- unique(unlist(lapply(rows, function(r) {
+    vals <- parse_risk_factor_values(r$risk_factor %||% r$risk_name %||% "")
+    if (!length(vals)) return(character())
+    vapply(vals, risk_factor_tag, character(1))
+  }), use.names = FALSE))
+  tags <- tags[nzchar(tags)]
+  if (!length(tags)) return(character())
+  stats::setNames(tags, tags)
+}
+
+# 依已選 TAG 推薦曾被標記的風險描述；未選 TAG 時列出範圍內全部描述（仍可自訂）
+cascade_risk_description_choices <- function(rows, risk_factors = character(0)) {
+  if (!length(rows)) return(character(0))
+  tags <- unique(c(
+    parse_risk_factor_values(risk_factors),
+    vapply(parse_risk_factor_values(risk_factors), risk_factor_tag, character(1))
+  ))
+  tags <- tags[nzchar(tags) & tags != "__custom__"]
+  scoped <- if (length(tags)) {
+    Filter(function(r) row_matches_risk_factor(r, tags), rows)
+  } else {
+    rows
   }
-  stats::setNames(factors, labels)
+  descs <- unique(vapply(scoped, function(r) nzchar_trim(r$risk_description), character(1)))
+  descs[nzchar(descs)]
+}
+
+risk_description_select_choices <- function(descs) {
+  descs <- unique(trimws(as.character(descs)))
+  descs <- descs[nzchar(descs)]
+  if (!length(descs)) return(character())
+  labels <- vapply(descs, function(d) {
+    if (nchar(d) > 80) paste0(substr(d, 1, 79), "…") else d
+  }, character(1))
+  stats::setNames(descs, labels)
 }
 
 cascade_risk_detail <- function(rows, risk_factor) {
-  hit <- Filter(function(r) {
-    identical(r$risk_factor, risk_factor) || identical(r$risk_name, risk_factor)
-  }, rows)
+  hit <- Filter(function(r) row_matches_risk_factor(r, risk_factor), rows)
   if (!length(hit)) {
     return(list(
       risk_factor = risk_factor, risk_category = "", risk_description = "",
@@ -711,9 +765,6 @@ collect_existing_control_ids <- function(..., lists = list()) {
       } else {
         item$control_id %||% ""
       }
-      # also library_id JL-EC-101-01 → EC-101-01
-      lid <- item$library_id %||% ""
-      if (grepl("^JL-", lid)) cid <- c(cid, sub("^JL-", "", lid))
       ids <- c(ids, nzchar_trim(cid))
     }
   }

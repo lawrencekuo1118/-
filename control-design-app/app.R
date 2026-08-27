@@ -2727,9 +2727,7 @@ server <- function(input, output, session) {
       div(class = "alert alert-secondary py-1 mb-2 small",
           paste0("無法設定", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（", paste(reason, collapse = "／"), "）。"))
     } else {
-      helpText(class = "text-muted small",
-               paste0("請先選控制性質與風險類別；人工且非法遵面時，", CONTROL_EVIDENCE_DOCUMENT_LABEL,
-                      "可多選（PBC 選取或手動輸入）。"))
+      NULL
     }
   })
 

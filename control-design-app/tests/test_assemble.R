@@ -1004,7 +1004,33 @@ check(grepl("design-tab-filter-bar", app_src) &&
         grepl("filter_risk_category", app_src) &&
         grepl("filter_ctrl_approach", app_src) &&
         grepl("search_sub_process_hits", paste(readLines(file.path(root, "R/cascade.R"), encoding = "UTF-8"), collapse = "\n")),
-      "三階段頁籤頂部有簡約搜尋篩選")
+      "三階段頁籤有簡約搜尋篩選")
+basic_tab <- sub('(?s).*nav_panel\\(\\s*"① 基礎設定"', 'nav_panel("① 基礎設定"', app_src, perl = TRUE)
+basic_tab <- sub('(?s)nav_panel\\(\\s*"② 風險辨識".*', "", basic_tab, perl = TRUE)
+check(grepl('sub_process_select_ui[\\s\\S]{0,500}filter_basic_kw', basic_tab, perl = TRUE),
+      "關鍵字篩選在子作業名稱輸入欄正下方")
+check(grepl("design_preview_basic", app_src) &&
+        grepl("design_preview_risk", app_src) &&
+        grepl("design_preview_control", app_src) &&
+        grepl("design_rcm_preview_fields", app_src) &&
+        grepl("uiOutput\\(\"live_preview\"\\)", app_src),
+      "各階段預覽列依範本 RCM 欄位順序")
+check(identical(
+  rcm_preview_columns_through_section("基礎設定"),
+  c("循環名稱", "子作業名稱")
+), "基礎設定預覽欄位順序")
+check(identical(
+  rcm_preview_columns_through_section("風險辨識"),
+  c("循環名稱", "子作業名稱", "風險面向", "風險範疇", "風險因素",
+    "風險描述", "風險類別", "會計科目")
+), "風險辨識預覽欄位順序")
+check(identical(
+  rcm_preview_columns_through_section("控制設計"),
+  RCM_HEADERS
+), "控制設計預覽欄位＝完整範本")
+prev_basic <- design_rcm_preview_fields(d1, section = "基礎設定")
+check(nrow(prev_basic) == 2L && identical(prev_basic$欄位[[1]], RCM_HEADER_LABELS[["循環名稱"]]),
+      "基礎設定預覽列欄位標籤")
 check(grepl("csaPreviewCollapse", app_src) &&
         grepl("csaPreviewCollapse", app_src) &&
         grepl("data-bs-target", app_src) &&

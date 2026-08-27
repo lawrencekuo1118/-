@@ -599,9 +599,9 @@ app_src_pbc <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8", war
 check(grepl("pbc-kind-format-row", app_src_pbc, fixed = TRUE),
       "PBC 證據類型與文件格式同列並排")
 check(grepl('selectizeInput\\(\\s*"pbc_file_format"', app_src_pbc, perl = TRUE),
-      "PBC 原始取得文件格式輸入存在")
-check(grepl("原始取得文件格式", app_src_pbc, fixed = TRUE),
-      "PBC 原始取得文件格式標籤存在")
+      "PBC 樣本檔案格式輸入存在")
+check(grepl("樣本檔案格式", app_src_pbc, fixed = TRUE),
+      "PBC 樣本檔案格式標籤存在")
 check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
         grepl("PBC規格說明", app_src_pbc, fixed = TRUE),
       "PBC 規格說明輸入位於整理表單")

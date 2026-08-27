@@ -3,7 +3,7 @@
 # reviewed_name   = 檢視後標準化命名（控制設計／現況撰寫時優先套用）
 # pbc_spec        = PBC 規格說明（選填；取得／檢附要求）
 # pbc_kind        = 證據類型特別標示（螢幕截圖／EMAIL／系統表單／傳票／政策制度）
-# pbc_file_format = 原始取得文件格式（.jpg／.png／.pptx 等）
+# pbc_file_format = 樣本檔案格式（.jpg／.png／.pptx 等）
 
 PBC_KIND_CHOICES <- c(
   "請選擇證據類型…" = "",
@@ -555,7 +555,7 @@ import_pbc_csv <- function(path, existing = empty_pbc_registry()) {
     pbc_kind = c("pbc_kind", "kind", "證據類型", "pbc_type", "類型"),
     pbc_file_format = c(
       "pbc_file_format", "file_format", "format", "ext", "extension",
-      "原始取得文件格式", "文件格式", "副檔名"
+      "樣本檔案格式", "原始取得文件格式", "文件格式", "副檔名"
     ),
     pbc_spec = c(
       "pbc_spec", "spec", "specification", "規格說明", "pbc規格說明",

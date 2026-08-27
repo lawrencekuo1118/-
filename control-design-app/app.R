@@ -388,7 +388,7 @@ ui <- page_navbar(
         }
       }
 
-      /* PBC：證據類型｜原始取得文件格式 同列並排 */
+      /* PBC：證據類型｜樣本檔案格式 同列並排 */
       .pbc-kind-format-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1126,7 +1126,7 @@ ui <- page_navbar(
         class = "pbc-kind-format-row",
         selectInput("pbc_kind", "證據類型（特別標示）", choices = PBC_KIND_CHOICES),
         selectizeInput(
-          "pbc_file_format", "原始取得文件格式",
+          "pbc_file_format", "樣本檔案格式",
           choices = PBC_FILE_FORMAT_CHOICES,
           options = list(
             placeholder = "例如 .jpg／.png／.pptx",

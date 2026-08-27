@@ -1144,17 +1144,19 @@ check(isTRUE(design_required_check(modifyList(d1, list(
   risk_factor = "密碼管理；使用者帳號管理", risk_name = "密碼管理；使用者帳號管理"
 )))$ok),
       "風險因素複選可通過必填")
-check(grepl('selectizeInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述選單")
-check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*selectizeInput\\(\\s*"risk_description"', app_src, perl = TRUE),
+check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述質性輸入")
+check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*textAreaInput\\(\\s*"risk_description"', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
 check(grepl("風險因素是風險描述上的標記", app_src), "風險因素以 TAG 說明")
-check(grepl('selectizeInput\\(\\s*"risk_description"[\\s\\S]{0,400}create\\s*=\\s*TRUE', app_src, perl = TRUE),
-      "風險描述可自訂新增")
+check(grepl('textAreaInput\\(\\s*"risk_description"[\\s\\S]{0,200}rows\\s*=\\s*3', app_src, perl = TRUE) &&
+        grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&
+        grepl('textAreaInput\\(\\s*"control_activity"', app_src),
+      "風險描述與控制目標／活動同為質性 textArea")
 check(grepl('selectizeInput\\(\\s*"risk_factor"[\\s\\S]{0,400}create\\s*=\\s*TRUE', app_src, perl = TRUE),
       "風險因素可自訂新增")
-check(grepl("refresh_risk_description_choices", app_src) &&
-        !grepl("updateTextAreaInput\\(session, \"risk_description\"", app_src),
-      "選 TAG 只刷新推薦描述、不強制覆寫")
+check(!grepl("refresh_risk_description_choices", app_src) &&
+        grepl("updateTextAreaInput\\(session, \"risk_description\"", app_src),
+      "風險描述改質性輸入、不以選單刷新覆寫")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
 check(grepl('significant_account[\\s\\S]*romm_classification', app_src, perl = TRUE),

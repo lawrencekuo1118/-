@@ -465,9 +465,7 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   }
   rd <- trimws(as.character(ctrl$risk_description %||% ""))
   if (nzchar(rd)) {
-    updateSelectizeInput(session, "risk_description",
-                         choices = stats::setNames(rd, rd),
-                         selected = rd, server = FALSE)
+    updateTextAreaInput(session, "risk_description", value = rd)
   }
   if (nzchar(trimws(ctrl$risk_category %||% ""))) {
     updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
@@ -575,15 +573,7 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
   }
   det <- cascade_risk_detail(rows, risk_factor)
   updateSelectizeInput(session, "risk_factor", selected = risk_factor)
-  # 風險因素是 TAG：只推薦描述，不強制覆寫使用者已填／自訂內容
-  rec <- cascade_risk_description_choices(rows, risk_factor)
-  cur <- trimws(as.character(det$risk_description %||% ""))
-  ch <- unique(c(rec, if (nzchar(cur)) cur else character()))
-  if (length(ch)) {
-    updateSelectizeInput(session, "risk_description",
-                         choices = stats::setNames(ch, ch),
-                         selected = "", server = FALSE)
-  }
+  # 風險描述為質性文字：選 TAG 不覆寫已填內容
   if (nzchar(det$risk_category)) {
     updateSelectInput(session, "risk_category", selected = det$risk_category)
   }

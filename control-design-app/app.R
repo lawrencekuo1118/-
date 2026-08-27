@@ -1931,11 +1931,13 @@ server <- function(input, output, session) {
 
   observeEvent(input$cycle, {
     if (isTRUE(applying_template())) return()
-    # 切換循環時清空子作業編號；名稱選單由 renderUI 依循環重掛載
+    # 切換循環時清空子作業名稱；編號改由循環編號觀察器預填 stub
     freezeReactiveValue(input, "sub_process")
     freezeReactiveValue(input, "sub_process_id")
+    freezeReactiveValue(input, "control_id")
     sub_process_ui_state$cycle <- NULL
     updateTextInput(session, "sub_process_id", value = "")
+    updateTextInput(session, "control_id", value = "")
     refresh_sub_process_choices(force = TRUE)
   }, ignoreNULL = FALSE)
 
@@ -2923,43 +2925,69 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
-  # 循環編號變更 → 子作業／控制編號依組成規則同步前綴
-  # 控制編號＝[循環編號]-[子作業序號]-[控制序號]
+  # 循環編號為基準 → 預填／鎖定子作業與控制編號前綴（例：CS → CS-／CS-）
   observeEvent(input$cycle_code, {
+    if (isTRUE(applying_template())) return()
     code <- trimws(input$cycle_code %||% "")
     if (!nzchar(code)) return()
     spid <- trimws(input$sub_process_id %||% "")
-    if (nzchar(spid)) {
-      new_spid <- recode_id_cycle_prefix(spid, code)
-      if (!identical(new_spid, spid)) {
-        freezeReactiveValue(input, "sub_process_id")
-        updateTextInput(session, "sub_process_id", value = new_spid)
-        # 名稱選單保持純名稱，不因編號前綴變更而改寫
-      }
+    new_spid <- sync_sub_process_id_value(spid, code)
+    if (!identical(new_spid, spid)) {
+      freezeReactiveValue(input, "sub_process_id")
+      updateTextInput(session, "sub_process_id", value = new_spid)
+      spid <- new_spid
     }
     cid <- trimws(input$control_id %||% "")
-    if (nzchar(cid)) {
-      new_cid <- recode_id_cycle_prefix(cid, code)
-      if (!identical(new_cid, cid)) {
-        freezeReactiveValue(input, "control_id")
-        updateTextInput(session, "control_id", value = new_cid)
-      }
+    new_cid <- sync_control_id_value(cid, code, spid)
+    if (!identical(new_cid, cid)) {
+      freezeReactiveValue(input, "control_id")
+      updateTextInput(session, "control_id", value = new_cid)
     }
   }, ignoreInit = TRUE)
 
-  # 子作業編號變更 → 控制編號中段同步（保留控制序號）
+  # 子作業編號變更 → 鎖定循環前綴，並同步控制編號（CS-102 → CS-102-）
   observeEvent(input$sub_process_id, {
-    spid <- trimws(input$sub_process_id %||% "")
-    cid <- trimws(input$control_id %||% "")
-    if (!nzchar(spid) || !nzchar(cid)) return()
+    if (isTRUE(applying_template())) return()
     cc <- trimws(input$cycle_code %||% "")
     if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
-    sn <- sub_process_seq_from_id(spid, cc)
-    if (!nzchar(sn) || !nzchar(cc)) return()
-    parts <- parse_rcm_id_parts(cid)
-    if (!isTRUE(parts$ok) || !nzchar(parts$ctrl)) return()
-    new_cid <- compose_control_id(cc, sn, parts$ctrl)
+    if (!nzchar(cc)) return()
+    spid <- trimws(input$sub_process_id %||% "")
+    new_spid <- sync_sub_process_id_value(spid, cc)
+    if (!identical(new_spid, spid)) {
+      freezeReactiveValue(input, "sub_process_id")
+      updateTextInput(session, "sub_process_id", value = new_spid)
+      spid <- new_spid
+    }
+    cid <- trimws(input$control_id %||% "")
+    new_cid <- sync_control_id_value(cid, cc, spid)
     if (!identical(new_cid, cid)) {
+      freezeReactiveValue(input, "control_id")
+      updateTextInput(session, "control_id", value = new_cid)
+    }
+  }, ignoreInit = TRUE)
+
+  # 控制編號變更 → 鎖定循環前綴；完整時回推子作業編號（EC-101-02 → EC-101）
+  observeEvent(input$control_id, {
+    if (isTRUE(applying_template())) return()
+    cc <- trimws(input$cycle_code %||% "")
+    if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
+    if (!nzchar(cc)) return()
+    cid <- trimws(input$control_id %||% "")
+    spid <- trimws(input$sub_process_id %||% "")
+    new_cid <- sync_control_id_value(cid, cc, spid)
+    # 若控制編號已帶子作業序號，以控制編號回推子作業（循環節仍用 cc）
+    sp_from_cid <- sub_process_id_from_control_id(new_cid, cc)
+    if (!is.na(sp_from_cid) && nzchar(sp_from_cid)) {
+      if (!identical(sp_from_cid, spid)) {
+        freezeReactiveValue(input, "sub_process_id")
+        updateTextInput(session, "sub_process_id", value = sp_from_cid)
+        spid <- sp_from_cid
+      }
+      # 以回推後的子作業再正規化控制編號
+      new_cid <- sync_control_id_value(new_cid, cc, spid)
+    }
+    if (!identical(new_cid, cid)) {
+      freezeReactiveValue(input, "control_id")
       updateTextInput(session, "control_id", value = new_cid)
     }
   }, ignoreInit = TRUE)
@@ -3055,20 +3083,6 @@ server <- function(input, output, session) {
     },
     ignoreInit = FALSE
   )
-
-  observeEvent(input$sub_process_id, {
-    spid <- trimws(input$sub_process_id %||% "")
-    if (!nzchar(spid) || nzchar(trimws(input$control_id %||% ""))) return()
-    ids <- collect_existing_control_ids(lists = list(isolate(lib()), isolate(controls())))
-    cc <- trimws(isolate(input$cycle_code %||% ""))
-    if (!nzchar(cc)) cc <- cycle_code_for(isolate(input$cycle %||% ""))
-    new_cid <- next_rcm_control_id(spid, ids, cycle_code = cc)
-    cur_cid <- trimws(isolate(input$control_id %||% ""))
-    if (nzchar(new_cid) && !identical(new_cid, cur_cid)) {
-      freezeReactiveValue(input, "control_id")
-      updateTextInput(session, "control_id", value = new_cid)
-    }
-  }, ignoreInit = TRUE)
 
   output$live_validation <- renderUI({
     d <- current_draft_from_inputs()

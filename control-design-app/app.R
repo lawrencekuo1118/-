@@ -169,6 +169,43 @@ ui <- page_navbar(
       });
       setInterval(wireSubProcessMenu, 800);
     })();
+    // 選單已選項目：雙擊即可拉回輸入框修改（create=true 時寫入新值；儲存後入參數庫）
+    (function() {
+      function selectizeFromItem($item) {
+        var $control = $item.closest('.selectize-control');
+        if (!$control.length) return null;
+        var $el = $control.siblings('select.selectized, input.selectized').first();
+        if (!$el.length) {
+          $el = $control.parent().find('select.selectized, input.selectized').first();
+        }
+        return ($el[0] && $el[0].selectize) ? $el[0].selectize : null;
+      }
+      function itemLabel(s, value, $item) {
+        var opt = s.options[value];
+        if (opt) {
+          if (opt.text) return String(opt.text);
+          if (opt.label) return String(opt.label);
+        }
+        var t = ($item.clone().children().remove().end().text() || '').trim();
+        return t || String(value);
+      }
+      $(document).on('dblclick.editSelectizeItem', '.rcm-design-tabs .selectize-control .item', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $item = $(this);
+        var s = selectizeFromItem($item);
+        if (!s || s.isDisabled) return;
+        var value = $item.attr('data-value');
+        if (value === undefined || value === null) return;
+        var text = itemLabel(s, value, $item);
+        try {
+          s.removeItem(value, true);
+          s.setTextboxValue(text);
+          s.focus();
+          if (typeof s.open === 'function') s.open();
+        } catch (err) {}
+      });
+    })();
   ")),
     tags$style(HTML(paste0("
       :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; --input-placeholder: #ADB5BD; }
@@ -291,9 +328,11 @@ ui <- page_navbar(
       .rcm-design-tabs .selectize-dropdown {
         z-index: 2000 !important;
       }
-      #sub_process-selectized,
-      .selectize-control.single .selectize-input {
-        cursor: pointer;
+      .rcm-design-tabs .selectize-control .item {
+        cursor: text;
+      }
+      .rcm-design-tabs .selectize-control .item:hover {
+        outline: 1px dashed rgba(0, 91, 170, 0.35);
       }
 
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
@@ -748,6 +787,9 @@ ui <- page_navbar(
               "control_activity", lab_req("控制活動"), rows = 3, width = "100%",
               placeholder = "How：具體執行行為（含誰／何時／如何）"
             ),
+            p(class = "small text-muted mb-2",
+              "具選單之欄位：可從建議選取後，", tags$strong("雙擊已選項目"),
+              "即可修改文字；儲存成功後會寫入參數庫為自訂選項。"),
             selectInput(
               "approach", lab_req("控制方式"),
               choices = c("請選擇…" = "", CONTROL_ACTIVITY_TYPE_PD),
@@ -763,9 +805,15 @@ ui <- page_navbar(
               choices = c("請選擇…" = "", FREQUENCY_CHOICES),
               selected = "", width = "100%"
             ),
-            textInput(
+            selectizeInput(
               "responsible_unit", lab_req("控制點負責單位"),
-              value = "", width = "100%", placeholder = "例：資訊安全單位"
+              choices = character(0), selected = "", multiple = FALSE, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                maxItems = 1,
+                placeholder = "例：資訊安全單位；可選建議或雙擊修改自訂"
+              )
             ),
             selectizeInput(
               "iuc", lab_req(CONTROL_IUC_DOCUMENT_LABEL),
@@ -773,7 +821,7 @@ ui <- page_navbar(
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
-                placeholder = "IUC；可多選；自 PBC 資料庫選取或手動輸入",
+                placeholder = "IUC；可多選；選後可雙擊修改；自 PBC 選取或手動輸入",
                 plugins = list("remove_button")
               )
             ),
@@ -788,17 +836,30 @@ ui <- page_navbar(
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
-                placeholder = "政策制度類 PBC；可選建議或手動輸入",
+                placeholder = "政策制度類 PBC；選後可雙擊修改",
                 plugins = list("remove_button")
               )
             ),
-            textInput("related_documents", lab_opt("相關文件"), width = "100%",
-                      placeholder = "一般相關文件（與 IUC／佐證文件分開）"),
+            selectizeInput(
+              "related_documents", lab_opt("相關文件"),
+              choices = character(0), selected = "", multiple = FALSE, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                maxItems = 1,
+                placeholder = "一般相關文件；可選建議或雙擊修改自訂"
+              )
+            ),
             selectizeInput(
               "related_law", "相關法規",
               choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
               multiple = TRUE, width = "100%",
-              options = list(create = TRUE, placeholder = "僅遵循面可填；可多選／自訂")
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "僅遵循面可填；可多選／自訂；選後可雙擊修改",
+                plugins = list("remove_button")
+              )
             ),
             uiOutput("related_law_hint"),
             selectizeInput(
@@ -807,7 +868,7 @@ ui <- page_navbar(
               options = list(
                 create = TRUE,
                 createOnBlur = TRUE,
-                placeholder = "Control Evidences；可多選；自 PBC 選取或手動輸入",
+                placeholder = "Control Evidences；選後可雙擊修改；自 PBC 選取或手動輸入",
                 plugins = list("remove_button")
               )
             ),
@@ -1310,11 +1371,48 @@ server <- function(input, output, session) {
     df
   }
 
+  # 設計儲存成功：質性／選單欄位寫入參數庫（不需高權）
+  refresh_design_text_param_choices <- function() {
+    store <- isolate(param_store())
+    merge_ch <- function(param, cur) {
+      ch <- parameter_options(store, param)
+      cur <- trimws(as.character(cur %||% "")[[1]])
+      if (nzchar(cur) && !(cur %in% ch)) ch <- c(ch, cur)
+      stats::setNames(ch, ch)
+    }
+    ru <- trimws(as.character(isolate(input$responsible_unit %||% "")[[1]]))
+    updateSelectizeInput(
+      session, "responsible_unit",
+      choices = merge_ch("控制點負責單位", ru),
+      selected = ru, server = FALSE
+    )
+    rd <- trimws(as.character(isolate(input$related_documents %||% "")[[1]]))
+    updateSelectizeInput(
+      session, "related_documents",
+      choices = merge_ch("相關文件", rd),
+      selected = rd, server = FALSE
+    )
+    rs <- trimws(as.character(isolate(input$related_system %||% "")))
+    # 相關系統維持 textInput；選項僅入參數庫供參數頁／下次重建使用
+    invisible(rs)
+  }
+
+  persist_design_custom_params <- function(ctrl) {
+    if (is.null(ctrl)) return(invisible(NULL))
+    df <- ingest_ctrl_parameters(isolate(param_store()), ctrl, source = "設計自訂")
+    save_parameter_store(df, param_path_json)
+    param_store(df)
+    try(refresh_design_text_param_choices(), silent = TRUE)
+    try(refresh_sub_process_choices(force = TRUE), silent = TRUE)
+    invisible(df)
+  }
+
   # Seed empty parameter DB after UI is ready (avoid blocking cascade updates)
   session$onFlushed(function() {
     if (!nrow(isolate(param_store()))) {
       try(persist_params(force = TRUE), silent = TRUE)
     }
+    try(refresh_design_text_param_choices(), silent = TRUE)
   }, once = TRUE)
 
   output$sidebar_cycle_hint <- renderUI({
@@ -1573,9 +1671,17 @@ server <- function(input, output, session) {
     if (nzchar(cy)) {
       rows <- library_controls_flat(cascade_source_library(lib_items), cycle = cy)
       ch <- cascade_sub_process_choices(rows)
+      param_names <- tryCatch(
+        parameter_options(isolate(param_store()), "子作業名稱"),
+        error = function(e) character()
+      )
+      if (length(param_names)) {
+        extra <- param_names[!param_names %in% unname(ch)]
+        if (length(extra)) ch <- c(ch, stats::setNames(extra, extra))
+      }
       cur <- sub_process_name_from_value(isolate(input$sub_process) %||% "")
       spid <- trimws(isolate(input$sub_process_id) %||% "")
-      if (!id_matches_cycle_code(spid, cycle_code_for(cy))) {
+      if (nzchar(spid) && !id_matches_cycle_code(spid, cycle_code_for(cy))) {
         cur <- ""
       }
       # 循環變更時清空選取；同循環僅 bump／庫更新時保留有效名稱
@@ -1603,7 +1709,7 @@ server <- function(input, output, session) {
       options = list(
         create = TRUE,
         createOnBlur = TRUE,
-        placeholder = "選建議子作業或手動輸入名稱",
+        placeholder = "選建議後可雙擊修改；或直接輸入名稱",
         maxItems = 1,
         openOnFocus = TRUE,
         maxOptions = 1000,
@@ -2146,10 +2252,18 @@ server <- function(input, output, session) {
         updateSelectInput(session, "frequency", selected = val)
       },
       "控制點負責單位" = function() {
-        updateTextInput(session, "responsible_unit", value = val)
+        updateSelectizeInput(
+          session, "responsible_unit",
+          choices = stats::setNames(val, val),
+          selected = val, server = FALSE
+        )
       },
       "流程負責單位" = function() {
-        updateTextInput(session, "responsible_unit", value = val)
+        updateSelectizeInput(
+          session, "responsible_unit",
+          choices = stats::setNames(val, val),
+          selected = val, server = FALSE
+        )
       },
       "相關系統／IUC" = function() {
         # 舊參數庫鍵名；僅套用至 IUC（與相關系統分開）
@@ -2175,7 +2289,13 @@ server <- function(input, output, session) {
         sel <- expand_pbc_selection(val, pbc_reg())
         updateSelectizeInput(session, "related_policy", selected = sel)
       },
-      "相關文件" = function() updateTextInput(session, "related_documents", value = val),
+      "相關文件" = function() {
+        updateSelectizeInput(
+          session, "related_documents",
+          choices = stats::setNames(val, val),
+          selected = val, server = FALSE
+        )
+      },
       "風險面向" = function() {
         updateSelectizeInput(session, "risk_principle",
                              choices = stats::setNames(val, val), selected = val, server = FALSE)
@@ -2582,9 +2702,11 @@ server <- function(input, output, session) {
     merged <- merge_design_preview_section(rcm_preview_ctrl(), draft, section)
     rcm_preview_ctrl(merged)
     bump_rcm_views()
+    persist_design_custom_params(merged)
     cols <- rcm_preview_section_columns(section)
     showNotification(
-      sprintf("已儲存「%s」至 RCM 表格：%s", section, paste(cols, collapse = "、")),
+      sprintf("已儲存「%s」至 RCM 表格：%s（自訂選項已入參數庫）",
+              section, paste(cols, collapse = "、")),
       type = "message", duration = 5
     )
   }
@@ -3051,6 +3173,7 @@ server <- function(input, output, session) {
     controls(cs)
     rcm_preview_ctrl(NULL)
     bump_rcm_views(pt)
+    persist_design_custom_params(pt)
     bslib::nav_select("main_nav", selected = "RCM", session = session)
     updateTextInput(session, "control_id",
                     value = next_rcm_control_id(

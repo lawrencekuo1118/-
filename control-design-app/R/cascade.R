@@ -489,7 +489,15 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     session, "related_policy",
     selected = expand_pbc_selection(ctrl$related_policy %||% "", pbc_registry)
   )
-  updateTextInput(session, "related_documents", value = ctrl$related_documents %||% "")
+  updateSelectizeInput(
+    session, "related_documents",
+    choices = {
+      rd <- trimws(as.character(ctrl$related_documents %||% ""))
+      if (nzchar(rd)) stats::setNames(rd, rd) else character(0)
+    },
+    selected = trimws(as.character(ctrl$related_documents %||% "")),
+    server = FALSE
+  )
   updateSelectizeInput(session, "related_law",
                        selected = {
                          raw <- trimws(as.character(ctrl$related_law %||% ""))
@@ -517,7 +525,15 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
       updateSelectInput(session, "frequency", selected = freq)
     }
   }
-  updateTextInput(session, "responsible_unit", value = ctrl$responsible_unit %||% "")
+  updateSelectizeInput(
+    session, "responsible_unit",
+    choices = {
+      ru <- trimws(as.character(ctrl$responsible_unit %||% ""))
+      if (nzchar(ru)) stats::setNames(ru, ru) else character(0)
+    },
+    selected = trimws(as.character(ctrl$responsible_unit %||% "")),
+    server = FALSE
+  )
   updateSelectizeInput(
     session, "iuc",
     selected = expand_pbc_selection(

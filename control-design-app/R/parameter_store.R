@@ -256,3 +256,60 @@ delete_parameter_rows <- function(df, indices) {
   rownames(df) <- NULL
   df
 }
+
+# 取出某參數之既有選項值（供設計頁選單合併自訂）
+parameter_options <- function(df, param) {
+  if (!is.data.frame(df) || !nrow(df)) return(character())
+  param <- trimws(as.character(param %||% ""))
+  if (!nzchar(param)) return(character())
+  v <- trimws(as.character(df$選項值[df$參數 == param]))
+  unique(v[nzchar(v)])
+}
+
+# 設計儲存成功後：將質性／選單欄位值寫入參數庫為「設計自訂」選項
+DESIGN_PARAM_FIELD_MAP <- function() {
+  iuc_lab <- if (exists("CONTROL_IUC_DOCUMENT_LABEL", mode = "character")) {
+    CONTROL_IUC_DOCUMENT_LABEL
+  } else {
+    "相關文件-控制用文件"
+  }
+  ev_lab <- if (exists("CONTROL_EVIDENCE_DOCUMENT_LABEL", mode = "character")) {
+    CONTROL_EVIDENCE_DOCUMENT_LABEL
+  } else {
+    "相關文件-控制佐證文件"
+  }
+  stats::setNames(
+    c(
+      "sub_process", "risk_description", "control_objective", "control_activity",
+      "responsible_unit", "iuc_or_system", "related_documents", "related_document",
+      "related_system", "related_policy", "related_law"
+    ),
+    c(
+      "子作業名稱", "風險描述", "控制目標", "控制活動",
+      "控制點負責單位", iuc_lab, "相關文件", ev_lab,
+      "相關系統", "相關政策與制度", "相關法規"
+    )
+  )
+}
+
+ingest_ctrl_parameters <- function(df, ctrl, source = "設計自訂") {
+  if (!is.data.frame(df)) df <- empty_parameter_store()
+  if (is.null(ctrl)) return(df)
+  c <- if (!is.null(ctrl$control)) ctrl$control else ctrl
+  fmap <- DESIGN_PARAM_FIELD_MAP()
+  for (i in seq_along(fmap)) {
+    param <- names(fmap)[[i]]
+    key <- unname(fmap[[i]])
+    raw <- c[[key]]
+    if (identical(key, "iuc_or_system")) {
+      raw <- c$iuc %||% c$iuc_or_system %||% ""
+    }
+    if (identical(key, "related_document")) {
+      raw <- c$related_document %||% c$outputs %||% ""
+    }
+    for (v in .split_multi(raw)) {
+      df <- upsert_parameter_row(df, param, v, source = source)
+    }
+  }
+  df
+}

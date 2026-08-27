@@ -720,6 +720,33 @@ check(identical(recode_id_cycle_prefix("EC-101-01", "SC"), "SC-101-01"),
 check(identical(recode_id_cycle_prefix("EC-101", "SC"), "SC-101"),
       "循環編號變更時子作業編號前綴同步")
 
+# 設計自訂選項入參數庫
+{
+  ps0 <- empty_parameter_store()
+  ps_in <- ingest_ctrl_parameters(ps0, list(
+    sub_process = "權限清冊覆核作業",
+    risk_description = "離職未即時停權",
+    control_objective = "確保權限與現職一致",
+    control_activity = "每季產出清冊並請主管覆核",
+    responsible_unit = "資訊安全單位",
+    iuc = "使用者權限清冊",
+    related_documents = "權限申請單",
+    related_document = "覆核簽核檔",
+    related_system = "AD",
+    related_policy = "資訊安全管理辦法",
+    related_law = "個資法"
+  ), source = "設計自訂")
+  check(nrow(ps_in) >= 11L, "設計欄位可入參數庫")
+  check(any(ps_in$參數 == "子作業名稱" & ps_in$選項值 == "權限清冊覆核作業" &
+              ps_in$來源 == "設計自訂"), "子作業名稱自訂入庫")
+  check(any(ps_in$參數 == CONTROL_IUC_DOCUMENT_LABEL & ps_in$選項值 == "使用者權限清冊"),
+        "控制用文件自訂入庫")
+  check(any(ps_in$參數 == CONTROL_EVIDENCE_DOCUMENT_LABEL & ps_in$選項值 == "覆核簽核檔"),
+        "控制佐證文件自訂入庫")
+  check("權限清冊覆核作業" %in% parameter_options(ps_in, "子作業名稱"),
+        "parameter_options 可讀出自訂選項")
+}
+
 seeded <- seed_control_library(TRUE)
 it_rows <- cycle_risk_rows(seeded, "電腦化資訊系統循環")
 check(length(it_rows) >= 20, sprintf("資訊循環風險列至少 20（實際 %d）", length(it_rows)))
@@ -875,6 +902,12 @@ if (length(jl)) {
 
 # 按鈕／下載皆須有對應 handler（防呆回歸）
 app_src <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("dblclick\\.editSelectizeItem|editSelectizeItem", app_src) &&
+        grepl("persist_design_custom_params", app_src) &&
+        grepl("ingest_ctrl_parameters", app_src) &&
+        grepl('selectizeInput\\(\\s*"responsible_unit"', app_src) &&
+        grepl('selectizeInput\\(\\s*"related_documents"', app_src),
+      "選單欄位可雙擊修改且儲存入參數庫")
 btn_ids <- unique(regmatches(app_src, gregexpr('actionButton\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]])
 btn_ids <- sub('actionButton\\(\\s*"([^"]+)".*', "\\1", btn_ids, perl = TRUE)
 dl_ids <- unique(regmatches(app_src, gregexpr('downloadButton\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]])

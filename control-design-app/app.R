@@ -737,10 +737,6 @@ ui <- page_navbar(
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
             div(
-              class = "d-flex gap-1 flex-wrap mb-2",
-              actionButton("oa_split_suggest", "拆分建議", class = "btn-sm btn-outline-secondary")
-            ),
-            div(
               class = "assertions-side mb-2",
               selectizeInput(
                 "assertions", "控制聲明",
@@ -2969,19 +2965,6 @@ server <- function(input, output, session) {
       updateTextInput(session, "control_id", value = new_cid)
     }
   }, ignoreInit = TRUE)
-
-  observeEvent(input$oa_split_suggest, {
-    blob <- paste(c(input$control_objective %||% "", input$control_activity %||% ""),
-                  collapse = "。")
-    if (!nzchar(trimws(blob))) {
-      d <- current_draft_from_inputs()
-      blob <- paste(c(d$control_objective, d$control_activity), collapse = "。")
-    }
-    sug <- suggest_objective_activity_split(blob)
-    updateTextAreaInput(session, "control_objective", value = sug$objective)
-    updateTextAreaInput(session, "control_activity", value = sug$activity)
-    showNotification(sug$note, type = "message")
-  })
 
   output$live_validation <- renderUI({
     d <- current_draft_from_inputs()

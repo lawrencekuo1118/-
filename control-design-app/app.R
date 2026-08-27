@@ -1104,6 +1104,7 @@ ui <- page_navbar(
     "PBC資料庫",
     card(
       card_header("PBC 資料庫"),
+      uiOutput("pbc_cycle_readonly"),
       p(class = "small text-muted mb-2",
         "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
       tags$div(
@@ -1136,7 +1137,6 @@ ui <- page_navbar(
         )
       ),
       textInput("pbc_id", NULL, placeholder = "ID（可空）"),
-      uiOutput("pbc_cycle_readonly"),
       selectizeInput(
         "pbc_related", lab_opt("互相勾稽（Walkthrough）"),
         choices = NULL, multiple = TRUE, width = "100%",

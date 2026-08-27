@@ -746,8 +746,9 @@ check(!grepl("updateSelectInput\\(session, \"cycle\", selected = \"\"\\)", app_c
 
 check(grepl("cascade_source_library", app_casc),
       "訪談引導仍採內建範本庫候選")
-check(grepl("控制編號＝循環編號-子作業序號-控制序號|control_id_compose_hint", app_casc),
-      "基礎設定說明控制編號組成規則")
+check(grepl("控制編號＝循環編號-子作業序號-控制序號", app_casc) &&
+        !grepl("control_id_compose_hint", app_casc),
+      "基礎設定說明控制編號組成規則（無動態提示列）")
 check(!grepl('selectInput\\(\\s*"design_sub"|selectInput\\(\\s*"cascade_sub"', app_casc) &&
         grepl('selectizeInput\\(\\s*"sub_process"', app_casc) &&
         grepl("sub_process_hint", app_casc) &&

@@ -10,7 +10,11 @@ SIX_CONTROL_STATUS_RULES <- c(
   approach = "控制方式（預防／偵測／矯正）",
   frequency = "控制頻率",
   responsible_unit = "控制點負責單位",
-  iuc_or_system = CONTROL_IUC_DOCUMENT_LABEL
+  iuc_or_system = if (exists("CONTROL_IUC_DOCUMENT_LABEL", inherits = TRUE)) {
+    CONTROL_IUC_DOCUMENT_LABEL
+  } else {
+    "相關文件-控制用文件"
+  }
 )
 # Note: objective+activity are cascade-selected; the six operational items for
 # status scaffolding are nature/approach/frequency/owner/IUC + steps derived from activity.

@@ -1043,13 +1043,19 @@ check(grepl('textInput\\(\\s*"related_system"\\s*,\\s*lab_opt\\(\\s*"相關系�
       "相關系統選填標籤與相關政策與制度同列排版")
 check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}assertions', app_src, perl = TRUE),
       "控制目標不再與控制聲明並排（改全寬）")
-# 僅檢查「風險控制點設計」分頁內不再用雙欄排子作業／類型／頻率
+# 僅檢查「風險控制點設計」分頁內不用 layout_columns；方式／性質／頻率為三欄並排
 design_panel <- sub('(?s).*nav_panel\\(\\s*"風險控制點設計"', "", app_src, perl = TRUE)
 design_panel <- sub('(?s)nav_panel\\(\\s*"控制點測試設計".*', "", design_panel, perl = TRUE)
 check(!grepl("layout_columns", design_panel, fixed = TRUE) &&
         grepl("rcm-design-tabs .shiny-input-container { width: 100%", app_src, fixed = TRUE) &&
         grepl('textInput\\(\\s*"sub_process_id"[\\s\\S]*width\\s*=\\s*"100%"', app_src, perl = TRUE),
-      "風險控制點設計輸入列皆滿版單欄")
+      "風險控制點設計不以 layout_columns 排版；其餘輸入滿寬")
+check(grepl("control-attr-row", app_src) &&
+        grepl("repeat\\(3, minmax\\(0, 1fr\\)\\)", app_src) &&
+        grepl('control-attr-row[\\s\\S]*"approach"[\\s\\S]*"nature"[\\s\\S]*"frequency"', app_src, perl = TRUE),
+      "控制方式／性質／頻率三欄並排")
+check(!grepl("請先選控制性質與風險類別；人工且非法遵面時", app_src),
+      "控制佐證文件無待選灰色說明")
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
       "控制聲明在控制目標上方")
 check(grepl('placeholder-shown', app_src) &&

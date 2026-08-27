@@ -419,15 +419,16 @@ risk_factor_selection_from_ctrl <- function(ctrl) {
 }
 
 # Apply library / RCM control cycle (form fields filled by apply_supplement_from_ctrl)
-apply_ctrl_to_cascade <- function(session, ctrl) {
+apply_ctrl_to_cascade <- function(session, ctrl, current_cycle = NULL) {
   ctrl <- as.list(ctrl)
   if (nzchar(ctrl$cycle %||% "")) {
-    updateSelectInput(session, "cycle", selected = ctrl$cycle)
-    updateTextInput(session, "cycle_code",
-                    value = {
-                      cc <- trimws(ctrl$cycle_code %||% "")
-                      if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle)
-                    })
+    cur_cy <- trimws(as.character(current_cycle %||% ""))
+    if (!identical(cur_cy, ctrl$cycle)) {
+      updateSelectInput(session, "cycle", selected = ctrl$cycle)
+    }
+    cc <- trimws(ctrl$cycle_code %||% "")
+    if (!nzchar(cc)) cc <- cycle_code_for(ctrl$cycle)
+    updateTextInput(session, "cycle_code", value = cc)
   }
   invisible(ctrl)
 }

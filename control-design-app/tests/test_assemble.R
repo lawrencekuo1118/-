@@ -1093,6 +1093,12 @@ check(grepl('preview_rcm_basic", "儲存"', app_src) &&
         grepl('preview_rcm_risk", "儲存"', app_src) &&
         grepl('preview_rcm_control", "儲存"', app_src),
       "三個設計區塊皆有儲存按鈕")
+check(grepl("design-stage-save-bar", app_src) &&
+        !grepl("design-section-preview-bar", app_src) &&
+        grepl('nav_panel\\(\\s*"① 基礎設定"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE) &&
+        grepl('nav_panel\\(\\s*"② 風險辨識"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE) &&
+        grepl('nav_panel\\(\\s*"③ 控制設計"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE),
+      "各階段儲存按鈕置於右上角")
 check(grepl("design-tab-filter-bar", app_src) &&
         grepl("filter_basic_kw", app_src) &&
         grepl("filter_risk_category", app_src) &&

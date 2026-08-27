@@ -395,13 +395,14 @@ ui <- page_navbar(
       @media (max-width: 768px) {
         .control-attr-row { grid-template-columns: 1fr; }
       }
-      .design-section-preview-bar {
+      .design-stage-save-bar {
         display: flex;
         justify-content: flex-end;
-        margin-top: 0.75rem;
-        padding-top: 0.35rem;
-        border-top: 1px dashed rgba(0,0,0,0.08);
+        align-items: center;
+        margin: 0 0 0.65rem 0;
+        min-height: 2rem;
       }
+      .design-stage-save-bar .btn { white-space: nowrap; }
       /* 各設計頁籤頂部簡約搜尋 */
       .design-tab-filter-bar {
         margin-bottom: 0.85rem;
@@ -687,6 +688,10 @@ ui <- page_navbar(
           id = "rcm_design_tabs",
           nav_panel(
             "① 基礎設定",
+            div(
+              class = "design-stage-save-bar",
+              actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
+            ),
             p(class = "small text-muted mb-2",
               "循環於左側側邊欄設定。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
             uiOutput("design_cycle_readonly"),
@@ -704,14 +709,14 @@ ui <- page_navbar(
             ),
             textInput("control_id", lab_opt("控制編號"), value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
-            uiOutput("design_preview_basic"),
-            div(
-              class = "design-section-preview-bar",
-              actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
-            )
+            uiOutput("design_preview_basic")
           ),
           nav_panel(
             "② 風險辨識",
+            div(
+              class = "design-stage-save-bar",
+              actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
+            ),
             div(
               class = "design-tab-filter-bar",
               tags$div(class = "filter-title", "風險類別／風險因素篩選 — 快速找出相關風險描述"),
@@ -777,14 +782,14 @@ ui <- page_navbar(
             actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
             selectInput("romm_classification", "RoMM 分類（抽樣輔助）",
                         choices = ROMM_CLASS_CHOICES, width = "100%"),
-            uiOutput("design_preview_risk"),
-            div(
-              class = "design-section-preview-bar",
-              actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
-            )
+            uiOutput("design_preview_risk")
           ),
           nav_panel(
             "③ 控制設計",
+            div(
+              class = "design-stage-save-bar",
+              actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
+            ),
             div(
               class = "design-tab-filter-bar",
               tags$div(class = "filter-title", "控制方式／控制性質篩選 — 快速找出相關控制活動"),
@@ -924,11 +929,7 @@ ui <- page_navbar(
               actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
             ),
             uiOutput("related_document_hint"),
-            uiOutput("design_preview_control"),
-            div(
-              class = "design-section-preview-bar",
-              actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
-            )
+            uiOutput("design_preview_control")
           )
         )
       ),

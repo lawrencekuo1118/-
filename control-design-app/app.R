@@ -628,7 +628,6 @@ ui <- page_navbar(
             ),
             textInput("control_id", "控制編號", value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
-            uiOutput("control_id_compose_hint"),
             uiOutput("design_preview_basic"),
             div(
               class = "design-section-preview-bar",
@@ -1490,30 +1489,6 @@ server <- function(input, output, session) {
       if (nzchar(nat_n)) updateSelectInput(session, "nature", selected = nat_n)
     }
     showNotification("已帶入控制活動", type = "message", duration = 3)
-  })
-  output$control_id_compose_hint <- renderUI({
-    cc <- trimws(input$cycle_code %||% "")
-    if (!nzchar(cc)) cc <- cycle_code_for(input$cycle %||% "")
-    spid <- trimws(input$sub_process_id %||% "")
-    cid <- trimws(input$control_id %||% "")
-    sn <- sub_process_seq_from_id(spid, cc)
-    parts <- parse_rcm_id_parts(cid)
-    ctrl_seg <- if (isTRUE(parts$ok) && nzchar(parts$ctrl)) parts$ctrl else "01"
-    example <- if (nzchar(cc) && nzchar(sn)) {
-      compose_control_id(cc, sn, ctrl_seg)
-    } else if (nzchar(cc)) {
-      compose_control_id(cc, "101", "01")
-    } else {
-      "EC-101-01"
-    }
-    tags$div(
-      class = "small text-muted mb-2",
-      sprintf("控制編號組成：[%s]-[%s]-[%s] → ",
-              if (nzchar(cc)) cc else "循環編號",
-              if (nzchar(sn)) sn else "子作業序號",
-              ctrl_seg),
-      tags$code(example)
-    )
   })
   output$risk_factor_hint <- renderUI({
     cy <- input$cycle %||% ""

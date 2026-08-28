@@ -424,18 +424,23 @@ check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "a
         !grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
       "訪談保留引導；風險控制點設計已移除引導設計區塊")
 app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
-check(grepl('col_widths = c\\(7, 5\\)', app_txt) &&
-        grepl("interview_design_groups", app_txt) &&
+interview_panel <- sub('(?s).*nav_panel\\(\\s*"訪談問項設計"', 'nav_panel("訪談問項設計"', app_txt, perl = TRUE)
+interview_panel <- sub('(?s)nav_panel\\(\\s*"風險控制點設計".*', "", interview_panel, perl = TRUE)
+check(grepl("interview_design_groups", app_txt) &&
         grepl("rcm_design_tabs", app_txt) &&
         grepl("design-preview-drawer", app_txt) &&
         grepl("designPreviewCollapse", app_txt) &&
+        grepl("interviewPreviewCollapse", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
         grepl('download_interview[\\s\\S]{0,400}interview_live_box', app_txt, perl = TRUE) &&
         !grepl('card\\([\\s\\S]{0,120}interview_live_box', app_txt, perl = TRUE) &&
-        grepl("interview_paragraph", app_txt),
-      "訪談 7/5；題綱摘要移入引導區底部；右欄保留表格預覽")
+        grepl("interview_paragraph", app_txt) &&
+        !grepl('layout_columns[\\s\\S]{0,200}interview_sub', interview_panel, perl = TRUE) &&
+        grepl('design-preview-drawer[\\s\\S]*interviewPreviewCollapse[\\s\\S]*interview_table', interview_panel, perl = TRUE) &&
+        grepl("預覽列（訪談題綱）— 點擊展開或收回", interview_panel, fixed = TRUE),
+      "訪談預覽列改為正下方收合抽屜（同風險控制點設計）")
 check(grepl("套用 IUC／PBC 命名", app_txt),
       "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
 check(!grepl("interview_source", app_txt) &&

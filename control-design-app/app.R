@@ -688,74 +688,89 @@ ui <- page_navbar(
   ),
   nav_panel(
     "訪談問項設計",
-    layout_columns(
-      col_widths = c(7, 5),
-      card(
-        card_header("訪談引導（依序選取）"),
-        uiOutput("interview_status"),
-        uiOutput("interview_guide_banner"),
-        # 循環於側邊欄；此處①子作業 → ②風險／控制點
-        selectInput(
-          "interview_sub", NULL,
-          choices = c("① 選擇子作業…" = ""),
-          selected = ""
-        ),
-        selectizeInput(
-          "worksheet_controls", NULL,
-          choices = NULL, multiple = TRUE,
-          options = list(placeholder = "② 選擇風險／控制點（可空＝該子作業下全部建議）")
-        ),
-        div(
-          class = "d-flex gap-1 flex-wrap mb-2",
-          actionButton("ws_select_core_iv", "深入且快速（風險／目標／活動）",
-                       class = "btn-sm btn-primary"),
-          actionButton("ws_select_full_iv", "完整走查（含頻率／IUC／步驟）",
-                       class = "btn-sm btn-outline-primary"),
-          actionButton("ws_reset_iv", "重設訪談選取", class = "btn-sm btn-outline-secondary")
-        ),
-        tags$hr(),
-        accordion(
-          id = "interview_design_groups",
-          open = c("訪談焦點", "5W1H／PBC"),
-          accordion_panel(
-            "訪談焦點",
-            p(class = "small text-muted mb-2",
-              "側邊欄選定循環並選子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
-            checkboxGroupInput(
-              "interview_elements", NULL,
-              choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
-            )
-          ),
-          accordion_panel(
-            "5W1H／PBC",
-            p(class = "small text-muted mb-2",
-              "勾選模組組成回答架構與追問題；可套用 PBC 命名。"),
-            checkboxGroupInput(
-              "interview_5w1h", NULL,
-              choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
-            ),
-            checkboxInput(
-              "interview_include_modules",
-              "將勾選之 5W1H 模組展開為獨立探針題",
-              value = TRUE
-            ),
-            selectizeInput(
-              "interview_pbc_link", "套用 IUC／PBC 命名",
-              choices = NULL, multiple = TRUE,
-              options = list(placeholder = "原名→新名（套用至訪談）")
-            )
+    card(
+      card_header("訪談引導（依序選取）"),
+      uiOutput("interview_status"),
+      uiOutput("interview_guide_banner"),
+      # 循環於側邊欄；此處①子作業 → ②風險／控制點
+      selectInput(
+        "interview_sub", NULL,
+        choices = c("① 選擇子作業…" = ""),
+        selected = ""
+      ),
+      selectizeInput(
+        "worksheet_controls", NULL,
+        choices = NULL, multiple = TRUE,
+        options = list(placeholder = "② 選擇風險／控制點（可空＝該子作業下全部建議）")
+      ),
+      div(
+        class = "d-flex gap-1 flex-wrap mb-2",
+        actionButton("ws_select_core_iv", "深入且快速（風險／目標／活動）",
+                     class = "btn-sm btn-primary"),
+        actionButton("ws_select_full_iv", "完整走查（含頻率／IUC／步驟）",
+                     class = "btn-sm btn-outline-primary"),
+        actionButton("ws_reset_iv", "重設訪談選取", class = "btn-sm btn-outline-secondary")
+      ),
+      tags$hr(),
+      accordion(
+        id = "interview_design_groups",
+        open = c("訪談焦點", "5W1H／PBC"),
+        accordion_panel(
+          "訪談焦點",
+          p(class = "small text-muted mb-2",
+            "側邊欄選定循環並選子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
+          checkboxGroupInput(
+            "interview_elements", NULL,
+            choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
           )
         ),
-        div(
-          class = "d-flex gap-1 flex-wrap mt-2",
-          downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-success btn-sm")
-        ),
-        uiOutput("interview_live_box")
+        accordion_panel(
+          "5W1H／PBC",
+          p(class = "small text-muted mb-2",
+            "勾選模組組成回答架構與追問題；可套用 PBC 命名。"),
+          checkboxGroupInput(
+            "interview_5w1h", NULL,
+            choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
+          ),
+          checkboxInput(
+            "interview_include_modules",
+            "將勾選之 5W1H 模組展開為獨立探針題",
+            value = TRUE
+          ),
+          selectizeInput(
+            "interview_pbc_link", "套用 IUC／PBC 命名",
+            choices = NULL, multiple = TRUE,
+            options = list(placeholder = "原名→新名（套用至訪談）")
+          )
+        )
       ),
-      card(
-        uiOutput("interview_scaffold_preview"),
-        DTOutput("interview_table"),
-        verbatimTextOutput("interview_paragraph")
+      div(
+        class = "d-flex gap-1 flex-wrap mt-2",
+        downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-success btn-sm")
+      ),
+      uiOutput("interview_live_box")
+    ),
+    div(
+      class = "design-preview-drawer",
+      tags$button(
+        class = "design-preview-toggle",
+        type = "button",
+        `data-bs-toggle` = "collapse",
+        `data-bs-target` = "#interviewPreviewCollapse",
+        `aria-expanded` = "false",
+        `aria-controls` = "interviewPreviewCollapse",
+        tags$span(class = "chevron", "▸"),
+        "預覽列（訪談題綱）— 點擊展開或收回"
+      ),
+      div(
+        id = "interviewPreviewCollapse",
+        class = "collapse",
+        div(
+          class = "design-preview-body",
+          uiOutput("interview_scaffold_preview"),
+          DTOutput("interview_table"),
+          verbatimTextOutput("interview_paragraph")
+        )
       )
     )
   ),

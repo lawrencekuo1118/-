@@ -1305,7 +1305,7 @@ ui <- page_navbar(
       uiOutput("rcm_preview_status"),
       uiOutput("rcm_latest_saved"),
       div(class = "rcm-table-scroll-wrap", DTOutput("rcm_table")),
-      downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
+      downloadButton("download_rcm", "下載 RCM.xlsx", class = "btn-sm"),
       tags$hr(),
       tags$strong("缺漏／缺文件／控制缺失"),
       DTOutput("gap_table")
@@ -4441,9 +4441,9 @@ server <- function(input, output, session) {
   })
 
   output$download_rcm <- downloadHandler(
-    filename = function() "rcm.csv",
+    filename = function() sprintf("RCM-%s.xlsx", format(Sys.Date(), "%Y%m%d")),
     content = function(file) with_loading(
-      write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")
+      write_rcm_xlsx(controls_to_rcm(controls()), file)
     )
   )
   output$download_interview <- downloadHandler(

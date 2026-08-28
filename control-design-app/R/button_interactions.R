@@ -104,8 +104,8 @@ button_interaction_registry <- function() {
     list(
       title = "RCM",
       rows = list(
-        list(id = "download_rcm", label = "下載 RCM CSV", page = "RCM",
-             prereq = "有控制點", effect = "匯出 controls_to_rcm()", gate = "n_ctrl>0")
+        list(id = "download_rcm", label = "下載 RCM.xlsx", page = "RCM",
+             prereq = "有控制點", effect = "匯出 controls_to_rcm() 為 xlsx", gate = "n_ctrl>0")
       )
     ),
     list(

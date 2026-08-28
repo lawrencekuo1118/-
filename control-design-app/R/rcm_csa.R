@@ -759,6 +759,13 @@ controls_to_rcm <- function(controls) {
   }))
 }
 
+write_rcm_xlsx <- function(df, path) {
+  if (!requireNamespace("writexl", quietly = TRUE)) {
+    stop("需要 writexl 套件以匯出 RCM xlsx：install.packages(\"writexl\")")
+  }
+  writexl::write_xlsx(as.data.frame(df), path)
+}
+
 # 0 列但保留 RCM 標題列（含儲存時間），供空表仍顯示欄名
 empty_rcm_display_df <- function() {
   empty <- controls_to_rcm(list())

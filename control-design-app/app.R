@@ -1374,7 +1374,6 @@ ui <- page_navbar(
       ),
       fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV／Excel",
                 accept = c(".csv", ".xlsx", ".xls")),
-      downloadButton("download_pbc", "匯出 CSV", class = "btn-sm mt-1"),
       tags$hr(),
       tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
       p(class = "small text-muted mb-2",
@@ -1435,7 +1434,6 @@ ui <- page_navbar(
       card_header("匯出"),
       div(
         class = "d-flex gap-2 flex-wrap",
-        downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
         downloadButton("download_lib_json", "匯出 JSON", class = "btn-sm")
       )
     )
@@ -3176,12 +3174,6 @@ server <- function(input, output, session) {
       collapse = "\n"
     )
   })
-  output$download_lib_csv <- downloadHandler(
-    filename = function() sprintf("control_library-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) with_loading(
-      utils::write.csv(library_to_flat_df(lib()), file, row.names = FALSE, fileEncoding = "UTF-8")
-    )
-  )
   output$download_lib_json <- downloadHandler(
     filename = function() sprintf("control_library-%s.json", format(Sys.time(), "%Y%m%d")),
     content = function(file) with_loading(save_control_library(lib(), file))
@@ -4036,13 +4028,6 @@ server <- function(input, output, session) {
       })
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
-  output$download_pbc <- downloadHandler(
-    filename = function() sprintf("pbc-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) with_loading(
-      utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
-    )
-  )
-
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
     df <- rcm_display_df()
@@ -4397,7 +4382,6 @@ server <- function(input, output, session) {
                            finalized_only = TRUE)),
       error = function(e) 0L
     )
-    n_pbc <- nrow(pbc_reg())
     n_param <- nrow(param_store())
 
     gate <- function(id, ok, tip_off) {
@@ -4448,8 +4432,6 @@ server <- function(input, output, session) {
     gate("download_interview", iv_n > 0L, "尚無訪談題綱可下載")
     gate("download_csa", csa_n > 0L, "尚無已定版控制點測試步驟可下載")
     gate("download_rcm", n_ctrl > 0L, "尚無 RCM 列可下載")
-    gate("download_pbc", n_pbc > 0L, "PBC 資料庫尚無資料")
-    gate("download_lib_csv", n_lib > 0L, "範本庫尚無資料")
     gate("download_lib_json", n_lib > 0L, "範本庫尚無資料")
     gate("download_params", n_param > 0L, "參數庫尚無資料")
     gate("download_params_json", n_param > 0L, "參數庫尚無資料")

@@ -120,8 +120,6 @@ button_interaction_registry <- function() {
         list(id = "pbc_apply_to_design", label = "套用至控制設計", page = "PBC",
              prereq = "pbc_apply 有選項；不可混批政策／非政策",
              effect = "寫入 IUC 或相關政策與制度；可寫入 CSA Inputs", gate = "執行時檢查"),
-        list(id = "download_pbc", label = "匯出 CSV", page = "PBC",
-             prereq = "庫有資料", effect = "下載全庫", gate = "n_pbc>0"),
         list(id = "—", label = "PBC 表選列", page = "PBC",
              prereq = "點選列", effect = "回填 PBC 增列表單", gate = "—")
       )
@@ -133,8 +131,6 @@ button_interaction_registry <- function() {
              prereq = "下拉已選範本", effect = "填入設計表單→跳轉設計頁", gate = "需選範本"),
         list(id = "apply_lib_selected_row", label = "套用表格列", page = "範本庫",
              prereq = "lib_table 選列", effect = "同上", gate = "需選列"),
-        list(id = "download_lib_csv", label = "匯出 CSV", page = "範本庫",
-             prereq = "庫有資料", effect = "唯讀下載", gate = "n_lib>0"),
         list(id = "download_lib_json", label = "匯出 JSON", page = "範本庫",
              prereq = "庫有資料", effect = "唯讀下載", gate = "n_lib>0"),
         list(id = "admin_lib_load_row", label = "載入選取列", page = "範本庫",

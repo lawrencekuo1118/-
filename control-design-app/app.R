@@ -38,6 +38,33 @@ lab_opt <- function(txt) {
   tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
 }
 
+# DataTables 共用：處理中顯示「載入中...」
+dt_loading_opts <- function(pageLength = 10, scrollX = TRUE, dom = "tip",
+                            ordering = NULL, emptyTable = "無資料", ...) {
+  opts <- list(
+    pageLength = pageLength,
+    scrollX = scrollX,
+    dom = dom,
+    processing = TRUE,
+    language = list(
+      processing = "載入中...",
+      loadingRecords = "載入中...",
+      emptyTable = emptyTable
+    )
+  )
+  if (!is.null(ordering)) opts$ordering <- ordering
+  extra <- list(...)
+  if (length(extra)) opts <- utils::modifyList(opts, extra)
+  opts
+}
+
+with_loading <- function(expr, message = "載入中...") {
+  withProgress(message = message, value = 0, {
+    on.exit(incProgress(1, detail = NULL), add = TRUE)
+    force(expr)
+  })
+}
+
 fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry = NULL,
                                   current_cycle = NULL) {
   if (is.null(ctrl)) return()
@@ -188,6 +215,38 @@ ui <- page_navbar(
         setTimeout(wireSubProcessMenu, 30);
       });
       setInterval(wireSubProcessMenu, 800);
+    })();
+    // 載入中：首次連線與斷線重連
+    (function() {
+      function ensureLoadingUi() {
+        if (!document.getElementById('app-loading-overlay')) {
+          var overlay = document.createElement('div');
+          overlay.id = 'app-loading-overlay';
+          overlay.innerHTML = '<div class=\"app-loading-box\">載入中...</div>';
+          document.body.appendChild(overlay);
+        }
+        if (!document.getElementById('app-busy-banner')) {
+          var banner = document.createElement('div');
+          banner.id = 'app-busy-banner';
+          banner.textContent = '載入中...';
+          document.body.appendChild(banner);
+        }
+      }
+      function hideBootOverlay() {
+        var el = document.getElementById('app-loading-overlay');
+        if (el) el.classList.add('app-loading-hidden');
+      }
+      function showBootOverlay() {
+        var el = document.getElementById('app-loading-overlay');
+        if (el) el.classList.remove('app-loading-hidden');
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureLoadingUi);
+      } else {
+        ensureLoadingUi();
+      }
+      $(document).on('shiny:connected', hideBootOverlay);
+      $(document).on('shiny:disconnected', showBootOverlay);
     })();
     // 選單已選項目：雙擊即可拉回輸入框修改（create=true 時寫入新值；儲存後入參數庫）
     (function() {
@@ -594,9 +653,59 @@ ui <- page_navbar(
         background: rgba(255,255,255,0.65);
       }
       .design-rcm-preview-panel td.na-cell { color: #ADB5BD; }
+      /* 載入中：首次連線、伺服器忙碌、表格處理 */
+      #app-loading-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.9);
+      }
+      #app-loading-overlay.app-loading-hidden { display: none; }
+      .app-loading-box {
+        padding: 0.65rem 1.25rem;
+        border-radius: 0.5rem;
+        background: var(--brand-white);
+        border: 1px solid rgba(0, 91, 170, 0.2);
+        color: var(--brand-blue);
+        font-weight: 600;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      }
+      #app-busy-banner {
+        display: none;
+        position: fixed;
+        top: 4.35rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10040;
+        padding: 0.35rem 0.95rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.97);
+        border: 1px solid rgba(0, 91, 170, 0.18);
+        color: var(--brand-blue);
+        font-size: 0.82rem;
+        font-weight: 600;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        pointer-events: none;
+      }
+      body.shiny-busy #app-busy-banner { display: block; }
+      .dataTables_processing { color: var(--brand-blue) !important; font-weight: 600; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
     ")))
+  ),
+  busyIndicatorOptions(
+    spinner_color = BRAND_BLUE,
+    spinner_delay = "0.35s",
+    spinner_size = "28px",
+    fade_opacity = 0.45,
+    pulse_background = sprintf(
+      "linear-gradient(120deg, transparent, %s, %s, transparent)",
+      BRAND_BLUE, BRAND_GREEN
+    ),
+    pulse_height = "3px"
   ),
   sidebar = sidebar(
     width = 280,
@@ -2368,24 +2477,28 @@ server <- function(input, output, session) {
     df <- param_catalog_df()
     datatable(
       df, rownames = FALSE, selection = "single", filter = "top",
-      options = list(pageLength = 25, scrollX = TRUE)
+      options = dt_loading_opts(pageLength = 25, scrollX = TRUE)
     )
   })
 
   output$download_params <- downloadHandler(
     filename = function() sprintf("param_catalog_%s.csv", format(Sys.Date(), "%Y%m%d")),
-    content = function(file) utils::write.csv(param_store(), file, row.names = FALSE, fileEncoding = "UTF-8")
+    content = function(file) with_loading(
+      utils::write.csv(param_store(), file, row.names = FALSE, fileEncoding = "UTF-8")
+    )
   )
   output$download_params_json <- downloadHandler(
     filename = function() sprintf("param_catalog_%s.json", format(Sys.Date(), "%Y%m%d")),
-    content = function(file) save_parameter_store(param_store(), file)
+    content = function(file) with_loading(save_parameter_store(param_store(), file))
   )
 
   observeEvent(input$param_refresh, {
     if (!require_admin(is_admin(), session)) return()
-    df <- persist_params()
-    showNotification(sprintf("參數資料庫已從現況重建並儲存（%d 筆）", nrow(df)),
-                     type = "message")
+    with_loading({
+      df <- persist_params()
+      showNotification(sprintf("參數資料庫已從現況重建並儲存（%d 筆）", nrow(df)),
+                       type = "message")
+    })
   })
 
   observeEvent(input$param_apply_row, {
@@ -2741,7 +2854,7 @@ server <- function(input, output, session) {
     datatable(
       library_summary_df(filter_library(lib(), cycle_filter = input$cycle, query = input$lib_query)),
       selection = "single", rownames = FALSE,
-      options = list(pageLength = 15, scrollX = TRUE, dom = "ftip")
+      options = dt_loading_opts(pageLength = 15, dom = "ftip")
     )
   })
   output$lib_preview <- renderText({
@@ -2762,11 +2875,13 @@ server <- function(input, output, session) {
   })
   output$download_lib_csv <- downloadHandler(
     filename = function() sprintf("control_library-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) utils::write.csv(library_to_flat_df(lib()), file, row.names = FALSE, fileEncoding = "UTF-8")
+    content = function(file) with_loading(
+      utils::write.csv(library_to_flat_df(lib()), file, row.names = FALSE, fileEncoding = "UTF-8")
+    )
   )
   output$download_lib_json <- downloadHandler(
     filename = function() sprintf("control_library-%s.json", format(Sys.time(), "%Y%m%d")),
-    content = function(file) save_control_library(lib(), file)
+    content = function(file) with_loading(save_control_library(lib(), file))
   )
 
   labelize <- function(label, body) {
@@ -3384,39 +3499,41 @@ server <- function(input, output, session) {
     if (!activity_type_ok(d$approach)) {
       return(showNotification("控制活動須對應單一預防／偵測屬性", type = "error"))
     }
-    d <- current_draft_from_inputs()
-    ids <- collect_existing_control_ids(lists = list(lib(), controls()))
-    fin <- finalize_control_as_rcm_row(d, existing_ids = ids, seq_hint = length(controls()) + 1L)
-    if (!isTRUE(fin$ok)) {
-      return(showNotification(
-        paste0("尚未完成設計，不能寫入 RCM 列：", fin$msg),
-        type = "error", duration = 10
-      ))
-    }
-    pt <- fin$control
-    cs <- controls()
-    idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
-    if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
-    controls(cs)
-    rcm_preview_ctrl(NULL)
-    bump_rcm_views(pt)
-    persist_design_custom_params(pt)
-    bslib::nav_select("main_nav", selected = "RCM", session = session)
-    updateTextInput(session, "control_id",
-                    value = next_rcm_control_id(
-                      pt$sub_process_id,
-                      collect_existing_control_ids(lists = list(lib(), controls())),
-                      cycle_code = pt$cycle_code %||% cycle_code_for(pt$cycle %||% "")
-                    ))
-    if (isTRUE(input$auto_collect_lib) && isTRUE(is_admin())) {
-      res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)
-      showNotification(
-        sprintf("%s｜已累積入庫 +%d／覆寫 %d", fin$msg, res$added, res$updated),
-        type = "message", duration = 8
-      )
-    } else {
-      showNotification(fin$msg, type = "message", duration = 8)
-    }
+    with_loading({
+      d <- current_draft_from_inputs()
+      ids <- collect_existing_control_ids(lists = list(lib(), controls()))
+      fin <- finalize_control_as_rcm_row(d, existing_ids = ids, seq_hint = length(controls()) + 1L)
+      if (!isTRUE(fin$ok)) {
+        return(showNotification(
+          paste0("尚未完成設計，不能寫入 RCM 列：", fin$msg),
+          type = "error", duration = 10
+        ))
+      }
+      pt <- fin$control
+      cs <- controls()
+      idx <- which(vapply(cs, function(x) identical(x$control_id, pt$control_id), logical(1)))
+      if (length(idx)) cs[[idx[[1]]]] <- pt else cs[[length(cs) + 1]] <- pt
+      controls(cs)
+      rcm_preview_ctrl(NULL)
+      bump_rcm_views(pt)
+      persist_design_custom_params(pt)
+      bslib::nav_select("main_nav", selected = "RCM", session = session)
+      updateTextInput(session, "control_id",
+                      value = next_rcm_control_id(
+                        pt$sub_process_id,
+                        collect_existing_control_ids(lists = list(lib(), controls())),
+                        cycle_code = pt$cycle_code %||% cycle_code_for(pt$cycle %||% "")
+                      ))
+      if (isTRUE(input$auto_collect_lib) && isTRUE(is_admin())) {
+        res <- collect_many_to_lib(list(pt), source = "finalize_rcm", quality_gate = TRUE)
+        showNotification(
+          sprintf("%s｜已累積入庫 +%d／覆寫 %d", fin$msg, res$added, res$updated),
+          type = "message", duration = 8
+        )
+      } else {
+        showNotification(fin$msg, type = "message", duration = 8)
+      }
+    })
   })
 
   controls_df <- reactive({
@@ -3440,7 +3557,7 @@ server <- function(input, output, session) {
   })
   output$control_table <- renderDT({
     datatable(controls_df(), selection = "single", rownames = FALSE,
-              options = list(dom = "t", pageLength = 6, scrollX = TRUE, ordering = FALSE))
+              options = dt_loading_opts(pageLength = 6, dom = "t", ordering = FALSE))
   })
   output$control_paragraph <- renderText({
     s <- input$control_table_rows_selected
@@ -3497,7 +3614,7 @@ server <- function(input, output, session) {
         stringsAsFactors = FALSE
       )
       return(datatable(empty, selection = "single", rownames = FALSE,
-                       options = list(pageLength = 8, scrollX = TRUE, dom = "tip")))
+                       options = dt_loading_opts(pageLength = 8)))
     }
     show <- data.frame(
       ID = df$pbc_id,
@@ -3523,7 +3640,7 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
     dt <- datatable(show, selection = "single", rownames = FALSE,
-                    options = list(pageLength = 8, scrollX = TRUE, dom = "tip"))
+                    options = dt_loading_opts(pageLength = 8))
     for (kind in PBC_KIND_VALUES) {
       dt <- DT::formatStyle(
         dt, "證據類型",
@@ -3587,20 +3704,24 @@ server <- function(input, output, session) {
     f <- input$upload_pbc
     if (is.null(f)) return()
     tryCatch({
-      reg <- import_pbc_file(
-        f$datapath, pbc_reg(),
-        original_name = f$name %||% f$datapath
-      )
-      reg <- enrich_related_pbc_from_specs(reg)
-      pbc_reg(reg)
-      persist_pbc(reg)
-      refresh_pbc_choices()
-      showNotification(sprintf("已匯入，共 %d 筆", nrow(reg)), type = "message")
+      with_loading({
+        reg <- import_pbc_file(
+          f$datapath, pbc_reg(),
+          original_name = f$name %||% f$datapath
+        )
+        reg <- enrich_related_pbc_from_specs(reg)
+        pbc_reg(reg)
+        persist_pbc(reg)
+        refresh_pbc_choices()
+        showNotification(sprintf("已匯入，共 %d 筆", nrow(reg)), type = "message")
+      })
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
   output$download_pbc <- downloadHandler(
     filename = function() sprintf("pbc-%s.csv", format(Sys.time(), "%Y%m%d")),
-    content = function(file) utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
+    content = function(file) with_loading(
+      utils::write.csv(pbc_reg(), file, row.names = FALSE, fileEncoding = "UTF-8")
+    )
   )
 
   # RCM / worksheets (訪談問項、自我評估測試步驟)
@@ -3610,12 +3731,10 @@ server <- function(input, output, session) {
     # 無資料仍顯示 RCM 標題列（欄名）；提示改由上方 rcm_count_box
     dt <- datatable(
       df, rownames = FALSE,
-      options = list(
-        scrollX = TRUE, pageLength = 15, dom = "tip",
+      options = dt_loading_opts(
+        pageLength = 15,
         ordering = FALSE,
-        language = list(
-          emptyTable = "尚無 RCM 列；於「風險控制點設計」各區塊按「儲存」，或完成設計後「寫入 RCM 一列」。"
-        ),
+        emptyTable = "尚無 RCM 列；於「風險控制點設計」各區塊按「儲存」，或完成設計後「寫入 RCM 一列」。",
         rowCallback = DT::JS(
           "function(row, data, index) {",
           "  var api = $(row).closest('table').DataTable();",
@@ -3897,17 +4016,17 @@ server <- function(input, output, session) {
   })
   output$interview_table <- renderDT({
     datatable(interview_preview_df(interview_worksheet()),
-              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
+              rownames = FALSE, options = dt_loading_opts())
   })
   output$csa_table <- renderDT({
     datatable(controls_to_csa(selected_worksheet_controls_sa(), input$csa_elements,
                               finalized_only = TRUE),
-              rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
+              rownames = FALSE, options = dt_loading_opts())
   })
   output$gap_table <- renderDT({
     rcm_revision()
     datatable(detect_gaps_many(controls()), rownames = FALSE,
-              options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+              options = dt_loading_opts(pageLength = 8))
   })
 
   # ---- Button gates：條件未達成則不可按（避免單獨執行失敗）----
@@ -4038,21 +4157,27 @@ server <- function(input, output, session) {
 
   output$download_rcm <- downloadHandler(
     filename = function() "rcm.csv",
-    content = function(file) write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")
+    content = function(file) with_loading(
+      write.csv(controls_to_rcm(controls()), file, row.names = FALSE, fileEncoding = "UTF-8")
+    )
   )
   output$download_interview <- downloadHandler(
     filename = function() sprintf("interview-%s.csv", format(Sys.time(), "%Y%m%d")),
     content = function(file) {
-      write.csv(interview_worksheet(),
-                file, row.names = FALSE, fileEncoding = "UTF-8")
+      with_loading(
+        write.csv(interview_worksheet(),
+                  file, row.names = FALSE, fileEncoding = "UTF-8")
+      )
     }
   )
   output$download_csa <- downloadHandler(
     filename = function() sprintf("self-assessment-%s.csv", format(Sys.time(), "%Y%m%d")),
     content = function(file) {
-      write.csv(controls_to_csa(selected_worksheet_controls_sa(), input$csa_elements,
-                                finalized_only = TRUE),
-                file, row.names = FALSE, fileEncoding = "UTF-8")
+      with_loading(
+        write.csv(controls_to_csa(selected_worksheet_controls_sa(), input$csa_elements,
+                                  finalized_only = TRUE),
+                  file, row.names = FALSE, fileEncoding = "UTF-8")
+      )
     }
   )
 }

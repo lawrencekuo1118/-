@@ -1406,7 +1406,7 @@ server <- function(input, output, session) {
   # 若尚無 PBC 庫，先以資訊／財務報導／銷售循環種子清單初始化
   if (!file.exists(pbc_path_csv) && !file.exists(pbc_path_json)) {
     for (seed_nm in c("seed_it_cycle_pbc.R", "seed_fr_cycle_pbc.R",
-                      "seed_sc_cycle_pbc.R")) {
+                      "seed_sc_cycle_pbc.R", "seed_py_cycle_pbc.R")) {
       seed_script <- file.path(root, "data", seed_nm)
       if (file.exists(seed_script)) {
         tryCatch(sys.source(seed_script, envir = new.env(parent = globalenv())),
@@ -1429,6 +1429,7 @@ server <- function(input, output, session) {
   }
   seed_if_missing_cycle("財務報導循環", "seed_fr_cycle_pbc.R")
   seed_if_missing_cycle("銷售及收款循環", "seed_sc_cycle_pbc.R")
+  seed_if_missing_cycle("薪工循環", "seed_py_cycle_pbc.R")
   pbc_reg <- reactiveVal(reg0)
   lib_path_json <- file.path(data_dir, "control_library.json")
   lib_path_csv <- file.path(data_dir, "control_library.csv")

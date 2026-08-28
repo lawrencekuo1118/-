@@ -575,6 +575,19 @@ ui <- page_navbar(
         .risk-factor-category-row { grid-template-columns: 1fr; }
       }
 
+      /* 訪談引導：風險因素｜控制點 同列 1:1 並排 */
+      .interview-risk-control-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .interview-risk-control-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .interview-risk-control-row { grid-template-columns: 1fr; }
+      }
+
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
         display: grid !important;
@@ -868,16 +881,30 @@ ui <- page_navbar(
       card_header("訪談引導（依序選取）"),
       uiOutput("interview_status"),
       uiOutput("interview_guide_banner"),
-      # 循環於側邊欄；此處①子作業 → ②風險／控制點
+      # 循環於側邊欄；此處①子作業 → ②風險 → ③控制點
       selectInput(
         "interview_sub", NULL,
         choices = c("① 選擇子作業…" = ""),
         selected = ""
       ),
-      selectizeInput(
-        "worksheet_controls", NULL,
-        choices = NULL, multiple = TRUE,
-        options = list(placeholder = "② 選擇風險／控制點（可空＝該子作業下全部建議）")
+      div(
+        class = "interview-risk-control-row",
+        selectizeInput(
+          "interview_risk_pick", "② 風險因素",
+          choices = NULL, multiple = TRUE,
+          options = list(
+            placeholder = "可空＝該子作業下全部風險",
+            plugins = list("remove_button")
+          )
+        ),
+        selectizeInput(
+          "interview_control_pick", "③ 控制點",
+          choices = NULL, multiple = TRUE,
+          options = list(
+            placeholder = "可空＝範圍內全部控制點",
+            plugins = list("remove_button")
+          )
+        )
       ),
       div(
         class = "d-flex gap-1 flex-wrap mb-2",
@@ -2390,10 +2417,8 @@ server <- function(input, output, session) {
       cycle = input$cycle %||% "",
       sub_key = input$interview_sub %||% ""
     )
-    ids <- input$worksheet_controls
-    if (length(ids) && any(nzchar(ids))) {
-      cs <- Filter(function(c) c$control_id %in% ids, cs)
-    }
+    cs <- filter_interview_controls_by_risk(cs, input$interview_risk_pick %||% character())
+    cs <- filter_interview_controls_by_ids(cs, input$interview_control_pick %||% character())
     mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
     pbc_ids <- input$interview_pbc_link %||% character()
     controls_to_interview(
@@ -2439,7 +2464,8 @@ server <- function(input, output, session) {
       interview_pool_controls(), cycle = cy, sub_key = sk
     )
     div(class = "alert alert-success py-1 mb-2 small",
-        sprintf("已選子作業 → 建議控制點／風險 %d 筆（②可空＝全部）。", length(scoped)))
+        sprintf("已選子作業 → 建議 %d 筆；②風險／③控制點可空＝全部。",
+                length(scoped)))
   })
 
   output$interview_live_box <- renderUI({
@@ -2628,21 +2654,24 @@ server <- function(input, output, session) {
       sub_key = input$interview_sub %||% ""
     )
     if (!length(scoped)) {
-      updateSelectizeInput(session, "worksheet_controls", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "interview_risk_pick", choices = character(), server = TRUE)
+      updateSelectizeInput(session, "interview_control_pick", choices = character(), server = TRUE)
       return()
     }
-    ch <- stats::setNames(
-      vapply(scoped, function(x) x$control_id, ""),
-      vapply(scoped, function(x) {
-        sprintf("%s｜%s｜%s",
-                x$control_id,
-                x$risk_factor %||% x$risk_name %||% "",
-                substr(x$control_objective %||% "", 1, 24))
-      }, "")
-    )
+    ch_risk <- interview_risk_choices(scoped)
+    cur_risk <- input$interview_risk_pick %||% character()
+    sel_risk <- intersect(cur_risk, unname(ch_risk))
     updateSelectizeInput(
-      session, "worksheet_controls", choices = ch, server = TRUE,
-      selected = intersect(input$worksheet_controls %||% character(), unname(ch))
+      session, "interview_risk_pick",
+      choices = ch_risk, server = TRUE, selected = sel_risk
+    )
+    ctrl_pool <- filter_interview_controls_by_risk(scoped, sel_risk)
+    ch_ctrl <- interview_control_choices(ctrl_pool)
+    cur_ctrl <- input$interview_control_pick %||% character()
+    updateSelectizeInput(
+      session, "interview_control_pick",
+      choices = ch_ctrl, server = TRUE,
+      selected = intersect(cur_ctrl, unname(ch_ctrl))
     )
   })
 
@@ -4268,7 +4297,8 @@ server <- function(input, output, session) {
   observeEvent(input$ws_reset_iv, {
     updateSelectInput(session, "interview_sub", selected = "")
     interview_sub_ui_state$cycle <- NULL
-    updateSelectizeInput(session, "worksheet_controls", selected = character())
+    updateSelectizeInput(session, "interview_risk_pick", selected = character())
+    updateSelectizeInput(session, "interview_control_pick", selected = character())
     updateSelectizeInput(session, "interview_pbc_link", selected = character())
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
@@ -4288,7 +4318,8 @@ server <- function(input, output, session) {
     steps <- c(
       sprintf("循環（側邊欄）：%s", if (nzchar(input$cycle %||% "")) "✓" else "○"),
       sprintf("①子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
-      sprintf("②風險／控制點：%s", if (length(input$worksheet_controls)) "✓" else "○（全部）")
+      sprintf("②風險：%s", if (length(input$interview_risk_pick %||% character())) "✓" else "○（全部）"),
+      sprintf("③控制點：%s", if (length(input$interview_control_pick %||% character())) "✓" else "○（全部）")
     )
     if (!nzchar(input$cycle %||% "")) {
       return(tagList(

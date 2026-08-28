@@ -428,6 +428,13 @@ check(length(filter_controls_by_cycle_sub(
   lib_iv, cycle = "資訊循環", sub_key = "存取管理作業"
 )) == 1L,
       "訪談子作業篩選接受純名稱（非 id||name）")
+scoped_iv <- filter_controls_by_cycle_sub(lib_iv, cycle = "資訊循環", sub_key = "")
+ch_risk <- interview_risk_choices(scoped_iv)
+check("未授權存取" %in% unname(ch_risk), "訪談風險選單自範本庫彙整")
+scoped_risk <- filter_interview_controls_by_risk(scoped_iv, "未授權存取")
+check(length(scoped_risk) >= 1L, "訪談依風險篩選控制點")
+ch_ctrl <- interview_control_choices(scoped_risk)
+check(any(grepl("LIB", unname(ch_ctrl))), "訪談控制點選單含編號與目標")
 check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
       "訪談焦點含預期風險／目標／活動")
 check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
@@ -461,8 +468,10 @@ check(!grepl("interview_source", app_txt) &&
         !grepl("範本庫預期（風險／目標／活動）", app_txt) &&
         !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm_csa.R"), encoding = "UTF-8"), collapse = "\n")) &&
         !grepl("interview_cycle", app_txt) &&
-        grepl("interview_sub", app_txt) &&
-        grepl("interview_sub_ui_state", app_txt) &&
+        grepl("interview_risk_pick", app_txt) &&
+        grepl("interview_control_pick", app_txt) &&
+        grepl("interview-risk-control-row", app_txt) &&
+        !grepl('selectizeInput\\(\\s*"worksheet_controls"', app_txt) &&
         grepl("isolate\\(input\\$interview_sub", app_txt) &&
         grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt) &&
         grepl('lab_req\\("循環"\\)', app_txt) &&

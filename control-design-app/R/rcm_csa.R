@@ -1033,6 +1033,42 @@ filter_controls_by_cycle_sub <- function(controls, cycle = "", sub_key = "") {
   out
 }
 
+interview_risk_choices <- function(controls) {
+  if (!length(controls)) return(character())
+  tags <- unique(unlist(lapply(controls, function(c) {
+    parse_risk_factor_values(c$risk_factor %||% c$risk_name %||% "")
+  }), use.names = FALSE))
+  tags <- tags[nzchar(tags)]
+  if (!length(tags)) return(character())
+  stats::setNames(tags, tags)
+}
+
+interview_control_choices <- function(controls) {
+  if (!length(controls)) return(character())
+  stats::setNames(
+    vapply(controls, function(x) as.character(x$control_id %||% ""), character(1)),
+    vapply(controls, function(x) {
+      sprintf("%s｜%s",
+              x$control_id,
+              substr(x$control_objective %||% "", 1, 28))
+    }, character(1))
+  )
+}
+
+filter_interview_controls_by_risk <- function(controls, risk_tags = character()) {
+  tags <- unique(trimws(as.character(risk_tags)))
+  tags <- tags[nzchar(tags)]
+  if (!length(tags) || !length(controls)) return(controls)
+  Filter(function(c) row_matches_risk_factor(c, tags), controls)
+}
+
+filter_interview_controls_by_ids <- function(controls, control_ids = character()) {
+  ids <- unique(trimws(as.character(control_ids)))
+  ids <- ids[nzchar(ids)]
+  if (!length(ids) || !length(controls)) return(controls)
+  Filter(function(c) as.character(c$control_id %||% "") %in% ids, controls)
+}
+
 # 範本庫 → 訪談用控制點（預期風險／目標／活動）
 library_items_as_interview_controls <- function(library) {
   if (!length(library)) return(list())

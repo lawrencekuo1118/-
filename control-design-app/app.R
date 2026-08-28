@@ -1300,6 +1300,12 @@ ui <- page_navbar(
   nav_panel(
     "PBC資料庫",
     card(
+      card_header("PBC 清單預覽"),
+      div(class = "pbc-table-scroll-wrap", DTOutput("pbc_table")),
+      uiOutput("pbc_walkthrough_box"),
+      verbatimTextOutput("pbc_all_status")
+    ),
+    card(
       card_header("PBC 資料庫"),
       uiOutput("pbc_cycle_readonly"),
       p(class = "small text-muted mb-2",
@@ -1365,12 +1371,6 @@ ui <- page_navbar(
         options = list(placeholder = "原名→新名")
       ),
       checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
-    ),
-    card(
-      card_header("PBC 清單預覽"),
-      div(class = "pbc-table-scroll-wrap", DTOutput("pbc_table")),
-      uiOutput("pbc_walkthrough_box"),
-      verbatimTextOutput("pbc_all_status")
     )
   ),
   nav_panel(

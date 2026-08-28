@@ -687,9 +687,9 @@ pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE
 check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
         grepl("PBC 清單預覽", pbc_panel, fixed = TRUE) &&
         grepl('card_header\\(\\s*"PBC 資料庫"', pbc_panel) &&
-        regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]] <
-          regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]],
-      "PBC 預覽列在設定畫面正下方（非左右雙欄）")
+        regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]] <
+          regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]],
+      "PBC 清單預覽在設定畫面上方（非左右雙欄）")
 check(grepl(
   'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
   app_src_pbc, perl = TRUE),

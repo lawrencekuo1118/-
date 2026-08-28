@@ -150,6 +150,80 @@ delete_pbc <- function(registry, pbc_ids) {
   registry[!registry$pbc_id %in% pbc_ids, , drop = FALSE]
 }
 
+# 名稱欄若含 1. 2. 3.… 多項清單，拆成多筆並剔除開頭編號
+NUMBERED_PBC_PREFIX <- "^\\d+[\\.\\)、．]\\s*"
+
+split_numbered_pbc_text_parts <- function(x) {
+  x <- trimws(as.character(x %||% ""))
+  if (!nzchar(x)) return(character())
+  x <- gsub("\r\n?", "\n", x, fixed = FALSE)
+  lines <- strsplit(x, "\n", fixed = TRUE)[[1]]
+  parts <- character()
+  for (ln in lines) {
+    ln <- trimws(ln)
+    if (!nzchar(ln)) next
+    chunks <- unlist(strsplit(
+      ln, "(?<=\\S)\\s+(?=\\d+[\\.\\)、．]\\s*)", perl = TRUE
+    ))
+    parts <- c(parts, trimws(chunks))
+  }
+  parts[nzchar(parts)]
+}
+
+strip_numbered_pbc_prefix <- function(x) {
+  trimws(sub(NUMBERED_PBC_PREFIX, "", as.character(x %||% ""), perl = TRUE))
+}
+
+numbered_pbc_parts <- function(client, reviewed = "") {
+  client_parts <- split_numbered_pbc_text_parts(client)
+  reviewed_parts <- split_numbered_pbc_text_parts(reviewed)
+  parts <- client_parts
+  if (length(parts) < 2L && length(reviewed_parts) >= 2L) {
+    parts <- reviewed_parts
+  }
+  if (length(parts) < 2L) return(character())
+  if (sum(grepl(NUMBERED_PBC_PREFIX, parts, perl = TRUE)) < 2L) {
+    return(character())
+  }
+  parts
+}
+
+# 將單筆 PBC 輸入展開為多筆（若名稱含編號清單）；規格說明等欄位沿用
+expand_numbered_pbc_rows <- function(row) {
+  row <- as.list(row)
+  client <- trimws(as.character(row$client_pbc_name %||% ""))
+  reviewed <- trimws(as.character(row$reviewed_name %||% ""))
+  client_parts <- split_numbered_pbc_text_parts(client)
+  reviewed_parts <- split_numbered_pbc_text_parts(reviewed)
+  use_client <- length(client_parts) >= 2L &&
+    sum(grepl(NUMBERED_PBC_PREFIX, client_parts, perl = TRUE)) >= 2L
+  use_reviewed <- !use_client && length(reviewed_parts) >= 2L &&
+    sum(grepl(NUMBERED_PBC_PREFIX, reviewed_parts, perl = TRUE)) >= 2L
+  if (!use_client && !use_reviewed) return(list(row))
+  parts <- if (use_client) client_parts else reviewed_parts
+  paired_reviewed <- if (use_client && length(reviewed_parts) == length(client_parts)) {
+    reviewed_parts
+  } else {
+    character()
+  }
+  lapply(seq_along(parts), function(i) {
+    r <- row
+    r$pbc_id <- ""
+    if (use_client) {
+      r$client_pbc_name <- strip_numbered_pbc_prefix(parts[[i]])
+      if (length(paired_reviewed)) {
+        r$reviewed_name <- strip_numbered_pbc_prefix(paired_reviewed[[i]])
+      } else if (!nzchar(reviewed)) {
+        r$reviewed_name <- r$client_pbc_name
+      }
+    } else {
+      r$reviewed_name <- strip_numbered_pbc_prefix(parts[[i]])
+      if (!nzchar(client)) r$client_pbc_name <- r$reviewed_name
+    }
+    r
+  })
+}
+
 is_pbc_policy_kind <- function(kind) {
   identical(normalize_pbc_kind(kind), PBC_KIND_POLICY)
 }
@@ -633,7 +707,7 @@ import_pbc_file <- function(path, existing = empty_pbc_registry(),
     rep("", nrow(raw))
   }
   for (i in seq_len(nrow(raw))) {
-    existing <- upsert_pbc(existing, list(
+    base_row <- list(
       pbc_id = pick(alias$pbc_id)[i],
       client_pbc_name = pick(alias$client_pbc_name)[i],
       reviewed_name = pick(alias$reviewed_name)[i],
@@ -645,7 +719,10 @@ import_pbc_file <- function(path, existing = empty_pbc_registry(),
       cycle = pick(alias$cycle)[i],
       source = pick(alias$source)[i],
       notes = pick(alias$notes)[i]
-    ))
+    )
+    for (row in expand_numbered_pbc_rows(base_row)) {
+      existing <- upsert_pbc(existing, row)
+    }
   }
   existing
 }

@@ -3388,7 +3388,7 @@ server <- function(input, output, session) {
   # PBC
   observeEvent(input$pbc_add, {
     tryCatch({
-      reg <- upsert_pbc(pbc_reg(), list(
+      base_row <- list(
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
         reviewed_name = input$pbc_reviewed, pbc_spec = input$pbc_spec,
         pbc_kind = input$pbc_kind,
@@ -3396,7 +3396,12 @@ server <- function(input, output, session) {
         related_pbc_ids = input$pbc_related,
         iuc_or_system = input$pbc_reviewed,
         cycle = input$cycle %||% "", notes = input$pbc_notes
-      ))
+      )
+      rows <- expand_numbered_pbc_rows(base_row)
+      reg <- pbc_reg()
+      for (row in rows) {
+        reg <- upsert_pbc(reg, row)
+      }
       # 規格說明內 #N／「名稱」自動補勾稽
       reg <- enrich_related_pbc_from_specs(reg)
       pbc_reg(reg)
@@ -3410,7 +3415,12 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, "pbc_file_format", selected = "")
       updateSelectizeInput(session, "pbc_related", selected = character(0))
       updateTextInput(session, "pbc_notes", value = "")
-      showNotification("已登錄 PBC", type = "message")
+      msg <- if (length(rows) > 1L) {
+        sprintf("已登錄 PBC（%d 筆）", length(rows))
+      } else {
+        "已登錄 PBC"
+      }
+      showNotification(msg, type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
   output$pbc_table <- renderDT({

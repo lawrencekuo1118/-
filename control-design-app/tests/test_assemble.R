@@ -588,6 +588,34 @@ reg_spec <- upsert_pbc(empty_pbc_registry(), list(
 ))
 check(identical(reg_spec$pbc_spec[1], "1. 含所有系統\n2. 檢附盤點表"),
       "PBC 規格說明可寫入 registry")
+split_rows <- expand_numbered_pbc_rows(list(
+  client_pbc_name = "1. 客戶需求Mail\n2. Voice of Customer",
+  reviewed_name = "",
+  pbc_spec = "請各提供一筆樣本"
+))
+check(length(split_rows) == 2L, "編號清單名稱拆成兩筆 PBC")
+check(identical(split_rows[[1]]$client_pbc_name, "客戶需求Mail"),
+      "剔除名稱開頭 1.")
+check(identical(split_rows[[2]]$client_pbc_name, "Voice of Customer"),
+      "剔除名稱開頭 2.")
+check(all(vapply(split_rows, function(r) identical(r$pbc_spec, "請各提供一筆樣本"), logical(1))),
+      "分拆後規格說明沿用相同")
+inline_rows <- expand_numbered_pbc_rows(list(
+  client_pbc_name = "1. 系統清單 2. 系統關聯圖",
+  reviewed_name = "1. 清單 2. 關聯圖",
+  pbc_spec = "同一規格"
+))
+check(length(inline_rows) == 2L, "同一行內嵌編號清單可分拆")
+check(identical(inline_rows[[1]]$reviewed_name, "清單"),
+      "檢視後命名同步剔除編號")
+check(length(expand_numbered_pbc_rows(list(
+  client_pbc_name = "1. 僅一項",
+  reviewed_name = "", pbc_spec = ""
+))) == 1L, "單一編號項目不強制分拆")
+check(identical(
+  expand_numbered_pbc_rows(list(client_pbc_name = "系統清單", reviewed_name = ""))[[1]]$client_pbc_name,
+  "系統清單"
+), "無編號清單維持單筆")
 seed_pbc <- file.path(root, "data", "pbc_registry.csv")
 if (file.exists(seed_pbc)) {
   seeded <- load_pbc_registry(seed_pbc)

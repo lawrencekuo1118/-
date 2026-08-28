@@ -712,18 +712,18 @@ ui <- page_navbar(
       .dataTables_processing { color: var(--brand-blue) !important; font-weight: 600; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
-    ")))
-  ),
-  busyIndicatorOptions(
-    spinner_color = BRAND_BLUE,
-    spinner_delay = "0.35s",
-    spinner_size = "28px",
-    fade_opacity = 0.45,
-    pulse_background = sprintf(
-      "linear-gradient(120deg, transparent, %s, %s, transparent)",
-      BRAND_BLUE, BRAND_GREEN
-    ),
-    pulse_height = "3px"
+    "))),
+    busyIndicatorOptions(
+      spinner_color = BRAND_BLUE,
+      spinner_delay = "0.35s",
+      spinner_size = "28px",
+      fade_opacity = 0.45,
+      pulse_background = sprintf(
+        "linear-gradient(120deg, transparent, %s, %s, transparent)",
+        BRAND_BLUE, BRAND_GREEN
+      ),
+      pulse_height = "3px"
+    )
   ),
   sidebar = sidebar(
     width = 280,

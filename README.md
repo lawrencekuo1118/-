@@ -63,9 +63,11 @@ Restored R sources for the live dashboard
 [`GGplaystore2021/`](./GGplaystore2021/). See that folder's README for run/deploy
 instructions.
 
-## Control design Shiny app (Form 4120SR)
+## Godamn SOX — Shiny app (Form 4120SR)
 
-See [`control-design-app/README.md`](./control-design-app/README.md) for a Shiny
+Live: <https://hopesmasher1118.shinyapps.io/godamn-sox/>
+
+See [`control-design-app/README.md`](./control-design-app/README.md) for **Godamn SOX**, a Shiny
 assistant that designs standard internal-control points aligned with Form 4120SR
 (Significant Risk): nine cycles, three risk attributes, objectives/activities/
 frequency/owner/IUC, auto-assembled narratives, and IUC-based control splits.

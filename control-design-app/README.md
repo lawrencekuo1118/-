@@ -1,4 +1,6 @@
-# 尬電SOX (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
+# Godamn SOX (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
+
+線上版：<https://hopesmasher1118.shinyapps.io/godamn-sox/>
 
 輔助**快速且精準**設計標準內部控制點，並產出 RCM、訪談問題與 CSA 底稿。
 
@@ -44,6 +46,17 @@ shiny::runApp("control-design-app")
 ```
 
 依賴：`shiny`, `bslib`, `DT`, `jsonlite`；匯入 xlsx 需 `readxl`。
+
+## 部署（shinyapps.io）
+
+僅部署至 **godamn-sox**（舊版 `control-design` 已退役，請勿再更新）：
+
+```r
+setwd("control-design-app")
+rsconnect::deployApp(appDir = ".", appName = "godamn-sox", account = "hopesmasher1118")
+```
+
+修改 PBC／範本庫／參數庫後，請先 commit `data/` 至 GitHub 再 deploy，才會同步至線上。
 
 ## 測試
 

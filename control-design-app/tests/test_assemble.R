@@ -19,6 +19,7 @@ source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 source(file.path(root, "R", "privilege.R"), local = TRUE)
+source(file.path(root, "R", "button_interactions.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -1582,6 +1583,29 @@ check(grepl("show_admin_login_modal|showModal", paste(readLines(file.path(root, 
         grepl("admin_prompt_lib|admin_prompt_param", app_src) &&
         !grepl("高權存取", app_src),
       "高權改為角落提示＋修改時彈出登入（側邊欄不張揚）")
+# 參數庫：高權專用按鈕互動說明（維護檔）
+check(file.exists(file.path(root, "R", "button_interactions.R")),
+      "按鈕互動說明維護檔存在")
+check(grepl('source\\(file\\.path\\(root, "R", "button_interactions\\.R"\\)', app_src),
+      "app.R 載入 button_interactions.R")
+check(grepl("admin_button_guide_panel", app_src) &&
+        grepl("output\\$admin_button_guide_panel", app_src) &&
+        grepl("if \\(!isTRUE\\(is_admin\\(\\)\\)\\) return\\(NULL\\)", app_src),
+      "按鈕說明面板僅高權可見")
+check(grepl("button-guide-card", app_src),
+      "按鈕說明含專用樣式")
+bi_reg <- button_interaction_registry()
+bi_ids <- unlist(lapply(bi_reg, function(sec) {
+  vapply(sec$rows, function(r) r$id %||% "", character(1))
+}))
+check(length(bi_reg) >= 8L && length(bi_ids) >= 30L,
+      "按鈕互動登錄表涵蓋主要分頁")
+for (must_id in c("finalize_rcm_row", "pbc_add", "apply_lib", "admin_param_upsert",
+                  "download_interview", "csa_scenario_save")) {
+  check(must_id %in% bi_ids, paste0("登錄表含 ", must_id))
+}
+check(identical(app_version_label(root), trimws(readLines(file.path(root, "VERSION"), n = 1L, warn = FALSE))),
+      "按鈕說明顯示 VERSION 版本號")
 ps0 <- empty_parameter_store()
 ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
 check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")

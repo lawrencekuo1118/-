@@ -29,6 +29,7 @@ source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 source(file.path(root, "R", "privilege.R"), local = TRUE)
+source(file.path(root, "R", "button_interactions.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -431,6 +432,17 @@ ui <- page_navbar(
         background: transparent;
         border: 0;
         padding: 0;
+      }
+      .button-guide-card .button-guide-table {
+        font-size: 0.78rem;
+      }
+      .button-guide-card .button-guide-table th {
+        background: rgba(0, 91, 170, 0.06);
+        white-space: nowrap;
+      }
+      .button-guide-card .table-responsive-wrap {
+        overflow-x: auto;
+        max-width: 100%;
       }
       .shiny-text-output pre, .shiny-plot-output, .shiny-image-output {
         overflow: visible !important; max-height: none !important;
@@ -1452,7 +1464,8 @@ ui <- page_navbar(
       card_header("即時顯示"),
       uiOutput("param_stats"),
       DTOutput("param_table")
-    )
+    ),
+    uiOutput("admin_button_guide_panel")
   )
 )
 
@@ -1603,6 +1616,14 @@ server <- function(input, output, session) {
         actionButton("admin_param_delete", "刪除選取列", class = "btn-sm btn-outline-danger"),
         actionButton("param_refresh", "從現況重建並儲存", class = "btn-sm btn-primary")
       )
+    )
+  })
+
+  output$admin_button_guide_panel <- renderUI({
+    if (!isTRUE(is_admin())) return(NULL)
+    div(
+      class = "table-responsive-wrap",
+      button_interactions_card_ui(version = app_version_label(root))
     )
   })
 

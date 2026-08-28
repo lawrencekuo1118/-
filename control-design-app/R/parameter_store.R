@@ -176,6 +176,27 @@ save_parameter_store <- function(df, path) {
 
 load_parameter_store <- function(path) {
   if (!file.exists(path)) return(empty_parameter_store())
+  df <- tryCatch({
+    raw <- jsonlite::read_json(path, simplifyVector = TRUE)
+    if (!is.data.frame(raw) || !nrow(raw)) return(NULL)
+    out <- data.frame(
+      參數 = as.character(raw$param %||% raw$參數 %||% ""),
+      選項值 = as.character(raw$value %||% raw$選項值 %||% ""),
+      來源 = as.character(raw$source %||% raw$來源 %||% ""),
+      出現次數 = as.integer(raw$count %||% raw$出現次數 %||% 1L),
+      最近更新 = as.character(raw$updated_at %||% raw$最近更新 %||% ""),
+      stringsAsFactors = FALSE
+    )
+    out <- out[nzchar(out$參數) & nzchar(out$選項值), , drop = FALSE]
+    if (!nrow(out)) return(empty_parameter_store())
+    if (exists("is_blocked_parameter_name", mode = "function")) {
+      out <- out[!vapply(out$參數, is_blocked_parameter_name, logical(1)), , drop = FALSE]
+    }
+    if (!nrow(out)) return(empty_parameter_store())
+    out[order(out$參數, -out$出現次數, out$選項值), , drop = FALSE]
+  }, error = function(e) NULL)
+  if (is.data.frame(df)) return(df)
+
   raw <- tryCatch(jsonlite::read_json(path, simplifyVector = FALSE), error = function(e) list())
   if (!length(raw)) return(empty_parameter_store())
   rows <- lapply(raw, function(x) {

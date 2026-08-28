@@ -22,6 +22,7 @@ source(file.path(root, "R", "privilege.R"), local = TRUE)
 source(file.path(root, "R", "button_interactions.R"), local = TRUE)
 source(file.path(root, "R", "table_schemas.R"), local = TRUE)
 source(file.path(root, "R", "data_persist.R"), local = TRUE)
+source(file.path(root, "R", "app_cache.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -1803,6 +1804,25 @@ for (fp in locale_scan_files) {
   }
 }
 check(!length(locale_hits), sprintf("用語僅台灣／美式專有名詞（違規：%s）", paste(locale_hits, collapse = ",")))
+
+# Fast load: persisted library JSON skips re-normalization
+lib_path <- file.path(root, "data", "control_library.json")
+if (file.exists(lib_path)) {
+  t_fast <- system.time(load_control_library(lib_path))[["elapsed"]]
+  check(t_fast < 0.5, sprintf("範本庫快速載入 <0.5s（實際 %.3fs）", t_fast))
+  raw <- jsonlite::read_json(lib_path, simplifyVector = FALSE)
+  check(all(vapply(raw, is_persisted_library_payload, logical(1))),
+        "範本庫 JSON 皆為已持久化格式")
+}
+param_path <- file.path(root, "data", "parameter_store.json")
+if (file.exists(param_path)) {
+  t_ps <- system.time(load_parameter_store(param_path))[["elapsed"]]
+  check(t_ps < 0.5, sprintf("參數庫快速載入 <0.5s（實際 %.3fs）", t_ps))
+  invalidate_cached_file_data("parameter_store")
+  v1 <- get_cached_file_data("parameter_store", param_path, load_parameter_store)
+  v2 <- get_cached_file_data("parameter_store", param_path, load_parameter_store)
+  check(identical(v1, v2), "參數庫檔案快取命中")
+}
 
 if (fail > 0) quit(status = 1)
 message("All extended tests passed.")

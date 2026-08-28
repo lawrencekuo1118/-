@@ -32,6 +32,7 @@ source(file.path(root, "R", "privilege.R"), local = TRUE)
 source(file.path(root, "R", "button_interactions.R"), local = TRUE)
 source(file.path(root, "R", "table_schemas.R"), local = TRUE)
 source(file.path(root, "R", "data_persist.R"), local = TRUE)
+source(file.path(root, "R", "app_cache.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -1716,7 +1717,11 @@ server <- function(input, output, session) {
   }
   # 先以普通物件載入／補種子，勿在 reactiveVal 建立後於非 reactive 脈絡讀取
   # （Shiny 1.14+ 會拋 "Operation not allowed without an active reactive context"）
-  reg0 <- load_pbc_registry(pbc_path_csv, pbc_path_json)
+  reg0 <- get_cached_file_data(
+    "pbc_registry",
+    pbc_path_csv,
+    function(p) load_pbc_registry(p, pbc_path_json)
+  )
   seed_if_missing_cycle <- function(cycle_nm, seed_file) {
     has <- is.data.frame(reg0) && nrow(reg0) > 0 && any(reg0$cycle == cycle_nm)
     if (has) return(invisible(NULL))
@@ -1747,7 +1752,11 @@ server <- function(input, output, session) {
     }
     save_control_library(seed, lib_path_json, lib_path_csv)
   }
-  lib <- reactiveVal(load_control_library(lib_path_json, fallback_seed = TRUE))
+  lib <- reactiveVal(get_cached_file_data(
+    "control_library",
+    lib_path_json,
+    function(p) load_control_library(p, fallback_seed = TRUE)
+  ))
   # 磁碟庫已含種子／批次時，勿在每個 session 同步重跑去識別合併（約 7s），
   # 否則會堵住循環／子作業選單更新。僅在庫過小時補齊。
   session$onFlushed(function() {
@@ -1792,7 +1801,11 @@ server <- function(input, output, session) {
 
   session$onFlushed(function() {
     if (nrow(isolate(pbc_reg())) == 0L) {
-      reg <- load_pbc_registry(pbc_path_csv, pbc_path_json)
+      reg <- get_cached_file_data(
+        "pbc_registry",
+        pbc_path_csv,
+        function(p) load_pbc_registry(p, pbc_path_json)
+      )
       if (nrow(reg) == 0L) {
         for (seed_nm in c("seed_it_cycle_pbc.R", "seed_fr_cycle_pbc.R",
                           "seed_sc_cycle_pbc.R", "seed_py_cycle_pbc.R")) {
@@ -1802,11 +1815,11 @@ server <- function(input, output, session) {
                      error = function(e) NULL)
           }
         }
+        invalidate_cached_file_data("pbc_registry")
         reg <- load_pbc_registry(pbc_path_csv, pbc_path_json)
       }
       if (nrow(reg) > 0L) pbc_reg(reg)
     }
-    try(refresh_pbc_choices(), silent = TRUE)
   }, once = TRUE)
 
   bump_db_persist_views <- function() {
@@ -1815,6 +1828,7 @@ server <- function(input, output, session) {
 
   persist_pbc <- function(reg) {
     out <- persist_pbc_to_disk(reg, pbc_path_csv, pbc_path_json)
+    invalidate_cached_file_data("pbc_registry")
     bump_db_persist_views()
     out
   }
@@ -1823,11 +1837,16 @@ server <- function(input, output, session) {
       return(isolate(lib()))
     }
     out <- persist_library_to_disk(library, lib_path_json, lib_path_csv)
+    invalidate_cached_file_data("control_library")
     bump_db_persist_views()
     out
   }
 
-  param_store <- reactiveVal(load_parameter_store(param_path_json))
+  param_store <- reactiveVal(get_cached_file_data(
+    "parameter_store",
+    param_path_json,
+    load_parameter_store
+  ))
   persist_params <- function(force = FALSE) {
     if (!isTRUE(force) && !require_admin(is_admin(), session)) {
       return(isolate(param_store()))
@@ -1841,6 +1860,7 @@ server <- function(input, output, session) {
       stop("參數庫未能寫入磁碟：", param_path_json)
     }
     param_store(df)
+    invalidate_cached_file_data("parameter_store")
     bump_db_persist_views()
     df
   }
@@ -1851,6 +1871,7 @@ server <- function(input, output, session) {
       stop("參數庫未能寫入磁碟：", param_path_json)
     }
     param_store(df)
+    invalidate_cached_file_data("parameter_store")
     bump_db_persist_views()
     df
   }
@@ -1886,19 +1907,12 @@ server <- function(input, output, session) {
     df <- ingest_ctrl_parameters(isolate(param_store()), ctrl, source = "設計自訂")
     persist_parameters_to_disk(df, param_path_json)
     param_store(df)
+    invalidate_cached_file_data("parameter_store")
     bump_db_persist_views()
     try(refresh_design_text_param_choices(), silent = TRUE)
     try(refresh_sub_process_choices(force = TRUE), silent = TRUE)
     invisible(df)
   }
-
-  # Seed empty parameter DB after UI is ready (avoid blocking cascade updates)
-  session$onFlushed(function() {
-    if (!nrow(isolate(param_store()))) {
-      try(persist_params(force = TRUE), silent = TRUE)
-    }
-    try(refresh_design_text_param_choices(), silent = TRUE)
-  }, once = TRUE)
 
   session$onSessionEnded(function() {
     tryCatch(
@@ -2286,6 +2300,23 @@ server <- function(input, output, session) {
                            server = TRUE, selected = cur_rel)
     }
   }
+
+  # 首屏後再刷新選單，避免阻塞「載入中」完成時間
+  startup_refresh_tick <- reactiveVal(0L)
+  session$onFlushed(function() {
+    invalidateLater(200, session)
+    startup_refresh_tick(isolate(startup_refresh_tick()) + 1L)
+  }, once = TRUE)
+  observeEvent(startup_refresh_tick(), {
+    if (startup_refresh_tick() < 1L) return()
+    isolate({
+      if (!nrow(param_store())) {
+        try(persist_params(force = TRUE), silent = TRUE)
+      }
+      try(refresh_pbc_choices(), silent = TRUE)
+      try(refresh_design_text_param_choices(), silent = TRUE)
+    })
+  }, ignoreInit = TRUE)
 
   interview_worksheet <- function() {
     cs <- interview_pool_controls()

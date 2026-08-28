@@ -687,20 +687,53 @@ save_control_library <- function(library, path_json, path_csv = NULL) {
   invisible(path_json)
 }
 
-load_control_library <- function(path_json, fallback_seed = TRUE) {
+load_persisted_library_item <- function(x) {
+  ctrl <- as.list(x$control %||% x)
+  list(
+    library_id = as.character(x$library_id %||% ctrl$library_id %||% ""),
+    title = as.character(x$title %||% ctrl$title %||% ""),
+    tags = unlist(x$tags %||% list()),
+    cycle = as.character(x$cycle %||% ctrl$cycle %||% ""),
+    source = as.character(x$source %||% "persisted"),
+    control = ctrl,
+    updated_at = as.character(x$updated_at %||% "")
+  )
+}
+
+is_persisted_library_payload <- function(x) {
+  is.list(x) && !is.null(x$control) &&
+    nzchar(trimws(as.character(x$library_id %||% "")))
+}
+
+load_control_library <- function(path_json, fallback_seed = TRUE, normalize = NULL) {
   if (!file.exists(path_json)) {
     return(if (fallback_seed) seed_control_library() else list())
   }
   raw <- jsonlite::read_json(path_json, simplifyVector = FALSE)
-  items <- lapply(raw, function(x) {
-    ctrl <- x$control %||% x
-    if (is.null(ctrl$library_id)) ctrl$library_id <- x$library_id
-    if (is.null(ctrl$title)) ctrl$title <- x$title
-    item <- library_item_from_control(ctrl, tags = unlist(x$tags %||% list()),
-                                      source = x$source %||% "persisted")
-    item$updated_at <- x$updated_at %||% item$updated_at
-    item
-  })
+  if (!length(raw)) {
+    return(if (fallback_seed) seed_control_library() else list())
+  }
+  use_fast <- if (is.null(normalize)) {
+    all(vapply(raw, is_persisted_library_payload, logical(1)))
+  } else {
+    !isTRUE(normalize)
+  }
+  items <- if (use_fast) {
+    lapply(raw, load_persisted_library_item)
+  } else {
+    lapply(raw, function(x) {
+      ctrl <- x$control %||% x
+      if (is.null(ctrl$library_id)) ctrl$library_id <- x$library_id
+      if (is.null(ctrl$title)) ctrl$title <- x$title
+      item <- library_item_from_control(
+        ctrl,
+        tags = unlist(x$tags %||% list()),
+        source = x$source %||% "persisted"
+      )
+      item$updated_at <- x$updated_at %||% item$updated_at
+      item
+    })
+  }
   if (!length(items) && fallback_seed) return(seed_control_library())
   items
 }

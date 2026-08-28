@@ -3491,9 +3491,9 @@ server <- function(input, output, session) {
     df <- pbc_reg()
     if (!nrow(df)) {
       empty <- data.frame(
-        ID = character(), 規格說明 = character(), 勾稽 = character(),
-        證據類型 = character(), 文件格式 = character(), 客戶原名 = character(),
-        檢視後 = character(), 循環 = character(), 備註 = character(),
+        ID = character(), 循環 = character(), 標準名稱 = character(),
+        原始名稱 = character(), 證據類型 = character(), 檔案格式 = character(),
+        規格說明 = character(), 勾稽 = character(), 備註 = character(),
         stringsAsFactors = FALSE
       )
       return(datatable(empty, selection = "single", rownames = FALSE,
@@ -3501,6 +3501,13 @@ server <- function(input, output, session) {
     }
     show <- data.frame(
       ID = df$pbc_id,
+      循環 = df$cycle,
+      標準名稱 = vapply(seq_len(nrow(df)), function(i) {
+        format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
+      }, character(1)),
+      原始名稱 = df$client_pbc_name,
+      證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
+      檔案格式 = ifelse(nzchar(df$pbc_file_format), df$pbc_file_format, "—"),
       規格說明 = {
         sp <- if ("pbc_spec" %in% names(df)) df$pbc_spec else rep("", nrow(df))
         ifelse(nzchar(sp), substr(sp, 1L, 48L), "—")
@@ -3512,13 +3519,6 @@ server <- function(input, output, session) {
           if (!length(ids)) "—" else paste(ids, collapse = "；")
         }, character(1))
       },
-      證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
-      文件格式 = ifelse(nzchar(df$pbc_file_format), df$pbc_file_format, "—"),
-      客戶原名 = df$client_pbc_name,
-      檢視後 = vapply(seq_len(nrow(df)), function(i) {
-        format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
-      }, character(1)),
-      循環 = df$cycle,
       備註 = df$notes,
       stringsAsFactors = FALSE
     )

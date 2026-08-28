@@ -690,6 +690,10 @@ check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
         regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]] <
           regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]],
       "PBC 預覽列在設定畫面正下方（非左右雙欄）")
+check(grepl(
+  'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
+  app_src_pbc, perl = TRUE),
+      "PBC 清單預覽表欄位順序：ID→循環→標準名稱→原始名稱→證據類型→檔案格式→規格說明→勾稽→備註")
 check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),

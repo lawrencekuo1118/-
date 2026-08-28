@@ -2577,27 +2577,41 @@ server <- function(input, output, session) {
     isolate(refresh_pbc_choices())
   })
 
+  interview_sub_ui_state <- new.env(parent = emptyenv())
+  interview_sub_ui_state$cycle <- NULL
+
   observe({
     cy <- input$cycle %||% ""
+    lib_revision()
     if (!nzchar(cy)) {
-      updateSelectInput(session, "interview_sub",
-                        choices = c("① 請先於側邊欄選擇循環…" = ""), selected = "")
+      interview_sub_ui_state$cycle <- ""
+      updateSelectInput(
+        session, "interview_sub",
+        choices = c("① 請先於側邊欄選擇循環…" = ""),
+        selected = ""
+      )
       return()
     }
-    rows <- library_controls_flat(cascade_source_library(lib()), cycle = cy)
+    rows <- library_controls_flat(cascade_source_library(isolate(lib())), cycle = cy)
     ch_sub <- cascade_sub_process_choices(rows)
     label0 <- if (length(ch_sub)) {
       sprintf("① 選擇子作業…（本循環建議 %d）", length(ch_sub))
     } else {
       "① 選擇子作業…（本循環暫無建議）"
     }
+    cur <- trimws(isolate(input$interview_sub %||% ""))
+    sel <- if (!identical(interview_sub_ui_state$cycle, cy)) {
+      interview_sub_ui_state$cycle <- cy
+      ""
+    } else if (nzchar(cur) && cur %in% unname(ch_sub)) {
+      cur
+    } else {
+      ""
+    }
     updateSelectInput(
       session, "interview_sub",
       choices = c(stats::setNames("", label0), ch_sub),
-      selected = {
-        cur <- input$interview_sub %||% ""
-        if (nzchar(cur) && cur %in% unname(ch_sub)) cur else ""
-      }
+      selected = sel
     )
   })
 
@@ -4245,6 +4259,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$ws_reset_iv, {
     updateSelectInput(session, "interview_sub", selected = "")
+    interview_sub_ui_state$cycle <- NULL
     updateSelectizeInput(session, "worksheet_controls", selected = character())
     updateSelectizeInput(session, "interview_pbc_link", selected = character())
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)

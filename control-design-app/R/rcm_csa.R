@@ -1021,8 +1021,13 @@ filter_controls_by_cycle_sub <- function(controls, cycle = "", sub_key = "") {
     out <- Filter(function(c) identical(trimws(as.character(c$cycle %||% "")), cy), out)
   }
   if (nzchar(sk) && !identical(sk, "__all__")) {
+    sp <- parse_sub_process_key(sk)
     out <- Filter(function(c) {
-      identical(sub_process_key(c$sub_process_id %||% "", c$sub_process %||% ""), sk)
+      cid <- trimws(as.character(c$sub_process_id %||% ""))
+      cnm <- trimws(as.character(c$sub_process %||% ""))
+      (nzchar(sp$id) && identical(cid, sp$id)) ||
+        (nzchar(sp$name) && identical(cnm, sp$name)) ||
+        identical(sub_process_key(cid, cnm), sk)
     }, out)
   }
   out

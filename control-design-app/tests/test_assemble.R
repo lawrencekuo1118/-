@@ -424,6 +424,10 @@ filt <- filter_controls_by_cycle_sub(lib_iv, cycle = "資訊循環", sub_key = "
 check(length(filt) == 1L, "訪談可依循環篩選")
 check(length(filter_controls_by_cycle_sub(lib_iv, cycle = "銷售循環")) == 0L,
       "訪談循環篩選排除不符列")
+check(length(filter_controls_by_cycle_sub(
+  lib_iv, cycle = "資訊循環", sub_key = "存取管理作業"
+)) == 1L,
+      "訪談子作業篩選接受純名稱（非 id||name）")
 check(all(c("risk", "control_objective", "control_activity") %in% names(INTERVIEW_ELEMENTS)),
       "訪談焦點含預期風險／目標／活動")
 check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")) &&
@@ -458,6 +462,8 @@ check(!grepl("interview_source", app_txt) &&
         !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm_csa.R"), encoding = "UTF-8"), collapse = "\n")) &&
         !grepl("interview_cycle", app_txt) &&
         grepl("interview_sub", app_txt) &&
+        grepl("interview_sub_ui_state", app_txt) &&
+        grepl("isolate\\(input\\$interview_sub", app_txt) &&
         grepl("cascade_source_library\\(lib\\(\\)\\)", app_txt) &&
         grepl('lab_req\\("循環"\\)', app_txt) &&
         length(gregexpr('selectInput\\(\\s*"cycle"', app_txt, perl = TRUE)[[1]]) == 1L,

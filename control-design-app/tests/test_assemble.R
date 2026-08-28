@@ -1297,14 +1297,18 @@ check(grepl("overflow: visible !important", app_src) &&
 check(grepl("apply_lib_selected_row", app_src), "範本庫可套用表格選取列")
 check(grepl("admin_login|verify_admin_password|show_admin_login_modal", app_src), "含高權登入機制")
 check(grepl("admin_lib_save_fields|admin_param_upsert", app_src), "高權可直接改範本庫／參數庫")
-check(grepl("busyIndicatorOptions", app_src) &&
-        grepl("app-loading-overlay", app_src) &&
-        grepl("app-busy-banner", app_src) &&
-        grepl("載入中\\.\\.\\.", app_src) &&
+check(grepl("app-corner-spinner", app_src) &&
+        grepl("app-spinner-ring", app_src) &&
+        grepl("body.shiny-busy #app-corner-spinner", app_src) &&
+        !grepl("app-loading-overlay", app_src) &&
+        !grepl("app-busy-banner", app_src) &&
+        !grepl('processing = "載入中', app_src) &&
         grepl("dt_loading_opts", app_src) &&
         grepl("with_loading", app_src) &&
-        grepl('processing = "載入中\\.\\.\\."', app_src),
-      "APP 含載入中提示（連線遮罩、忙碌橫幅、表格與耗時操作）")
+        grepl("processing = FALSE", app_src) &&
+        grepl("#shiny-busy", app_src) &&
+        grepl("display: none !important", app_src),
+      "忙碌狀態改為左下角 spinner（無載入中文字／全頁遮罩）")
 
 check(identical(cycle_code_for("電腦化資訊系統循環"), "EC"), "資訊循環編號＝EC")
 check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編號＝SC")

@@ -42,17 +42,15 @@ lab_opt <- function(txt) {
   tagList(txt, tags$span(class = "text-muted small ms-1", "選填"))
 }
 
-# DataTables 共用：處理中顯示「載入中...」
+# DataTables 共用選項（不顯示表格「載入中」文字；全頁忙碌以左下角 spinner 表示）
 dt_loading_opts <- function(pageLength = 10, scrollX = TRUE, dom = "tip",
                             ordering = NULL, emptyTable = "無資料", ...) {
   opts <- list(
     pageLength = pageLength,
     scrollX = scrollX,
     dom = dom,
-    processing = TRUE,
+    processing = FALSE,
     language = list(
-      processing = "載入中...",
-      loadingRecords = "載入中...",
       emptyTable = emptyTable
     )
   )
@@ -63,10 +61,7 @@ dt_loading_opts <- function(pageLength = 10, scrollX = TRUE, dom = "tip",
 }
 
 with_loading <- function(expr, message = "載入中...") {
-  withProgress(message = message, value = 0, {
-    on.exit(incProgress(1, detail = NULL), add = TRUE)
-    force(expr)
-  })
+  force(expr)
 }
 
 fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry = NULL,
@@ -226,37 +221,32 @@ ui <- page_navbar(
       });
       setInterval(wireAllCascadeMenus, 800);
     })();
-    // 載入中：首次連線與斷線重連
+    // 左下角 spinner：首次連線、伺服器忙碌、斷線重連
     (function() {
-      function ensureLoadingUi() {
-        if (!document.getElementById('app-loading-overlay')) {
-          var overlay = document.createElement('div');
-          overlay.id = 'app-loading-overlay';
-          overlay.innerHTML = '<div class=\"app-loading-box\">載入中...</div>';
-          document.body.appendChild(overlay);
-        }
-        if (!document.getElementById('app-busy-banner')) {
-          var banner = document.createElement('div');
-          banner.id = 'app-busy-banner';
-          banner.textContent = '載入中...';
-          document.body.appendChild(banner);
-        }
+      function ensureCornerSpinner() {
+        if (document.getElementById('app-corner-spinner')) return;
+        var el = document.createElement('div');
+        el.id = 'app-corner-spinner';
+        el.setAttribute('aria-hidden', 'true');
+        el.innerHTML = '<div class=\"app-spinner-ring\"></div>';
+        document.body.appendChild(el);
       }
-      function hideBootOverlay() {
-        var el = document.getElementById('app-loading-overlay');
-        if (el) el.classList.add('app-loading-hidden');
+      function showBootSpinner() {
+        ensureCornerSpinner();
+        document.getElementById('app-corner-spinner').classList.add('app-spinner-boot');
       }
-      function showBootOverlay() {
-        var el = document.getElementById('app-loading-overlay');
-        if (el) el.classList.remove('app-loading-hidden');
+      function hideBootSpinner() {
+        var el = document.getElementById('app-corner-spinner');
+        if (el) el.classList.remove('app-spinner-boot');
       }
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', ensureLoadingUi);
+        document.addEventListener('DOMContentLoaded', ensureCornerSpinner);
       } else {
-        ensureLoadingUi();
+        ensureCornerSpinner();
       }
-      $(document).on('shiny:connected', hideBootOverlay);
-      $(document).on('shiny:disconnected', showBootOverlay);
+      showBootSpinner();
+      $(document).on('shiny:connected', hideBootSpinner);
+      $(document).on('shiny:disconnected', showBootSpinner);
     })();
     // 選單已選項目：雙擊即可拉回輸入框修改（create=true 時寫入新值；儲存後入參數庫）
     (function() {
@@ -774,59 +764,37 @@ ui <- page_navbar(
         background: rgba(255,255,255,0.65);
       }
       .design-rcm-preview-panel td.na-cell { color: #ADB5BD; }
-      /* 載入中：首次連線、伺服器忙碌、表格處理 */
-      #app-loading-overlay {
+      /* 左下角 spinner（取代全頁遮罩／載入中文字） */
+      #shiny-busy { display: none !important; }
+      #app-corner-spinner {
         position: fixed;
-        inset: 0;
+        bottom: 1rem;
+        left: 1rem;
         z-index: 10050;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.9);
-      }
-      #app-loading-overlay.app-loading-hidden { display: none; }
-      .app-loading-box {
-        padding: 0.65rem 1.25rem;
-        border-radius: 0.5rem;
-        background: var(--brand-white);
-        border: 1px solid rgba(0, 91, 170, 0.2);
-        color: var(--brand-blue);
-        font-weight: 600;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      }
-      #app-busy-banner {
         display: none;
-        position: fixed;
-        top: 4.35rem;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10040;
-        padding: 0.35rem 0.95rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.97);
-        border: 1px solid rgba(0, 91, 170, 0.18);
-        color: var(--brand-blue);
-        font-size: 0.82rem;
-        font-weight: 600;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
         pointer-events: none;
       }
-      body.shiny-busy #app-busy-banner { display: block; }
-      .dataTables_processing { color: var(--brand-blue) !important; font-weight: 600; }
+      body.shiny-busy #app-corner-spinner,
+      #app-corner-spinner.app-spinner-boot {
+        display: block;
+      }
+      .app-spinner-ring {
+        width: 28px;
+        height: 28px;
+        border: 3px solid rgba(0, 91, 170, 0.18);
+        border-top-color: var(--brand-blue);
+        border-right-color: var(--brand-green);
+        border-radius: 50%;
+        animation: app-spinner-spin 0.75s linear infinite;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      @keyframes app-spinner-spin {
+        to { transform: rotate(360deg); }
+      }
+      .dataTables_processing { display: none !important; }
       /* 範本庫／參數庫僅由側邊欄進入，隱藏標題列選項 */
       .navbar .nav-item:has(> a[data-value=\"範本庫\"]), .navbar .nav-item:has(> a[data-value=\"參數庫\"]) { display: none !important; }
-    "))),
-    busyIndicatorOptions(
-      spinner_color = BRAND_BLUE,
-      spinner_delay = "0.35s",
-      spinner_size = "28px",
-      fade_opacity = 0.45,
-      pulse_background = sprintf(
-        "linear-gradient(120deg, transparent, %s, %s, transparent)",
-        BRAND_BLUE, BRAND_GREEN
-      ),
-      pulse_height = "3px"
-    )
+    ")))
   ),
   sidebar = sidebar(
     width = 280,

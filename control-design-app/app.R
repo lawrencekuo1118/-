@@ -412,6 +412,19 @@ ui <- page_navbar(
         .pbc-kind-format-row { grid-template-columns: 1fr; }
       }
 
+      /* PBC：ID｜互相勾稽 同列 1:2 並排 */
+      .pbc-id-related-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .pbc-id-related-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .pbc-id-related-row { grid-template-columns: 1fr; }
+      }
+
       /* 風險面向｜風險範疇 同列 1:1 並排 */
       .risk-principle-area-row {
         display: grid;
@@ -1172,13 +1185,16 @@ ui <- page_navbar(
           )
         )
       ),
-      textInput("pbc_id", NULL, placeholder = "ID（可空）"),
-      selectizeInput(
-        "pbc_related", lab_opt("互相勾稽（Walkthrough）"),
-        choices = NULL, multiple = TRUE, width = "100%",
-        options = list(
-          placeholder = "選取相關 PBC（可多選；亦可由規格說明自動解析）",
-          plugins = list("remove_button")
+      tags$div(
+        class = "pbc-id-related-row",
+        textInput("pbc_id", NULL, placeholder = "ID（可空）"),
+        selectizeInput(
+          "pbc_related", lab_opt("互相勾稽（Walkthrough）"),
+          choices = NULL, multiple = TRUE, width = "100%",
+          options = list(
+            placeholder = "選取相關 PBC（可多選；亦可由規格說明自動解析）",
+            plugins = list("remove_button")
+          )
         )
       ),
       textInput("pbc_notes", NULL, placeholder = "備註"),

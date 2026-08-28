@@ -684,6 +684,10 @@ check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互�
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),
       "PBC 互相勾稽選單與 Walkthrough 預覽存在")
+check(grepl("pbc-id-related-row", app_src_pbc, fixed = TRUE) &&
+        grepl('pbc-id-related-row[\\s\\S]*"pbc_id"[\\s\\S]*"pbc_related"', app_src_pbc, perl = TRUE) &&
+        grepl('pbc-id-related-row[\\s\\S]*minmax\\(0, 1fr\\) minmax\\(0, 2fr\\)', app_src_pbc, perl = TRUE),
+      "PBC ID 與互相勾稽 1:2 同列並排")
 wt_reg <- empty_pbc_registry()
 wt_reg <- upsert_pbc(wt_reg, list(
   pbc_id = "PBC-EC-001", client_pbc_name = "系統清單", reviewed_name = "系統清單",

@@ -694,6 +694,11 @@ check(grepl(
   'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
   app_src_pbc, perl = TRUE),
       "PBC 清單預覽表欄位順序：ID→循環→標準名稱→原始名稱→證據類型→檔案格式→規格說明→勾稽→備註")
+check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
+        grepl('div\\(class = "pbc-table-scroll-wrap", DTOutput\\("pbc_table"\\)\\)', app_src_pbc, perl = TRUE) &&
+        grepl("\\.pbc-table-scroll-wrap[\\s\\S]*overflow-x: auto", app_src_pbc, perl = TRUE) &&
+        grepl("autoWidth = FALSE", app_src_pbc, fixed = TRUE),
+      "PBC 清單預覽表可左右捲動（scroll-wrap + autoWidth）")
 check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),

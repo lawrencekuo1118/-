@@ -396,6 +396,24 @@ ui <- page_navbar(
       .dataTables_wrapper, .dataTables_scroll, .dataTables_scrollBody {
         overflow: visible !important; max-height: none !important; height: auto !important;
       }
+      /* PBC 清單預覽：允許左右拖曳／捲動（覆寫上方全頁不裁切規則） */
+      .pbc-table-scroll-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .pbc-table-scroll-wrap .dataTables_wrapper,
+      .pbc-table-scroll-wrap .dataTables_scroll,
+      .pbc-table-scroll-wrap .dataTables_scrollHead,
+      .pbc-table-scroll-wrap .dataTables_scrollBody {
+        overflow-x: auto !important;
+        max-width: 100%;
+      }
+      .pbc-table-scroll-wrap table.dataTable {
+        width: max-content !important;
+        min-width: 100%;
+      }
       .shiny-text-output pre, .shiny-plot-output, .shiny-image-output {
         overflow: visible !important; max-height: none !important;
       }
@@ -1344,7 +1362,7 @@ ui <- page_navbar(
     ),
     card(
       card_header("PBC 清單預覽"),
-      DTOutput("pbc_table"),
+      div(class = "pbc-table-scroll-wrap", DTOutput("pbc_table")),
       uiOutput("pbc_walkthrough_box"),
       verbatimTextOutput("pbc_all_status")
     )
@@ -3613,8 +3631,8 @@ server <- function(input, output, session) {
         規格說明 = character(), 勾稽 = character(), 備註 = character(),
         stringsAsFactors = FALSE
       )
-      return(datatable(empty, selection = "single", rownames = FALSE,
-                       options = dt_loading_opts(pageLength = 8)))
+      return(datatable(empty, selection = "single", rownames = FALSE, width = "100%",
+                       options = dt_loading_opts(pageLength = 8, autoWidth = FALSE)))
     }
     show <- data.frame(
       ID = df$pbc_id,
@@ -3639,8 +3657,8 @@ server <- function(input, output, session) {
       備註 = df$notes,
       stringsAsFactors = FALSE
     )
-    dt <- datatable(show, selection = "single", rownames = FALSE,
-                    options = dt_loading_opts(pageLength = 8))
+    dt <- datatable(show, selection = "single", rownames = FALSE, width = "100%",
+                    options = dt_loading_opts(pageLength = 8, autoWidth = FALSE))
     for (kind in PBC_KIND_VALUES) {
       dt <- DT::formatStyle(
         dt, "證據類型",

@@ -2236,7 +2236,6 @@ server <- function(input, output, session) {
         selected = unique(c(cur_pol, policy_ids))
       )
       showNotification("已套用 PBC 至「相關政策與制度」", type = "message")
-      bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
       return(invisible(NULL))
     }
     cur_iuc <- parse_text_list_values(input$iuc)
@@ -2254,7 +2253,6 @@ server <- function(input, output, session) {
       updateTextAreaInput(session, "inputs", value = new_inputs)
     }
     showNotification("已套用 PBC 命名至控制設計 IUC", type = "message")
-    bslib::nav_select("main_nav", selected = "風險控制點設計", session = session)
   })
 
   output$pbc_all_status <- renderText({

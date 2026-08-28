@@ -86,6 +86,50 @@ apply_pbc_if_exists_note <- function(notes, if_exists) {
   paste(parts, collapse = "；")
 }
 
+filter_pbc_by_cycle <- function(registry, cycle = "") {
+  registry <- normalize_pbc_df(registry)
+  cycle <- trimws(as.character(cycle %||% ""))
+  if (!nrow(registry) || !nzchar(cycle)) return(registry)
+  registry[trimws(registry$cycle) == cycle, , drop = FALSE]
+}
+
+pbc_sample_export_df <- function(registry) {
+  registry <- normalize_pbc_df(registry)
+  if (!nrow(registry)) {
+    return(data.frame(
+      序號 = integer(),
+      ID = character(),
+      循環 = character(),
+      標準名稱 = character(),
+      原始名稱 = character(),
+      證據類型 = character(),
+      樣本檔案格式 = character(),
+      PBC規格說明 = character(),
+      備註 = character(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  data.frame(
+    序號 = seq_len(nrow(registry)),
+    ID = registry$pbc_id,
+    循環 = registry$cycle,
+    標準名稱 = registry$reviewed_name,
+    原始名稱 = registry$client_pbc_name,
+    證據類型 = registry$pbc_kind,
+    樣本檔案格式 = registry$pbc_file_format,
+    PBC規格說明 = registry$pbc_spec,
+    備註 = registry$notes,
+    stringsAsFactors = FALSE
+  )
+}
+
+write_pbc_sample_xlsx <- function(registry, path) {
+  if (!requireNamespace("writexl", quietly = TRUE)) {
+    stop("需要 writexl 套件以匯出 PBC xlsx：install.packages(\"writexl\")")
+  }
+  writexl::write_xlsx(pbc_sample_export_df(registry), path)
+}
+
 # 檢視後命名加上【類型】前綴，供 IUC／PBC 對照特別標示
 format_pbc_reviewed_label <- function(reviewed_name, pbc_kind = "") {
   reviewed <- trimws(as.character(reviewed_name %||% ""))

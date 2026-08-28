@@ -120,7 +120,7 @@ table_schema_registry <- function() {
     ),
     .schema_table(
       "pbc_table", "PBC 資料庫", "PBC", "pbc_table", pbc_rows,
-      "不依側邊欄循環篩選；全庫顯示"
+      "可勾「僅顯示側邊欄循環」；複選列匯出樣本需求 xlsx"
     ),
     .schema_table(
       "lib_table", "範本庫摘要", "範本庫", "lib_table", lib_rows,

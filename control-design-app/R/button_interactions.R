@@ -117,6 +117,8 @@ button_interaction_registry <- function() {
              gate = "需欄位；高權於按下後檢查"),
         list(id = "pbc_delete", label = "刪除", page = "PBC",
              prereq = "高權＋PBC 表選列", effect = "刪除該筆", gate = "需高權＋選列"),
+        list(id = "download_pbc_samples", label = "匯出樣本需求清單.xlsx", page = "PBC",
+             prereq = "表內有資料；可複選列", effect = "匯出 xlsx 供客戶參照", gate = "pbc_view_n>0"),
         list(id = "pbc_apply_to_design", label = "套用至控制設計", page = "PBC",
              prereq = "pbc_apply 有選項；不可混批政策／非政策",
              effect = "寫入 IUC 或相關政策與制度；可寫入 CSA Inputs", gate = "執行時檢查"),

@@ -626,6 +626,14 @@ check(identical(
 ), "PBC 如果存在取消勾選移除備註標記")
 check(isTRUE(pbc_if_exists_from_notes("客戶備註；如果存在")),
       "PBC 備註可辨識如果存在")
+reg_cycle <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "a", reviewed_name = "a", cycle = "電腦化資訊系統循環"
+))
+check(identical(nrow(filter_pbc_by_cycle(reg_cycle, "電腦化資訊系統循環")), 1L),
+      "PBC 可依循環篩選")
+exp_df <- pbc_sample_export_df(reg_spec)
+check(all(c("序號", "PBC規格說明", "樣本檔案格式") %in% names(exp_df)),
+      "PBC 樣本匯出欄位完整")
 split_rows <- expand_numbered_pbc_rows(list(
   client_pbc_name = "1. 客戶需求Mail\n2. Voice of Customer",
   reviewed_name = "",
@@ -704,6 +712,11 @@ check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
 check(grepl('checkboxInput\\("pbc_if_exists", "如果存在"', app_src_pbc, fixed = TRUE) &&
         grepl("pbc-spec-row", app_src_pbc, fixed = TRUE),
       "PBC 規格說明旁含如果存在勾選框")
+check(grepl("download_pbc_samples", app_src_pbc, fixed = TRUE) &&
+        grepl('selection = "multiple"', app_src_pbc, fixed = TRUE) &&
+        grepl("pbc_filter_by_cycle", app_src_pbc, fixed = TRUE) &&
+        grepl("write_pbc_sample_xlsx", app_src_pbc, fixed = TRUE),
+      "PBC 總表支援複選匯出樣本需求 xlsx")
 check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
       "PBC 規格說明在證據類型／文件格式上方")
 check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&

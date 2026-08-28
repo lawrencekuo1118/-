@@ -1334,6 +1334,21 @@ ui <- page_navbar(
     "PBC資料庫",
     card(
       card_header("PBC資料庫"),
+      div(
+        class = "d-flex gap-2 flex-wrap align-items-center mb-2",
+        checkboxInput(
+          "pbc_filter_by_cycle", "僅顯示側邊欄循環",
+          value = TRUE, width = "auto"
+        ),
+        downloadButton(
+          "download_pbc_samples", "匯出樣本需求清單.xlsx",
+          class = "btn-sm btn-success"
+        ),
+        tags$span(
+          class = "small text-muted",
+          "複選列後匯出；未勾選列時匯出目前表內全部。"
+        )
+      ),
       div(class = "pbc-table-scroll-wrap", DTOutput("pbc_table")),
       uiOutput("pbc_walkthrough_box")
     ),
@@ -2721,7 +2736,7 @@ server <- function(input, output, session) {
 
   output$pbc_walkthrough_box <- renderUI({
     s <- input$pbc_table_rows_selected
-    reg <- pbc_reg()
+    reg <- pbc_table_view()
     if (is.null(s) || !length(s) || !nrow(reg)) {
       return(tags$div(
         class = "small text-muted mt-2 mb-1",
@@ -3945,8 +3960,25 @@ server <- function(input, output, session) {
     )) return()
     execute_pbc_add()
   })
+  pbc_table_view <- reactive({
+    reg <- pbc_reg()
+    if (!nrow(reg)) return(reg)
+    if (!isTRUE(input$pbc_filter_by_cycle)) return(reg)
+    cy <- trimws(input$cycle %||% "")
+    if (!nzchar(cy)) return(reg)
+    filter_pbc_by_cycle(reg, cy)
+  })
+
+  pbc_rows_for_export <- reactive({
+    reg <- pbc_table_view()
+    if (!nrow(reg)) return(reg)
+    sel <- input$pbc_table_rows_selected
+    if (!is.null(sel) && length(sel)) reg <- reg[sel, , drop = FALSE]
+    reg
+  })
+
   output$pbc_table <- renderDT({
-    df <- pbc_reg()
+    df <- pbc_table_view()
     if (!nrow(df)) {
       empty <- data.frame(
         ID = character(), 循環 = character(), 標準名稱 = character(),
@@ -3954,7 +3986,7 @@ server <- function(input, output, session) {
         規格說明 = character(), 勾稽 = character(), 備註 = character(),
         stringsAsFactors = FALSE
       )
-      return(datatable(empty, selection = "single", rownames = FALSE, width = "100%",
+      return(datatable(empty, selection = "multiple", rownames = FALSE, width = "100%",
                        options = dt_loading_opts(pageLength = 8, autoWidth = FALSE)))
     }
     show <- data.frame(
@@ -3978,7 +4010,7 @@ server <- function(input, output, session) {
       備註 = df$notes,
       stringsAsFactors = FALSE
     )
-    dt <- datatable(show, selection = "single", rownames = FALSE, width = "100%",
+    dt <- datatable(show, selection = "multiple", rownames = FALSE, width = "100%",
                     options = dt_loading_opts(pageLength = 8, autoWidth = FALSE))
     for (kind in PBC_KIND_VALUES) {
       dt <- DT::formatStyle(
@@ -4001,8 +4033,8 @@ server <- function(input, output, session) {
   })
   observeEvent(input$pbc_table_rows_selected, {
     s <- input$pbc_table_rows_selected
-    if (is.null(s)) return()
-    row <- pbc_reg()[s, , drop = FALSE]
+    if (is.null(s) || length(s) != 1L) return()
+    row <- pbc_table_view()[s, , drop = FALSE]
     pbc_form_cycle(trimws(row$cycle[[1]] %||% ""))
     updateTextInput(session, "pbc_id", value = row$pbc_id[[1]])
     updateTextInput(session, "pbc_client", value = row$client_pbc_name[[1]])
@@ -4039,8 +4071,12 @@ server <- function(input, output, session) {
   observeEvent(input$pbc_delete, {
     if (!require_admin(is_admin(), session)) return()
     s <- input$pbc_table_rows_selected
-    if (is.null(s)) return(showNotification("請先選取", type = "warning"))
-    reg <- delete_pbc(pbc_reg(), pbc_reg()$pbc_id[s])
+    if (is.null(s) || !length(s)) {
+      return(showNotification("請先選取要刪除的列", type = "warning"))
+    }
+    view <- pbc_table_view()
+    ids <- view$pbc_id[s]
+    reg <- delete_pbc(pbc_reg(), ids)
     pbc_reg(reg)
     persist_pbc(reg)
     refresh_pbc_choices()
@@ -4063,6 +4099,18 @@ server <- function(input, output, session) {
       })
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
   })
+  output$download_pbc_samples <- downloadHandler(
+    filename = function() {
+      cy <- trimws(input$cycle %||% "")
+      cy_label <- if (nzchar(cy)) cy else "全部"
+      sprintf("PBC樣本需求清單_%s_%s.xlsx", cy_label, format(Sys.Date(), "%Y%m%d"))
+    },
+    content = function(file) {
+      reg <- pbc_rows_for_export()
+      if (!nrow(reg)) stop("無可匯出的 PBC 列")
+      with_loading(write_pbc_sample_xlsx(reg, file))
+    }
+  )
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
     df <- rcm_display_df()
@@ -4418,6 +4466,7 @@ server <- function(input, output, session) {
       error = function(e) 0L
     )
     n_param <- nrow(param_store())
+    pbc_view_n <- tryCatch(nrow(pbc_table_view()), error = function(e) 0L)
 
     gate <- function(id, ok, tip_off) {
       set_action_button(session, id, ok, if (isTRUE(ok)) "" else tip_off)
@@ -4462,6 +4511,7 @@ server <- function(input, output, session) {
          "請至少填「客戶原名」或「檢視後命名」")
     gate("pbc_delete", admin && pbc_row,
          if (!admin) "需高權登入" else "請先選取 PBC 列")
+    gate("download_pbc_samples", pbc_view_n > 0L, "目前表內無 PBC 可匯出")
 
     # 下載（無資料時不可按）
     gate("download_interview", iv_n > 0L, "尚無訪談題綱可下載")

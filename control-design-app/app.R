@@ -1519,6 +1519,7 @@ ui <- page_navbar(
 server <- function(input, output, session) {
   controls <- reactiveVal(list())
   is_admin <- reactiveVal(FALSE)
+  pending_admin_action <- reactiveVal(NULL)
   rcm_revision <- reactiveVal(0L)
   last_saved_control <- reactiveVal(NULL)
   rcm_preview_ctrl <- reactiveVal(NULL)
@@ -1579,6 +1580,9 @@ server <- function(input, output, session) {
       is_admin(TRUE)
       removeModal()
       showNotification("高權登入成功", type = "message")
+      pending <- pending_admin_action()
+      pending_admin_action(NULL)
+      if (identical(pending, "pbc_add")) execute_pbc_add()
     } else {
       is_admin(FALSE)
       showNotification("密碼錯誤", type = "error")
@@ -3911,8 +3915,7 @@ server <- function(input, output, session) {
   })
 
   # PBC
-  observeEvent(input$pbc_add, {
-    if (!require_admin(is_admin(), session)) return()
+  execute_pbc_add <- function() {
     tryCatch({
       edit_id <- trimws(input$pbc_id %||% "")
       reg0 <- pbc_reg()
@@ -3961,6 +3964,14 @@ server <- function(input, output, session) {
       }
       showNotification(msg, type = "message")
     }, error = function(e) showNotification(conditionMessage(e), type = "error"))
+  }
+
+  observeEvent(input$pbc_add, {
+    if (!require_admin_or_defer(
+      is_admin(), session, "pbc_add",
+      set_pending = pending_admin_action
+    )) return()
+    execute_pbc_add()
   })
   output$pbc_table <- renderDT({
     df <- pbc_reg()
@@ -4479,8 +4490,8 @@ server <- function(input, output, session) {
          if (!admin) "需高權登入" else "請先選取參數列")
 
     # PBC
-    gate("pbc_add", admin && pbc_fields_ok,
-         if (!admin) "需高權登入" else "請至少填「客戶原名」或「檢視後命名」")
+    gate("pbc_add", pbc_fields_ok,
+         "請至少填「客戶原名」或「檢視後命名」")
     gate("pbc_delete", admin && pbc_row,
          if (!admin) "需高權登入" else "請先選取 PBC 列")
 

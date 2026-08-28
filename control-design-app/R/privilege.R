@@ -47,6 +47,16 @@ require_admin <- function(is_admin, session = NULL) {
   FALSE
 }
 
+#' If not admin, queue action id and show login modal; return FALSE.
+require_admin_or_defer <- function(is_admin, session, action_id, set_pending) {
+  if (isTRUE(is_admin)) return(TRUE)
+  action_id <- trimws(as.character(action_id %||% ""))
+  if (!nzchar(action_id)) return(FALSE)
+  if (is.function(set_pending)) set_pending(action_id)
+  if (!is.null(session)) show_admin_login_modal(session)
+  FALSE
+}
+
 # Enable/disable actionButton or downloadButton until prerequisites are met
 set_action_button <- function(session, id, enabled, title = "") {
   if (is.null(session) || !nzchar(as.character(id %||% ""))) return(invisible(FALSE))

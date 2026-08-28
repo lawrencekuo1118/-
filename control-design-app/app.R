@@ -30,6 +30,7 @@ source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 source(file.path(root, "R", "privilege.R"), local = TRUE)
 source(file.path(root, "R", "button_interactions.R"), local = TRUE)
+source(file.path(root, "R", "table_schemas.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -440,9 +441,17 @@ ui <- page_navbar(
         background: rgba(0, 91, 170, 0.06);
         white-space: nowrap;
       }
-      .button-guide-card .table-responsive-wrap {
+      .button-guide-card .table-responsive-wrap,
+      .table-schema-card .table-responsive-wrap {
         overflow-x: auto;
         max-width: 100%;
+      }
+      .table-schema-card .table-schema-table {
+        font-size: 0.78rem;
+      }
+      .table-schema-card .table-schema-table th {
+        background: rgba(0, 91, 170, 0.06);
+        white-space: nowrap;
       }
       .shiny-text-output pre, .shiny-plot-output, .shiny-image-output {
         overflow: visible !important; max-height: none !important;
@@ -1465,7 +1474,8 @@ ui <- page_navbar(
       uiOutput("param_stats"),
       DTOutput("param_table")
     ),
-    uiOutput("admin_button_guide_panel")
+    uiOutput("admin_button_guide_panel"),
+    uiOutput("admin_table_schema_panel")
   )
 )
 
@@ -1624,6 +1634,14 @@ server <- function(input, output, session) {
     div(
       class = "table-responsive-wrap",
       button_interactions_card_ui(version = app_version_label(root))
+    )
+  })
+
+  output$admin_table_schema_panel <- renderUI({
+    if (!isTRUE(is_admin())) return(NULL)
+    div(
+      class = "table-responsive-wrap",
+      table_schemas_card_ui(version = app_version_label(root))
     )
   })
 

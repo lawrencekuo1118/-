@@ -20,6 +20,7 @@ source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 source(file.path(root, "R", "privilege.R"), local = TRUE)
 source(file.path(root, "R", "button_interactions.R"), local = TRUE)
+source(file.path(root, "R", "table_schemas.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -1606,6 +1607,33 @@ for (must_id in c("finalize_rcm_row", "pbc_add", "apply_lib", "admin_param_upser
 }
 check(identical(app_version_label(root), trimws(readLines(file.path(root, "VERSION"), n = 1L, warn = FALSE))),
       "按鈕說明顯示 VERSION 版本號")
+# 參數庫：高權專用表格 SCHEMA 說明
+check(file.exists(file.path(root, "R", "table_schemas.R")),
+      "表格 SCHEMA 維護檔存在")
+check(grepl('source\\(file\\.path\\(root, "R", "table_schemas\\.R"\\)', app_src),
+      "app.R 載入 table_schemas.R")
+check(grepl("admin_table_schema_panel", app_src) &&
+        grepl("output\\$admin_table_schema_panel", app_src) &&
+        grepl("table_schemas_card_ui", app_src),
+      "表格 SCHEMA 面板僅高權可見")
+ts_reg <- table_schema_registry()
+ts_ids <- vapply(ts_reg, function(t) t$table_id, character(1))
+check(length(ts_reg) >= 7L,
+      "SCHEMA 登錄表涵蓋主要 DataTable")
+for (must_tbl in c("rcm_table", "pbc_table", "param_table", "lib_table",
+                  "interview_table", "csa_table", "gap_table")) {
+  check(must_tbl %in% ts_ids, paste0("SCHEMA 登錄表含 ", must_tbl))
+}
+rcm_schema <- ts_reg[[which(ts_ids == "rcm_table")]]
+rcm_schema_cols <- vapply(rcm_schema$rows, function(r) r$col, character(1))
+check(all(RCM_HEADERS %in% rcm_schema_cols),
+      "RCM SCHEMA 含全部 RCM_HEADERS")
+pbc_schema_cols <- vapply(ts_reg[[which(ts_ids == "pbc_table")]]$rows,
+                          function(r) r$col, character(1))
+check(identical(pbc_schema_cols,
+                c("ID", "循環", "標準名稱", "原始名稱", "證據類型",
+                  "檔案格式", "規格說明", "勾稽", "備註")),
+      "PBC SCHEMA 欄位順序與 UI 一致")
 ps0 <- empty_parameter_store()
 ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
 check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")

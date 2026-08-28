@@ -166,7 +166,10 @@ button_interaction_registry <- function() {
         list(id = "admin_param_delete", label = "刪除選取列", page = "參數庫",
              prereq = "高權＋選列", effect = "刪除參數列", gate = "高權＋選列"),
         list(id = "param_refresh", label = "從現況重建並儲存", page = "參數庫",
-             prereq = "高權", effect = "重建參數庫", gate = "需高權")
+             prereq = "高權", effect = "重建參數庫", gate = "需高權"),
+        list(id = "—", label = "表格 SCHEMA 說明", page = "參數庫",
+             prereq = "高權", effect = "顯示各 DataTable 欄位順序與來源對照",
+             gate = "僅高權可見")
       )
     )
   )

@@ -3896,7 +3896,7 @@ server <- function(input, output, session) {
     )
   })
   output$interview_table <- renderDT({
-    datatable(interview_worksheet(),
+    datatable(interview_preview_df(interview_worksheet()),
               rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10, dom = "tip"))
   })
   output$csa_table <- renderDT({

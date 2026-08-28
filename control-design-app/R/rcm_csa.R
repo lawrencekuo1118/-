@@ -1209,6 +1209,18 @@ empty_interview_df <- function() {
   )
 }
 
+# 訪談預覽表隱藏欄（完整題綱／CSV 仍保留）
+INTERVIEW_PREVIEW_HIDDEN_COLS <- c(
+  "回答架構_5W1H", "設計摘要", "受訪者回答", "佐證取得", "結論", "element_key"
+)
+
+interview_preview_df <- function(df) {
+  if (!is.data.frame(df) || !ncol(df)) return(df)
+  drop <- intersect(INTERVIEW_PREVIEW_HIDDEN_COLS, names(df))
+  if (!length(drop)) return(df)
+  df[, setdiff(names(df), drop), drop = FALSE]
+}
+
 control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
                                  modules = DEFAULT_INTERVIEW_5W1H,
                                  pbc_reg = NULL,

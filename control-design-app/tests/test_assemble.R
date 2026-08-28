@@ -352,6 +352,9 @@ check(nrow(iv) == 2L, "訪談可依元素過濾")
 check(all(c("控制編號", "訪談問題", "預期佐證_PBC", "受訪者回答",
             "回答架構_5W1H", "建議串接PBC") %in% names(iv)),
       "訪談工作底稿含標準欄位")
+iv_prev <- interview_preview_df(iv)
+check(!any(INTERVIEW_PREVIEW_HIDDEN_COLS %in% names(iv_prev)),
+      "訪談預覽表隱藏回答架構／設計摘要／受訪者回答等欄")
 check(identical(as.character(iv[["控制編號"]][1]), derive_control_id(d1, 1L)),
       "訪談對齊控制編號")
 check(all(grepl("以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步|人事時地物",
@@ -424,6 +427,8 @@ check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "a
         !grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
       "訪談保留引導；風險控制點設計已移除引導設計區塊")
 app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("interview_preview_df\\(interview_worksheet\\(\\)\\)", app_txt),
+      "訪談預覽表使用 interview_preview_df 過濾欄位")
 interview_panel <- sub('(?s).*nav_panel\\(\\s*"訪談問項設計"', 'nav_panel("訪談問項設計"', app_txt, perl = TRUE)
 interview_panel <- sub('(?s)nav_panel\\(\\s*"風險控制點設計".*', "", interview_panel, perl = TRUE)
 check(grepl("interview_design_groups", app_txt) &&

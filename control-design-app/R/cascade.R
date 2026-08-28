@@ -449,6 +449,51 @@ cascade_sub_process_choices <- function(rows) {
   stats::setNames(labels, labels)
 }
 
+design_tab_cascade_rows <- function(lib_items, cycle, sub_process_id = "", sub_process = "") {
+  cy <- trimws(as.character(cycle %||% ""))
+  if (!nzchar(cy)) return(list())
+  rows <- library_controls_flat(cascade_source_library(lib_items), cycle = cy)
+  sub_key <- sub_process_filter_key(sub_process_id %||% "", sub_process %||% "")
+  if (nzchar(sub_key)) filter_cascade_rows(rows, sub_key = sub_key) else rows
+}
+
+merge_param_store_choices <- function(ch, param_store, param_name) {
+  param_names <- tryCatch(
+    parameter_options(param_store, param_name),
+    error = function(e) character()
+  )
+  if (!length(param_names)) return(ch)
+  extra <- param_names[!param_names %in% unname(ch)]
+  if (!length(extra)) return(ch)
+  c(ch, stats::setNames(extra, extra))
+}
+
+ensure_value_in_choices <- function(ch, val) {
+  val <- trimws(as.character(val %||% ""))
+  if (!nzchar(val)) return(ch)
+  if (val %in% unname(ch)) return(ch)
+  c(ch, stats::setNames(val, val))
+}
+
+cascade_selectize_field_options <- function(placeholder, multiple = FALSE) {
+  opts <- list(
+    create = TRUE,
+    createOnBlur = TRUE,
+    placeholder = placeholder,
+    openOnFocus = TRUE,
+    maxOptions = 1000,
+    closeAfterSelect = TRUE,
+    allowEmptyOption = TRUE,
+    showEmptyOptionInDropdown = FALSE
+  )
+  if (isTRUE(multiple)) {
+    opts$plugins <- list("remove_button")
+  } else {
+    opts$maxItems <- 1
+  }
+  opts
+}
+
 # Short tag label for 風險因素（風險描述之 tag；不含 []）
 risk_factor_tag <- function(x) {
   x <- trimws(as.character(x %||% ""))
@@ -560,7 +605,7 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   }
   rd <- trimws(as.character(ctrl$risk_description %||% ""))
   if (nzchar(rd)) {
-    updateTextAreaInput(session, "risk_description", value = rd)
+    updateSelectizeInput(session, "risk_description", selected = rd)
   }
   if (nzchar(trimws(ctrl$risk_category %||% ""))) {
     updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
@@ -607,8 +652,10 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
     stored_ids = doc_ids
   )
   updateSelectizeInput(session, "related_document_pbc", selected = doc_sel)
-  updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
-  updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
+  co <- trimws(as.character(ctrl$control_objective %||% ""))
+  if (nzchar(co)) updateSelectizeInput(session, "control_objective", selected = co)
+  ca <- trimws(as.character(ctrl$control_activity %||% ""))
+  if (nzchar(ca)) updateSelectizeInput(session, "control_activity", selected = ca)
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
   ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
   if (nzchar(at)) updateSelectInput(session, "approach", selected = at)
@@ -789,6 +836,16 @@ cascade_activity_choices <- function(rows) {
     labels <- c(labels, sprintf("[%s] %s", at, short))
   }
   stats::setNames(keys, labels)
+}
+
+cascade_activity_text_choices <- function(rows) {
+  acts <- unique(vapply(rows, function(r) nzchar_trim(r$control_activity), character(1)))
+  acts <- acts[nzchar(acts)]
+  if (!length(acts)) return(character())
+  labels <- vapply(acts, function(a) {
+    if (nchar(a) > 80) paste0(substr(a, 1, 79), "…") else a
+  }, character(1))
+  stats::setNames(acts, labels)
 }
 
 cascade_iuc_choices <- function(rows, pbc_df = NULL) {

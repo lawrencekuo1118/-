@@ -75,8 +75,6 @@ button_interaction_registry <- function() {
              prereq = "側邊欄已選循環", effect = "合併至 RCM 預覽草稿列", gate = "執行時檢查循環"),
         list(id = "preview_rcm_control", label = "儲存（控制設計）", page = "設計",
              prereq = "側邊欄已選循環", effect = "合併至 RCM 預覽草稿列", gate = "執行時檢查循環"),
-        list(id = "account_select_all", label = "全部適用", page = "設計",
-             prereq = "風險類別＝報導面", effect = "展開全部會計科目", gate = "僅報導面"),
         list(id = "goto_pbc_tab", label = "開啟 PBC 資料庫", page = "設計",
              prereq = "—", effect = "跳轉 PBC 分頁", gate = "無"),
         list(id = "finalize_rcm_row", label = "完成設計＝寫入 RCM 一列", page = "設計",

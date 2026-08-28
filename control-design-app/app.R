@@ -190,19 +190,20 @@ ui <- page_navbar(
         el.disabled = !msg.enabled;
       }
     });
-    // 子作業名稱：選項已在 selectize.options 時，聚焦／點擊強制 refreshOptions 以寫入下拉 DOM
+    // 建議選單：選項已在 selectize.options 時，聚焦／點擊強制 refreshOptions 以寫入下拉 DOM
     (function() {
-      function wireSubProcessMenu() {
-        var el = document.getElementById('sub_process');
-        if (!el || !el.selectize || el.selectize.__subMenuWired) return;
+      var cascadeSelectIds = ['sub_process', 'risk_factor', 'risk_description',
+                              'control_objective', 'control_activity'];
+      function wireCascadeSelectMenu(id) {
+        var el = document.getElementById(id);
+        if (!el || !el.selectize || el.selectize.__cascadeMenuWired) return;
         var s = el.selectize;
-        s.__subMenuWired = true;
+        s.__cascadeMenuWired = true;
         var openRendered = function(ev) {
           try {
             if (ev) { ev.preventDefault(); ev.stopPropagation(); }
             var keys = Object.keys(s.options || {});
             if (!keys.length) return;
-            // 若下拉 DOM 尚無選項，重建一次
             if (!s.$dropdown_content.children('[data-selectable]').length) {
               var snapshot = keys.map(function(k) { return s.options[k]; });
               s.clearOptions();
@@ -212,13 +213,18 @@ ui <- page_navbar(
             s.open();
           } catch (err) {}
         };
-        s.$control.off('mousedown.subMenu click.subMenu').on('mousedown.subMenu click.subMenu', openRendered);
-        s.$control_input.off('focus.subMenu').on('focus.subMenu', function() { openRendered(); });
+        s.$control.off('mousedown.cascadeMenu click.cascadeMenu')
+          .on('mousedown.cascadeMenu click.cascadeMenu', openRendered);
+        s.$control_input.off('focus.cascadeMenu')
+          .on('focus.cascadeMenu', function() { openRendered(); });
+      }
+      function wireAllCascadeMenus() {
+        cascadeSelectIds.forEach(wireCascadeSelectMenu);
       }
       $(document).on('shiny:value shiny:connected shiny:idle', function() {
-        setTimeout(wireSubProcessMenu, 30);
+        setTimeout(wireAllCascadeMenus, 30);
       });
-      setInterval(wireSubProcessMenu, 800);
+      setInterval(wireAllCascadeMenus, 800);
     })();
     // 載入中：首次連線與斷線重連
     (function() {
@@ -577,9 +583,11 @@ ui <- page_navbar(
         align-items: start;
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
-      #control_objective { min-height: 2.5rem; resize: vertical; }
-      #control_activity { min-height: 5.5rem; resize: vertical; }
-      #risk_description { min-height: 5.5rem; resize: vertical; }
+      #control_objective-selectized + .selectize-control .selectize-input,
+      #control_activity-selectized + .selectize-control .selectize-input,
+      #risk_description-selectized + .selectize-control .selectize-input { min-height: 2.5rem; }
+      #control_activity-selectized + .selectize-control .selectize-input,
+      #risk_description-selectized + .selectize-control .selectize-input { min-height: 5.5rem; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
       .assertions-side .alert { margin-bottom: 0.35rem; }
       /* 控制方式／性質／頻率：桌面三欄並排；窄螢幕改單欄 */
@@ -987,7 +995,7 @@ ui <- page_navbar(
               uiOutput("filter_risk_hits")
             ),
             p(class = "small text-muted mb-2",
-              "風險因素是風險描述上的標記（TAG）。風險描述可手動撰寫；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
+              "風險因素是風險描述上的標記（TAG）。風險描述可從建議選取或手動輸入；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
             div(
               class = "risk-principle-area-row",
               selectizeInput(
@@ -1009,16 +1017,7 @@ ui <- page_navbar(
             ),
             div(
               class = "risk-factor-category-row",
-              selectizeInput(
-                "risk_factor", lab_req("風險因素"),
-                choices = NULL, multiple = TRUE, width = "100%",
-                options = list(
-                  create = TRUE,
-                  createOnBlur = TRUE,
-                  placeholder = "可複選建議 TAG 或手動新增風險因素",
-                  plugins = list("remove_button")
-                )
-              ),
+              uiOutput("risk_factor_select_ui"),
               selectInput(
                 "risk_category", lab_req("風險類別"),
                 choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
@@ -1026,10 +1025,7 @@ ui <- page_navbar(
               )
             ),
             uiOutput("risk_factor_hint"),
-            textAreaInput(
-              "risk_description", lab_req("風險描述"), rows = 3, width = "100%",
-              placeholder = "描述此控制點對應之風險內涵"
-            ),
+            uiOutput("risk_description_select_ui"),
             uiOutput("significant_account_hint"),
             selectizeInput(
               "significant_account", "會計科目",
@@ -1039,10 +1035,9 @@ ui <- page_navbar(
               width = "100%",
               options = list(
                 create = TRUE,
-                placeholder = "報導面必填：可複選常見科目，或選「全部適用」"
+                placeholder = "報導面必填：可複選常見科目，或選「全部適用」（互斥）"
               )
             ),
-            actionButton("account_select_all", "全部適用", class = "btn-sm btn-outline-primary mb-2"),
             selectInput("romm_classification", "RoMM 分類（抽樣輔助）",
                         choices = ROMM_CLASS_CHOICES, width = "100%"),
             uiOutput("design_preview_risk")
@@ -1083,14 +1078,8 @@ ui <- page_navbar(
               ),
               uiOutput("assertions_hint")
             ),
-            textAreaInput(
-              "control_objective", lab_req("控制目標"), rows = 1, width = "100%",
-              placeholder = "Why：欲達成之控制結果（非執行步驟）"
-            ),
-            textAreaInput(
-              "control_activity", lab_req("控制活動"), rows = 3, width = "100%",
-              placeholder = "How：具體執行行為（含誰／何時／如何）"
-            ),
+            uiOutput("control_objective_select_ui"),
+            uiOutput("control_activity_select_ui"),
             p(class = "small text-muted mb-2",
               "具選單之欄位：可從建議選取後，", tags$strong("雙擊已選項目"),
               "即可修改文字。"),
@@ -1911,6 +1900,7 @@ server <- function(input, output, session) {
     bump_db_persist_views()
     try(refresh_design_text_param_choices(), silent = TRUE)
     try(refresh_sub_process_choices(force = TRUE), silent = TRUE)
+    try(refresh_design_suggest_choices(force = TRUE), silent = TRUE)
     invisible(df)
   }
 
@@ -1990,7 +1980,8 @@ server <- function(input, output, session) {
     cat <- as.character(v$cat %||% "")
     if (nzchar(desc)) {
       freezeReactiveValue(input, "risk_description")
-      updateTextAreaInput(session, "risk_description", value = desc)
+      updateSelectizeInput(session, "risk_description", selected = desc)
+      refresh_design_suggest_choices(force = TRUE)
     }
     if (nzchar(cat)) {
       freezeReactiveValue(input, "risk_category")
@@ -1998,7 +1989,7 @@ server <- function(input, output, session) {
     }
     if (nzchar(rf)) {
       sel <- parse_risk_factor_values(rf)
-      refresh_risk_factor_choices()
+      refresh_design_suggest_choices(force = TRUE)
       freezeReactiveValue(input, "risk_factor")
       updateSelectizeInput(session, "risk_factor", selected = sel)
     }
@@ -2038,7 +2029,11 @@ server <- function(input, output, session) {
     act <- as.character(v$act %||% "")
     ap <- as.character(v$ap %||% "")
     nat <- as.character(v$nat %||% "")
-    if (nzchar(act)) updateTextAreaInput(session, "control_activity", value = act)
+    if (nzchar(act)) {
+      freezeReactiveValue(input, "control_activity")
+      updateSelectizeInput(session, "control_activity", selected = act)
+      refresh_design_suggest_choices(force = TRUE)
+    }
     if (nzchar(ap)) {
       ap_n <- if (exists("normalize_single_activity_type", mode = "function"))
         normalize_single_activity_type(ap) else ap
@@ -2131,8 +2126,8 @@ server <- function(input, output, session) {
       current_cycle = isolate(input$cycle %||% "")
     )
     refresh_sub_process_choices(force = TRUE)
+    refresh_design_suggest_choices(force = TRUE)
     refresh_pbc_choices()
-    refresh_risk_factor_choices()
     invisible(NULL)
   }
 
@@ -2141,11 +2136,17 @@ server <- function(input, output, session) {
   sub_process_ui_state <- new.env(parent = emptyenv())
   sub_process_ui_state$cycle <- NULL
   sub_process_ui_tick <- reactiveVal(0L)
+  design_suggest_ui_tick <- reactiveVal(0L)
 
   refresh_sub_process_choices <- function(force = FALSE) {
     # renderUI 已依 cycle／lib 重繪；force 時再 bump 一次以重掛載選單
     if (isTRUE(force)) {
       sub_process_ui_tick(isolate(sub_process_ui_tick()) + 1L)
+    }
+  }
+  refresh_design_suggest_choices <- function(force = FALSE) {
+    if (isTRUE(force)) {
+      design_suggest_ui_tick(isolate(design_suggest_ui_tick()) + 1L)
     }
   }
 
@@ -2207,28 +2208,14 @@ server <- function(input, output, session) {
     )
   })
 
-  # 風險因素選單快取：避免同內容反覆 updateSelectize 造成跳閃
-  risk_factor_choices_cache <- new.env(parent = emptyenv())
-  risk_factor_choices_cache$ch <- NULL
-  risk_factor_choices_cache$sel <- NULL
-
-  refresh_risk_factor_choices <- function() {
-    cy <- isolate(input$cycle %||% "")
-    sub_key <- sub_process_filter_key(
-      isolate(input$sub_process_id %||% ""),
-      isolate(input$sub_process %||% "")
-    )
+  output$risk_factor_select_ui <- renderUI({
+    tick <- design_suggest_ui_tick()
+    cy <- input$cycle %||% ""
     rows <- if (nzchar(cy)) {
-      r <- library_controls_flat(cascade_source_library(isolate(lib())), cycle = cy)
-      if (nzchar(sub_key)) {
-        r <- filter_cascade_rows(r, sub_key = sub_key)
-      }
-      r
-    } else {
-      list()
-    }
+      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
+    } else list()
     ch <- if (length(rows)) cascade_risk_choices(rows) else character()
-    # isolate：避免 observe(cycle/sub) 誤追蹤 risk_factor，多選時反覆重建選單跳閃
+    ch <- merge_param_store_choices(ch, isolate(param_store()), "風險因素")
     cur <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
     if (length(cur)) {
       extra <- cur[!cur %in% unname(ch)]
@@ -2236,16 +2223,97 @@ server <- function(input, output, session) {
         ch <- c(ch, stats::setNames(extra, vapply(extra, risk_factor_tag, character(1))))
       }
     }
-    prev_ch <- risk_factor_choices_cache$ch
-    prev_sel <- risk_factor_choices_cache$sel
-    same_ch <- identical(unname(ch), unname(prev_ch)) &&
-      identical(names(ch), names(prev_ch))
-    same_sel <- identical(as.character(cur), as.character(prev_sel))
-    if (same_ch && same_sel) return(invisible(NULL))
-    risk_factor_choices_cache$ch <- ch
-    risk_factor_choices_cache$sel <- cur
-    updateSelectizeInput(session, "risk_factor", choices = ch, server = FALSE, selected = cur)
-  }
+    freezeReactiveValue(input, "risk_factor")
+    ch_ui <- if (length(ch)) ch else if (nzchar(cy)) character() else c("(請先選循環)" = "")
+    selectizeInput(
+      "risk_factor", lab_req("風險因素"),
+      choices = ch_ui,
+      selected = cur,
+      multiple = TRUE,
+      width = "100%",
+      options = cascade_selectize_field_options(
+        "可複選建議 TAG 或手動新增風險因素",
+        multiple = TRUE
+      )
+    )
+  })
+
+  output$risk_description_select_ui <- renderUI({
+    tick <- design_suggest_ui_tick()
+    cy <- input$cycle %||% ""
+    rows <- if (nzchar(cy)) {
+      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
+    } else list()
+    rf <- input$risk_factor %||% character()
+    descs <- if (length(rows)) cascade_risk_description_choices(rows, rf) else character(0)
+    ch <- if (length(descs)) risk_description_select_choices(descs) else character()
+    ch <- merge_param_store_choices(ch, isolate(param_store()), "風險描述")
+    cur <- trimws(isolate(input$risk_description %||% ""))
+    ch <- ensure_value_in_choices(ch, cur)
+    freezeReactiveValue(input, "risk_description")
+    ch_ui <- if (length(ch)) c("(請選擇或輸入描述)" = "", ch) else {
+      if (nzchar(cy)) c("(請選擇或輸入描述)" = "") else c("(請先選循環)" = "")
+    }
+    selectizeInput(
+      "risk_description", lab_req("風險描述"),
+      choices = ch_ui,
+      selected = if (nzchar(cur)) cur else "",
+      width = "100%",
+      options = cascade_selectize_field_options(
+        "選建議後可雙擊修改；或直接輸入風險描述"
+      )
+    )
+  })
+
+  output$control_objective_select_ui <- renderUI({
+    tick <- design_suggest_ui_tick()
+    cy <- input$cycle %||% ""
+    rows <- if (nzchar(cy)) {
+      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
+    } else list()
+    ch <- if (length(rows)) cascade_objective_choices(rows) else character()
+    ch <- merge_param_store_choices(ch, isolate(param_store()), "控制目標")
+    cur <- trimws(isolate(input$control_objective %||% ""))
+    ch <- ensure_value_in_choices(ch, cur)
+    freezeReactiveValue(input, "control_objective")
+    ch_ui <- if (length(ch)) c("(請選擇或輸入目標)" = "", ch) else {
+      if (nzchar(cy)) c("(請選擇或輸入目標)" = "") else c("(請先選循環)" = "")
+    }
+    selectizeInput(
+      "control_objective", lab_req("控制目標"),
+      choices = ch_ui,
+      selected = if (nzchar(cur)) cur else "",
+      width = "100%",
+      options = cascade_selectize_field_options(
+        "Why：欲達成之控制結果（非執行步驟）"
+      )
+    )
+  })
+
+  output$control_activity_select_ui <- renderUI({
+    tick <- design_suggest_ui_tick()
+    cy <- input$cycle %||% ""
+    rows <- if (nzchar(cy)) {
+      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
+    } else list()
+    ch <- if (length(rows)) cascade_activity_text_choices(rows) else character()
+    ch <- merge_param_store_choices(ch, isolate(param_store()), "控制活動")
+    cur <- trimws(isolate(input$control_activity %||% ""))
+    ch <- ensure_value_in_choices(ch, cur)
+    freezeReactiveValue(input, "control_activity")
+    ch_ui <- if (length(ch)) c("(請選擇或輸入活動)" = "", ch) else {
+      if (nzchar(cy)) c("(請選擇或輸入活動)" = "") else c("(請先選循環)" = "")
+    }
+    selectizeInput(
+      "control_activity", lab_req("控制活動"),
+      choices = ch_ui,
+      selected = if (nzchar(cur)) cur else "",
+      width = "100%",
+      options = cascade_selectize_field_options(
+        "How：具體執行行為（含誰／何時／如何）"
+      )
+    )
+  })
 
   # PBC／Assertions 選單快取：避免同內容反覆 update 造成跳閃
   pbc_choices_cache <- new.env(parent = emptyenv())
@@ -2423,12 +2491,14 @@ server <- function(input, output, session) {
   observeEvent(input$main_nav, {
     if (identical(input$main_nav, "風險控制點設計")) {
       refresh_sub_process_choices(force = TRUE)
+      refresh_design_suggest_choices(force = TRUE)
     }
   }, ignoreInit = TRUE)
 
   observeEvent(input$rcm_design_tabs, {
     if (identical(input$main_nav, "風險控制點設計")) {
       refresh_sub_process_choices(force = TRUE)
+      refresh_design_suggest_choices(force = TRUE)
     }
   }, ignoreInit = TRUE)
 
@@ -2511,7 +2581,7 @@ server <- function(input, output, session) {
     input$sub_process
     input$sub_process_id
     lib_revision()
-    isolate(refresh_risk_factor_choices())
+    isolate(refresh_design_suggest_choices(force = TRUE))
     isolate(refresh_pbc_choices())
   })
 
@@ -2744,22 +2814,24 @@ server <- function(input, output, session) {
       "子作業編號" = function() {
         updateTextInput(session, "sub_process_id", value = val)
         refresh_sub_process_choices()
-        refresh_risk_factor_choices()
+        refresh_design_suggest_choices(force = TRUE)
       },
       "子作業名稱" = function() {
         updateSelectizeInput(session, "sub_process",
                              selected = sub_process_name_from_value(val))
         refresh_sub_process_choices()
-        refresh_risk_factor_choices()
+        refresh_design_suggest_choices(force = TRUE)
       },
       "風險因素" = function() {
         sel <- parse_risk_factor_values(val)
         freezeReactiveValue(input, "risk_factor")
         updateSelectizeInput(session, "risk_factor", selected = sel)
-        refresh_risk_factor_choices()
+        refresh_design_suggest_choices(force = TRUE)
       },
       "風險描述" = function() {
-        updateTextAreaInput(session, "risk_description", value = val)
+        freezeReactiveValue(input, "risk_description")
+        updateSelectizeInput(session, "risk_description", selected = val)
+        refresh_design_suggest_choices(force = TRUE)
       },
       "風險類別" = function() {
         updateSelectInput(session, "risk_category", selected = val)
@@ -2781,10 +2853,14 @@ server <- function(input, output, session) {
         )
       },
       "控制目標" = function() {
-        updateTextAreaInput(session, "control_objective", value = val)
+        freezeReactiveValue(input, "control_objective")
+        updateSelectizeInput(session, "control_objective", selected = val)
+        refresh_design_suggest_choices(force = TRUE)
       },
       "控制活動" = function() {
-        updateTextAreaInput(session, "control_activity", value = val)
+        freezeReactiveValue(input, "control_activity")
+        updateSelectizeInput(session, "control_activity", selected = val)
+        refresh_design_suggest_choices(force = TRUE)
       },
       "控制性質" = function() {
         updateSelectInput(session, "nature", selected = val)
@@ -3293,7 +3369,7 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% "")
     if (is_reporting_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("報導面"), " — 會計科目為必填；可複選常見財務報表科目，或按「全部適用」。")
+          lab_req("報導面"), " — 會計科目為必填；可複選常見財務報表科目，或單獨選「全部適用」（與其他科目互斥）。")
     } else if (nzchar(cat)) {
       div(class = "alert alert-secondary py-1 mb-2 small",
           "非報導面：會計科目已鎖定不可填（將自動清空）。")
@@ -3302,26 +3378,28 @@ server <- function(input, output, session) {
     }
   })
 
-  # 「全部適用」：按鈕或選項 → 勾選全部常見科目
-  observeEvent(input$account_select_all, {
-    cat <- trimws(input$risk_category %||% "")
-    if (!is_reporting_risk_category(cat)) {
-      return(showNotification("僅報導面可選會計科目", type = "warning"))
-    }
-    updateSelectizeInput(
-      session, "significant_account",
-      choices = account_select_choices(),
-      selected = expand_account_selection(ACCOUNT_ALL_OPTION)
-    )
-  })
+  account_sel_prev <- reactiveVal(character())
+
   observeEvent(input$significant_account, {
     cat <- trimws(isolate(input$risk_category %||% ""))
     if (!is_reporting_risk_category(cat)) return()
     sel <- parse_account_values(input$significant_account)
-    if (!(ACCOUNT_ALL_OPTION %in% sel)) return()
-    # 選到「全部適用」時展開為全科目（避免只留標籤卻漏存）
-    desired <- expand_account_selection(ACCOUNT_ALL_OPTION)
-    if (!setequal(sel, desired)) {
+    if (!length(sel)) {
+      account_sel_prev(character())
+      return()
+    }
+    all_opt <- ACCOUNT_ALL_OPTION
+    desired <- sel
+    prev <- account_sel_prev()
+    if (all_opt %in% sel && length(sel) > 1L) {
+      if (!(all_opt %in% prev)) {
+        desired <- all_opt
+      } else {
+        desired <- sel[sel != all_opt]
+      }
+    }
+    account_sel_prev(desired)
+    if (!identical(sel, desired)) {
       freezeReactiveValue(input, "significant_account")
       updateSelectizeInput(
         session, "significant_account",
@@ -4324,7 +4402,6 @@ server <- function(input, output, session) {
     gate("finalize_rcm_row", can_finalize,
          "需完成引導②～⑥且設計必填／目標活動分欄通過後才可定稿")
     gate("collect_ready_to_lib", admin, "需高權登入後才可累積範本庫")
-    gate("account_select_all", reporting, "僅報導面可選會計科目")
 
     # 控制點測試設計（CSA）
     gate("csa_scenario_add", has_csa_ctrl, "請先選擇已定版控制點")

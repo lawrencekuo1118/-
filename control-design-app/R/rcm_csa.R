@@ -1745,10 +1745,7 @@ expand_account_selection <- function(x) {
   vals <- parse_account_values(x)
   if (!length(vals)) return(character(0))
   all_opt <- if (exists("ACCOUNT_ALL_OPTION")) ACCOUNT_ALL_OPTION else "全部適用"
-  std <- if (exists("ACCOUNT_CHOICES")) ACCOUNT_CHOICES else character(0)
-  if (all_opt %in% vals) {
-    return(c(all_opt, std))
-  }
+  if (all_opt %in% vals) return(all_opt)
   vals
 }
 

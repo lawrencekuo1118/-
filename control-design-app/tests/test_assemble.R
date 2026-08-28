@@ -248,9 +248,8 @@ check(identical(join_significant_accounts(c("全部適用", "應收帳款")), "�
       "含全部適用則正規化為全部適用")
 check(identical(join_significant_accounts(c("應收帳款", "存貨")), "應收帳款；存貨"),
       "複選科目以分號接合")
-check(ACCOUNT_ALL_OPTION %in% expand_account_selection("全部適用") &&
-        length(expand_account_selection("全部適用")) > 10L,
-      "全部適用展開為全科目選取")
+check(identical(expand_account_selection("全部適用"), ACCOUNT_ALL_OPTION),
+      "全部適用回填僅保留單一選項")
 rep_all <- design_required_check(modifyList(d1, list(
   risk_category = "報導面", significant_account = "全部適用"
 )))
@@ -1038,10 +1037,12 @@ check(grepl("sync_sub_process_id_value|sync_control_id_value", app_casc) &&
 check(exists("cascade_builtin_library", mode = "function"),
       "cascade_builtin_library 快取種子")
 check(grepl("refresh_sub_process_choices\\(force", app_casc) &&
+        grepl("refresh_design_suggest_choices\\(force", app_casc) &&
         grepl("input\\$main_nav", app_casc) &&
         grepl("sub_process_select_ui", app_casc) &&
+        grepl("risk_factor_select_ui", app_casc) &&
         grepl("openOnFocus", app_casc),
-      "進入設計分頁強制重送子作業選單")
+      "進入設計分頁強制重送子作業與風險／控制建議選單")
 check(!grepl("updateSelectInput\\(session, \"cycle\", selected = \"\"\\)", app_casc),
       "啟動時不再延遲清空循環（避免競態）")
 
@@ -1131,6 +1132,8 @@ if (length(jl)) {
   rows3 <- filter_cascade_rows(rows2, risk_factor = rk)
   objs <- cascade_objective_choices(rows3)
   check(length(objs) >= 1, "風險對應控制目標候選")
+  acts <- cascade_activity_text_choices(rows3)
+  check(length(acts) >= 1, "風險對應控制活動候選（純文字）")
   obj1 <- unname(objs)[[1]]
   rows4 <- filter_cascade_rows(rows3, objective = obj1)
   acts <- cascade_activity_choices(rows4)
@@ -1260,8 +1263,8 @@ check(identical(cycle_code_for("銷售及收款循環"), "SC"), "銷售循環編
 
 # 風險辨識分頁：風險因素、風險描述、風險類別、RoMM 分類
 check(grepl('nav_panel\\([\\s\\S]*"③ 控制設計"', app_src, perl = TRUE) &&
-        grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&
-        grepl('textAreaInput\\(\\s*"control_activity"', app_src) &&
+        grepl('control_objective_select_ui', app_src) &&
+        grepl('control_activity_select_ui', app_src) &&
         grepl('selectInput\\(\\s*"approach"', app_src) &&
         grepl('selectInput\\(\\s*"nature"', app_src),
       "控制設計分頁含控制目標／活動／預防偵測／人工自動")
@@ -1504,29 +1507,32 @@ check(isTRUE(design_required_check(modifyList(d1, list(
   risk_factor = "密碼管理；使用者帳號管理", risk_name = "密碼管理；使用者帳號管理"
 )))$ok),
       "風險因素複選可通過必填")
-check(grepl('textAreaInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述質性輸入")
+check(grepl('risk_description_select_ui', app_src), "風險辨識含風險描述建議選單")
 check(grepl(
   'risk_area[\\s\\S]{0,500}risk_factor[\\s\\S]{0,500}risk_description',
   app_src, perl = TRUE
 ), "風險因素位於風險範疇與風險描述之間")
-check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*textAreaInput\\(\\s*"risk_description"', app_src, perl = TRUE),
+check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*risk_description_select_ui', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
 check(grepl("風險因素是風險描述上的標記", app_src), "風險因素以 TAG 說明")
-check(grepl('textAreaInput\\(\\s*"control_objective"[\\s\\S]{0,120}rows\\s*=\\s*1', app_src, perl = TRUE) &&
-        grepl('#control_objective \\{ min-height: 2\\.5rem', app_src),
-      "控制目標輸入欄預設一句話高")
-check(grepl('textAreaInput\\(\\s*"risk_description"[\\s\\S]{0,200}rows\\s*=\\s*3', app_src, perl = TRUE) &&
-        grepl('textAreaInput\\(\\s*"control_activity"', app_src),
-      "風險描述與控制活動同為質性 textArea")
-check(grepl('selectizeInput\\(\\s*"risk_factor"[\\s\\S]{0,400}create\\s*=\\s*TRUE', app_src, perl = TRUE),
-      "風險因素可自訂新增")
-check(!grepl("refresh_risk_description_choices", app_src) &&
-        grepl("updateTextAreaInput\\(session, \"risk_description\"", app_src),
-      "風險描述改質性輸入、不以選單刷新覆寫")
+check(grepl('control_objective_select_ui', app_src) &&
+        grepl('#control_objective-selectized', app_src),
+      "控制目標為建議選單（可自訂）")
+check(grepl('risk_description_select_ui', app_src) &&
+        grepl('control_activity_select_ui', app_src),
+      "風險描述與控制活動同為建議選單")
+check(grepl('risk_factor_select_ui', app_src) &&
+        grepl('cascade_selectize_field_options', app_src),
+      "風險因素與子作業相同 renderUI 建議選單")
+check(grepl("refresh_design_suggest_choices", app_src) &&
+        grepl('updateSelectizeInput\\(session, \"risk_description\"', app_src),
+      "風險描述以 renderUI 建議選單、套用時 updateSelectize")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
 check(grepl('significant_account[\\s\\S]*romm_classification', app_src, perl = TRUE),
       "會計科目在 RoMM 分類上方")
+check(!grepl('account_select_all', app_src),
+      "已移除會計科目全部適用按鈕（改為選單互斥選項）")
 check(!grepl("custom_risk_factor|custom_risk_desc|custom_risk_category", app_src),
       "已移除自訂風險獨立輸入（改由風險辨識）")
 check(!grepl('"(risk_attr_kind)"|input\\$risk_attr_kind|updateRadioButtons\\(\\s*session,\\s*"risk_attr_kind"', app_src),

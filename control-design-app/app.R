@@ -1405,7 +1405,9 @@ ui <- page_navbar(
           )
         )
       ),
-      textInput("pbc_notes", NULL, placeholder = "備註"),
+      textAreaInput(
+        "pbc_notes", NULL, rows = 3, width = "100%", placeholder = "備註"
+      ),
       div(
         class = "d-flex gap-1 flex-wrap",
         actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
@@ -3942,7 +3944,7 @@ server <- function(input, output, session) {
       updateSelectInput(session, "pbc_kind", selected = "")
       updateSelectizeInput(session, "pbc_file_format", selected = "")
       updateSelectizeInput(session, "pbc_related", selected = character(0))
-      updateTextInput(session, "pbc_notes", value = "")
+      updateTextAreaInput(session, "pbc_notes", value = "")
       pbc_form_cycle("")
       msg <- if (length(rows) > 1L) {
         sprintf("已登錄 PBC（%d 筆）", length(rows))
@@ -4062,7 +4064,7 @@ server <- function(input, output, session) {
     if (length(extra)) ch_rel <- c(ch_rel, stats::setNames(extra, extra))
     updateSelectizeInput(session, "pbc_related", choices = ch_rel,
                          selected = rel_ids)
-    updateTextInput(session, "pbc_notes", value = row$notes[[1]])
+    updateTextAreaInput(session, "pbc_notes", value = row$notes[[1]])
     updateCheckboxInput(
       session, "pbc_if_exists",
       value = pbc_if_exists_from_notes(row$notes[[1]])

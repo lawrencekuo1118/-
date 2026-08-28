@@ -430,6 +430,28 @@ ui <- page_navbar(
         width: max-content !important;
         min-width: 100%;
       }
+      .pbc-db-card-header .card-header,
+      .pbc-db-card > .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .pbc-db-card-header .card-header .pbc-db-card-title,
+      .pbc-db-card > .card-header .pbc-db-card-title {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .pbc-db-card-header .card-header .pbc-export-btn,
+      .pbc-db-card > .card-header .pbc-export-btn {
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
+      .pbc-db-card-header .card-header .pbc-export-btn .btn,
+      .pbc-db-card > .card-header .pbc-export-btn .btn {
+        white-space: nowrap;
+      }
       .pbc-status-footer {
         padding: 0.75rem 0 0.25rem;
         border-top: 1px solid rgba(0, 91, 170, 0.12);
@@ -1336,16 +1358,23 @@ ui <- page_navbar(
   nav_panel(
     "PBC資料庫",
     card(
-      card_header("PBC資料庫"),
+      class = "pbc-db-card",
+      card_header(
+        class = "pbc-db-card-header",
+        tags$span(class = "pbc-db-card-title", "PBC資料庫"),
+        tags$div(
+          class = "pbc-export-btn",
+          downloadButton(
+            "download_pbc_samples", "匯出樣本需求清單.xlsx",
+            class = "btn-sm btn-success"
+          )
+        )
+      ),
       div(
         class = "d-flex gap-2 flex-wrap align-items-center mb-2",
         checkboxInput(
           "pbc_filter_by_cycle", "僅顯示側邊欄循環",
           value = TRUE, width = "auto"
-        ),
-        downloadButton(
-          "download_pbc_samples", "匯出樣本需求清單.xlsx",
-          class = "btn-sm btn-success"
         ),
         tags$span(
           class = "small text-muted",

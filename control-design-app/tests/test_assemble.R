@@ -714,10 +714,12 @@ check(grepl('checkboxInput\\("pbc_if_exists", "如果存在"', app_src_pbc, fixe
         grepl("pbc-spec-row", app_src_pbc, fixed = TRUE),
       "PBC 規格說明旁含如果存在勾選框")
 check(grepl("download_pbc_samples", app_src_pbc, fixed = TRUE) &&
+        grepl("pbc-export-btn", app_src_pbc, fixed = TRUE) &&
+        grepl('card_header[\\s\\S]{0,280}download_pbc_samples', pbc_panel, perl = TRUE) &&
         grepl('selection = "multiple"', app_src_pbc, fixed = TRUE) &&
         grepl("pbc_filter_by_cycle", app_src_pbc, fixed = TRUE) &&
         grepl("write_pbc_sample_xlsx", app_src_pbc, fixed = TRUE),
-      "PBC 總表支援複選匯出樣本需求 xlsx")
+      "PBC 總表支援複選匯出樣本需求 xlsx（按鈕在區塊右上角）")
 check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
       "PBC 規格說明在證據類型／文件格式上方")
 check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&

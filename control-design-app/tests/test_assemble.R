@@ -1511,10 +1511,12 @@ check(grepl(
 check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*textAreaInput\\(\\s*"risk_description"', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
 check(grepl("風險因素是風險描述上的標記", app_src), "風險因素以 TAG 說明")
+check(grepl('textAreaInput\\(\\s*"control_objective"[\\s\\S]{0,120}rows\\s*=\\s*1', app_src, perl = TRUE) &&
+        grepl('#control_objective \\{ min-height: 2\\.5rem', app_src),
+      "控制目標輸入欄預設一句話高")
 check(grepl('textAreaInput\\(\\s*"risk_description"[\\s\\S]{0,200}rows\\s*=\\s*3', app_src, perl = TRUE) &&
-        grepl('textAreaInput\\(\\s*"control_objective"', app_src) &&
         grepl('textAreaInput\\(\\s*"control_activity"', app_src),
-      "風險描述與控制目標／活動同為質性 textArea")
+      "風險描述與控制活動同為質性 textArea")
 check(grepl('selectizeInput\\(\\s*"risk_factor"[\\s\\S]{0,400}create\\s*=\\s*TRUE', app_src, perl = TRUE),
       "風險因素可自訂新增")
 check(!grepl("refresh_risk_description_choices", app_src) &&

@@ -576,7 +576,7 @@ ui <- page_navbar(
         align-items: start;
       }
       .objective-assertions-row .shiny-input-container { margin-bottom: 0.35rem; }
-      #control_objective { min-height: 7.5rem; resize: vertical; }
+      #control_objective { min-height: 2.5rem; resize: vertical; }
       #control_activity { min-height: 5.5rem; resize: vertical; }
       #risk_description { min-height: 5.5rem; resize: vertical; }
       .objective-assertions-row .selectize-control { min-height: 2.5rem; }
@@ -1083,7 +1083,7 @@ ui <- page_navbar(
               uiOutput("assertions_hint")
             ),
             textAreaInput(
-              "control_objective", lab_req("控制目標"), rows = 4, width = "100%",
+              "control_objective", lab_req("控制目標"), rows = 1, width = "100%",
               placeholder = "Why：欲達成之控制結果（非執行步驟）"
             ),
             textAreaInput(

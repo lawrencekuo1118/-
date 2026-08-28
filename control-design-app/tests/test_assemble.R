@@ -399,7 +399,7 @@ reg_iv <- upsert_pbc(reg_iv, list(
 ))
 iv_pbc <- control_to_interview(
   d1, elements = c("iuc"), modules = c("what"),
-  pbc_reg = reg_iv, pbc_ids = reg_iv$pbc_id[[1]],
+  pbc_reg = reg_iv,
   include_module_rows = TRUE
 )
 check(any(grepl("客戶權限報表|使用者權限清冊", iv_pbc[["建議串接PBC"]])),
@@ -460,8 +460,9 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl('design-preview-drawer[\\s\\S]*interviewPreviewCollapse[\\s\\S]*interview_table', interview_panel, perl = TRUE) &&
         grepl("預覽列（訪談題綱）— 點擊展開或收回", interview_panel, fixed = TRUE),
       "訪談預覽列改為正下方收合抽屜（同風險控制點設計）")
-check(grepl("套用 IUC／PBC 命名", app_txt),
-      "訪談 5W1H／PBC 區標籤對齊風險控制點設計 PBC 套用")
+check(!grepl("interview_pbc_link", app_txt) &&
+        !grepl("套用 IUC／PBC 命名", app_txt),
+      "訪談設計改由控制點 IUC／PBC 欄位直接串接，無獨立套用區")
 check(!grepl("interview_source", app_txt) &&
         !grepl("① 題綱來源", app_txt) &&
         !grepl("已定稿 RCM（實際設計列）", app_txt) &&
@@ -753,10 +754,12 @@ check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
       "PBC資料庫表可左右捲動（scroll-wrap + autoWidth）")
 check(grepl("pbc-status-footer", app_src_pbc, fixed = TRUE) &&
         grepl('uiOutput\\("pbc_walkthrough_box"\\)\\s*\\)\\s*,\\s*card\\(\\s*card_header\\("PBC增列設定"', pbc_panel, perl = TRUE) &&
-        grepl('checkboxInput\\("pbc_also_inputs"[\\s\\S]*pbc-status-footer[\\s\\S]*pbc_all_status', pbc_panel, perl = TRUE) &&
+        grepl('pbc-status-footer[\\s\\S]*pbc_all_status', pbc_panel, perl = TRUE) &&
         grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse"', pbc_panel, perl = TRUE) &&
-        !grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse show"', pbc_panel, perl = TRUE),
-      "PBC 命名對照列表置於分頁最下方且預設收合")
+        !grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse show"', pbc_panel, perl = TRUE) &&
+        !grepl("pbc_apply", app_src_pbc) &&
+        !grepl("pbc_also_inputs", app_src_pbc),
+      "PBC 命名對照列表置於分頁最下方且預設收合；已移除套用區")
 check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),
@@ -1267,10 +1270,10 @@ check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
 check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
 check(grepl('seed_if_missing_cycle\\("電腦化資訊系統循環"', app_src) &&
-        grepl('ch_iuc_all <- pbc_non_policy_choices\\(reg, cycle_filter = NULL\\)', app_src) &&
-        grepl('update_selectize\\("pbc_apply", ch_iuc_all\\)', app_src) &&
+        grepl('ch_pbc_design <- pbc_choices\\(reg, cycle_filter = cf_design\\)', app_src) &&
+        grepl('update_selectize\\("inputs", ch_pbc_design\\)', app_src) &&
         grepl("PBC 資料庫可直接查閱", app_src, fixed = TRUE),
-      "PBC資料庫不等待循環別即可顯示／選取")
+      "PBC資料庫不等待循環別即可顯示；設計／測試頁 Inputs 等欄位直接選 PBC")
 check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|nav_panel\\([\\s\\S]{0,80}"① 基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
       "基礎設定分頁內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")
@@ -1485,10 +1488,12 @@ check(length(gregexpr("整體設計流程", app_src, fixed = TRUE)[[1]]) == 1 &&
           !grepl("各頁籤用途", other_chunk, fixed = TRUE),
         "其他頁籤不含整體設計流程／各頁籤用途")
 }
-check(grepl("pbc_apply_to_design", app_src) &&
-        grepl('nav_panel\\(\\s*"PBC資料庫"', app_src) &&
-        !grepl('nav_panel\\([\\s\\S]*"③ 控制設計"[\\s\\S]{0,1200}pbc_apply', app_src, perl = TRUE),
-      "套用 IUC／PBC 命名改在 PBC資料庫")
+check(!grepl("pbc_apply_to_design", app_src) &&
+        !grepl("pbc_apply", app_src) &&
+        grepl('selectizeInput\\(\\s*"inputs"', app_src) &&
+        grepl('update_selectize\\("iuc"', app_src) &&
+        grepl('update_selectize\\("related_document_pbc"', app_src),
+      "各設計頁對應欄位直接選 PBC；PBC 頁已移除套用區")
 check(grepl("missing_by_group", app_src) &&
         grepl("DESIGN_ACCORDION_SECTIONS", app_src) &&
         grepl("必填未齊（依表單分組）", app_src) &&

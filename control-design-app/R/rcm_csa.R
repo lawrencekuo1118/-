@@ -970,20 +970,16 @@ interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
   probes[mods]
 }
 
-suggest_interview_pbc <- function(ctrl, pbc_reg = NULL, pbc_ids = NULL) {
-  linked <- ""
-  if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && length(pbc_ids)) {
-    linked <- tryCatch(format_pbc_for_inputs(pbc_reg, pbc_ids), error = function(e) "")
-  }
+suggest_interview_pbc <- function(ctrl, pbc_reg = NULL) {
   iuc <- trimws(as.character(ctrl_iuc_value(ctrl)))
   inputs <- trimws(as.character(ctrl$inputs %||% ""))
   outp <- trimws(as.character(ctrl$related_document %||% ctrl$outputs %||% ""))
   base <- unique(c(iuc, inputs, outp))
   base <- base[nzchar(base)]
-  if (!length(base) && !nzchar(trimws(linked))) return("（待對照 PBC 資料庫）")
-  label <- if (length(base)) paste(base, collapse = "；") else ""
+  if (!length(base)) return("（待對照 PBC 資料庫）")
+  label <- paste(base, collapse = "；")
   hits <- character()
-  if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && nrow(pbc_reg) && length(base)) {
+  if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && nrow(pbc_reg)) {
     for (nm in base) {
       rows <- pbc_reg[
         grepl(nm, as.character(pbc_reg$reviewed_name %||% ""), fixed = TRUE) |
@@ -1001,7 +997,7 @@ suggest_interview_pbc <- function(ctrl, pbc_reg = NULL, pbc_ids = NULL) {
       }
     }
   }
-  parts <- unique(c(label, hits, if (nzchar(trimws(linked))) linked else character()))
+  parts <- unique(c(label, hits))
   parts <- parts[nzchar(parts)]
   if (!length(parts)) "（待對照 PBC 資料庫）" else paste(parts, collapse = "｜")
 }
@@ -1260,14 +1256,13 @@ interview_preview_df <- function(df) {
 control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
                                  modules = DEFAULT_INTERVIEW_5W1H,
                                  pbc_reg = NULL,
-                                 pbc_ids = NULL,
                                  include_module_rows = TRUE) {
   bank <- interview_element_bank(ctrl, modules = modules)
   elements <- intersect(as.character(elements %||% character()), names(bank))
   mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
   cid <- derive_control_id(ctrl, 1L)
   scaffold <- interview_answer_scaffold(mods)
-  pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg, pbc_ids = pbc_ids)
+  pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg)
   meta <- list(
     `控制編號` = cid,
     `循環` = ctrl$cycle %||% "",
@@ -1347,7 +1342,6 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
                                   finalized_only = TRUE,
                                   modules = DEFAULT_INTERVIEW_5W1H,
                                   pbc_reg = NULL,
-                                  pbc_ids = NULL,
                                   include_module_rows = TRUE) {
   if (!length(controls)) return(empty_interview_df())
   if (isTRUE(finalized_only)) {
@@ -1356,7 +1350,7 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
   if (!length(controls)) return(empty_interview_df())
   do.call(rbind, lapply(controls, control_to_interview,
                         elements = elements, modules = modules,
-                        pbc_reg = pbc_reg, pbc_ids = pbc_ids,
+                        pbc_reg = pbc_reg,
                         include_module_rows = include_module_rows))
 }
 

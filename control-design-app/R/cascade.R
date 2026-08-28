@@ -693,7 +693,10 @@ apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   if (nzchar(ctrl$type %||% "")) {
     updateSelectizeInput(session, "type", selected = ctrl$type)
   }
-  updateTextAreaInput(session, "inputs", value = ctrl$inputs %||% "")
+  updateSelectizeInput(
+    session, "inputs",
+    selected = expand_pbc_selection(ctrl$inputs %||% "", pbc_registry)
+  )
   updateTextAreaInput(session, "review_steps", value = ctrl$review_steps %||% "")
   updateTextAreaInput(session, "outputs", value = ctrl$outputs %||% ctrl$related_document %||% "")
   updateTextAreaInput(session, "investigation_threshold", value = ctrl$investigation_threshold %||% "")

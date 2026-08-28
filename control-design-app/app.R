@@ -935,11 +935,6 @@ ui <- page_navbar(
             "interview_include_modules",
             "將勾選之 5W1H 模組展開為獨立探針題",
             value = TRUE
-          ),
-          selectizeInput(
-            "interview_pbc_link", "套用 IUC／PBC 命名",
-            choices = NULL, multiple = TRUE,
-            options = list(placeholder = "原名→新名")
           )
         )
       ),
@@ -1289,7 +1284,15 @@ ui <- page_navbar(
       tags$strong(class = "small", "此情境組之測試步驟（Form 4120SR）"),
       selectizeInput("type", "Type", choices = TYPE_CHOICES,
                      options = list(create = TRUE, placeholder = "Form 4120SR Type")),
-      textAreaInput("inputs", "Inputs", rows = 2, placeholder = "測試投入／證據來源"),
+      selectizeInput(
+        "inputs", "Inputs", choices = NULL, multiple = TRUE, width = "100%",
+        options = list(
+          create = TRUE,
+          createOnBlur = TRUE,
+          placeholder = "測試投入／證據來源；自 PBC 選取或手動輸入",
+          plugins = list("remove_button")
+        )
+      ),
       textAreaInput("review_steps", "Steps", rows = 4, placeholder = "測試步驟（每行一步）"),
       textAreaInput("outputs", "Outputs", rows = 2, placeholder = "預期產出／文件"),
       textAreaInput("investigation_threshold", "調查門檻", rows = 1, placeholder = "調查門檻")
@@ -1411,21 +1414,10 @@ ui <- page_navbar(
       div(
         class = "d-flex gap-1 flex-wrap",
         actionButton("pbc_add", "登錄", class = "btn-primary btn-sm"),
-        actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm"),
-        actionButton("pbc_apply_to_design", "套用至控制設計",
-                     class = "btn-sm btn-outline-success")
+        actionButton("pbc_delete", "刪除", class = "btn-outline-danger btn-sm")
       ),
       fileInput("upload_pbc", NULL, buttonLabel = "匯入 CSV／Excel",
-                accept = c(".csv", ".xlsx", ".xls")),
-      tags$hr(),
-      tags$div(class = "small fw-bold mb-1", "套用 IUC／PBC 命名"),
-      p(class = "small text-muted mb-2",
-        "將命名對照套用至「風險控制點設計」：非政策制度 → IUC；政策制度 → 相關政策與制度。"),
-      selectizeInput(
-        "pbc_apply", NULL, choices = NULL, multiple = TRUE,
-        options = list(placeholder = "原名→新名")
-      ),
-      checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
+                accept = c(".csv", ".xlsx", ".xls"))
     ),
     tags$div(
       class = "pbc-status-footer design-preview-drawer mt-3",
@@ -2358,9 +2350,9 @@ server <- function(input, output, session) {
     reg <- isolate(pbc_reg())
     cf_design <- if (nzchar(cy)) cy else NULL
     # PBC 資料庫頁：不因側邊欄循環縮限選項／表格
-    ch_iuc_all <- pbc_non_policy_choices(reg, cycle_filter = NULL)
     ch_iuc_design <- pbc_non_policy_choices(reg, cycle_filter = cf_design)
     ch_policy_design <- pbc_policy_choices(reg, cycle_filter = cf_design)
+    ch_pbc_design <- pbc_choices(reg, cycle_filter = cf_design)
     merge_selected <- function(cur, ch) {
       cur <- parse_text_list_values(cur)
       if (!length(cur)) return(cur)
@@ -2378,11 +2370,10 @@ server <- function(input, output, session) {
       pbc_choices_cache[[cache_key]] <- list(ch = ch, sel = cur)
       updateSelectizeInput(session, input_id, choices = ch, server = TRUE, selected = cur)
     }
-    update_selectize("pbc_apply", ch_iuc_all)
-    update_selectize("interview_pbc_link", ch_iuc_design)
     update_selectize("related_document_pbc", ch_iuc_design)
     update_selectize("iuc", ch_iuc_design)
     update_selectize("related_policy", ch_policy_design)
+    update_selectize("inputs", ch_pbc_design)
     # 勾稽選單：排除目前編輯中的 ID
     excl <- trimws(isolate(input$pbc_id %||% ""))
     ch_rel <- pbc_related_link_choices(reg, exclude_id = excl)
@@ -2422,13 +2413,11 @@ server <- function(input, output, session) {
     cs <- filter_interview_controls_by_risk(cs, input$interview_risk_pick %||% character())
     cs <- filter_interview_controls_by_ids(cs, input$interview_control_pick %||% character())
     mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
-    pbc_ids <- input$interview_pbc_link %||% character()
     controls_to_interview(
       cs, input$interview_elements,
       finalized_only = FALSE,
       modules = mods,
       pbc_reg = pbc_reg(),
-      pbc_ids = pbc_ids,
       include_module_rows = isTRUE(input$interview_include_modules %||% TRUE)
     )
   }
@@ -2439,12 +2428,9 @@ server <- function(input, output, session) {
       return(tags$div(class = "alert alert-warning py-1 mb-2 small", "尚未勾選 5W1H 模組。"))
     }
     sc <- interview_answer_scaffold(mods)
-    n_pbc <- length(input$interview_pbc_link %||% character())
     tags$div(
       class = "small border rounded p-2 mb-2 bg-light",
-      tags$strong("5W1H 預覽："), sc,
-      if (n_pbc > 0) tags$div(class = "text-muted mt-1",
-                              sprintf("已套用 PBC %d 筆。", n_pbc))
+      tags$strong("5W1H 預覽："), sc
     )
   })
 
@@ -2476,9 +2462,8 @@ server <- function(input, output, session) {
     tags$div(
       class = "mb-2",
       tags$div(class = "small text-muted",
-               sprintf("題綱列數：%d｜5W1H 模組：%d｜PBC：%d",
-                       nrow(iv), length(mods),
-                       length(input$interview_pbc_link %||% character()))),
+               sprintf("題綱列數：%d｜5W1H 模組：%d",
+                       nrow(iv), length(mods))),
       tags$div(class = "small text-muted",
                "每題答案鏈：以何頻率 → 誰取得什麼文件或資訊(IUC) → 做什麼 → 下一步")
     )
@@ -2685,51 +2670,6 @@ server <- function(input, output, session) {
 
   # 啟動時循環維持未選（selectInput 預設已是 ""）；勿再延遲 updateSelectInput 清空，
   # 否則會與使用者剛選的循環競態，把選單／循環編號沖掉。
-
-  observeEvent(input$pbc_apply_to_design, {
-    ids <- input$pbc_apply %||% character()
-    if (!length(ids)) {
-      return(showNotification("請先選擇要套用的 PBC 命名", type = "warning"))
-    }
-    reg <- pbc_reg()
-    rows <- lookup_pbc(reg, ids)
-    if (!nrow(rows)) {
-      return(showNotification("找不到所選 PBC 項目", type = "warning"))
-    }
-    is_policy <- vapply(rows$pbc_kind, is_pbc_policy_kind, logical(1))
-    policy_ids <- rows$pbc_id[is_policy]
-    iuc_ids <- rows$pbc_id[!is_policy]
-    if (length(policy_ids) && length(iuc_ids)) {
-      return(showNotification(
-        "請分次套用：政策制度與其他證據類型不可同批套用。",
-        type = "warning", duration = 6
-      ))
-    }
-    if (length(policy_ids)) {
-      cur_pol <- parse_text_list_values(input$related_policy)
-      updateSelectizeInput(
-        session, "related_policy",
-        selected = unique(c(cur_pol, policy_ids))
-      )
-      showNotification("已套用 PBC 至「相關政策與制度」", type = "message")
-      return(invisible(NULL))
-    }
-    cur_iuc <- parse_text_list_values(input$iuc)
-    updateSelectizeInput(
-      session, "iuc",
-      selected = unique(c(cur_iuc, ids))
-    )
-    if (isTRUE(input$pbc_also_inputs)) {
-      mapped <- format_pbc_for_inputs(pbc_reg(), ids)
-      cur <- trimws(input$inputs %||% "")
-      if (grepl("【IUC／PBC 命名對照】", cur, fixed = TRUE)) {
-        cur <- trimws(sub("【IUC／PBC 命名對照】[\\s\\S]*$", "", cur))
-      }
-      new_inputs <- if (nzchar(cur)) paste(cur, mapped, sep = "\n") else mapped
-      updateTextAreaInput(session, "inputs", value = new_inputs)
-    }
-    showNotification("已套用 PBC 命名至控制設計 IUC", type = "message")
-  })
 
   output$pbc_all_status <- renderText({
     lines <- format_pbc_status_lines(pbc_reg())
@@ -3304,7 +3244,7 @@ server <- function(input, output, session) {
       control_type = nature,
       control_activity_type = approach,
       type = input$type %||% "",
-      inputs = input$inputs %||% "",
+      inputs = resolve_multi_pbc_text(input$inputs %||% character(), pbc_reg()),
       review_steps = input$review_steps %||% "",
       outputs = {
         out <- trimws(input$outputs %||% "")
@@ -4165,7 +4105,10 @@ server <- function(input, output, session) {
     if (nzchar(trimws(sc$type %||% ""))) {
       updateSelectizeInput(session, "type", selected = sc$type)
     }
-    updateTextAreaInput(session, "inputs", value = sc$inputs %||% "")
+    updateSelectizeInput(
+      session, "inputs",
+      selected = expand_pbc_selection(sc$inputs %||% "", isolate(pbc_reg()))
+    )
     updateTextAreaInput(session, "review_steps", value = sc$review_steps %||% "")
     updateTextAreaInput(session, "outputs", value = sc$outputs %||% "")
     updateTextAreaInput(session, "investigation_threshold",
@@ -4227,7 +4170,7 @@ server <- function(input, output, session) {
       scenario_name = input$csa_scenario_name %||% "",
       company_status = input$csa_scenario_status %||% "",
       type = input$type %||% "",
-      inputs = input$inputs %||% "",
+      inputs = resolve_multi_pbc_text(input$inputs %||% character(), pbc_reg()),
       review_steps = input$review_steps %||% "",
       outputs = input$outputs %||% "",
       investigation_threshold = input$investigation_threshold %||% "",
@@ -4329,7 +4272,6 @@ server <- function(input, output, session) {
     interview_sub_ui_state$cycle <- NULL
     updateSelectizeInput(session, "interview_risk_pick", selected = character())
     updateSelectizeInput(session, "interview_control_pick", selected = character())
-    updateSelectizeInput(session, "interview_pbc_link", selected = character())
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
     updateCheckboxInput(session, "interview_include_modules", value = TRUE)

@@ -1218,11 +1218,14 @@ check(grepl("範本套用", app_src) && grepl("未套用範本", app_src) &&
         !grepl("從範本庫套用（可跳過）", app_src) &&
         grepl("lib-apply-card", app_src),
       "範本庫頁籤含可跳過套用設定（無重疊舊標題）")
-check(!grepl('actionButton\\(\\s*"csa_scenario_dup"', app_src) &&
-        !grepl('actionButton\\(\\s*"save_to_lib"', app_src) &&
-        !grepl('actionButton\\(\\s*"lib_add_selected_control"', app_src) &&
-        !grepl('actionButton\\(\\s*"import_jinglian_seed"', app_src),
-      "設計區塊按鈕精簡（每區至多三個）")
+check(!grepl('gate\\("save_custom_cascade"', app_src) &&
+        !grepl('gate\\("oa_swap"', app_src) &&
+        !grepl('gate\\("oa_split_suggest"', app_src) &&
+        !grepl('gate\\("csa_scenario_dup"', app_src) &&
+        !grepl('gate\\("save_to_lib"', app_src) &&
+        !grepl('gate\\("lib_add_selected_control"', app_src) &&
+        !grepl('gate\\("import_jinglian_seed"', app_src),
+      "已移除無 UI 按鈕的遺留 gate")
 check(grepl("overflow: visible !important", app_src) &&
         grepl("max-height: none !important", app_src),
       "區塊一次顯示全部內容（無區塊內上下滑動）")

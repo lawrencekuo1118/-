@@ -4115,17 +4115,9 @@ server <- function(input, output, session) {
       input$risk_category %||% sel$risk_category %||% ""
     ))
     reporting <- is_reporting_risk_category(risk_cat)
-    both_custom <- identical(input$cascade_objective, "__custom__") &&
-      identical(input$cascade_activity, "__custom__")
-    has_custom_oa <- nzchar(trimws(input$custom_objective %||% "")) ||
-      nzchar(trimws(input$custom_activity %||% ""))
-    has_sel_oa <- nzchar(trimws(sel$control_objective %||% "")) &&
-      nzchar(trimws(sel$control_activity %||% ""))
-    approach_ok <- isTRUE(tryCatch(activity_type_ok(sel$approach), error = function(e) FALSE))
 
     lib_picked <- nzchar(trimws(input$lib_pick %||% ""))
     lib_row <- length(input$lib_table_rows_selected %||% integer()) > 0
-    ctrl_row <- length(input$control_table_rows_selected %||% integer()) > 0
     param_row <- length(input$param_table_rows_selected %||% integer()) > 0
     pbc_row <- length(input$pbc_table_rows_selected %||% integer()) > 0
     n_lib <- length(lib())
@@ -4133,7 +4125,6 @@ server <- function(input, output, session) {
     n_ready <- length(Filter(function(c) {
       isTRUE((c$rcm_ready$ready %||% is_rcm_row_ready(c)$ready))
     }, controls()))
-    n_fin <- length(Filter(is_control_finalized_for_rcm, controls()))
     csa_ctrl <- tryCatch(csa_edit_ctrl(), error = function(e) NULL)
     has_csa_ctrl <- !is.null(csa_ctrl)
     n_csa_sc <- if (has_csa_ctrl) length(csa_ctrl$csa_scenarios %||% list()) else 0L
@@ -4162,20 +4153,12 @@ server <- function(input, output, session) {
     gate("finalize_rcm_row", can_finalize,
          "需完成引導②～⑥且設計必填／目標活動分欄通過後才可定稿")
     gate("collect_ready_to_lib", admin, "需高權登入後才可累積範本庫")
-    gate("save_custom_cascade", admin && has_sel_oa && approach_ok,
-         if (!admin) "需高權登入"
-         else if (!has_sel_oa) "需具備控制目標與控制活動"
-         else "自訂活動須指定單一預防／偵測")
     gate("account_select_all", reporting, "僅報導面可選會計科目")
-    gate("oa_swap", both_custom, "請於引導④⑤皆選「自訂新增」後再對調")
-    gate("oa_split_suggest", both_custom || has_custom_oa || has_sel_oa,
-         "請先有控制目標／活動內容")
 
     # 控制點測試設計（CSA）
     gate("csa_scenario_add", has_csa_ctrl, "請先選擇已定版控制點")
     gate("csa_scenario_save", has_csa_ctrl && csa_name_ok,
          if (!has_csa_ctrl) "請先選擇已定版控制點" else "請填寫控制現況情境名稱")
-    gate("csa_scenario_dup", has_csa_ctrl, "請先選擇已定版控制點")
     gate("csa_scenario_del", has_csa_ctrl && n_csa_sc > 1L,
          if (!has_csa_ctrl) "請先選擇已定版控制點"
          else "至少保留一組情境（目前無可刪）")
@@ -4185,13 +4168,9 @@ server <- function(input, output, session) {
     gate("apply_lib_selected_row", lib_row, "請先在表格選取一列範本")
     gate("lib_delete", admin && lib_row,
          if (!admin) "需高權登入" else "請選取範本列")
-    gate("save_to_lib", admin, "需高權登入")
     gate("lib_add_current", admin, "需高權登入")
-    gate("lib_add_selected_control", admin && ctrl_row,
-         if (!admin) "需高權登入" else "請先在設計頁選取控制點")
     gate("lib_add_all_ready", admin && n_ready > 0L,
          if (!admin) "需高權登入" else "尚無 RCM 就緒控制點")
-    gate("import_jinglian_seed", admin, "需高權登入")
     gate("admin_lib_load_row", admin && lib_row,
          if (!admin) "需高權登入" else "請先選取範本列")
     gate("admin_lib_save_fields", admin && admin_lib_id,

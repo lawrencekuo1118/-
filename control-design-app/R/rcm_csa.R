@@ -1,11 +1,7 @@
 # RCM / CSA / interview + gap detection
-# RCM: 控制目標(Why) 與 控制活動(How) 嚴格分欄防呆
-# 完成一筆控制點設計 = 完成 RCM 一列（設計欄位；現況／分析評估留空）
+# RCM: 控制目標(Why) 與 控制活動(How) 分欄；定稿＝一列 RCM
 
 # ---- Selectable design elements ----
-# Three workflow tabs: 訪談問項設計 → 風險控制點設計 → 控制點測試設計
-# Priority: 風險控制點設計（RCM 列）→ 訪談問項 → 控制點測試
-# Supporting: 範本庫／參數庫（側邊欄）｜標題列僅 RCM → PBC資料庫
 DESIGN_ELEMENTS <- c(
   risk = "循環／風險",
   risk_attributes = "風險三大屬性／類別",
@@ -189,13 +185,7 @@ resolve_control_frequency <- function(nature, frequency) {
   trimws(as.character(frequency %||% ""))
 }
 
-# ---------------------------------------------------------------------------
-# 控制測試抽樣（CSA）— PCAOB AS 2301／AS 2315 ＋ Deloitte 頻率對應表
-# ---------------------------------------------------------------------------
-# PCAOB：測試性質／時間／範圍須回應 RoMM（AS 2301）；屬性抽樣樣本數考量
-# 可容忍偏差、預期偏差與過度依賴風險，控制發生頻率決定期間內母體（AS 2315）。
-# Deloitte 實務（營運有效性、預期偏差≈0、計畫依賴）：以控制頻率對應最低樣本數；
-# Higher RoMM／Fraud／估計高風險時上調。
+# 控制測試抽樣：PCAOB AS 2301／2315 ＋ Deloitte 頻率表（Higher RoMM／Fraud 上調）
 
 CONTROL_TEST_SAMPLE_BASE <- c(
   "每年" = 1L,
@@ -337,9 +327,7 @@ is_control_finalized_for_rcm <- function(ctrl) {
   isTRUE(ctrl$rcm_ready$ready) || isTRUE(is_rcm_row_ready(ctrl)$ready)
 }
 
-# ---------------------------------------------------------------------------
-# CSA 多情境組：同一控制點可因不同「控制現況情境」擁有多組測試步驟
-# ---------------------------------------------------------------------------
+# CSA 多情境組（同一控制點 × 不同控制現況）
 new_csa_scenario <- function(scenario_name = "預設現況",
                              company_status = "",
                              type = "",
@@ -1365,9 +1353,7 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
                         include_module_rows = include_module_rows))
 }
 
-# ---- CSA test-step worksheet (Phase-2: after interview + RCM) ----
-# Not only self-check slogans: concrete test procedures, evidence, expected result
-# Same control may expand to multiple scenario groups (不同控制現況情境 → 多組測試步驟)
+# CSA rows: procedures / evidence / expected result；依情境組展開
 control_to_csa_one <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS,
                                scenario_seq = 1L,
                                scenario_name = "預設現況",
@@ -1569,9 +1555,7 @@ controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
   do.call(rbind, lapply(controls, control_to_csa, elements = elements))
 }
 
-# ---- 設計必填欄位（對齊鯨鏈 RCM 核心欄；定稿＝RCM 一列前置）----
-# 選填：控制設計差異／相關政策法令文件／有效性評估／4120SR 進階欄
-# 會計科目：僅風險類別＝報導面時必填；其餘類別鎖定不可填
+# ---- 設計必填欄位 ----
 DESIGN_REQUIRED_FIELDS <- c(
   cycle = "循環名稱",
   sub_process = "子作業名稱",
@@ -1638,15 +1622,13 @@ group_design_required_missing <- function(missing_labels) {
 }
 
 DESIGN_OPTIONAL_FIELDS <- c(
-  significant_account = "會計科目（僅報導面必填；常見科目複選／全部適用；其他類別不可填）",
-  related_law = "相關法規（僅遵循面必填；其他類別不可填）",
-  assertions = "控制聲明（報導面八種／營運面三種可複選；遵循面不可選）",
+  significant_account = "會計科目",
+  related_law = "相關法規",
+  assertions = "控制聲明",
   related_policy = "相關政策與制度",
-  related_system = "相關系統（IT／應用系統；自動控制必填）",
+  related_system = "相關系統",
   related_documents = "相關文件",
-  related_document_pbc = paste0(
-    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 資料庫選取或手動輸入；自動控制／遵循面不可填）"
-  )
+  related_document_pbc = CONTROL_EVIDENCE_DOCUMENT_LABEL
 )
 
 is_automatic_control <- function(nature) {

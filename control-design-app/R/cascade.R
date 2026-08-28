@@ -1,8 +1,6 @@
-# Guided cascade: cycle → 子作業 → 風險 → 目標 → 活動(單一預防/偵測) → IUC
-# Company status unlocks only after cascade is complete.
-# 「六大控制項目」規則：組裝現況描述前必須就緒的設計要素。
+# Guided cascade: cycle → 子作業 → 風險 → 目標 → 活動 → IUC
 
-# 六大控制項目（現況書寫前置規則）
+# 六大控制項目（現況書寫前置）
 SIX_CONTROL_STATUS_RULES <- c(
   control_objective = "控制目標",
   control_activity = "控制活動",
@@ -16,9 +14,7 @@ SIX_CONTROL_STATUS_RULES <- c(
     "相關文件-控制用文件"
   }
 )
-# Note: objective+activity are cascade-selected; the six operational items for
-# status scaffolding are nature/approach/frequency/owner/IUC + steps derived from activity.
-# User-facing「六大」bundle used for status template gates:
+# 狀態閘門用六大（不含控制目標）
 SIX_STATUS_GATE_FIELDS <- c(
   "nature", "approach", "frequency", "responsible_unit", "iuc_or_system", "control_activity"
 )

@@ -823,27 +823,22 @@ ui <- page_navbar(
     div(
       class = "home-hero",
       tags$h2("尬電SOX"),
-      p("輔助快速且精準設計標準內部控制點，產出 RCM、訪談題綱與自我評估（CSA）測試步驟。")
+      p("輔助設計標準內部控制點，產出 RCM、訪談題綱與 CSA 測試步驟。")
     ),
     card(
       class = "home-section",
       card_header("整體設計流程"),
       tags$ol(
         class = "home-steps mb-0",
-        tags$li(tags$strong("側邊欄"), "設定", strong("循環"), "與公司名稱；循環選定後各頁共用。"),
+        tags$li(tags$strong("側邊欄"), "：循環／公司名稱。"),
         tags$li(tags$strong("風險控制點設計"), "：",
-                tags$span(class = "text-danger", "須先選側邊欄循環"),
-                "，於表單填寫 ",
                 strong("基礎設定 → 風險辨識 → 控制設計"),
-                " 三個分頁籤依序填寫（子作業、風險、控制目標／活動、IUC 等；",
-                tags$span(class = "text-danger", "*"), " 為設計必填）。"),
-        tags$li("可自 ", strong("範本庫"), " 或 ", strong("參數庫"), " 套用欄位，再覆寫調整。"),
-        tags$li(strong("完成設計＝寫入 RCM 一列"),
-                "（1 控制點 ↔ 1 RCM 列；控制編號如 EC-101-01）。"),
-        tags$li(tags$strong("訪談問項設計"),
-                "：依循環／子作業深挖預期風險與預期控制目標／活動，以 5W1H（人事時地物）了解內控實際執行現況，並可串接 PBC。"),
-        tags$li(tags$strong("控制點測試設計"),
-                "：填寫 Form 4120SR Inputs／Steps／Outputs，並產製 CSA 測試程序／PBC／預期結果。")
+                "（須依序；", tags$span(class = "text-danger", "*"), " 為必填）。"),
+        tags$li(strong("完成設計＝寫入 RCM 一列"), "（1 控制點 ↔ 1 RCM 列）。"),
+        tags$li(tags$strong("訪談問項設計"), "／", tags$strong("控制點測試設計"),
+                "：對齊已定稿 RCM。"),
+        tags$li(tags$strong("PBC／RCM"), "檢視匯出；需要時再開",
+                tags$strong("範本庫"), "／", tags$strong("參數庫"), "。")
       )
     ),
     card(
@@ -851,27 +846,13 @@ ui <- page_navbar(
       card_header("各頁籤用途"),
       div(
         class = "home-tabs-grid",
-        div(class = "home-tab-card",
-            strong("訪談問項設計"),
-            "依側邊欄循環選子作業 → 預期風險／目標／活動 → 5W1H 題綱（可串 PBC）。"),
-        div(class = "home-tab-card",
-            strong("風險控制點設計"),
-            "依側邊欄循環於分頁籤填寫基礎設定、風險辨識、控制設計；定稿寫入 RCM。"),
-        div(class = "home-tab-card",
-            strong("控制點測試設計"),
-            "CSA 測試步驟與 Form 4120SR Type／Inputs／Steps／Outputs／調查門檻。"),
-        div(class = "home-tab-card",
-            strong("RCM"),
-            "檢視／下載已定稿 RCM 列與缺漏表。"),
-        div(class = "home-tab-card",
-            strong("PBC資料庫"),
-            "客戶原名 → 檢視後標準命名；證據類型標示螢幕截圖／EMAIL／系統表單／傳票／人工整理／政策制度。"),
-        div(class = "home-tab-card",
-            strong("範本庫"),
-            "可跳過套用；寫入／直接編輯時才需高權登入。"),
-        div(class = "home-tab-card",
-            strong("參數庫"),
-            "查詢／套用表單；新增刪除／重建時才需高權登入。")
+        div(class = "home-tab-card", strong("訪談問項設計"), "已定稿 RCM → 訪談題綱。"),
+        div(class = "home-tab-card", strong("風險控制點設計"), "分頁籤填寫基礎／風險／控制；定稿寫入 RCM。"),
+        div(class = "home-tab-card", strong("控制點測試設計"), "CSA 測試步驟與情境組。"),
+        div(class = "home-tab-card", strong("RCM"), "檢視／下載已定稿列。"),
+        div(class = "home-tab-card", strong("PBC資料庫"), "客戶原名 → 標準命名。"),
+        div(class = "home-tab-card", strong("範本庫"), "可跳過套用；寫入需高權。"),
+        div(class = "home-tab-card", strong("參數庫"), "查詢／套用；維護需高權。")
       )
     )
   ),
@@ -920,8 +901,6 @@ ui <- page_navbar(
         open = c("訪談焦點", "5W1H／PBC"),
         accordion_panel(
           "訪談焦點",
-          p(class = "small text-muted mb-2",
-            "側邊欄選定循環並選子作業後，依內建建議之預期風險與預期控制目標／活動產出題綱。"),
           checkboxGroupInput(
             "interview_elements", NULL,
             choices = INTERVIEW_ELEMENTS, selected = DEFAULT_INTERVIEW_ELEMENTS
@@ -929,8 +908,6 @@ ui <- page_navbar(
         ),
         accordion_panel(
           "5W1H／PBC",
-          p(class = "small text-muted mb-2",
-            "勾選模組組成回答架構與追問題；可套用 PBC 命名。"),
           checkboxGroupInput(
             "interview_5w1h", NULL,
             choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
@@ -943,7 +920,7 @@ ui <- page_navbar(
           selectizeInput(
             "interview_pbc_link", "套用 IUC／PBC 命名",
             choices = NULL, multiple = TRUE,
-            options = list(placeholder = "原名→新名（套用至訪談）")
+            options = list(placeholder = "原名→新名")
           )
         )
       ),
@@ -991,8 +968,6 @@ ui <- page_navbar(
               class = "design-stage-save-bar",
               actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
             ),
-            p(class = "small text-muted mb-2",
-              "循環於左側側邊欄設定。子作業名稱可選建議項目或手動輸入，選後自動帶入編號。"),
             uiOutput("design_cycle_readonly"),
             uiOutput("sub_process_hint"),
             textInput("sub_process_id", lab_opt("子作業編號"), value = "",
@@ -1021,8 +996,6 @@ ui <- page_navbar(
                         placeholder = "風險因素關鍵字（可留空）…"),
               uiOutput("filter_risk_hits")
             ),
-            p(class = "small text-muted mb-2",
-              "風險因素是風險描述上的標記（TAG）。風險描述可從建議選取或手動輸入；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
             div(
               class = "risk-principle-area-row",
               selectizeInput(
@@ -1062,7 +1035,7 @@ ui <- page_navbar(
               width = "100%",
               options = list(
                 create = TRUE,
-                placeholder = "報導面必填：可複選常見科目，或選「全部適用」（互斥）"
+                placeholder = "複選科目或「全部適用」"
               )
             ),
             selectInput("romm_classification", "RoMM 分類（抽樣輔助）",
@@ -1100,16 +1073,13 @@ ui <- page_navbar(
                 width = "100%",
                 options = list(
                   create = FALSE,
-                  placeholder = "依風險類別：報導面八種／營運面三種／遵循面不可選"
+                  placeholder = "依風險類別選取"
                 )
               ),
               uiOutput("assertions_hint")
             ),
             uiOutput("control_objective_select_ui"),
             uiOutput("control_activity_select_ui"),
-            p(class = "small text-muted mb-2",
-              "具選單之欄位：可從建議選取後，", tags$strong("雙擊已選項目"),
-              "即可修改文字。"),
             div(
               class = "control-attr-row",
               selectInput(
@@ -1248,21 +1218,16 @@ ui <- page_navbar(
     "控制點測試設計",
     card(
       card_header("控制點測試設計（CSA）"),
-      p(class = "small text-muted mb-2",
-        "僅能選取「風險控制點設計」已定版並寫入 RCM 之控制點。",
-        "同一控制點可因不同控制現況情境維護多組測試步驟。",
-        "抽樣樣本數依該控制實際發生頻率訂定（PCAOB AS 2301／AS 2315；Deloitte 頻率對應表）；",
-        "Higher RoMM／Fraud 時上調。"),
       selectizeInput(
         "worksheet_controls_sa", NULL, choices = NULL, multiple = TRUE,
-        options = list(placeholder = "已定版風險控制點（空＝全部已定版）")
+        options = list(placeholder = "已定版控制點（空＝全部）")
       ),
       checkboxGroupInput("csa_elements", "測試步驟元素",
                          choices = DESIGN_ELEMENTS, selected = DEFAULT_CSA_ELEMENTS),
       actionButton("ws_select_core_csa", "自我評估核心元素", class = "btn-sm btn-primary"),
       uiOutput("csa_status"),
       tags$hr(),
-      tags$strong(class = "small", "頻率 → 建議最低樣本數（基準／高風險）"),
+      tags$strong(class = "small", "頻率 → 建議最低樣本數"),
       tags$div(
         class = "small text-muted mb-2",
         tags$table(
@@ -1283,12 +1248,10 @@ ui <- page_navbar(
         )
       ),
       tags$hr(),
-      tags$strong(class = "small", "控制現況情境組（同一控制點可多組）"),
-      p(class = "small text-muted mb-2",
-        "同一已定版控制點可因不同控制現況情境，各自維護一組測試步驟（Type／Inputs／Steps／Outputs）。"),
+      tags$strong(class = "small", "控制現況情境組（可多組）"),
       selectizeInput(
         "csa_edit_control", "編輯控制點", choices = NULL,
-        options = list(placeholder = "選擇已定版控制點以編輯情境組")
+        options = list(placeholder = "選擇控制點")
       ),
       selectizeInput(
         "csa_scenario_pick", "情境組", choices = NULL,
@@ -1297,7 +1260,7 @@ ui <- page_navbar(
       textInput("csa_scenario_name", "控制現況情境名稱",
                 placeholder = "例：電子簽核路徑／口頭核准路徑"),
       textAreaInput("csa_scenario_status", "該情境之控制現況說明", rows = 2,
-                    placeholder = "描述此情境下公司實際怎麼做"),
+                    placeholder = "此情境下公司實際怎麼做"),
       div(
         class = "d-flex gap-1 flex-wrap mb-2",
         actionButton("csa_scenario_add", "新增情境組", class = "btn-sm btn-outline-primary"),
@@ -1359,9 +1322,7 @@ ui <- page_navbar(
       card_header("PBC增列設定"),
       uiOutput("pbc_cycle_readonly"),
       p(class = "small text-muted mb-2",
-        "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。",
-        tags$strong("登錄／刪除／匯入"),
-        "需高權登入後方可寫入資料庫。"),
+        tags$strong("登錄／刪除／匯入"), "需高權登入。"),
       tags$div(
         class = "pbc-name-map-row",
         textInput(
@@ -1451,8 +1412,6 @@ ui <- page_navbar(
     card(
       class = "lib-apply-card",
       card_header("範本套用"),
-      p(class = "small text-muted mb-3",
-        "選用既有範本填入「風險控制點設計」；可不選、直接於設計頁建立。"),
       textInput("lib_query", "搜尋", value = "",
                 placeholder = "搜尋標題／風險／控制編號…"),
       selectInput(
@@ -1463,9 +1422,7 @@ ui <- page_navbar(
         class = "d-flex gap-1 flex-wrap mb-2 mt-1",
         actionButton("apply_lib", "套用選取範本", class = "btn-sm btn-primary"),
         actionButton("apply_lib_selected_row", "套用表格列", class = "btn-sm btn-outline-primary")
-      ),
-      p(class = "small text-muted mb-0",
-        "寫入／匯入／刪除／直接編輯時會跳出高權登入。")
+      )
     ),
     uiOutput("admin_lib_edit_panel"),
     card(
@@ -1475,7 +1432,7 @@ ui <- page_navbar(
     ),
     uiOutput("admin_lib_mutate_panel"),
     card(
-      card_header("匯出（唯讀可用）"),
+      card_header("匯出"),
       div(
         class = "d-flex gap-2 flex-wrap",
         downloadButton("download_lib_csv", "匯出 CSV", class = "btn-sm"),
@@ -3412,13 +3369,11 @@ server <- function(input, output, session) {
   output$significant_account_hint <- renderUI({
     cat <- trimws(input$risk_category %||% "")
     if (is_reporting_risk_category(cat)) {
-      div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("報導面"), " — 會計科目為必填；可複選常見財務報表科目，或單獨選「全部適用」（與其他科目互斥）。")
+      div(class = "alert alert-info py-1 mb-2 small", lab_req("報導面"), " — 會計科目必填。")
     } else if (nzchar(cat)) {
-      div(class = "alert alert-secondary py-1 mb-2 small",
-          "非報導面：會計科目已鎖定不可填（將自動清空）。")
+      div(class = "alert alert-secondary py-1 mb-2 small", "非報導面：會計科目已鎖定。")
     } else {
-      helpText(class = "text-muted small", "請先選擇風險類別；僅報導面可填會計科目。")
+      helpText(class = "text-muted small", "請先選擇風險類別。")
     }
   })
 
@@ -3500,12 +3455,11 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% "")
     if (is_compliance_risk_category(cat)) {
       div(class = "alert alert-info py-1 mb-2 small",
-          lab_req("遵循面"), " — 相關法規為必填（可多選）；右側可填該法規有效網址連結（選填）。")
+          lab_req("遵循面"), " — 相關法規必填。")
     } else if (nzchar(cat)) {
-      div(class = "alert alert-secondary py-1 mb-2 small",
-          "非遵循面：相關法規已鎖定不可填（將自動清空）。")
+      div(class = "alert alert-secondary py-1 mb-2 small", "非遵循面：相關法規已鎖定。")
     } else {
-      helpText(class = "text-muted small", "請先選擇風險類別；僅遵循面可填相關法規。")
+      helpText(class = "text-muted small", "請先選擇風險類別。")
     }
   })
 
@@ -3513,18 +3467,13 @@ server <- function(input, output, session) {
     cat <- trimws(input$risk_category %||% "")
     mode <- assertion_mode_for_category(cat)
     if (identical(mode, "reporting")) {
-      div(class = "alert alert-info py-1 mb-2 small",
-          "報導面：可複選八種 Assertions（Existence or Occurrence、Completeness、",
-          "Rights and Obligations、Valuation or Allocation、Accuracy、Cutoff、",
-          "Classification、Presentation）。")
+      div(class = "alert alert-info py-1 mb-2 small", "報導面：八種 Assertions 可複選。")
     } else if (identical(mode, "operations")) {
-      div(class = "alert alert-info py-1 mb-2 small",
-          "營運面：聲明限縮為三種可複選——完整性、正確性、即時性。")
+      div(class = "alert alert-info py-1 mb-2 small", "營運面：完整性／正確性／即時性。")
     } else if (identical(mode, "locked")) {
-      div(class = "alert alert-secondary py-1 mb-2 small",
-          "遵循面：無 Assertions 可選（已鎖定並清空）。")
+      div(class = "alert alert-secondary py-1 mb-2 small", "遵循面：無 Assertions。")
     } else {
-      helpText(class = "text-muted small", "請先於風險辨識選擇風險類別，以決定聲明可選範圍。")
+      helpText(class = "text-muted small", "請先選擇風險類別。")
     }
   })
 

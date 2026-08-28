@@ -396,8 +396,9 @@ ui <- page_navbar(
       .dataTables_wrapper, .dataTables_scroll, .dataTables_scrollBody {
         overflow: visible !important; max-height: none !important; height: auto !important;
       }
-      /* PBC 清單預覽：允許左右拖曳／捲動（覆寫上方全頁不裁切規則） */
-      .pbc-table-scroll-wrap {
+      /* DataTables 預覽表：允許左右拖曳／捲動（覆寫上方全頁不裁切規則） */
+      .pbc-table-scroll-wrap,
+      .rcm-table-scroll-wrap {
         width: 100%;
         max-width: 100%;
         overflow-x: auto;
@@ -406,11 +407,16 @@ ui <- page_navbar(
       .pbc-table-scroll-wrap .dataTables_wrapper,
       .pbc-table-scroll-wrap .dataTables_scroll,
       .pbc-table-scroll-wrap .dataTables_scrollHead,
-      .pbc-table-scroll-wrap .dataTables_scrollBody {
+      .pbc-table-scroll-wrap .dataTables_scrollBody,
+      .rcm-table-scroll-wrap .dataTables_wrapper,
+      .rcm-table-scroll-wrap .dataTables_scroll,
+      .rcm-table-scroll-wrap .dataTables_scrollHead,
+      .rcm-table-scroll-wrap .dataTables_scrollBody {
         overflow-x: auto !important;
         max-width: 100%;
       }
-      .pbc-table-scroll-wrap table.dataTable {
+      .pbc-table-scroll-wrap table.dataTable,
+      .rcm-table-scroll-wrap table.dataTable {
         width: max-content !important;
         min-width: 100%;
       }
@@ -1284,7 +1290,7 @@ ui <- page_navbar(
       uiOutput("rcm_count_box"),
       uiOutput("rcm_preview_status"),
       uiOutput("rcm_latest_saved"),
-      DTOutput("rcm_table"),
+      div(class = "rcm-table-scroll-wrap", DTOutput("rcm_table")),
       downloadButton("download_rcm", "下載 RCM CSV", class = "btn-sm"),
       tags$hr(),
       tags$strong("缺漏／缺文件／控制缺失"),
@@ -3748,10 +3754,11 @@ server <- function(input, output, session) {
     if (is.null(df)) df <- empty_rcm_display_df()
     # 無資料仍顯示 RCM 標題列（欄名）；提示改由上方 rcm_count_box
     dt <- datatable(
-      df, rownames = FALSE,
+      df, rownames = FALSE, width = "100%",
       options = dt_loading_opts(
         pageLength = 15,
         ordering = FALSE,
+        autoWidth = FALSE,
         emptyTable = "尚無 RCM 列；於「風險控制點設計」各區塊按「儲存」，或完成設計後「寫入 RCM 一列」。",
         rowCallback = DT::JS(
           "function(row, data, index) {",

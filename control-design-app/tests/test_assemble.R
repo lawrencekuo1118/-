@@ -1309,6 +1309,11 @@ check(grepl("empty_rcm_display_df", app_src) &&
         grepl("emptyTable", app_src) &&
         !grepl('data\\.frame\\(訊息\\s*=\\s*"尚無 RCM 列', app_src),
       "RCM 頁無資料時仍渲染標題列而非單欄訊息")
+check(grepl("rcm-table-scroll-wrap", app_src, fixed = TRUE) &&
+        grepl('div\\(class = "rcm-table-scroll-wrap", DTOutput\\("rcm_table"\\)\\)', app_src, perl = TRUE) &&
+        grepl("\\.rcm-table-scroll-wrap[\\s\\S]*overflow-x: auto", app_src, perl = TRUE) &&
+        grepl("output\\$rcm_table[\\s\\S]*autoWidth = FALSE", app_src, perl = TRUE),
+      "RCM 表格可左右捲動（scroll-wrap + autoWidth）")
 merged_basic <- merge_design_preview_section(NULL, d1, "基礎設定")
 check(isTRUE(merged_basic$rcm_preview), "預覽合併標記 rcm_preview")
 check("基礎設定" %in% merged_basic$rcm_preview_sections, "預覽記錄區塊名稱")

@@ -420,6 +420,18 @@ ui <- page_navbar(
         width: max-content !important;
         min-width: 100%;
       }
+      .pbc-status-footer {
+        padding: 0.75rem 0 0.25rem;
+        border-top: 1px solid rgba(0, 91, 170, 0.12);
+      }
+      .pbc-status-footer .shiny-text-output pre {
+        white-space: pre-wrap;
+        font-size: 0.82rem;
+        margin-bottom: 0;
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
       .shiny-text-output pre, .shiny-plot-output, .shiny-image-output {
         overflow: visible !important; max-height: none !important;
       }
@@ -1302,8 +1314,7 @@ ui <- page_navbar(
     card(
       card_header("PBC資料庫"),
       div(class = "pbc-table-scroll-wrap", DTOutput("pbc_table")),
-      uiOutput("pbc_walkthrough_box"),
-      verbatimTextOutput("pbc_all_status")
+      uiOutput("pbc_walkthrough_box")
     ),
     card(
       card_header("PBC增列設定"),
@@ -1371,6 +1382,11 @@ ui <- page_navbar(
         options = list(placeholder = "原名→新名")
       ),
       checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
+    ),
+    tags$div(
+      class = "pbc-status-footer mt-3",
+      tags$div(class = "small fw-bold mb-1", "PBC 命名對照一覽"),
+      verbatimTextOutput("pbc_all_status")
     )
   ),
   nav_panel(

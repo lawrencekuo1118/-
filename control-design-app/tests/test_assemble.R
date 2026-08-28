@@ -699,6 +699,10 @@ check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
         grepl("\\.pbc-table-scroll-wrap[\\s\\S]*overflow-x: auto", app_src_pbc, perl = TRUE) &&
         grepl("autoWidth = FALSE", app_src_pbc, fixed = TRUE),
       "PBC資料庫表可左右捲動（scroll-wrap + autoWidth）")
+check(grepl("pbc-status-footer", app_src_pbc, fixed = TRUE) &&
+        grepl('uiOutput\\("pbc_walkthrough_box"\\)\\s*\\)\\s*,\\s*card\\(\\s*card_header\\("PBC增列設定"', pbc_panel, perl = TRUE) &&
+        grepl('checkboxInput\\("pbc_also_inputs"[\\s\\S]*pbc-status-footer[\\s\\S]*pbc_all_status', pbc_panel, perl = TRUE),
+      "PBC 命名對照列表置於分頁最下方（移出 PBC資料庫區塊）")
 check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),

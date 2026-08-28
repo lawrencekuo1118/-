@@ -31,7 +31,7 @@ show_admin_login_modal <- function(session = NULL) {
         actionButton("admin_login", "登入", class = "btn-primary btn-sm")
       ),
       p(class = "small text-muted mb-2",
-        "修改範本庫或參數庫需高權。登入後此工作階段可繼續編輯。"),
+        "修改範本庫、參數庫或 PBC 資料庫需高權。登入後此工作階段可繼續編輯。"),
       passwordInput("admin_password", NULL, placeholder = "高權密碼")
     ),
     session = session

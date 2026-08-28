@@ -1600,8 +1600,12 @@ check(exists("set_action_button", mode = "function"), "按鈕條件閘道 helper
 app_gate <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
 check(grepl("toggleButton", app_gate) && grepl("Button gates", app_gate),
       "UI／server 含按鈕條件閘道（toggleButton）")
-check(grepl('gate\\("finalize_rcm_row"', app_gate) &&
-        grepl('gate\\("pbc_add"', app_gate) &&
+check(grepl('gate\\("pbc_add"', app_gate) &&
+        grepl('gate\\("pbc_delete"', app_gate) &&
+        grepl('gate\\("pbc_add", admin', app_gate) &&
+        grepl('require_admin\\(is_admin\\(\\), session\\)', app_gate) &&
+        grepl('observeEvent\\(input\\$pbc_add', app_gate) &&
+        grepl('persist_pbc <- function\\(reg, force = FALSE\\)', app_gate) &&
         grepl('gate\\("csa_scenario_save"', app_gate) &&
         grepl('gate\\("apply_lib"', app_gate) &&
         grepl('gate\\("download_interview"', app_gate),

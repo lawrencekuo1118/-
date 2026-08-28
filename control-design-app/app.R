@@ -1332,7 +1332,9 @@ ui <- page_navbar(
       card_header("PBC增列設定"),
       uiOutput("pbc_cycle_readonly"),
       p(class = "small text-muted mb-2",
-        "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),
+        "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。",
+        tags$strong("登錄／刪除／匯入"),
+        "需高權登入後方可寫入資料庫。"),
       tags$div(
         class = "pbc-name-map-row",
         textInput(
@@ -1815,7 +1817,10 @@ server <- function(input, output, session) {
     db_persist_revision(db_persist_revision() + 1L)
   }
 
-  persist_pbc <- function(reg) {
+  persist_pbc <- function(reg, force = FALSE) {
+    if (!isTRUE(force) && !require_admin(is_admin(), session)) {
+      return(isolate(pbc_reg()))
+    }
     out <- persist_pbc_to_disk(reg, pbc_path_csv, pbc_path_json)
     invalidate_cached_file_data("pbc_registry")
     bump_db_persist_views()
@@ -3878,6 +3883,7 @@ server <- function(input, output, session) {
 
   # PBC
   observeEvent(input$pbc_add, {
+    if (!require_admin(is_admin(), session)) return()
     tryCatch({
       edit_id <- trimws(input$pbc_id %||% "")
       reg0 <- pbc_reg()
@@ -4015,6 +4021,7 @@ server <- function(input, output, session) {
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
   }, ignoreInit = TRUE)
   observeEvent(input$pbc_delete, {
+    if (!require_admin(is_admin(), session)) return()
     s <- input$pbc_table_rows_selected
     if (is.null(s)) return(showNotification("請先選取", type = "warning"))
     reg <- delete_pbc(pbc_reg(), pbc_reg()$pbc_id[s])
@@ -4023,6 +4030,7 @@ server <- function(input, output, session) {
     refresh_pbc_choices()
   })
   observeEvent(input$upload_pbc, {
+    if (!require_admin(is_admin(), session)) return()
     f <- input$upload_pbc
     if (is.null(f)) return()
     tryCatch({
@@ -4440,8 +4448,10 @@ server <- function(input, output, session) {
          if (!admin) "需高權登入" else "請先選取參數列")
 
     # PBC
-    gate("pbc_add", pbc_fields_ok, "請至少填「客戶原名」或「檢視後命名」")
-    gate("pbc_delete", pbc_row, "請先選取 PBC 列")
+    gate("pbc_add", admin && pbc_fields_ok,
+         if (!admin) "需高權登入" else "請至少填「客戶原名」或「檢視後命名」")
+    gate("pbc_delete", admin && pbc_row,
+         if (!admin) "需高權登入" else "請先選取 PBC 列")
 
     # 下載（無資料時不可按）
     gate("download_interview", iv_n > 0L, "尚無訪談題綱可下載")

@@ -1300,13 +1300,13 @@ ui <- page_navbar(
   nav_panel(
     "PBC資料庫",
     card(
-      card_header("PBC 清單預覽"),
+      card_header("PBC資料庫"),
       div(class = "pbc-table-scroll-wrap", DTOutput("pbc_table")),
       uiOutput("pbc_walkthrough_box"),
       verbatimTextOutput("pbc_all_status")
     ),
     card(
-      card_header("PBC 資料庫"),
+      card_header("PBC增列設定"),
       uiOutput("pbc_cycle_readonly"),
       p(class = "small text-muted mb-2",
         "整理客戶取得原名與檢視後標準命名（公司現況／證據命名）。"),

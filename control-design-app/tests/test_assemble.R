@@ -685,20 +685,20 @@ check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE)
 pbc_panel <- sub('(?s).*nav_panel\\(\\s*"PBC資料庫"', 'nav_panel("PBC資料庫"', app_src_pbc, perl = TRUE)
 pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE)
 check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
-        grepl("PBC 清單預覽", pbc_panel, fixed = TRUE) &&
-        grepl('card_header\\(\\s*"PBC 資料庫"', pbc_panel) &&
-        regexpr("PBC 清單預覽", pbc_panel, fixed = TRUE)[[1]] <
-          regexpr("PBC 資料庫", pbc_panel, fixed = TRUE)[[1]],
-      "PBC 清單預覽在設定畫面上方（非左右雙欄）")
+        grepl('card_header\\(\\s*"PBC資料庫"', pbc_panel) &&
+        grepl('card_header\\(\\s*"PBC增列設定"', pbc_panel) &&
+        regexpr('card_header\\(\\s*"PBC資料庫"', pbc_panel)[[1]] <
+          regexpr('card_header\\(\\s*"PBC增列設定"', pbc_panel)[[1]],
+      "PBC資料庫表在增列設定上方（非左右雙欄）")
 check(grepl(
   'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
   app_src_pbc, perl = TRUE),
-      "PBC 清單預覽表欄位順序：ID→循環→標準名稱→原始名稱→證據類型→檔案格式→規格說明→勾稽→備註")
+      "PBC資料庫表欄位順序：ID→循環→標準名稱→原始名稱→證據類型→檔案格式→規格說明→勾稽→備註")
 check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
         grepl('div\\(class = "pbc-table-scroll-wrap", DTOutput\\("pbc_table"\\)\\)', app_src_pbc, perl = TRUE) &&
         grepl("\\.pbc-table-scroll-wrap[\\s\\S]*overflow-x: auto", app_src_pbc, perl = TRUE) &&
         grepl("autoWidth = FALSE", app_src_pbc, fixed = TRUE),
-      "PBC 清單預覽表可左右捲動（scroll-wrap + autoWidth）")
+      "PBC資料庫表可左右捲動（scroll-wrap + autoWidth）")
 check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互相勾稽欄")
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),

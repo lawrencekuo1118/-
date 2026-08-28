@@ -559,6 +559,11 @@ check(identical(apply_pbc_to_iuc(reg, reg$pbc_id[1]), "使用者權限清冊"), 
 reg2 <- upsert_pbc(reg, list(
   client_pbc_name = "outlook.msg", reviewed_name = "核准信", pbc_kind = "EMAIL"))
 check(identical(apply_pbc_to_iuc(reg2, reg2$pbc_id[2]), "【EMAIL】核准信"), "PBC 證據類型標示套用")
+ch_email <- pbc_choices(reg2)
+check(any(grepl("^PBC-\\d+【EMAIL】核准信$", names(ch_email), perl = TRUE)),
+      "PBC 下拉選單標籤為 ID＋檢視後命名（簡式）")
+check(!any(grepl("原名「", names(ch_email), fixed = TRUE)),
+      "PBC 下拉選單不再顯示原名→檢視後對照")
 check(identical(format_pbc_reviewed_label("制度手冊", "政策制度"), "【政策制度】制度手冊"),
       "PBC 格式化標示")
 check("傳票" %in% PBC_KIND_VALUES, "PBC 證據類型含傳票")

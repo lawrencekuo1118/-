@@ -338,7 +338,7 @@ filter_pbc_registry <- function(registry, cycle_filter = NULL,
   df
 }
 
-# Choices for design UI: value = pbc_id (stable); label shows both names
+# Choices for design UI: value = pbc_id (stable); label = ID＋檢視後命名
 pbc_choices <- function(registry, cycle_filter = NULL,
                           include_kinds = NULL, exclude_kinds = NULL) {
   df <- filter_pbc_registry(
@@ -348,21 +348,11 @@ pbc_choices <- function(registry, cycle_filter = NULL,
     exclude_kinds = exclude_kinds
   )
   if (!nrow(df)) return(character())
-  kind_tag <- vapply(df$pbc_kind, function(k) {
-    k <- trimws(as.character(k %||% ""))
-    if (nzchar(k)) paste0("【", k, "】") else ""
+  labels <- vapply(seq_len(nrow(df)), function(i) {
+    reviewed <- trimws(df$reviewed_name[i])
+    if (!nzchar(reviewed)) reviewed <- trimws(df$client_pbc_name[i])
+    paste0(df$pbc_id[i], format_pbc_reviewed_label(reviewed, df$pbc_kind[i]))
   }, character(1))
-  reviewed_lbl <- vapply(seq_len(nrow(df)), function(i) {
-    format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
-  }, character(1))
-  labels <- sprintf(
-    "%s%s｜原名「%s」→ 檢視後「%s」%s",
-    df$pbc_id,
-    kind_tag,
-    ifelse(nzchar(df$client_pbc_name), df$client_pbc_name, "—"),
-    reviewed_lbl,
-    ifelse(nzchar(df$cycle), paste0("〔", df$cycle, "〕"), "")
-  )
   stats::setNames(df$pbc_id, labels)
 }
 

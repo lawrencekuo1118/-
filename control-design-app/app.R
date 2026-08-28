@@ -1405,9 +1405,25 @@ ui <- page_navbar(
       checkboxInput("pbc_also_inputs", "一併寫入測試設計 Inputs 對照", FALSE)
     ),
     tags$div(
-      class = "pbc-status-footer mt-3",
-      tags$div(class = "small fw-bold mb-1", "PBC 命名對照一覽"),
-      verbatimTextOutput("pbc_all_status")
+      class = "pbc-status-footer design-preview-drawer mt-3",
+      tags$button(
+        class = "design-preview-toggle",
+        type = "button",
+        `data-bs-toggle` = "collapse",
+        `data-bs-target` = "#pbcNameMapCollapse",
+        `aria-expanded` = "false",
+        `aria-controls` = "pbcNameMapCollapse",
+        tags$span(class = "chevron", "▸"),
+        "PBC 命名對照一覽 — 點擊展開或收回"
+      ),
+      div(
+        id = "pbcNameMapCollapse",
+        class = "collapse",
+        div(
+          class = "design-preview-body",
+          verbatimTextOutput("pbc_all_status")
+        )
+      )
     )
   ),
   nav_panel(

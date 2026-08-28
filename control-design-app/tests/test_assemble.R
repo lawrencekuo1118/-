@@ -1045,6 +1045,8 @@ check(grepl("refresh_sub_process_choices\\(force", app_casc) &&
       "進入設計分頁強制重送子作業與風險／控制建議選單")
 check(!grepl("updateSelectInput\\(session, \"cycle\", selected = \"\"\\)", app_casc),
       "啟動時不再延遲清空循環（避免競態）")
+check(!grepl("startup_refresh_tick", app_casc),
+      "onFlushed 不讀寫 reactiveVal（避免 Shiny 1.14+ 斷線）")
 
 check(grepl("cascade_source_library", app_casc),
       "訪談引導仍採內建範本庫候選")

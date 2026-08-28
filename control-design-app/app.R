@@ -2369,22 +2369,14 @@ server <- function(input, output, session) {
     }
   }
 
-  # 首屏後再刷新選單，避免阻塞「載入中」完成時間
-  startup_refresh_tick <- reactiveVal(0L)
+  # 首屏 flush 後刷新選單（勿在 onFlushed 內讀寫 reactiveVal，Shiny 1.14+ 會崩潰斷線）
   session$onFlushed(function() {
-    invalidateLater(200, session)
-    startup_refresh_tick(isolate(startup_refresh_tick()) + 1L)
+    if (!nrow(isolate(param_store()))) {
+      try(persist_params(force = TRUE), silent = TRUE)
+    }
+    try(refresh_pbc_choices(), silent = TRUE)
+    try(refresh_design_text_param_choices(), silent = TRUE)
   }, once = TRUE)
-  observeEvent(startup_refresh_tick(), {
-    if (startup_refresh_tick() < 1L) return()
-    isolate({
-      if (!nrow(param_store())) {
-        try(persist_params(force = TRUE), silent = TRUE)
-      }
-      try(refresh_pbc_choices(), silent = TRUE)
-      try(refresh_design_text_param_choices(), silent = TRUE)
-    })
-  }, ignoreInit = TRUE)
 
   interview_worksheet <- function() {
     cs <- interview_pool_controls()

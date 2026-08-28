@@ -1187,7 +1187,7 @@ ui <- page_navbar(
       ),
       tags$div(
         class = "pbc-id-related-row",
-        textInput("pbc_id", NULL, placeholder = "ID（可空）"),
+        textInput("pbc_id", "ID", placeholder = "ID（可空）"),
         selectizeInput(
           "pbc_related", lab_opt("互相勾稽（Walkthrough）"),
           choices = NULL, multiple = TRUE, width = "100%",

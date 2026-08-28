@@ -684,6 +684,8 @@ check("related_pbc_ids" %in% names(empty_pbc_registry()), "PBC registry 含互�
 check(grepl('selectizeInput\\(\\s*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl("pbc_walkthrough_box", app_src_pbc, fixed = TRUE),
       "PBC 互相勾稽選單與 Walkthrough 預覽存在")
+check(grepl('textInput\\(\\s*"pbc_id",\\s*"ID"', app_src_pbc, perl = TRUE),
+      "PBC ID 輸入欄含 ID 小標題")
 check(grepl("pbc-id-related-row", app_src_pbc, fixed = TRUE) &&
         grepl('pbc-id-related-row[\\s\\S]*"pbc_id"[\\s\\S]*"pbc_related"', app_src_pbc, perl = TRUE) &&
         grepl('pbc-id-related-row[\\s\\S]*minmax\\(0, 1fr\\) minmax\\(0, 2fr\\)', app_src_pbc, perl = TRUE),

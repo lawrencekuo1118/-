@@ -742,13 +742,6 @@ ui <- page_navbar(
                       placeholder = "循環編號-子作業序號（例：EC-101）",
                       width = "100%"),
             uiOutput("sub_process_select_ui"),
-            div(
-              class = "design-tab-filter-bar",
-              tags$div(class = "filter-title", "關鍵字篩選 — 快速找出相關子作業名稱"),
-              textInput("filter_basic_kw", NULL, value = "", width = "100%",
-                        placeholder = "輸入子作業名稱或編號關鍵字…"),
-              uiOutput("filter_basic_hits")
-            ),
             textInput("control_id", lab_opt("控制編號"), value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("design_preview_basic")
@@ -1588,50 +1581,11 @@ server <- function(input, output, session) {
     }
   })
 
-  # 設計頁籤頂部簡約搜尋：依範本庫找子作業／風險描述／控制活動
+  # 設計頁籤頂部簡約搜尋：依範本庫找風險描述／控制活動
   tab_filter_rows <- reactive({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return(list())
     library_controls_flat(cascade_source_library(lib()), cycle = cy)
-  })
-  output$filter_basic_hits <- renderUI({
-    kw <- input$filter_basic_kw %||% ""
-    hits <- search_sub_process_hits(tab_filter_rows(), keyword = kw)
-    if (!length(hits)) {
-      return(tags$div(class = "small text-muted",
-                      if (!nzchar(input$cycle %||% "")) "請先選定循環" else "無相符子作業"))
-    }
-    tags$div(
-      class = "design-tab-filter-hits",
-      lapply(seq_along(hits), function(i) {
-        h <- hits[[i]]
-        actionLink(
-          paste0("filter_basic_pick_", i),
-          label = h$label,
-          class = "btn btn-link",
-          onclick = sprintf(
-            "Shiny.setInputValue('filter_basic_apply', {nm:%s, id:%s, nonce:Math.random()}, {priority:'event'}); return false;",
-            jsonlite::toJSON(h$sub_process, auto_unbox = TRUE),
-            jsonlite::toJSON(h$sub_process_id %||% "", auto_unbox = TRUE)
-          )
-        )
-      })
-    )
-  })
-  observeEvent(input$filter_basic_apply, {
-    v <- input$filter_basic_apply
-    if (is.null(v)) return()
-    nm <- as.character(v$nm %||% "")
-    id <- as.character(v$id %||% "")
-    if (!nzchar(nm)) return()
-    if (nzchar(id)) {
-      freezeReactiveValue(input, "sub_process_id")
-      updateTextInput(session, "sub_process_id", value = id)
-    }
-    freezeReactiveValue(input, "sub_process")
-    refresh_sub_process_choices(force = TRUE)
-    updateSelectizeInput(session, "sub_process", selected = nm)
-    showNotification(sprintf("已帶入子作業：%s", nm), type = "message", duration = 3)
   })
   output$filter_risk_hits <- renderUI({
     hits <- search_risk_description_hits(

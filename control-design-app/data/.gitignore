@@ -17,3 +17,6 @@
 !seed_py_cycle_pbc.R
 !pbc_registry.csv
 !pbc_registry.json
+!control_library.json
+!control_library.csv
+!parameter_store.json

@@ -31,6 +31,7 @@ source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 source(file.path(root, "R", "privilege.R"), local = TRUE)
 source(file.path(root, "R", "button_interactions.R"), local = TRUE)
 source(file.path(root, "R", "table_schemas.R"), local = TRUE)
+source(file.path(root, "R", "data_persist.R"), local = TRUE)
 
 # UI label with required asterisk
 lab_req <- function(txt) {
@@ -1491,7 +1492,8 @@ ui <- page_navbar(
       DTOutput("param_table")
     ),
     uiOutput("admin_button_guide_panel"),
-    uiOutput("admin_table_schema_panel")
+    uiOutput("admin_table_schema_panel"),
+    uiOutput("admin_db_persist_panel")
   )
 )
 
@@ -1504,6 +1506,7 @@ server <- function(input, output, session) {
   applying_template <- reactiveVal(FALSE)
   lib_revision <- reactiveVal(0L)
   pbc_form_cycle <- reactiveVal("")
+  db_persist_revision <- reactiveVal(0L)
 
   bump_rcm_views <- function(ctrl = NULL) {
     rcm_revision(rcm_revision() + 1L)
@@ -1662,6 +1665,35 @@ server <- function(input, output, session) {
     )
   })
 
+  output$admin_db_persist_panel <- renderUI({
+    if (!isTRUE(is_admin())) return(NULL)
+    db_persist_revision()
+    st <- database_persist_status(app_database_manifest(data_dir))
+    card(
+      class = "button-guide-card",
+      card_header("高權：資料庫持久化狀態"),
+      tags$p(
+        class = "small text-muted mb-2",
+        "修改 PBC／範本庫／參數庫後會立即寫入 ",
+        tags$code("data/"),
+        " 目錄；部署前請 commit 至 GitHub，",
+        tags$code("rsconnect::deployApp"),
+        " 才會同步至 shinyapps.io。"
+      ),
+      tags$pre(
+        class = "small mb-2",
+        style = "white-space: pre-wrap; background: transparent; border: 0; padding: 0;",
+        format_database_persist_status(st)
+      ),
+      tags$ul(
+        class = "small text-muted mb-0",
+        tags$li(tags$code("pbc_registry.csv"), "／", tags$code("pbc_registry.json")),
+        tags$li(tags$code("control_library.json"), "／", tags$code("control_library.csv")),
+        tags$li(tags$code("parameter_store.json"))
+      )
+    )
+  })
+
   observeEvent(input$admin_prompt_lib, {
     show_admin_login_modal(session)
   })
@@ -1777,13 +1809,22 @@ server <- function(input, output, session) {
     try(refresh_pbc_choices(), silent = TRUE)
   }, once = TRUE)
 
-  persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
+  bump_db_persist_views <- function() {
+    db_persist_revision(db_persist_revision() + 1L)
+  }
+
+  persist_pbc <- function(reg) {
+    out <- persist_pbc_to_disk(reg, pbc_path_csv, pbc_path_json)
+    bump_db_persist_views()
+    out
+  }
   persist_lib <- function(library, force = FALSE) {
     if (!isTRUE(force) && !require_admin(is_admin(), session)) {
       return(isolate(lib()))
     }
-    save_control_library(library, lib_path_json, lib_path_csv)
-    library
+    out <- persist_library_to_disk(library, lib_path_json, lib_path_csv)
+    bump_db_persist_views()
+    out
   }
 
   param_store <- reactiveVal(load_parameter_store(param_path_json))
@@ -1796,13 +1837,21 @@ server <- function(input, output, session) {
       pbc = pbc_reg()
     )
     save_parameter_store(df, param_path_json)
+    if (!verify_persist_file(param_path_json)) {
+      stop("參數庫未能寫入磁碟：", param_path_json)
+    }
     param_store(df)
+    bump_db_persist_views()
     df
   }
   persist_params_df <- function(df) {
     if (!require_admin(is_admin(), session)) return(isolate(param_store()))
     save_parameter_store(df, param_path_json)
+    if (!verify_persist_file(param_path_json)) {
+      stop("參數庫未能寫入磁碟：", param_path_json)
+    }
     param_store(df)
+    bump_db_persist_views()
     df
   }
 
@@ -1835,8 +1884,9 @@ server <- function(input, output, session) {
   persist_design_custom_params <- function(ctrl) {
     if (is.null(ctrl)) return(invisible(NULL))
     df <- ingest_ctrl_parameters(isolate(param_store()), ctrl, source = "設計自訂")
-    save_parameter_store(df, param_path_json)
+    persist_parameters_to_disk(df, param_path_json)
     param_store(df)
+    bump_db_persist_views()
     try(refresh_design_text_param_choices(), silent = TRUE)
     try(refresh_sub_process_choices(force = TRUE), silent = TRUE)
     invisible(df)
@@ -1849,6 +1899,20 @@ server <- function(input, output, session) {
     }
     try(refresh_design_text_param_choices(), silent = TRUE)
   }, once = TRUE)
+
+  session$onSessionEnded(function() {
+    tryCatch(
+      flush_all_app_databases(
+        isolate(pbc_reg()),
+        isolate(lib()),
+        isolate(param_store()),
+        pbc_path_csv, pbc_path_json,
+        lib_path_json, lib_path_csv,
+        param_path_json
+      ),
+      error = function(e) NULL
+    )
+  })
 
   output$sidebar_cycle_hint <- renderUI({
     cy <- input$cycle %||% ""

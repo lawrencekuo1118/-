@@ -21,6 +21,7 @@ source(file.path(root, "R", "parameter_store.R"), local = TRUE)
 source(file.path(root, "R", "privilege.R"), local = TRUE)
 source(file.path(root, "R", "button_interactions.R"), local = TRUE)
 source(file.path(root, "R", "table_schemas.R"), local = TRUE)
+source(file.path(root, "R", "data_persist.R"), local = TRUE)
 
 fail <- 0L
 check <- function(cond, msg) {
@@ -1644,6 +1645,24 @@ check(identical(pbc_schema_cols,
                 c("ID", "循環", "標準名稱", "原始名稱", "證據類型",
                   "檔案格式", "規格說明", "勾稽", "備註")),
       "PBC SCHEMA 欄位順序與 UI 一致")
+gitignore_txt <- readLines(file.path(root, "data", ".gitignore"), warn = FALSE)
+check(any(grepl("!control_library\\.json", gitignore_txt)) &&
+        any(grepl("!parameter_store\\.json", gitignore_txt)),
+      "範本庫／參數庫資料檔納入 Git 追蹤")
+check(grepl("persist_pbc_to_disk|persist_library_to_disk|persist_parameters_to_disk", app_src) &&
+        grepl("flush_all_app_databases", app_src) &&
+        grepl("onSessionEnded", app_src) &&
+        grepl("admin_db_persist_panel", app_src),
+      "資料庫修改後強制落盤並顯示持久化狀態")
+tmp_pbc <- tempfile(fileext = ".csv")
+tmp_pbc_j <- tempfile(fileext = ".json")
+reg1 <- upsert_pbc(empty_pbc_registry(), list(
+  client_pbc_name = "a.csv", reviewed_name = "A", cycle = "電腦化資訊系統循環"
+))
+persist_pbc_to_disk(reg1, tmp_pbc, tmp_pbc_j)
+check(verify_persist_file(tmp_pbc) && verify_persist_file(tmp_pbc_j),
+      "PBC 持久化寫入可驗證")
+unlink(c(tmp_pbc, tmp_pbc_j))
 ps0 <- empty_parameter_store()
 ps1 <- upsert_parameter_row(ps0, "風險類別", "測試面", "高權維護")
 check(nrow(ps1) == 1L && identical(ps1$來源[[1]], "高權維護"), "參數庫可高權新增列")

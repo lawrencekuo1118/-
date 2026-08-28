@@ -1,0 +1,666 @@
+[
+  {
+    "name": "銷售達成率進度週報",
+    "spec": ""
+  },
+  {
+    "name": "每季銷售檢討會議(Sales Camp)_會議通知",
+    "spec": ""
+  },
+  {
+    "name": "每季銷售檢討會議(Sales Camp)會議簡報等相關資料",
+    "spec": ""
+  },
+  {
+    "name": "年度銷售預測會議_會議通知",
+    "spec": ""
+  },
+  {
+    "name": "年度銷售預測會議Sales Review Report等相關資料",
+    "spec": ""
+  },
+  {
+    "name": "各BU主管提供之銷售預測資料",
+    "spec": ""
+  },
+  {
+    "name": "報價參考價目表(Product Rate Card)",
+    "spec": "請提供\"最新版本\"。"
+  },
+  {
+    "name": "存放報價參考價目表(Product Rate Card)位址_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "報價參考價目表(Product Rate Card)_核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "客戶提出服務或產品(規格)需求_書面記錄",
+    "spec": ""
+  },
+  {
+    "name": "向客戶報價單_核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "客戶同意報價_書面紀錄",
+    "spec": ""
+  },
+  {
+    "name": "客戶背景調查紀錄",
+    "spec": ""
+  },
+  {
+    "name": "客戶資料編輯權限清單",
+    "spec": ""
+  },
+  {
+    "name": "客戶基本資料表_CMS系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "客戶資料刪除申請單",
+    "spec": ""
+  },
+  {
+    "name": "NDA簽署申請單_eLR系統畫面(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "簽署完成之NDA",
+    "spec": ""
+  },
+  {
+    "name": "TBR申請單(含核准紀錄)",
+    "spec": "須顯示附上之申請佐證用附件名稱，如\"與客戶通聯記錄\"等。"
+  },
+  {
+    "name": "TBR狀態之Perfect Console帳號_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "合約簽署申請單(eLR)_核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "合約條款_法務審核紀錄",
+    "spec": ""
+  },
+  {
+    "name": "合約交易條件_業務審核紀錄",
+    "spec": ""
+  },
+  {
+    "name": "合約簽署用印申請單(SR系統)_核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "合約電子簽_DocuSign系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "已簽署合約與相關文件",
+    "spec": ""
+  },
+  {
+    "name": "已簽署合約與相關文件_歸檔紀錄或系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "授信額度申請單(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "授信額度調整申請單(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "客戶財務狀況評估紀錄",
+    "spec": ""
+  },
+  {
+    "name": "BR申請單(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "BR狀態之Perfect Console帳號_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "訂單JO(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "訂單JO建立檢附文件",
+    "spec": ""
+  },
+  {
+    "name": "客戶額度不足跳出警示_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "例外額度放行Order Credit Shipping申請_核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "訂單銷售折讓提交RJO",
+    "spec": ""
+  },
+  {
+    "name": "服務中要求更改訂單(增購)之原JO/新JO",
+    "spec": ""
+  },
+  {
+    "name": "尚未提供服務即取消訂單_RJO及相關證明文件",
+    "spec": ""
+  },
+  {
+    "name": "尚未提供服務即取消訂單_原始JO",
+    "spec": ""
+  },
+  {
+    "name": "簽約完成前因退單而提交RJO(服務前要求更改訂單之原JO/RJO/新JO)",
+    "spec": ""
+  },
+  {
+    "name": "服務中要求更改訂單(增購)_新增JO及增購合約",
+    "spec": ""
+  },
+  {
+    "name": "服務中要求更改訂單(增購)_原始JO",
+    "spec": "JO單號 (Original Job Order) : JOPU2020"
+  },
+  {
+    "name": "因換約而提交RJO(服務中要求更改訂單(全數換約)之原JO/RJO/新JO)",
+    "spec": ""
+  },
+  {
+    "name": "服務中要求更改訂單(重新簽約)_新增JO及新合約",
+    "spec": "JO單號 (Reissue Job Order) : JOPT0003163"
+  },
+  {
+    "name": "服務中要求更改訂單(重新簽約)_原始JO",
+    "spec": "JO單號 (Original Job Order) : JOPT0003000"
+  },
+  {
+    "name": "服務中要求更改訂單(重新簽約)_RJO",
+    "spec": ""
+  },
+  {
+    "name": "因合約提前終止而提交RJO(服務中要求終止訂單之原JO/RJO/法務索賠紀錄/索賠收款之新JO)",
+    "spec": "須顯示附上之申請佐證用附件名稱，如\"客戶違約情事評估報告\"等。"
+  },
+  {
+    "name": "合約提前終止_RJO及相關文件",
+    "spec": "須顯示附上之申請佐證用附件名稱，如\"客戶違約情事評估報告\"等。"
+  },
+  {
+    "name": "合約提前終止_原始JO",
+    "spec": ""
+  },
+  {
+    "name": "合約提前終止_索賠紀錄",
+    "spec": "與「合約提前終止_RJO及相關文件」相關。"
+  },
+  {
+    "name": "合約提前終止_索賠收款JO",
+    "spec": "與「合約提前終止_RJO及相關文件」相關。"
+  },
+  {
+    "name": "客戶違約索賠申請單(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "技術授權內部評估_核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "與銷售相關的所有關鍵系統圖",
+    "spec": ""
+  },
+  {
+    "name": "銷售相關系統之使用者與admin權限清單",
+    "spec": ""
+  },
+  {
+    "name": "Job Order－Shopify revenue form",
+    "spec": "請提供2025／04月，全部認列的job order（by 每一個業務）"
+  },
+  {
+    "name": "Job Order－Skincare pro revenue form",
+    "spec": "請提供2025／04月，全部認列的job order（by 每一個業務）"
+  },
+  {
+    "name": "Shopify每月財務報表及相關文件（發票…等）",
+    "spec": ""
+  },
+  {
+    "name": "Shopify每月財務報表比對異常處理相關文件（如有）",
+    "spec": "Mail、溝通紀錄、後續處理程序"
+  },
+  {
+    "name": "Skincare pro每月財務報表及相關文件（發票…等）",
+    "spec": ""
+  },
+  {
+    "name": "Skincare pro每月財務報表比對異常處理相關文件（如有）",
+    "spec": "Mail、溝通紀錄、後續處理程序"
+  },
+  {
+    "name": "提供給財務後台付款總額（如有）",
+    "spec": ""
+  },
+  {
+    "name": "TBR & BR對應JO單及合約",
+    "spec": "CSM無權限\nTBR單號: 11087643669 / eLR單號: PNDA250516-003\nBR單號: 11252488981 / eLR單號: PCON250503-003"
+  },
+  {
+    "name": "我方賠償客戶申請紀錄(含核准紀錄)",
+    "spec": "與「合約提前終止_索賠收款JO」相關。"
+  },
+  {
+    "name": "賠償處理結果(含核准紀錄)",
+    "spec": "與「賠償處理結果(含核准紀錄)」相關。"
+  },
+  {
+    "name": "TBR申請(含核准紀錄)",
+    "spec": "顯示BD指派CSM人員作為支援"
+  },
+  {
+    "name": "正式BR申請(含核准紀錄)",
+    "spec": "顯示人工填寫 license ID 經人工填寫"
+  },
+  {
+    "name": "BR對應JO單及合約",
+    "spec": ""
+  },
+  {
+    "name": "BR開通後通知客戶Perfect Console帳號",
+    "spec": ""
+  },
+  {
+    "name": "客製需求(UI或功能)之人天評估(含CEO核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "BD通知開發人天需求",
+    "spec": ""
+  },
+  {
+    "name": "CSM與RD討論JIRA上專案排程",
+    "spec": "檢附BD開工通知或通聯記錄"
+  },
+  {
+    "name": "按訂單SPEC內容開立SR申請(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "接收客戶SKU客製用資源/圖檔_系統畫面或通聯記錄",
+    "spec": ""
+  },
+  {
+    "name": "接收客戶SKU客製用資源/圖檔開發完刪除_系統畫面",
+    "spec": "AWS之TTL環境設定(含參數)"
+  },
+  {
+    "name": "CSM申請PUSH前檢附TR內部測試結果(含核准紀錄)",
+    "spec": "TR 經反覆測試後 QA 判定已合格"
+  },
+  {
+    "name": "CSM取得客戶PUSH至正式(或測試)環境意見_通聯記錄",
+    "spec": ""
+  },
+  {
+    "name": "CSM選定正式上線TR申請(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "CSM通知客戶雲端資源PUSH完成(正式與測試環境)",
+    "spec": ""
+  },
+  {
+    "name": "客製SKU交付紀錄與相關文件",
+    "spec": ""
+  },
+  {
+    "name": "WCM交付紀錄與相關文件",
+    "spec": ""
+  },
+  {
+    "name": "(Web/Instore)SDK交付紀錄與相關文件",
+    "spec": ""
+  },
+  {
+    "name": "Kiosk交付紀錄與相關文件",
+    "spec": ""
+  },
+  {
+    "name": "Samsung訂單(PCON240805-0001)交付紀錄與相關文件",
+    "spec": ""
+  },
+  {
+    "name": "提醒客戶完成整合與上線_通聯記錄",
+    "spec": ""
+  },
+  {
+    "name": "Perfect Console供客戶下載資源包_系統畫面",
+    "spec": "客製後SKU與各式SDK版本"
+  },
+  {
+    "name": "Perfect Console按訂單SPEC限制可輸入授權代碼_系統畫面",
+    "spec": "顯示按合約同意數量限制客戶填寫App(SDK)代碼數量"
+  },
+  {
+    "name": "客戶上線完成來信告知_通聯記錄",
+    "spec": ""
+  },
+  {
+    "name": "Perfect Console通知客戶授權到期_Email",
+    "spec": ""
+  },
+  {
+    "name": "U App通知業務BR授權到期_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "BR效期到期自動終止服務_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "終止授權與服務通知客戶之紀錄",
+    "spec": ""
+  },
+  {
+    "name": "授權終止後SDK無法連線Perfect Console之佐證文件",
+    "spec": ""
+  },
+  {
+    "name": "BR單效期(延長或區間異動)異動申請記錄",
+    "spec": ""
+  },
+  {
+    "name": "因提前終止授權而新建之更短效期BR表單",
+    "spec": ""
+  },
+  {
+    "name": "品牌客戶客訴處理相關政策或SOP",
+    "spec": ""
+  },
+  {
+    "name": "品牌客戶來信客訴紀錄",
+    "spec": ""
+  },
+  {
+    "name": "CSM於JIRA開立技術相關客訴處理需求單(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "客戶處理結果紀錄",
+    "spec": ""
+  },
+  {
+    "name": "VIP客戶(雅斯蘭黛)於JIRA開立技術相關處理需求單(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "客戶處理結果紀錄(雅斯蘭黛)",
+    "spec": ""
+  },
+  {
+    "name": "CSM分派非技術類客訴案件至BD或權責單位_通聯記錄",
+    "spec": ""
+  },
+  {
+    "name": "我方賠償客戶申請紀錄(含核准紀錄)",
+    "spec": ""
+  },
+  {
+    "name": "賠償處理結果(含核准紀錄)",
+    "spec": "申請折讓或BR延長"
+  },
+  {
+    "name": "人工建立之CS backend ticket",
+    "spec": "1. 透過email客訴人工判斷通過之ticket\n2. 請提供一筆已結案之level 1客訴紀錄\n3. 請提供一筆已結案之level 2客訴紀錄"
+  },
+  {
+    "name": "自動建立之CS backend ticket",
+    "spec": "1. 透過app回報自動建立之ticket\n2. 請提供一筆已結案之level 1客訴紀錄\n3. 請提供一筆已結案之level 2客訴紀錄"
+  },
+  {
+    "name": "給予Redeem code之email",
+    "spec": ""
+  },
+  {
+    "name": "線下討論補償點數之email or 對話紀錄",
+    "spec": ""
+  },
+  {
+    "name": "補償點數Credit Granting Request Form",
+    "spec": ""
+  },
+  {
+    "name": "每周客訴review report",
+    "spec": "1. 請提供最近一筆客訴weekly report\n2. 請提供針對異常行為進行後續追蹤處理之紀錄"
+  },
+  {
+    "name": "Level 1 Agency 客訴處理SOP",
+    "spec": ""
+  },
+  {
+    "name": "Level 1 Agency 教育訓練紀錄",
+    "spec": "CS team提供level 1之教訓訓練紀錄"
+  },
+  {
+    "name": "Level 2 Agency轉呈無法處理之客訴問題至CSM",
+    "spec": ""
+  },
+  {
+    "name": "Skincare Pro－CSM 撈取 Skincare Pro 回傳之 feedback log",
+    "spec": ""
+  },
+  {
+    "name": "Skincare Pro－人工轉入JIRA平台之VIP bug",
+    "spec": "請提供近期任一筆已結案之紀錄"
+  },
+  {
+    "name": "Skincare Pro feedback log 處理流程與紀錄樣本",
+    "spec": "驗證處理流程與升級條件"
+  },
+  {
+    "name": "Shopify－透過email發送進入SalesFunnel之客訴截圖",
+    "spec": "尚未被人工判斷之所有email 清單畫面截圖"
+  },
+  {
+    "name": "Shopify－人工轉入JIRA平台之VIP bug",
+    "spec": "請提供近期任一筆已結案之紀錄"
+  },
+  {
+    "name": "JO系統開票通知_Email",
+    "spec": "顯示提前七日寄出"
+  },
+  {
+    "name": "開立完成之發票",
+    "spec": ""
+  },
+  {
+    "name": "業務提供發票給客戶之紀錄",
+    "spec": ""
+  },
+  {
+    "name": "開立完成之Invoice",
+    "spec": ""
+  },
+  {
+    "name": "業務提供Invoice給客戶之紀錄",
+    "spec": ""
+  },
+  {
+    "name": "每月AR傳票由AR拋轉至GL模組_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "Invoice request _重開發票申請單",
+    "spec": ""
+  },
+  {
+    "name": "已開立發票作廢證明",
+    "spec": ""
+  },
+  {
+    "name": "新開立之更正發票",
+    "spec": ""
+  },
+  {
+    "name": "銷售折讓(Credit Memo)內部申請(含核准紀錄)",
+    "spec": "若有，請提供"
+  },
+  {
+    "name": "RJO申請項目選單_系統畫面截圖",
+    "spec": ""
+  },
+  {
+    "name": "RJO_銷售退回",
+    "spec": ""
+  },
+  {
+    "name": "RJO帳務重分類底稿",
+    "spec": ""
+  },
+  {
+    "name": "每日銀行水單_收款證明 (含註記發票編號)",
+    "spec": ""
+  },
+  {
+    "name": "每日網銀明細_收款證明",
+    "spec": ""
+  },
+  {
+    "name": "Oracle AR 收款登記",
+    "spec": ""
+  },
+  {
+    "name": "收款傳票",
+    "spec": ""
+  },
+  {
+    "name": "出納通知會計完成收款",
+    "spec": ""
+  },
+  {
+    "name": "會計核對應冲AR紀錄",
+    "spec": "如比對系統紀錄截圖或與業務確認金額紀錄"
+  },
+  {
+    "name": "AR沖帳傳票",
+    "spec": ""
+  },
+  {
+    "name": "Oracle AR帳齡報表",
+    "spec": ""
+  },
+  {
+    "name": "OAR週報",
+    "spec": ""
+  },
+  {
+    "name": "向客戶催款_正式通知",
+    "spec": ""
+  },
+  {
+    "name": "因客戶延遲給付申請暫停BR",
+    "spec": ""
+  },
+  {
+    "name": "Oracle AR帳齡報表",
+    "spec": ""
+  },
+  {
+    "name": "預期信用損失估計底稿",
+    "spec": ""
+  },
+  {
+    "name": "預期信用損失估計傳票",
+    "spec": ""
+  },
+  {
+    "name": "沖銷預期信用損失_RJO_客戶不付款",
+    "spec": ""
+  },
+  {
+    "name": "沖銷預期信用損失傳票",
+    "spec": ""
+  },
+  {
+    "name": "合約資產負債重分類傳票",
+    "spec": "尚未開票之合約負債重分類為合約資產"
+  },
+  {
+    "name": "合約資產負債重分類底稿",
+    "spec": ""
+  },
+  {
+    "name": "各類收入明細(對應20-F)",
+    "spec": ""
+  },
+  {
+    "name": "各類收入分攤方法_JobOrder extra service 系統設定",
+    "spec": ""
+  },
+  {
+    "name": "各類收入分攤方法_Accounting Memo與核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "每月收入傳票由JO拋轉至GL模組_系統畫面",
+    "spec": ""
+  },
+  {
+    "name": "點數收入分攤方法_Accounting Memo",
+    "spec": ""
+  },
+  {
+    "name": "點數存貨價值報表",
+    "spec": ""
+  },
+  {
+    "name": "點數存貨重分類底稿",
+    "spec": "尚未使用點數重分類為合約負債"
+  },
+  {
+    "name": "App Store 收入對帳單",
+    "spec": ""
+  },
+  {
+    "name": "App Store 收入內部紀錄對帳資料",
+    "spec": "與#158「App Store 收入對帳單」相關。"
+  },
+  {
+    "name": "Google Play收入對帳單",
+    "spec": ""
+  },
+  {
+    "name": "Google Play收入內部紀錄對帳資料",
+    "spec": "與#160「Google Play收入對帳單」相關。"
+  },
+  {
+    "name": "Google Ads 收入對帳單",
+    "spec": ""
+  },
+  {
+    "name": "Verifone收入對帳單",
+    "spec": ""
+  },
+  {
+    "name": "Verifone收入內部紀錄對帳資料",
+    "spec": "與#163「Verifone收入對帳單」相關。"
+  },
+  {
+    "name": "客戶申請授信(CCM)_財務核准紀錄",
+    "spec": ""
+  },
+  {
+    "name": "客戶申請授信額度_財務評估資料",
+    "spec": ""
+  }
+]

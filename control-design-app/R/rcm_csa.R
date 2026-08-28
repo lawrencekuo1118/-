@@ -5,7 +5,7 @@
 # ---- Selectable design elements ----
 # Three workflow tabs: 訪談問項設計 → 風險控制點設計 → 控制點測試設計
 # Priority: 風險控制點設計（RCM 列）→ 訪談問項 → 控制點測試
-# Supporting: 範本庫／參數庫（側邊欄最下方）→ PBC資料庫 → RCM
+# Supporting: 範本庫／參數庫（側邊欄）｜標題列僅 RCM → PBC資料庫
 DESIGN_ELEMENTS <- c(
   risk = "循環／風險",
   risk_attributes = "風險三大屬性／類別",
@@ -13,16 +13,34 @@ DESIGN_ELEMENTS <- c(
   control_activity = "控制活動",
   control_types = "控制類型／活動類型",
   frequency_owner = "頻率／負責單位",
-  iuc = "IUC／相關系統",
+  iuc = "IUC",
   company_status = "控制現況描述",
   design_gap = "控制設計差異",
   nature_approach_type = "Nature／Approach／Type（4120SR）",
   inputs = "Inputs（投入）",
   steps = "Steps（執行步驟）",
-  outputs = "Outputs／相關文件",
+  outputs = "Outputs／控制佐證文件",
   exception = "例外／調查門檻",
   assertion_account = "科目／聲明"
 )
+
+# IUC 與 相關系統為獨立欄位；iuc_or_system 保留向後相容（僅對應 IUC）
+ctrl_iuc_value <- function(ctrl) {
+  join_text_list_values(ctrl$iuc %||% ctrl$iuc_or_system %||% "")
+}
+
+ctrl_related_system_value <- function(ctrl) {
+  trimws(as.character(ctrl$related_system %||% ""))
+}
+
+sync_iuc_aliases <- function(ctrl) {
+  iuc <- ctrl_iuc_value(ctrl)
+  if (nzchar(iuc)) {
+    ctrl$iuc <- iuc
+    ctrl$iuc_or_system <- iuc
+  }
+  ctrl
+}
 
 # 訪談問項設計
 # 主目標：針對不同循環／子作業下之「預期風險」與「預期控制目標／活動」深入且快速了解
@@ -84,63 +102,68 @@ INTERVIEW_5W1H_PROBE_LABELS <- c(
   next_step = "模組｜下一步"
 )
 
-INTERVIEW_SOURCE_CHOICES <- c(
-  "已定稿 RCM（實際設計列）" = "rcm",
-  "範本庫預期（風險／目標／活動）" = "library"
-)
-
 # 自我評估／控制點測試設計（控制點定稿後）
 DEFAULT_CSA_ELEMENTS <- c(
   "control_objective", "control_activity", "steps",
   "iuc", "outputs", "exception", "frequency_owner"
 )
 
-# ---- RCM headers learned from 鯨鏈科技_資訊循環_RCM v1 (0820).xlsx ----
-# Row1 groups + Row2 columns. Keep related fields grouped; 防呆分欄。
+# ---- RCM 範本欄位（Internal Control Lab 範本_RCM；多餘欄排除；缺值＝NA）----
 RCM_HEADER_GROUPS <- list(
-  `流程資訊` = c("循環名稱", "子作業編號", "子作業名稱"),
-  `風險資訊` = c("風險因素", "風險描述", "風險類別", "會計科目"),
-  `控制資訊` = c(
-    "控制目標", "控制編號", "控制活動", "控制類型", "控制活動類型",
-    "控制頻率", "控制現況描述", "控制設計差異說明",
-    "相關系統", "相關政策或程序", "相關法令", "相關文件", "流程負責單位"
+  `流程資訊` = c("循環名稱", "子作業名稱"),
+  `風險資訊` = c(
+    "風險面向", "風險範疇", "風險因素", "風險描述", "風險類別", "會計科目"
   ),
-  `控制分析與評估` = c("控制有效性評估", "可能潛在風險", "建議改善方式", "設計檢核")
+  `控制資訊` = c(
+    "控制目標", "控制聲明", "控制活動",
+    "控制性質", "控制方式", "控制頻率", "控制點負責單位",
+    "相關法規", "相關政策與制度", "相關系統",
+    "相關文件", "相關文件-控制用文件", "相關文件-控制佐證文件"
+  )
 )
 
 RCM_HEADERS <- unlist(RCM_HEADER_GROUPS, use.names = FALSE)
 
-# Exact labels matching workbook row 2 (display aliases cleaned)
+# Exact labels matching template (bilingual notes for UI hints)
 RCM_HEADER_LABELS <- c(
-  `循環名稱` = "循環名稱",
-  `子作業編號` = "子作業編號",
-  `子作業名稱` = "子作業名稱",
+  `循環名稱` = "循環名稱（Process Name）",
+  `子作業名稱` = "子作業名稱（Sub-Process Name）",
+  `風險面向` = "風險面向（Risk Principle）",
+  `風險範疇` = "風險範疇（Risk Area）",
   `風險因素` = "風險因素（Risk Factor）",
   `風險描述` = "風險描述（Risk Description）",
-  `風險類別` = "風險類別（報導面／營運面／遵循面）",
-  `會計科目` = "會計科目",
-  `控制目標` = "控制目標",
-  `控制編號` = "控制編號",
-  `控制活動` = "控制活動",
-  `控制類型` = "控制類型（人工/自動）",
-  `控制活動類型` = "控制活動類型（預防性控制/偵測性控制）",
-  `控制頻率` = "控制頻率",
-  `控制現況描述` = "控制現況描述",
-  `控制設計差異說明` = "控制設計差異說明",
-  `相關系統` = "相關系統",
-  `相關政策或程序` = "相關政策或程序",
-  `相關法令` = "相關法令",
-  `相關文件` = "相關文件",
-  `流程負責單位` = "流程負責單位",
-  `控制有效性評估` = "控制有效性評估（有效/無效）",
-  `可能潛在風險` = "可能潛在風險",
-  `建議改善方式` = "建議改善方式",
-  `設計檢核` = "設計檢核（App 防呆）"
+  `風險類別` = "風險類別 Risk Category（報導面 Reporting／營運面 Operational／遵循面 Compliance）",
+  `會計科目` = "會計科目（Financial Statement Accounts）",
+  `控制目標` = "控制目標（Control Objective）",
+  `控制聲明` = "控制聲明（Control Assertions）",
+  `控制活動` = "控制活動（Control Activity）",
+  `控制性質` = "控制性質 Control Nature（人工 Manual／自動 Automated）",
+  `控制方式` = "控制方式 Control Approach（預防性 Preventive／偵測性 Detective／矯正性 Corrective）",
+  `控制頻率` = "控制頻率（Control Frequency）",
+  `控制點負責單位` = "控制點負責單位（Control Owner）",
+  `相關法規` = "相關法規（Related Regulations）",
+  `相關政策與制度` = "相關政策與制度（Related Policies and Procedures）",
+  `相關系統` = "相關系統（Related Systems）",
+  `相關文件` = "相關文件（Related Documents）",
+  `相關文件-控制用文件` = "相關文件-控制用文件（IUC）",
+  `相關文件-控制佐證文件` = "相關文件-控制佐證文件（Control Evidences）"
 )
 
 RISK_CATEGORY_CHOICES <- c("報導面", "營運面", "遵循面")
 CONTROL_TYPE_MANUAL_AUTO <- c("人工", "自動")
-CONTROL_ACTIVITY_TYPE_PD <- c("預防性控制", "偵測性控制")
+# 範本用語：預防性／偵測性／矯正性（相容舊值「…控制」）
+CONTROL_ACTIVITY_TYPE_PD <- c("預防性", "偵測性", "矯正性")
+
+# 缺值暫列 NA（範本慣例）
+rcm_na_value <- function(x) {
+  v <- trimws(as.character(x %||% ""))
+  if (!length(v) || is.na(v[[1]]) || !nzchar(v[[1]]) ||
+      identical(toupper(v[[1]]), "NA") || identical(v[[1]], "—") ||
+      identical(v[[1]], "-")) {
+    return("NA")
+  }
+  v[[1]]
+}
 
 strip_attr_label <- function(x) {
   gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
@@ -325,6 +348,7 @@ new_csa_scenario <- function(scenario_name = "預設現況",
                              outputs = "",
                              investigation_threshold = "",
                              iuc_or_system = "",
+                             related_system = "",
                              frequency = "",
                              nature = "",
                              scenario_id = NULL) {
@@ -345,6 +369,7 @@ new_csa_scenario <- function(scenario_name = "預設現況",
     outputs = as.character(outputs %||% ""),
     investigation_threshold = as.character(investigation_threshold %||% ""),
     iuc_or_system = as.character(iuc_or_system %||% ""),
+    related_system = as.character(related_system %||% ""),
     frequency = as.character(frequency %||% ""),
     nature = as.character(nature %||% "")
   )
@@ -360,7 +385,8 @@ normalize_csa_scenario <- function(sc, seq_no = 1L, ctrl = list()) {
     review_steps = sc$review_steps %||% sc$steps %||% "",
     outputs = sc$outputs %||% "",
     investigation_threshold = sc$investigation_threshold %||% "",
-    iuc_or_system = sc$iuc_or_system %||% sc$related_system %||% "",
+    iuc_or_system = sc$iuc_or_system %||% "",
+    related_system = sc$related_system %||% "",
     frequency = sc$frequency %||% "",
     nature = sc$nature %||% "",
     scenario_id = sc$scenario_id %||% sprintf("S%d", as.integer(seq_no))
@@ -383,7 +409,10 @@ normalize_csa_scenario <- function(sc, seq_no = 1L, ctrl = list()) {
     out$investigation_threshold <- ctrl$investigation_threshold
   }
   if (!nzchar(trimws(out$iuc_or_system))) {
-    out$iuc_or_system <- ctrl$iuc_or_system %||% ctrl$related_system %||% ""
+    out$iuc_or_system <- ctrl_iuc_value(ctrl)
+  }
+  if (!nzchar(trimws(out$related_system))) {
+    out$related_system <- ctrl_related_system_value(ctrl)
   }
   if (!nzchar(trimws(out$frequency))) out$frequency <- ctrl$frequency %||% ""
   if (!nzchar(trimws(out$nature))) out$nature <- ctrl$nature %||% ""
@@ -401,7 +430,8 @@ synthetic_default_csa_scenario <- function(ctrl) {
       review_steps = ctrl$review_steps %||% "",
       outputs = ctrl$outputs %||% ctrl$related_document %||% "",
       investigation_threshold = ctrl$investigation_threshold %||% "",
-      iuc_or_system = ctrl$iuc_or_system %||% ctrl$related_system %||% "",
+      iuc_or_system = ctrl_iuc_value(ctrl),
+      related_system = ctrl_related_system_value(ctrl),
       frequency = ctrl$frequency %||% "",
       nature = ctrl$nature %||% ""
     ),
@@ -429,8 +459,11 @@ overlay_csa_scenario <- function(ctrl, sc) {
   out$outputs <- sc$outputs
   out$investigation_threshold <- sc$investigation_threshold
   if (nzchar(trimws(sc$iuc_or_system))) {
+    out$iuc <- sc$iuc_or_system
     out$iuc_or_system <- sc$iuc_or_system
-    out$related_system <- sc$iuc_or_system
+  }
+  if (nzchar(trimws(sc$related_system))) {
+    out$related_system <- sc$related_system
   }
   if (nzchar(trimws(sc$frequency))) out$frequency <- sc$frequency
   if (nzchar(trimws(sc$nature))) out$nature <- sc$nature
@@ -452,13 +485,13 @@ upsert_control_csa_scenario <- function(ctrl, scenario) {
     existing[[hit[[1]]]] <- sc[c(
       "scenario_id", "scenario_name", "company_status", "type", "inputs",
       "review_steps", "outputs", "investigation_threshold", "iuc_or_system",
-      "frequency", "nature"
+      "related_system", "frequency", "nature"
     )]
   } else {
     existing[[length(existing) + 1L]] <- sc[c(
       "scenario_id", "scenario_name", "company_status", "type", "inputs",
       "review_steps", "outputs", "investigation_threshold", "iuc_or_system",
-      "frequency", "nature"
+      "related_system", "frequency", "nature"
     )]
   }
   ctrl$csa_scenarios <- existing
@@ -489,10 +522,21 @@ csa_scenario_choices <- function(ctrl) {
 normalize_control_activity_type_pd <- function(x) {
   x <- trimws(as.character(x %||% ""))
   if (!nzchar(x)) return("")
-  if (grepl("預防|Preventive", x, ignore.case = TRUE)) return("預防性控制")
-  if (grepl("偵測|Detective", x, ignore.case = TRUE)) return("偵測性控制")
   if (x %in% CONTROL_ACTIVITY_TYPE_PD) return(x)
-  x
+  # 舊用語／英文 → 範本短語
+  if (grepl("矯正|Corrective", x, ignore.case = TRUE) &&
+      !grepl("預防|Preventive|偵測|Detective", x, ignore.case = TRUE)) {
+    return("矯正性")
+  }
+  if (grepl("預防|Preventive", x, ignore.case = TRUE) &&
+      !grepl("偵測|Detective|矯正|Corrective", x, ignore.case = TRUE)) {
+    return("預防性")
+  }
+  if (grepl("偵測|Detective", x, ignore.case = TRUE) &&
+      !grepl("預防|Preventive|矯正|Corrective", x, ignore.case = TRUE)) {
+    return("偵測性")
+  }
+  ""
 }
 
 normalize_risk_category <- function(ctrl) {
@@ -609,9 +653,15 @@ count_filled_risk_attrs <- function(ctrl) {
 
 derive_sub_process_id <- function(ctrl, seq_no = 1L) {
   if (!is_blank(ctrl$sub_process_id)) return(trimws(ctrl$sub_process_id))
-  cycle <- ctrl$cycle %||% ""
-  if (grepl("資訊|電腦", cycle)) sprintf("EC-%03d", 100L + as.integer(seq_no))
-  else sprintf("SP-%03d", as.integer(seq_no))
+  cc <- trimws(ctrl$cycle_code %||% "")
+  if (!nzchar(cc) && nzchar(ctrl$cycle %||% "")) {
+    cc <- cycle_code_for(ctrl$cycle)
+  }
+  # 子作業編號 = [循環編號]-[子作業序號]
+  if (nzchar(cc)) {
+    return(compose_sub_process_id(cc, sprintf("%03d", 100L + as.integer(seq_no))))
+  }
+  sprintf("SP-%03d", as.integer(seq_no))
 }
 
 derive_risk_id <- function(ctrl, seq_no = 1L) {
@@ -621,29 +671,33 @@ derive_risk_id <- function(ctrl, seq_no = 1L) {
 }
 
 derive_control_id <- function(ctrl, seq_no = 1L) {
-  # Prefer Jinglian style: {子作業編號}-{序號} e.g. EC-101-01
+  # 控制編號 = [循環編號]-[子作業序號]-[控制序號] 例：EC-101-01
   if (!is_blank(ctrl$control_id) && !grepl("^CD-|^CP-|^IT-C", ctrl$control_id)) {
     return(trimws(ctrl$control_id))
   }
   sp <- derive_sub_process_id(ctrl, seq_no)
+  parts <- parse_rcm_id_parts(sp)
+  if (isTRUE(parts$ok) && nzchar(parts$cycle) && nzchar(parts$sub)) {
+    return(compose_control_id(parts$cycle, parts$sub, seq_no))
+  }
   sprintf("%s-%02d", sp, as.integer(seq_no))
 }
 
-# 防呆：類型欄位不可混用（人工/自動 ≠ 預防/偵測）
+# 防呆：控制性質／控制方式不可混用（人工/自動 ≠ 預防/偵測/矯正）
 rcm_type_fields_check <- function(control_type, activity_type) {
   ct <- normalize_control_type_manual_auto(control_type)
   at <- normalize_control_activity_type_pd(activity_type)
   issues <- character()
   if (nzchar(as.character(control_type %||% "")) && !nzchar(ct)) {
-    issues <- c(issues, "控制類型應為：人工／自動（不可混用）")
+    issues <- c(issues, "控制性質應為：人工／自動（不可混用）")
   }
   if (nzchar(as.character(activity_type %||% "")) && !nzchar(at)) {
-    issues <- c(issues, "控制活動類型應為：預防性控制／偵測性控制")
+    issues <- c(issues, "控制方式應為：預防性／偵測性／矯正性")
   }
   # swapped fields detection
-  if (grepl("預防|偵測", as.character(control_type %||% "")) &&
+  if (grepl("預防|偵測|矯正", as.character(control_type %||% "")) &&
       grepl("人工|自動", as.character(activity_type %||% ""))) {
-    issues <- c(issues, "控制類型與控制活動類型疑似對調（前者=人工/自動，後者=預防/偵測）")
+    issues <- c(issues, "控制性質與控制方式疑似對調（前者=人工/自動，後者=預防/偵測/矯正）")
   }
   list(ok = !length(issues), msg = if (!length(issues)) "OK" else paste(issues, collapse = "；"),
        control_type = ct, activity_type = at)
@@ -652,57 +706,56 @@ rcm_type_fields_check <- function(control_type, activity_type) {
 control_to_rcm_row <- function(ctrl, seq_no = 1L) {
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
   tchk <- rcm_type_fields_check(ctrl$nature %||% ctrl$control_type, ctrl$approach %||% ctrl$control_activity_type)
-  status_desc <- ctrl$company_status %||% ctrl$detailed_description %||% ""
-  design_gap <- ctrl$design_gap_note %||% ""
-  # If OA or type check fails, force 設計檢核
-  design_ok <- isTRUE(chk$ok) && isTRUE(tchk$ok)
-  design_msg <- if (design_ok) {
-    sprintf("通過（目標：%s；活動：%s；類型欄位正確）", chk$objective_verdict, chk$activity_verdict)
-  } else {
-    paste0("待修：", paste(c(if (!chk$ok) chk$msg, if (!tchk$ok) tchk$msg), collapse = "；"))
-  }
+  invisible(chk) # 設計品質仍檢核；不另輸出「設計檢核」欄（範本無此欄）
 
+  cy <- {
+    v <- ctrl$cycle %||% ""
+    if (grepl("資訊|電腦", v)) "資訊循環" else v
+  }
+  ac <- {
+    raw <- trimws(as.character(ctrl$significant_account %||% ""))
+    if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
+      if (!nzchar(raw)) "" else raw
+    } else {
+      ""
+    }
+  }
   data.frame(
-    `循環名稱` = {
-      cy <- ctrl$cycle %||% ""
-      if (grepl("資訊|電腦", cy)) "資訊循環" else cy
-    },
-    `子作業編號` = derive_sub_process_id(ctrl, seq_no),
-    `子作業名稱` = ctrl$sub_process %||% "",
-    `風險因素` = risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% ""),
-    `風險描述` = {
+    `循環名稱` = rcm_na_value(cy),
+    `子作業名稱` = rcm_na_value(ctrl$sub_process),
+    `風險面向` = rcm_na_value(ctrl$risk_principle),
+    `風險範疇` = rcm_na_value(ctrl$risk_area),
+    `風險因素` = rcm_na_value(format_risk_factor_text(ctrl$risk_factor %||% ctrl$risk_name %||% "")),
+    `風險描述` = rcm_na_value({
       if (!is_blank(ctrl$risk_description)) ctrl$risk_description
       else ctrl$risk_name %||% ""
-    },
-    `風險類別` = normalize_risk_category(ctrl),
-    `會計科目` = {
-      ac <- trimws(as.character(ctrl$significant_account %||% ""))
-      if (is_reporting_risk_category(ctrl$risk_category %||% "")) {
-        if (!nzchar(ac)) "" else ac
-      } else {
-        ""
-      }
-    },
-    `控制目標` = trimws(ctrl$control_objective %||% ""),
-    `控制編號` = derive_control_id(ctrl, seq_no),
-    `控制活動` = trimws(ctrl$control_activity %||% ""),
-    `控制類型` = tchk$control_type,
-    `控制活動類型` = tchk$activity_type,
-    `控制頻率` = resolve_control_frequency(
+    }),
+    `風險類別` = rcm_na_value(normalize_risk_category(ctrl)),
+    `會計科目` = rcm_na_value(ac),
+    `控制目標` = rcm_na_value(ctrl$control_objective),
+    `控制聲明` = rcm_na_value(ctrl$assertions),
+    `控制活動` = rcm_na_value(ctrl$control_activity),
+    `控制性質` = rcm_na_value(tchk$control_type),
+    `控制方式` = rcm_na_value(tchk$activity_type),
+    `控制頻率` = rcm_na_value(resolve_control_frequency(
       tchk$control_type,
       ctrl$frequency
-    ),
-    `控制現況描述` = status_desc,
-    `控制設計差異說明` = design_gap,
-    `相關系統` = ctrl$related_system %||% ctrl$iuc_or_system %||% "",
-    `相關政策或程序` = ctrl$related_policy %||% "",
-    `相關法令` = ctrl$related_law %||% "",
-    `相關文件` = ctrl$related_document %||% ctrl$outputs %||% "",
-    `流程負責單位` = ctrl$responsible_unit %||% "",
-    `控制有效性評估` = ctrl$effectiveness %||% "",
-    `可能潛在風險` = ctrl$residual_risk %||% "",
-    `建議改善方式` = ctrl$improvement %||% "",
-    `設計檢核` = design_msg,
+    )),
+    `控制點負責單位` = rcm_na_value(ctrl$responsible_unit),
+    `相關法規` = {
+      law <- rcm_na_value(ctrl$related_law)
+      url <- trimws(as.character(ctrl$related_law_url %||% ""))
+      if (!nzchar(url) || identical(law, "NA")) {
+        law
+      } else {
+        paste0(law, "｜", url)
+      }
+    },
+    `相關政策與制度` = rcm_na_value(ctrl$related_policy),
+    `相關系統` = rcm_na_value(ctrl_related_system_value(ctrl)),
+    `相關文件` = rcm_na_value(ctrl$related_documents),
+    `相關文件-控制用文件` = rcm_na_value(ctrl_iuc_value(ctrl)),
+    `相關文件-控制佐證文件` = rcm_na_value(ctrl$related_document %||% ctrl$outputs),
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
@@ -718,12 +771,121 @@ controls_to_rcm <- function(controls) {
   }))
 }
 
+# 0 列但保留 RCM 標題列（含儲存時間），供空表仍顯示欄名
+empty_rcm_display_df <- function() {
+  empty <- controls_to_rcm(list())
+  cbind(
+    `儲存時間` = character(0),
+    as.data.frame(empty, stringsAsFactors = FALSE)
+  )
+}
+
 # Column groups for UI / export presentation
 rcm_group_for_column <- function(col) {
   for (g in names(RCM_HEADER_GROUPS)) {
     if (col %in% RCM_HEADER_GROUPS[[g]]) return(g)
   }
   "其他"
+}
+
+# 風險控制點設計各 accordion 區塊 → 控制點欄位／RCM 欄位（供「預覽」合併）
+DESIGN_SECTION_CTRL_FIELDS <- list(
+  `基礎設定` = c(
+    "company", "cycle", "cycle_code", "sub_process_id", "sub_process", "control_id"
+  ),
+  `風險辨識` = c(
+    "risk_principle", "risk_area",
+    "risk_factor", "risk_name", "risk_description", "risk_category",
+    "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
+    "romm_classification", "significant_account", "assertions"
+  ),
+  `控制設計` = c(
+    "control_objective", "control_activity", "frequency", "responsible_unit",
+    "iuc", "iuc_or_system", "related_system", "related_policy", "related_law",
+    "related_law_url",
+    "related_documents", "related_document", "related_document_pbc_ids",
+    "related_document_manual",
+    "nature", "approach", "control_type", "control_activity_type", "type",
+    "inputs", "review_steps", "outputs", "investigation_threshold", "key_control"
+  )
+)
+
+DESIGN_PREVIEW_SECTIONS <- c("基礎設定", "風險辨識", "控制設計")
+
+rcm_preview_section_columns <- function(section) {
+  sec <- trimws(as.character(section %||% ""))
+  cols <- switch(
+    sec,
+    `基礎設定` = c("循環名稱", "子作業名稱"),
+    `風險辨識` = c(
+      "風險面向", "風險範疇", "風險因素", "風險描述", "風險類別", "會計科目"
+    ),
+    `控制設計` = setdiff(
+      RCM_HEADERS,
+      c("循環名稱", "子作業名稱",
+        "風險面向", "風險範疇", "風險因素", "風險描述", "風險類別", "會計科目")
+    ),
+    character()
+  )
+  intersect(cols, RCM_HEADERS)
+}
+
+# 累積至某設計階段之 RCM 欄（維持範本順序）
+rcm_preview_columns_through_section <- function(section) {
+  sec <- trimws(as.character(section %||% ""))
+  idx <- match(sec, DESIGN_PREVIEW_SECTIONS)
+  if (is.na(idx)) return(character())
+  cols <- unlist(
+    lapply(DESIGN_PREVIEW_SECTIONS[seq_len(idx)], rcm_preview_section_columns),
+    use.names = FALSE
+  )
+  intersect(RCM_HEADERS, unique(cols))
+}
+
+# 設計頁預覽：依範本欄序輸出欄位名稱與值（缺值＝NA）
+design_rcm_preview_fields <- function(ctrl, section = NULL, saved_sections = NULL) {
+  row <- control_to_rcm_row(ctrl, seq_no = 0L)
+  cols <- if (is.null(section) || !nzchar(section)) {
+    RCM_HEADERS
+  } else {
+    rcm_preview_columns_through_section(section)
+  }
+  saved <- trimws(as.character(saved_sections %||% character()))
+  saved <- saved[nzchar(saved)]
+  saved_cols <- if (length(saved)) {
+    unlist(lapply(saved, rcm_preview_section_columns), use.names = FALSE)
+  } else {
+    character()
+  }
+  labels <- unname(RCM_HEADER_LABELS[cols])
+  vals <- vapply(cols, function(cn) {
+    if (length(saved) && length(saved_cols) && !cn %in% saved_cols) return("NA")
+    as.character(row[[cn]][[1]] %||% "NA")
+  }, character(1))
+  data.frame(
+    欄位 = labels,
+    內容 = vals,
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+}
+
+merge_design_preview_section <- function(existing, draft, section) {
+  existing <- as.list(existing %||% list())
+  draft <- as.list(draft)
+  fields <- DESIGN_SECTION_CTRL_FIELDS[[section]] %||% character()
+  for (f in fields) {
+    if (!is.null(draft[[f]])) existing[[f]] <- draft[[f]]
+  }
+  existing$rcm_preview <- TRUE
+  prev_secs <- as.character(existing$rcm_preview_sections %||% character())
+  existing$rcm_preview_sections <- unique(c(prev_secs[nzchar(prev_secs)], section))
+  existing$rcm_preview_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  existing
+}
+
+is_rcm_preview_ctrl <- function(ctrl) {
+  isTRUE(ctrl$rcm_preview)
 }
 
 # ---- Interview：循環／子作業下預期風險與預期目標／活動（人事時地物鏈）----
@@ -762,7 +924,7 @@ interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
   act <- nzchar_or(ctrl$control_activity, "該控制活動")
   obj <- nzchar_or(ctrl$control_objective, "該控制目標")
   risk_label <- nzchar_or(ctrl$risk_factor %||% ctrl$risk_name, "該風險")
-  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC）")
+  iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   freq <- nzchar_or(resolve_control_frequency(ctrl$nature, ctrl$frequency), "所訂頻率")
   owner <- nzchar_or(ctrl$responsible_unit, "負責單位")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡")
@@ -818,7 +980,7 @@ suggest_interview_pbc <- function(ctrl, pbc_reg = NULL, pbc_ids = NULL) {
   if (!is.null(pbc_reg) && is.data.frame(pbc_reg) && length(pbc_ids)) {
     linked <- tryCatch(format_pbc_for_inputs(pbc_reg, pbc_ids), error = function(e) "")
   }
-  iuc <- trimws(as.character(ctrl$related_system %||% ctrl$iuc_or_system %||% ""))
+  iuc <- trimws(as.character(ctrl_iuc_value(ctrl)))
   inputs <- trimws(as.character(ctrl$inputs %||% ""))
   outp <- trimws(as.character(ctrl$related_document %||% ctrl$outputs %||% ""))
   base <- unique(c(iuc, inputs, outp))
@@ -890,7 +1052,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
   act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
   ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
   at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
-  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC／相關系統）")
+  iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   status <- nzchar_or(ctrl$company_status, "（尚未書寫現況）")
   gap <- nzchar_or(ctrl$design_gap_note, "（無設計差異說明）")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡文件")
@@ -951,8 +1113,11 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     iuc = list(
       element = unname(INTERVIEW_ELEMENTS[["iuc"]]),
       question = paste0(sprintf(
-        "執行時取得哪些文件或系統資訊（設計 IUC：%s）？誰提供、如何確保完整正確？請指出可作為 PBC 的項目。",
-        iuc
+        "執行時取得哪些文件或資訊（設計 IUC：%s%s）？誰提供、如何確保完整正確？請指出可作為 PBC 的項目。",
+        iuc,
+        if (nzchar(ctrl_related_system_value(ctrl))) {
+          sprintf("；相關系統：%s", ctrl_related_system_value(ctrl))
+        } else ""
       ), suffix),
       evidence = paste(iuc, "PBC 命名對照", sep = "；")
     ),
@@ -1004,7 +1169,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     outputs = list(
       element = unname(INTERVIEW_ELEMENTS[["outputs"]]),
       question = paste0(sprintf(
-        "控制產出／相關文件為何（預期：%s）？誰簽核、留存何處、留存多久？下一步給誰？",
+        "控制產出／佐證文件為何（預期：%s）？誰簽核、留存何處、留存多久？下一步給誰？",
         outp
       ), suffix),
       evidence = outp
@@ -1084,7 +1249,7 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
           control_objective = ctrl$control_objective %||% "",
           control_activity = ctrl$control_activity %||% "",
           company_status = ctrl$company_status %||% "",
-          iuc = ctrl$iuc_or_system %||% "",
+          iuc = ctrl_iuc_value(ctrl),
           steps = ctrl$review_steps %||% "",
           nzchar_or(item$evidence, "")
         )
@@ -1157,7 +1322,7 @@ control_to_csa_one <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS,
   cid <- derive_control_id(ctrl, 1L)
   obj <- nzchar_or(ctrl$control_objective, "（待補控制目標）")
   act <- nzchar_or(ctrl$control_activity, "（待補控制活動）")
-  iuc <- nzchar_or(ctrl$related_system %||% ctrl$iuc_or_system, "（待補 IUC／PBC）")
+  iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "執行軌跡／簽核")
   steps <- trimws(unlist(strsplit(as.character(ctrl$review_steps %||% ""), "\n")))
   steps <- steps[nzchar(steps)]
@@ -1231,14 +1396,14 @@ control_to_csa_one <- function(ctrl, elements = DEFAULT_CSA_ELEMENTS,
                 "該步驟有完整執行軌跡且無未結例外")
       }
     } else if (identical(key, "iuc")) {
-      add_row(key, "IUC／相關系統",
+      add_row(key, "IUC",
               sprintf("確認「%s」情境依賴之 IUC／PBC 完整正確", scen_nm),
               sprintf("取得「%s」，核對來源、參數、邏輯或產生流程；比對客戶原名與檢視後命名", iuc),
               iuc,
               "IUC 完整正確，足以支撐控制結論",
               sample = "依 IUC 依賴範圍；與控制抽樣樣本勾稽")
     } else if (identical(key, "outputs")) {
-      add_row(key, "Outputs／相關文件",
+      add_row(key, "Outputs／控制佐證文件",
               sprintf("確認「%s」情境產出證據足以證明控制已發生", scen_nm),
               sprintf("抽查產出「%s」之完整性、簽核及時性與內容妥適性", outp),
               outp,
@@ -1356,27 +1521,115 @@ controls_to_csa <- function(controls, elements = DEFAULT_CSA_ELEMENTS,
 # 會計科目：僅風險類別＝報導面時必填；其餘類別鎖定不可填
 DESIGN_REQUIRED_FIELDS <- c(
   cycle = "循環名稱",
-  sub_process_id = "子作業編號",
   sub_process = "子作業名稱",
   risk_factor = "風險因素",
   risk_description = "風險描述",
   risk_category = "風險類別",
   control_objective = "控制目標",
   control_activity = "控制活動",
-  nature = "控制類型（人工／自動）",
-  approach = "控制活動類型（預防／偵測）",
+  nature = "控制性質（人工／自動）",
+  approach = "控制方式（預防／偵測／矯正）",
   frequency = "控制頻率",
-  responsible_unit = "流程負責單位",
-  iuc_or_system = "相關系統／IUC"
+  responsible_unit = "控制點負責單位",
+  iuc_or_system = paste0(CONTROL_IUC_DOCUMENT_LABEL, "（IUC）")
 )
+
+DESIGN_ACCORDION_SECTIONS <- c("基礎設定", "風險辨識", "控制設計")
+
+empty_missing_by_group <- function() {
+  stats::setNames(
+    rep(list(character()), length(DESIGN_ACCORDION_SECTIONS)),
+    DESIGN_ACCORDION_SECTIONS
+  )
+}
+
+design_field_section <- function(field_key) {
+  if (field_key %in% c("cycle", "sub_process_id", "sub_process")) return("基礎設定")
+  if (field_key %in% c("risk_factor", "risk_description", "risk_category")) return("風險辨識")
+  "控制設計"
+}
+
+format_design_required_by_accordion <- function(missing_by_group = NULL, missing_fallback = character()) {
+  groups <- missing_by_group
+  if (is.null(groups) || !length(unlist(groups))) {
+    groups <- group_design_required_missing(missing_fallback)
+  }
+  lines <- character()
+  for (sec in DESIGN_ACCORDION_SECTIONS) {
+    items <- unique(groups[[sec]] %||% character())
+    items <- items[nzchar(items)]
+    if (length(items)) {
+      lines <- c(lines, sprintf("%s：%s", sec, paste(items, collapse = "、")))
+    }
+  }
+  if (!length(lines) && length(missing_fallback)) {
+    return(paste0("必填未齊：", paste(unique(missing_fallback), collapse = "、")))
+  }
+  paste(lines, collapse = "｜")
+}
+
+group_design_required_missing <- function(missing_labels) {
+  groups <- empty_missing_by_group()
+  for (lab in unique(missing_labels)) {
+    if (!nzchar(lab)) next
+    sec <- if (lab %in% c("循環名稱", "子作業編號", "子作業名稱")) {
+      "基礎設定"
+    } else if (grepl("^風險|^會計科目|^相關法規", lab)) {
+      "風險辨識"
+    } else {
+      "控制設計"
+    }
+    groups[[sec]] <- c(groups[[sec]], lab)
+  }
+  lapply(groups, unique)
+}
 
 DESIGN_OPTIONAL_FIELDS <- c(
   significant_account = "會計科目（僅報導面必填；常見科目複選／全部適用；其他類別不可填）",
-  related_law = "相關法令（僅遵循面必填；其他類別不可填）",
-  assertions = "聲明（報導面八種／營運面三種可複選；遵循面不可選）",
-  related_policy = "相關政策或程序",
-  related_document = "相關文件"
+  related_law = "相關法規（僅遵循面必填；其他類別不可填）",
+  assertions = "控制聲明（報導面八種／營運面三種可複選；遵循面不可選）",
+  related_policy = "相關政策與制度",
+  related_system = "相關系統（IT／應用系統；自動控制必填）",
+  related_documents = "相關文件",
+  related_document_pbc = paste0(
+    CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 資料庫選取或手動輸入；自動控制／遵循面不可填）"
+  )
 )
+
+is_automatic_control <- function(nature) {
+  identical(normalize_control_type_manual_auto(nature), "自動")
+}
+
+# 相關系統：自動控制必填；人工控制選填
+related_system_mode_for_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  nature <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  if (is_automatic_control(nature)) return("required")
+  if (identical(nature, "人工")) return("optional")
+  "pending"
+}
+
+# 控制佐證文件：人工＋非法遵面必填；自動或遵循面鎖定
+related_document_mode_for_ctrl <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  nature <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  cat <- trimws(as.character(ctrl$risk_category %||% ""))
+  if (is_automatic_control(nature) || is_compliance_risk_category(cat)) {
+    return("locked")
+  }
+  if (nzchar(nature) && nzchar(cat)) return("required")
+  "pending"
+}
+
+related_document_pbc_value <- function(ctrl, registry = NULL) {
+  txt <- join_text_list_values(ctrl$related_document %||% "")
+  if (nzchar(txt)) return(txt)
+  sel <- c(
+    parse_pbc_id_values(ctrl$related_document_pbc_ids),
+    parse_text_list_values(ctrl$related_document_manual %||% "")
+  )
+  resolve_multi_pbc_text(sel, registry)
+}
 
 is_reporting_risk_category <- function(cat) {
   grepl("^報導", trimws(as.character(cat %||% "")))
@@ -1505,14 +1758,13 @@ law_is_filled <- function(x) {
 design_field_value <- function(ctrl, field) {
   ctrl <- as.list(ctrl)
   if (identical(field, "risk_factor")) {
-    return(risk_factor_tag(trimws(as.character(
-      ctrl$risk_factor %||% ctrl$risk_name %||% ""
-    ))))
+    return(format_risk_factor_text(ctrl$risk_factor %||% ctrl$risk_name %||% ""))
   }
   if (identical(field, "iuc_or_system")) {
-    return(trimws(as.character(
-      ctrl$iuc_or_system %||% ctrl$related_system %||% ""
-    )))
+    return(ctrl_iuc_value(ctrl))
+  }
+  if (identical(field, "related_system")) {
+    return(ctrl_related_system_value(ctrl))
   }
   if (identical(field, "nature")) {
     return(trimws(as.character(
@@ -1536,26 +1788,33 @@ design_field_value <- function(ctrl, field) {
   trimws(as.character(ctrl[[field]] %||% ""))
 }
 
-# Returns ok + missing Chinese labels for 設計必填欄位
+# Returns ok + missing Chinese labels for 設計必填欄位（含 accordion 分組）
 design_required_check <- function(ctrl) {
   missing <- character()
+  missing_by_group <- empty_missing_by_group()
+  add_miss <- function(label, section) {
+    missing <<- c(missing, label)
+    missing_by_group[[section]] <<- c(missing_by_group[[section]], label)
+  }
   filled <- list()
   for (f in names(DESIGN_REQUIRED_FIELDS)) {
     val <- design_field_value(ctrl, f)
     filled[[f]] <- nzchar(val)
-    if (!nzchar(val)) missing <- c(missing, DESIGN_REQUIRED_FIELDS[[f]])
+    if (!nzchar(val)) {
+      add_miss(DESIGN_REQUIRED_FIELDS[[f]], design_field_section(f))
+    }
   }
   # Extra rule: nature must be exactly one 人工/自動
   raw_nature <- trimws(as.character(ctrl$nature %||% ctrl$control_type %||% ""))
   norm_nature <- normalize_control_type_manual_auto(raw_nature)
   if (nzchar(raw_nature) && !nzchar(norm_nature)) {
-    missing <- c(missing, "控制類型須為單一人工或自動（不可混用）")
+    add_miss("控制性質須為單一人工或自動（不可混用）", "控制設計")
     filled$nature <- FALSE
   }
-  # Extra rule: approach must be exactly one 預防/偵測
+  # Extra rule: approach must be exactly one 預防/偵測/矯正
   if (isTRUE(filled$approach) && exists("activity_type_ok", mode = "function") &&
       !activity_type_ok(ctrl$approach %||% ctrl$control_activity_type)) {
-    missing <- c(missing, "控制活動類型須為單一預防／偵測（不可混用）")
+    add_miss("控制方式須為單一預防／偵測／矯正（不可混用）", "控制設計")
     filled$approach <- FALSE
   }
   # 會計科目：報導面必填；其他類別不得填入（僅允許空白／NA）
@@ -1564,12 +1823,12 @@ design_required_check <- function(ctrl) {
   if (is_reporting_risk_category(cat)) {
     filled$significant_account <- account_is_filled(acct)
     if (!account_is_filled(acct)) {
-      missing <- c(missing, "會計科目（報導面必填）")
+      add_miss("會計科目（報導面必填）", "風險辨識")
     }
   } else if (nzchar(cat)) {
     filled$significant_account <- !account_is_filled(acct)
     if (account_is_filled(acct)) {
-      missing <- c(missing, "會計科目僅報導面可填（請清空）")
+      add_miss("會計科目僅報導面可填（請清空）", "風險辨識")
     }
   } else {
     filled$significant_account <- TRUE
@@ -1579,12 +1838,12 @@ design_required_check <- function(ctrl) {
   if (is_compliance_risk_category(cat)) {
     filled$related_law <- law_is_filled(law)
     if (!law_is_filled(law)) {
-      missing <- c(missing, "相關法令（遵循面必填）")
+      add_miss("相關法規（遵循面必填）", "風險辨識")
     }
   } else if (nzchar(cat)) {
     filled$related_law <- !law_is_filled(law)
     if (law_is_filled(law)) {
-      missing <- c(missing, "相關法令僅遵循面可填（請清空）")
+      add_miss("相關法規僅遵循面可填（請清空）", "風險辨識")
     }
   } else {
     filled$related_law <- TRUE
@@ -1595,30 +1854,68 @@ design_required_check <- function(ctrl) {
   if (identical(mode_as, "locked")) {
     filled$assertions <- !length(asrt)
     if (length(asrt)) {
-      missing <- c(missing, "聲明僅報導面／營運面可填（遵循面請清空）")
+      add_miss("控制聲明僅報導面／營運面可填（遵循面請清空）", "控制設計")
     }
   } else if (identical(mode_as, "reporting") || identical(mode_as, "operations")) {
     ok_as <- assertions_allowed_ok(asrt, cat)
     filled$assertions <- ok_as
     if (!ok_as) {
-      missing <- c(missing, if (identical(mode_as, "operations")) {
-        "聲明超出營運面可選（完整性／正確性／即時性）"
-      } else {
-        "聲明超出報導面可選（Thomson Reuters／AICPA 八種）"
-      })
+      add_miss(
+        if (identical(mode_as, "operations")) {
+          "控制聲明超出營運面可選（完整性／正確性／即時性）"
+        } else {
+          "控制聲明超出報導面可選（Thomson Reuters／AICPA 八種）"
+        },
+        "控制設計"
+      )
     }
   } else {
     filled$assertions <- !length(asrt)
   }
+  # 控制佐證文件：人工＋非法遵面必填（PBC 選取或手動輸入，可多選）；自動／遵循面不可填
+  doc_mode <- related_document_mode_for_ctrl(ctrl)
+  doc_sel <- c(
+    parse_pbc_id_values(ctrl$related_document_pbc_ids),
+    parse_text_list_values(ctrl$related_document_manual %||% "")
+  )
+  doc_txt <- related_document_pbc_value(ctrl)
+  doc_label <- CONTROL_EVIDENCE_DOCUMENT_LABEL
+  if (identical(doc_mode, "required")) {
+    filled$related_document_pbc <- multi_pbc_is_filled(doc_sel) || nzchar(doc_txt)
+    if (!filled$related_document_pbc) {
+      add_miss(paste0(doc_label, "（可多選；自 PBC 選取或手動輸入）"), "控制設計")
+    }
+  } else if (identical(doc_mode, "locked")) {
+    filled$related_document_pbc <- !multi_pbc_is_filled(doc_sel) && !nzchar(doc_txt)
+    if (multi_pbc_is_filled(doc_sel) || nzchar(doc_txt)) {
+      add_miss(paste0(doc_label, "不可設定（自動控制或遵循面風險）"), "控制設計")
+    }
+  } else {
+    filled$related_document_pbc <- TRUE
+  }
+  # 相關系統：自動控制必填；人工控制選填
+  sys_mode <- related_system_mode_for_ctrl(ctrl)
+  sys <- ctrl_related_system_value(ctrl)
+  if (identical(sys_mode, "required")) {
+    filled$related_system <- nzchar(sys)
+    if (!nzchar(sys)) {
+      add_miss("相關系統（自動控制必填）", "控制設計")
+    }
+  } else {
+    filled$related_system <- TRUE
+  }
   list(
     ok = !length(missing),
     missing = unique(missing),
+    missing_by_group = lapply(missing_by_group, unique),
     filled = filled,
     required = DESIGN_REQUIRED_FIELDS,
     optional = DESIGN_OPTIONAL_FIELDS,
     account_mode = if (is_reporting_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
     law_mode = if (is_compliance_risk_category(cat)) "required" else if (nzchar(cat)) "locked" else "pending",
-    assertion_mode = mode_as
+    assertion_mode = mode_as,
+    document_mode = doc_mode,
+    related_system_mode = sys_mode
   )
 }
 
@@ -1668,19 +1965,19 @@ detect_design_gaps <- function(ctrl) {
                                 ctrl$approach %||% ctrl$control_activity_type)
   if (!isTRUE(tchk$ok)) {
     add("控制缺失", "高", tchk$msg %||% "類型欄錯誤",
-        "控制類型＝人工/自動；控制活動類型＝預防/偵測，勿對調")
+        "控制性質＝人工/自動；控制方式＝預防/偵測/矯正，勿對調")
   }
   if (!is_blank(ctrl$assertions) &&
       (is_reporting_risk_category(ctrl$risk_category %||% "") ||
        is_operations_risk_category(ctrl$risk_category %||% "")) &&
       !assertions_allowed_ok(ctrl$assertions, ctrl$risk_category)) {
-    add("缺資訊", "中", "聲明選項與風險類別不符",
+    add("缺資訊", "中", "控制聲明選項與風險類別不符",
         "報導面用八種 Assertions；營運面僅完整性／正確性／即時性；遵循面不可選")
   }
   if (is_blank(ctrl$assertions) &&
       (is_reporting_risk_category(ctrl$risk_category %||% "") ||
        is_operations_risk_category(ctrl$risk_category %||% ""))) {
-    add("缺資訊", "中", "缺少相關聲明", "對應 assertion（4120SR 輔助；可複選）")
+    add("缺資訊", "中", "缺少控制聲明", "對應 assertion（4120SR 輔助；可複選）")
   }
 
   chk <- rcm_objective_activity_check(ctrl$control_objective, ctrl$control_activity)
@@ -1694,8 +1991,16 @@ detect_design_gaps <- function(ctrl) {
   if (is_blank(ctrl$inputs)) {
     add("缺文件", "中", "缺少 Inputs 說明", "補投入報表／資料來源（可附 PBC 對照）")
   }
-  if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document)) {
-    add("缺文件", "低", "缺少產出／相關文件（選填）",
+  doc_mode <- related_document_mode_for_ctrl(ctrl)
+  if (identical(doc_mode, "required") &&
+      !multi_pbc_is_filled(ctrl$related_document_pbc_ids) &&
+      is_blank(ctrl$related_document) &&
+      is_blank(ctrl$related_document_manual)) {
+    add("缺文件", "高", paste0("缺少", CONTROL_EVIDENCE_DOCUMENT_LABEL, "（可多選；自 PBC 選取或手動輸入）"),
+        "至 PBC 資料庫選取或於控制設計手動輸入佐證文件名稱")
+  } else if (is_blank(ctrl$outputs) && is_blank(ctrl$related_document) &&
+             !identical(doc_mode, "locked")) {
+    add("缺文件", "低", paste0("缺少產出／", CONTROL_EVIDENCE_DOCUMENT_LABEL),
         "建議補可驗證證據（簽核、log、調節表）供後續 PBC")
   }
   if (is_blank(ctrl$investigation_threshold) &&
@@ -1748,6 +2053,21 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   # 相關法令：遵循面保留；其他類別強制清空
   if (!is_compliance_risk_category(ctrl$risk_category %||% "")) {
     ctrl$related_law <- ""
+    ctrl$related_law_url <- ""
+  } else {
+    ctrl$related_law_url <- trimws(as.character(ctrl$related_law_url %||% ""))
+  }
+  # 控制佐證文件：自動控制或遵循面強制清空；否則保留 PBC 選取＋手動輸入
+  if (identical(related_document_mode_for_ctrl(ctrl), "locked")) {
+    ctrl$related_document <- ""
+    ctrl$related_document_pbc_ids <- character(0)
+    ctrl$related_document_manual <- ""
+  } else {
+    ctrl$related_document_pbc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+    ctrl$related_document_manual <- join_text_list_values(ctrl$related_document_manual)
+    if (is_blank(ctrl$related_document)) {
+      ctrl$related_document <- join_text_list_values(ctrl$related_document_manual)
+    }
   }
   # 聲明：依風險類別過濾；遵循面強制清空
   ctrl$assertions <- normalize_assertions_for_category(
@@ -1759,16 +2079,11 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
   if (is_blank(ctrl$risk_factor) && !is_blank(ctrl$risk_name)) {
     ctrl$risk_factor <- ctrl$risk_name
   }
-  if (is_blank(ctrl$iuc_or_system) && !is_blank(ctrl$related_system)) {
-    ctrl$iuc_or_system <- ctrl$related_system
-  }
-  if (is_blank(ctrl$related_system) && !is_blank(ctrl$iuc_or_system)) {
-    ctrl$related_system <- ctrl$iuc_or_system
-  }
+  ctrl <- sync_iuc_aliases(ctrl)
   if (!is_blank(ctrl$risk_factor) || !is_blank(ctrl$risk_name)) {
-    tag <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name)
-    ctrl$risk_factor <- tag
-    ctrl$risk_name <- tag
+    formatted <- format_risk_factor_text(ctrl$risk_factor %||% ctrl$risk_name)
+    ctrl$risk_factor <- formatted
+    ctrl$risk_name <- formatted
   }
   ctrl$frequency <- resolve_control_frequency(
     ctrl$nature %||% ctrl$control_type,
@@ -1780,7 +2095,7 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
     return(list(
       ok = FALSE, ready = FALSE, gaps = detect_design_gaps(ctrl),
       control = NULL, rcm_row = NULL, required = req,
-      msg = paste0("必填未齊：", paste(req$missing, collapse = "、"))
+      msg = paste0("必填未齊：", format_design_required_by_accordion(req$missing_by_group, req$missing))
     ))
   }
 
@@ -1822,33 +2137,38 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
       ctrl$control_id <- derive_control_id(ctrl, seq_hint)
     }
   }
-  # 設計階段：現況／分析評估欄位留空（不在本 APP 範圍）
+  # 設計階段：現況／差異／分析評估欄位一律留空（不在本 APP 範圍）
   ctrl$company_status <- ""
-  ctrl$design_gap_note <- ctrl$design_gap_note %||% ""
+  ctrl$design_gap_note <- ""
   ctrl$effectiveness <- ""
   ctrl$residual_risk <- ""
   ctrl$improvement <- ""
   if (exists("assemble_summary_description", mode = "function")) {
     ctrl$summary_description <- tryCatch(assemble_summary_description(ctrl), error = function(e) "")
   }
-  ctrl$detailed_description <- ctrl$detailed_description %||% ""
+  # detailed_description 僅保留組裝後之設計敘述；不含公司現況原文
+  if (exists("assemble_control_paragraph", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(assemble_control_paragraph(ctrl), error = function(e) "")
+  } else if (exists("assemble_detailed_description", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(assemble_detailed_description(ctrl), error = function(e) "")
+  } else {
+    ctrl$detailed_description <- ""
+  }
   ctrl$rcm_ready <- list(ready = TRUE, gaps = ready$gaps)
+  ctrl$saved_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   ctrl$validation <- if (exists("validate_control_design", mode = "function")) {
     validate_control_design(ctrl)
   } else list(ok = TRUE, missing = character())
 
   row <- control_to_rcm_row(ctrl, seq_no = seq_hint)
-  # Parity check: designed control id == RCM 控制編號
-  if (!identical(as.character(ctrl$control_id), as.character(row[["控制編號"]]))) {
-    ctrl$control_id <- as.character(row[["控制編號"]])
-  }
+  # 範本 RCM 不含控制編號欄；編號僅保留於設計 session／下游工作底稿
   list(
     ok = TRUE,
     ready = TRUE,
     gaps = ready$gaps,
     control = ctrl,
     rcm_row = row,
-    msg = sprintf("已完成設計＝RCM 一列（%s）", ctrl$control_id)
+    msg = sprintf("已完成設計＝RCM 一列（%s）", ctrl$control_id %||% "—")
   )
 }
 
@@ -1856,13 +2176,10 @@ finalize_control_as_rcm_row <- function(ctrl, existing_ids = character(), seq_hi
 assert_design_rcm_parity <- function(controls) {
   n <- length(controls)
   rcm <- controls_to_rcm(controls)
-  ids_c <- if (!n) character() else vapply(controls, function(x) as.character(x$control_id %||% ""), "")
-  ids_r <- if (!nrow(rcm)) character() else as.character(rcm[["控制編號"]])
   list(
-    ok = (n == nrow(rcm)) && identical(ids_c, ids_r),
+    ok = (n == nrow(rcm)),
     n_controls = n,
     n_rcm_rows = nrow(rcm),
-    control_ids = ids_c,
-    rcm_ids = ids_r
+    note = "範本 RCM 不含控制編號；列數對齊即可"
   )
 }

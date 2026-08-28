@@ -155,52 +155,6 @@ rcm_objective_activity_check <- function(objective, activity) {
   )
 }
 
-# Try to split a mixed pasted sentence into objective vs activity suggestions
-suggest_objective_activity_split <- function(text) {
-  text <- trimws(as.character(text %||% ""))
-  if (!nzchar(text)) {
-    return(list(objective = "", activity = "", note = "無內容"))
-  }
-  # If already two lines, prefer first=obj second=act when cues match
-  lines <- trimws(unlist(strsplit(text, "\n")))
-  lines <- lines[nzchar(lines)]
-  if (length(lines) >= 2) {
-    return(list(
-      objective = lines[[1]],
-      activity = paste(lines[-1], collapse = ""),
-      note = "已依換行拆成目標／活動，請再人工確認"
-    ))
-  }
-  # Split on 。 or ； keeping outcome clause vs action clause
-  parts <- trimws(unlist(strsplit(text, "[。；;]")))
-  parts <- parts[nzchar(parts)]
-  if (length(parts) >= 2) {
-    scores_obj <- vapply(parts, function(p) count_cues(p, OBJECTIVE_CUES) - count_cues(p, ACTIVITY_CUES), numeric(1))
-    scores_act <- vapply(parts, function(p) count_cues(p, ACTIVITY_CUES) - count_cues(p, OBJECTIVE_CUES), numeric(1))
-    oi <- which.max(scores_obj)
-    ai <- which.max(scores_act)
-    if (!identical(oi, ai)) {
-      return(list(objective = parts[[oi]], activity = parts[[ai]], note = "已依句意拆分，請確認"))
-    }
-  }
-  # Heuristic rewrite wrappers
-  if (contains_any(text, ACTIVITY_CUES) && !contains_any(text, OBJECTIVE_CUES)) {
-    return(list(
-      objective = paste0("確保", gsub("^確保", "", text), "之相關風險受控"),
-      activity = text,
-      note = "原文偏活動：已建議補一條結果型目標，請改寫得更精準"
-    ))
-  }
-  if (contains_any(text, OBJECTIVE_CUES) && !contains_any(text, ACTIVITY_CUES)) {
-    return(list(
-      objective = text,
-      activity = "（請補：執行者＋具體動作＋表單／系統）",
-      note = "原文偏目標：活動欄待補 How"
-    ))
-  }
-  list(objective = text, activity = text, note = "無法自動拆分，請手動分開 Why／How")
-}
-
 format_oa_check_html <- function(chk) {
   iss <- if (length(chk$issues)) paste(chk$issues, collapse = "；") else "無"
   hints <- if (length(chk$hints)) paste(chk$hints, collapse = "；") else ""

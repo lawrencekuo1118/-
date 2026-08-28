@@ -7,16 +7,232 @@ if (!exists("%||%", mode = "function", inherits = TRUE)) {
 
 LIBRARY_CONTROL_FIELDS <- c(
   "library_id", "title", "cycle", "sub_process_id", "sub_process",
+  "risk_principle", "risk_area",
   "risk_factor", "risk_name", "risk_description", "risk_category",
   "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
   "romm_classification", "significant_account", "assertions",
   "control_objective", "control_activity", "frequency", "responsible_unit",
-  "iuc_or_system", "related_system", "related_policy", "related_law", "related_document",
+  "iuc_or_system", "related_system", "related_policy", "related_law",
+  "related_law_url",
+  "related_documents", "related_document",
+  "related_document_pbc_ids",
   "company_status", "design_gap_note", "effectiveness", "residual_risk", "improvement",
   "nature", "approach", "type",
   "inputs", "review_steps", "outputs", "investigation_threshold",
   "dependent_controls", "detailed_description", "summary_description", "control_id"
 )
+
+# 非控制點「設計」欄位：輸入檔／既有 RCM 常帶入，不可污染 APP 範本庫／參數庫
+# （對應 RCM「控制現況描述／差異說明」與「控制分析與評估」群組）
+NON_DESIGN_CONTROL_FIELDS <- c(
+  "company_status",      # 控制現況描述／公司現況
+  "design_gap_note",     # 控制設計差異說明
+  "effectiveness",       # 控制有效性評估
+  "residual_risk",       # 可能潛在風險
+  "improvement"          # 建議改善方式
+)
+
+# 執行階段組出的編號：僅設計頁／RCM 使用，不寫入範本庫
+RUNTIME_ID_CONTROL_FIELDS <- c("sub_process_id", "control_id")
+
+NON_PERSIST_CONTROL_ALIASES <- c(
+  "control_status", "status_description", "design_gap", "gap_analysis",
+  "控制現況描述", "控制設計差異說明", "控制有效性評估",
+  "可能潛在風險", "建議改善方式", "現況描述", "差異說明",
+  "差異缺失", "缺失說明", "有效性評估", "潛在風險", "改善建議",
+  "改善方式", "建議改善", "公司控制現況", "公司現況", "控制現況",
+  "改善計畫", "改善計劃", "分析評估", "控制分析與評估"
+)
+
+# 參數庫禁止收錄的參數名（與上列意義雷同）
+PARAMETER_STORE_BLOCKED_PARAMS <- c(
+  "子作業編號", "控制編號",
+  "控制現況描述", "控制設計差異說明", "控制有效性評估",
+  "可能潛在風險", "建議改善方式",
+  "公司控制現況", "公司現況", "控制現況", "現況描述",
+  "差異說明", "差異缺失", "缺失說明",
+  "有效性評估", "潛在風險",
+  "改善建議", "改善方式", "建議改善", "改善計畫", "改善計劃",
+  "分析評估", "控制分析與評估"
+)
+
+is_blocked_parameter_name <- function(param) {
+  p <- trimws(as.character(param %||% ""))
+  if (!nzchar(p)) return(TRUE)
+  if (p %in% PARAMETER_STORE_BLOCKED_PARAMS) return(TRUE)
+  grepl("現況|改善建議|改善方式|建議改善|有效性評估|潛在風險|差異說明|差異缺失", p)
+}
+
+strip_runtime_id_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  for (f in RUNTIME_ID_CONTROL_FIELDS) {
+    ctrl[[f]] <- ""
+  }
+  ctrl
+}
+
+strip_non_design_control_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  for (f in NON_DESIGN_CONTROL_FIELDS) {
+    ctrl[[f]] <- ""
+  }
+  # 匯入檔常把「控制現況描述」誤塞進 detailed_description；設計庫一律清空後由組裝函式重建
+  ctrl$detailed_description <- ""
+  # 常見別名一併清空（含差異缺失／現況相關欄）
+  for (alias in NON_PERSIST_CONTROL_ALIASES) {
+    if (!is.null(ctrl[[alias]])) ctrl[[alias]] <- ""
+  }
+  ctrl
+}
+
+# 寫入／回傳前拿掉編號與非設計欄（不重清 detailed_description，以免刪掉組裝結果）
+drop_non_persist_control_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  drop <- unique(c(NON_DESIGN_CONTROL_FIELDS, RUNTIME_ID_CONTROL_FIELDS,
+                   NON_PERSIST_CONTROL_ALIASES, "company"))
+  for (f in drop) ctrl[[f]] <- NULL
+  ctrl
+}
+
+# 範本鍵依內容特徵穩定累積（不含子作業／控制編號）
+library_content_id <- function(ctrl) {
+  rf <- trimws(as.character(ctrl$risk_factor %||% ctrl$risk_name %||% ""))
+  if (exists("format_risk_factor_text", mode = "function")) {
+    rf <- format_risk_factor_text(rf)
+  }
+  raw <- paste(c(
+    trimws(as.character(ctrl$cycle %||% "")),
+    trimws(as.character(ctrl$sub_process %||% "")),
+    rf,
+    trimws(as.character(ctrl$risk_description %||% "")),
+    trimws(as.character(ctrl$control_objective %||% "")),
+    trimws(as.character(ctrl$control_activity %||% "")),
+    trimws(as.character(ctrl$iuc %||% ctrl$iuc_or_system %||% ""))
+  ), collapse = "|")
+  sprintf("LIB-%08x", sum(utf8ToInt(enc2utf8(raw))) %% as.integer(1e8))
+}
+
+# 企業專屬用語／文件編號／系統商品名 → 通用表述（入庫前去識別）
+CLIENT_NAME_MARKERS <- c(
+  "輝能科技", "ProLogium", "prologium", "PROLOGIUM",
+  "鯨鏈科技", "鯨鏈RCM", "鯨鏈", "Jinglian", "jinglian"
+)
+
+is_client_identifying_tag <- function(tag) {
+  tg <- trimws(as.character(tag %||% ""))
+  if (!nzchar(tg)) return(FALSE)
+  if (tg %in% CLIENT_NAME_MARKERS) return(TRUE)
+  grepl("輝能|ProLogium|prologium|鯨鏈|Jinglian", tg, ignore.case = TRUE)
+}
+
+deidentify_client_specific_text <- function(text) {
+  s <- as.character(text %||% "")
+  if (!nzchar(s)) return(s)
+  # 公司／集團名
+  s <- gsub("輝能科技", "本公司", s, fixed = TRUE)
+  s <- gsub("(?i)ProLogium", "集團", s, perl = TRUE)
+  s <- gsub("鯨鏈科技", "本公司", s, fixed = TRUE)
+  s <- gsub("鯨鏈RCM", "RCM", s, fixed = TRUE)
+  s <- gsub("(?i)Jinglian", "本公司", s, perl = TRUE)
+  s <- gsub("鯨鏈", "本公司", s, fixed = TRUE)
+  # 企業內部表單／程序編號（如 A6-004-A、Q2-001、R2-001-I）
+  s <- gsub("[（(]\\s*[A-Za-z]{1,3}\\d?[-－]\\d{2,4}(?:[-－][A-Za-z0-9]+)?\\s*[）)]", "", s, perl = TRUE)
+  # 企業常用專屬系統商品名 → 通用系統類別
+  s <- gsub("(?i)Easy\\s*flow", "電子簽核系統", s, perl = TRUE)
+  s <- gsub("(?i)Shop\\s*flow", "生產流程系統", s, perl = TRUE)
+  s <- gsub("\\bSPM系統\\b", "流程管理系統", s, perl = TRUE)
+  s <- gsub("\\bSPM\\b", "流程管理系統", s, perl = TRUE)
+  s <- gsub("\\bSFT\\b", "檔案傳輸系統", s, perl = TRUE)
+  s <- gsub("鼎新", "ERP套裝", s, fixed = TRUE)
+  # 台灣用語（避免陸／港澳用字進入已提交資料）
+  s <- gsub("資料數據", "資料", s, fixed = TRUE)
+  s <- gsub("大批量", "大量", s, fixed = TRUE)
+  s <- gsub("重覆", "重複", s, fixed = TRUE)
+  s <- gsub("系統帳戶", "系統帳號", s, fixed = TRUE)
+  s <- gsub("安裝或設置", "安裝或設定", s, fixed = TRUE)
+  s <- gsub("應設置密碼", "應設定密碼", s, fixed = TRUE)
+  s <- gsub("系統資源配置", "系統資源設定", s, fixed = TRUE)
+  s <- gsub("其它類別", "其他類別", s, fixed = TRUE)
+  s <- gsub("信息系統", "資訊系統", s, fixed = TRUE)
+  s <- gsub("軟件", "軟體", s, fixed = TRUE)
+  s <- gsub("網絡", "網路", s, fixed = TRUE)
+  s <- gsub("數據庫", "資料庫", s, fixed = TRUE)
+  s <- gsub("默認", "預設", s, fixed = TRUE)
+  s <- gsub("登录", "登入", s, fixed = TRUE)
+  # 清理多餘空白
+  s <- gsub("[ \\t]{2,}", " ", s)
+  s <- gsub(" *\r?\n *", "\n", s)
+  trimws(s)
+}
+
+deidentify_control_fields <- function(ctrl) {
+  ctrl <- as.list(ctrl)
+  # 非設計欄＋公司名一併清掉
+  if (exists("strip_non_design_control_fields", mode = "function")) {
+    ctrl <- strip_non_design_control_fields(ctrl)
+  }
+  ctrl$company <- ""
+  text_keys <- c(
+    "title", "risk_factor", "risk_name", "risk_description",
+    "risk_attr_financial", "risk_attr_operations", "risk_attr_compliance",
+    "control_objective", "control_activity", "responsible_unit",
+    "iuc", "iuc_or_system", "related_system", "related_policy", "related_law",
+    "related_law_url",
+    "related_document", "inputs", "review_steps", "outputs",
+    "investigation_threshold", "dependent_controls",
+    "detailed_description", "summary_description", "sub_process"
+  )
+  for (k in text_keys) {
+    if (!is.null(ctrl[[k]]) && is.character(ctrl[[k]])) {
+      ctrl[[k]] <- deidentify_client_specific_text(ctrl[[k]])
+    }
+  }
+  # 敘述含公司名時強制以去識別後欄位重建（避免殘留）
+  ctrl$detailed_description <- ""
+  ctrl$summary_description <- ""
+  ctrl
+}
+
+deidentify_library_item <- function(item) {
+  item <- as.list(item)
+  if (!is.null(item$control)) {
+    item$control <- deidentify_control_fields(item$control)
+  }
+  if (!is.null(item$title)) {
+    item$title <- deidentify_client_specific_text(item$title)
+  }
+  # 標籤去掉企業名／企業批次標
+  if (!is.null(item$tags)) {
+    tg <- as.character(unlist(item$tags, use.names = FALSE))
+    tg <- tg[!vapply(tg, is_client_identifying_tag, logical(1))]
+    tg <- vapply(tg, deidentify_client_specific_text, character(1), USE.NAMES = FALSE)
+    tg <- unique(c(tg[nzchar(tg)], "去識別範本"))
+    item$tags <- tg
+  }
+  # 來源改為中性鍵（保留 PL-/JL- 編號前綴供追蹤）
+  src <- as.character(item$source %||% "")
+  if (grepl("prologium|輝能|jinglian|鯨鏈", src, ignore.case = TRUE)) {
+    item$source <- "rcm_import_batch"
+  }
+  # 重建組裝敘述（公司欄已空 →「就公司現行…」）
+  ctrl <- item$control %||% list()
+  if (exists("assemble_summary_description", mode = "function")) {
+    ctrl$summary_description <- tryCatch(
+      assemble_summary_description(ctrl), error = function(e) ctrl$title %||% ""
+    )
+  }
+  if (exists("assemble_control_paragraph", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(
+      assemble_control_paragraph(ctrl), error = function(e) ""
+    )
+  } else if (exists("assemble_detailed_description", mode = "function")) {
+    ctrl$detailed_description <- tryCatch(
+      assemble_detailed_description(ctrl), error = function(e) ""
+    )
+  }
+  item$control <- ctrl
+  item
+}
 
 seed_control_library <- function(include_jinglian_batch = TRUE) {
   base <- list(
@@ -72,62 +288,115 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
       investigation_threshold = "數量或金額任一不符即暫停付款",
       dependent_controls = "採購核決權限控制"
     ), tags = c("採購", "三方比對"), source = "seed"),
+    # 其餘九大循環：內建一筆即可直接選，毋須先匯入底稿
     library_item_from_control(list(
-      library_id = "LIB-IT-ACCESS-01",
-      title = "資訊循環｜使用者權限定期覆核",
-      cycle = "電腦化資訊系統循環",
-      sub_process = "存取管理",
-      risk_name = "不當或過時權限未及時取消",
-      risk_description = "離職／轉調人員或不相容職務權限未於系統中移除，導致未授權存取",
-      risk_attr_financial = "[財務報導] 可能造成未授權交易或資料竄改",
-      risk_attr_operations = "[營運] 系統權限與組織職掌不一致",
-      risk_attr_compliance = "[法令遵循] 個資／資安政策遵循",
+      library_id = "LIB-PR-BOM-01",
+      title = "生產｜用料與產出核對",
+      cycle = "生產循環",
+      sub_process_id = "PR-101", sub_process = "用料管理作業",
+      risk_factor = "用料浪費或短溢",
+      risk_description = "實際用料與 BOM／工單差異未及時查明，導致成本與存貨不實",
+      risk_category = "報導面",
+      romm_classification = "Significant Risk — Not higher risk associated with the control",
+      significant_account = "存貨、銷貨成本",
+      assertions = "存在或發生 (Existence or Occurrence)；正確性 (Accuracy)",
+      control_objective = "確保生產用料與產出依核准工單正確記錄",
+      control_activity = "生產管理員每日比對工單用料與系統領料，差異逾門檻須呈主管簽核後調整",
+      frequency = "每日", responsible_unit = "生產管理／成本會計",
+      iuc_or_system = "工單／領料單／BOM",
+      nature = "人工", approach = "偵測性 (Detective)",
+      type = "含覆核要素之控制 (Controls with a Review Element)"
+    ), tags = c("生產", "用料"), source = "seed"),
+    library_item_from_control(list(
+      library_id = "LIB-PY-PAYROLL-01",
+      title = "薪工｜薪資異動核准",
+      cycle = "薪工循環",
+      sub_process_id = "PY-101", sub_process = "薪資計算作業",
+      risk_factor = "未授權薪資異動",
+      risk_description = "薪資、職級或加給異動未經適當核准即入薪資系統",
+      risk_category = "報導面",
       romm_classification = "Significant Risk — Higher risk associated with the control",
-      significant_account = "多科目（視系統涵蓋流程）",
+      significant_account = "薪資費用、應付薪資",
+      assertions = "發生 (Occurrence)；正確性 (Accuracy)",
+      control_objective = "確保薪資異動皆經權責主管核准後才生效",
+      control_activity = "人資於過帳前檢核異動單簽核完整，系統僅允許已核准異動寫入薪資主檔",
+      frequency = "每筆交易", responsible_unit = "人資／財務",
+      iuc_or_system = "薪資異動單／簽核紀錄",
+      nature = "人工", approach = "預防性 (Preventive)",
+      type = "授權與核准 (Authorizations and Approvals)"
+    ), tags = c("薪工"), source = "seed"),
+    library_item_from_control(list(
+      library_id = "LIB-FN-LOAN-01",
+      title = "融資｜借款撥款覆核",
+      cycle = "融資循環",
+      sub_process_id = "FN-101", sub_process = "借款管理作業",
+      risk_factor = "借款條件不符或未入帳",
+      risk_description = "借款合約條件與實際撥款／入帳不一致",
+      risk_category = "報導面",
+      romm_classification = "Significant Risk — Not higher risk associated with the control",
+      significant_account = "銀行借款、利息費用",
+      assertions = "完整性 (Completeness)；評價或分攤 (Valuation or Allocation)",
+      control_objective = "確保借款撥款與合約條件一致並完整入帳",
+      control_activity = "財務人員於撥款入帳前核對合約額度、利率與撥款通知，主管覆核後過帳",
+      frequency = "每筆交易", responsible_unit = "財務部資金",
+      iuc_or_system = "借款合約／撥款通知",
+      nature = "人工", approach = "偵測性 (Detective)",
+      type = "核對驗證 (Verifications)"
+    ), tags = c("融資"), source = "seed"),
+    library_item_from_control(list(
+      library_id = "LIB-FA-CAPEX-01",
+      title = "固定資產｜資本支出核准",
+      cycle = "固定資產循環",
+      sub_process_id = "FA-101", sub_process = "購置管理作業",
+      risk_factor = "未核准資本支出入帳",
+      risk_description = "資本支出未經核決權限核准即採購或資本化",
+      risk_category = "報導面",
+      romm_classification = "Significant Risk — Not higher risk associated with the control",
+      significant_account = "不動產廠房及設備",
       assertions = "存在或發生 (Existence or Occurrence)；權利與義務 (Rights and Obligations)",
-      control_objective = "確保系統使用者權限與現職及職責分離原則一致",
-      control_activity = "權限管理員每季產出使用者權限清冊，由各單位主管覆核後回簽，並於期限內完成異動",
-      frequency = "每季",
-      responsible_unit = "資訊部／各業務單位主管",
-      iuc_or_system = "使用者權限清冊",
-      nature = "人工",
-      approach = "偵測性 (Detective)",
-      type = "含覆核要素之控制 (Controls with a Review Element)",
-      inputs = "HR 在職名單、系統權限清冊",
-      review_steps = "產製權限清冊\n比對在職與職務\n主管標註應移除／調整權限\n資訊部於期限完成異動並留存軌跡",
-      outputs = "覆核簽回清冊、權限異動單、系統 log",
-      investigation_threshold = "任何不應存在之權限均須異動；逾期未回簽列入追蹤",
-      dependent_controls = "入離職帳號開立／停用控制",
-      key_control = "Y"
-    ), tags = c("資訊循環", "存取管理", "ITGC"), source = "seed"),
+      control_objective = "確保固定資產購置皆經適當核准並正確資本化",
+      control_activity = "資產管理員於請購／驗收入帳前檢核核准層級與金額，不符者不得入帳",
+      frequency = "每筆交易", responsible_unit = "資產管理／財務",
+      iuc_or_system = "資本支出申請單／驗收單",
+      nature = "人工", approach = "預防性 (Preventive)",
+      type = "授權與核准 (Authorizations and Approvals)"
+    ), tags = c("固定資產"), source = "seed"),
     library_item_from_control(list(
-      library_id = "LIB-IT-CHANGE-01",
-      title = "資訊循環｜程式變更上線核准",
-      cycle = "電腦化資訊系統循環",
-      sub_process = "變更管理",
-      risk_name = "未經核准之程式變更上線",
-      risk_description = "開發或維護程式未經適當測試與核准即移轉正式環境，導致財務資料錯誤",
-      risk_attr_financial = "[財務報導] 系統處理正確性／完整性受影響",
-      risk_attr_operations = "[營運] 變更失控造成服務中斷",
-      risk_attr_compliance = "[法令遵循] 變更管理政策",
+      library_id = "LIB-IV-TRADE-01",
+      title = "投資｜交易覆核",
+      cycle = "投資循環",
+      sub_process_id = "IV-101", sub_process = "投資交易作業",
+      risk_factor = "投資交易未授權或不完整",
+      risk_description = "投資買賣未經授權或交割結果未完整入帳",
+      risk_category = "報導面",
       romm_classification = "Significant Risk — Higher risk associated with the control",
-      significant_account = "多科目（視應用系統）",
-      assertions = "正確性 (Accuracy)；完整性 (Completeness)",
-      control_objective = "確保正式環境之程式變更皆經測試通過且獲適當權限核准",
-      control_activity = "變更管理員於移轉前檢核變更單之測試結果與核准簽核，系統僅允許已核准單號執行移轉",
-      frequency = "持續",
-      responsible_unit = "資訊部變更管理／系統擁有者",
-      iuc_or_system = "變更管理單／移轉 log",
-      nature = "自動",
-      approach = "預防性 (Preventive)",
-      type = "授權與核准 (Authorizations and Approvals)",
-      inputs = "變更申請單、測試報告",
-      review_steps = "確認測試環境結果\n確認核准層級\n核對移轉物件清單\n執行移轉並留存 log",
-      outputs = "已核准變更單、移轉成功 log",
-      investigation_threshold = "缺測試或缺核准不得移轉",
-      dependent_controls = "開發／營運環境職責分離",
-      key_control = "Y"
-    ), tags = c("資訊循環", "變更管理", "ITGC"), source = "seed")
+      significant_account = "透過損益按公允價值衡量之金融資產",
+      assertions = "存在或發生 (Existence or Occurrence)；完整性 (Completeness)",
+      control_objective = "確保投資交易經授權且交割結果完整正確入帳",
+      control_activity = "投資管理員比對交易單、券商回報與帳簿，差異須於當日查明並呈主管",
+      frequency = "每日", responsible_unit = "投資管理／財務",
+      iuc_or_system = "交易單／券商對帳單",
+      nature = "人工", approach = "偵測性 (Detective)",
+      type = "核對驗證 (Verifications)"
+    ), tags = c("投資"), source = "seed"),
+    library_item_from_control(list(
+      library_id = "LIB-RD-PROJECT-01",
+      title = "研發｜專案支出歸屬覆核",
+      cycle = "研發循環",
+      sub_process_id = "RD-101", sub_process = "研發支出歸屬作業",
+      risk_factor = "研發支出歸屬錯誤",
+      risk_description = "研發專案成本歸屬錯誤或費用／資本化分類不當",
+      risk_category = "報導面",
+      romm_classification = "Significant Risk — Not higher risk associated with the control",
+      significant_account = "研究發展費用、無形資產",
+      assertions = "正確性 (Accuracy)；分類 (Classification)",
+      control_objective = "確保研發支出依專案與會計政策正確歸屬",
+      control_activity = "會計每月覆核專案工時／費用歸屬表，異常項目標記後由專案主管確認",
+      frequency = "每月", responsible_unit = "研發管理／會計",
+      iuc_or_system = "專案費用歸屬表",
+      nature = "人工", approach = "偵測性 (Detective)",
+      type = "含覆核要素之控制 (Controls with a Review Element)"
+    ), tags = c("研發"), source = "seed")
   )
 
   if (!isTRUE(include_jinglian_batch)) return(base)
@@ -148,32 +417,44 @@ seed_control_library <- function(include_jinglian_batch = TRUE) {
     normalizePath(getwd())
   })
 
+  out <- base
   batch_json <- file.path(app_root, "data", "jinglian_it_rcm_batch.json")
   if (file.exists(batch_json)) {
     jl <- tryCatch(load_control_library(batch_json, fallback_seed = FALSE), error = function(e) list())
-    if (length(jl)) return(merge_libraries(base, jl, overwrite = TRUE))
-  }
-  xlsx <- file.path(app_root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
-  if (file.exists(xlsx)) {
-    jl <- tryCatch(import_rcm_xlsx_as_library(xlsx), error = function(e) list())
-    if (length(jl)) return(merge_libraries(base, jl, overwrite = TRUE))
-  }
-  base
-}
-
-library_item_from_control <- function(ctrl, tags = character(), source = "manual") {
-  ctrl <- as.list(ctrl)
-  # Stable accumulative ID: prefer real RCM 控制編號 so re-save updates same template
-  if (is.null(ctrl$library_id) || !nzchar(as.character(ctrl$library_id %||% ""))) {
-    cid <- trimws(as.character(ctrl$control_id %||% ""))
-    if (nzchar(cid) && !grepl("^CD-", cid)) {
-      ctrl$library_id <- if (grepl("^JL-", cid)) cid else paste0("LIB-", cid)
-    } else {
-      raw <- paste(c(ctrl$cycle, ctrl$sub_process_id, ctrl$risk_factor %||% ctrl$risk_name,
-                     ctrl$control_objective, ctrl$iuc_or_system), collapse = "|")
-      ctrl$library_id <- sprintf("LIB-%08x", sum(utf8ToInt(enc2utf8(raw))) %% as.integer(1e8))
+    if (length(jl)) out <- merge_libraries(out, jl, overwrite = TRUE)
+  } else {
+    xlsx <- file.path(app_root, "templates", "鯨鏈科技_資訊循環_RCM_v1_0820.xlsx")
+    if (file.exists(xlsx)) {
+      jl <- tryCatch(
+        import_rcm_xlsx_as_library(
+          xlsx, source = "rcm_import_batch", id_prefix = "JL",
+          tags = c("RCM", "資訊循環", "首批")
+        ),
+        error = function(e) list()
+      )
+      if (length(jl)) out <- merge_libraries(out, jl, overwrite = TRUE)
     }
   }
+  # 輝能科技全循環 RCM 批次
+  pl_json <- file.path(app_root, "data", "prologium_rcm_batch.json")
+  if (file.exists(pl_json)) {
+    pl <- tryCatch(load_control_library(pl_json, fallback_seed = FALSE), error = function(e) list())
+    if (length(pl)) out <- merge_libraries(out, pl, overwrite = FALSE)
+  }
+  out
+}
+
+library_item_from_control <- function(ctrl, tags = character(), source = "manual",
+                                       deidentify = TRUE) {
+  ctrl <- strip_non_design_control_fields(as.list(ctrl))
+  if (isTRUE(deidentify)) {
+    ctrl <- deidentify_control_fields(ctrl)
+  }
+  # 包裝鍵：匯入可沿用 JL-/PL-；其餘依內容雜湊。編號本身不入庫。
+  if (is.null(ctrl$library_id) || !nzchar(as.character(ctrl$library_id %||% ""))) {
+    ctrl$library_id <- library_content_id(ctrl)
+  }
+  ctrl <- strip_runtime_id_fields(ctrl)
   if (is.null(ctrl$title) || !nzchar(as.character(ctrl$title %||% ""))) {
     ctrl$title <- sprintf(
       "%s｜%s",
@@ -185,6 +466,8 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
         } else (ctrl$control_activity %||% "控制")
       }
     )
+  } else if (isTRUE(deidentify)) {
+    ctrl$title <- deidentify_client_specific_text(ctrl$title)
   }
   if (is.null(ctrl$summary_description) || !nzchar(as.character(ctrl$summary_description %||% ""))) {
     if (exists("assemble_summary_description", mode = "function")) {
@@ -198,12 +481,26 @@ library_item_from_control <- function(ctrl, tags = character(), source = "manual
   }
   tags <- unique(c(as.character(tags), as.character(ctrl$tags %||% character()), "累積範本"))
   tags <- tags[nzchar(tags)]
+  if (isTRUE(deidentify)) {
+    tags <- tags[!vapply(tags, is_client_identifying_tag, logical(1))]
+    tags <- unique(c(vapply(tags, deidentify_client_specific_text, character(1), USE.NAMES = FALSE),
+                     "去識別範本"))
+    tags <- tags[nzchar(tags)]
+  }
+  src <- as.character(source %||% "manual")
+  if (isTRUE(deidentify) && grepl("prologium|輝能|jinglian|鯨鏈", src, ignore.case = TRUE)) {
+    src <- "rcm_import_batch"
+  }
+  # 記憶體物件亦不保留非設計／編號欄（空字串也不留）
+  ctrl <- drop_non_persist_control_fields(ctrl)
+  # 公司名一律不入庫
+  ctrl$company <- NULL
   list(
-    library_id = as.character(ctrl$library_id),
-    title = as.character(ctrl$title),
+    library_id = as.character(ctrl$library_id %||% ""),
+    title = as.character(ctrl$title %||% ""),
     tags = tags,
     cycle = as.character(ctrl$cycle %||% ""),
-    source = as.character(source %||% "manual"),
+    source = src,
     updated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     control = ctrl
   )
@@ -330,15 +627,19 @@ merge_libraries <- function(base, incoming, overwrite = TRUE) {
 }
 
 library_to_flat_df <- function(library) {
+  fields <- setdiff(
+    LIBRARY_CONTROL_FIELDS,
+    c(NON_DESIGN_CONTROL_FIELDS, RUNTIME_ID_CONTROL_FIELDS)
+  )
   if (!length(library)) {
-    return(data.frame(matrix(ncol = length(LIBRARY_CONTROL_FIELDS) + 2, nrow = 0,
-                             dimnames = list(NULL, c(LIBRARY_CONTROL_FIELDS, "tags", "updated_at"))),
+    return(data.frame(matrix(ncol = length(fields) + 2, nrow = 0,
+                             dimnames = list(NULL, c(fields, "tags", "updated_at"))),
                       stringsAsFactors = FALSE))
   }
   rows <- lapply(library, function(item) {
     ctrl <- item$control
-    vals <- lapply(LIBRARY_CONTROL_FIELDS, function(f) as.character(ctrl[[f]] %||% item[[f]] %||% ""))
-    names(vals) <- LIBRARY_CONTROL_FIELDS
+    vals <- lapply(fields, function(f) as.character(ctrl[[f]] %||% item[[f]] %||% ""))
+    names(vals) <- fields
     vals$tags <- paste(item$tags %||% character(), collapse = ";")
     vals$updated_at <- item$updated_at %||% ""
     as.data.frame(vals, stringsAsFactors = FALSE)
@@ -362,14 +663,21 @@ flat_row_to_library_item <- function(row) {
 
 save_control_library <- function(library, path_json, path_csv = NULL) {
   payload <- lapply(library, function(item) {
+    ctrl <- drop_non_persist_control_fields(item$control %||% list())
+    if (!nzchar(trimws(as.character(ctrl$detailed_description %||% ""))) &&
+        exists("assemble_control_paragraph", mode = "function")) {
+      ctrl$detailed_description <- tryCatch(
+        assemble_control_paragraph(ctrl), error = function(e) ""
+      )
+    }
     list(
       library_id = item$library_id,
       title = item$title,
       tags = item$tags,
-      cycle = item$cycle %||% item$control$cycle %||% "",
+      cycle = item$cycle %||% ctrl$cycle %||% "",
       source = item$source %||% "manual",
       updated_at = item$updated_at %||% "",
-      control = item$control
+      control = ctrl
     )
   })
   jsonlite::write_json(payload, path_json, auto_unbox = TRUE, pretty = TRUE, force = TRUE, null = "null")
@@ -425,17 +733,13 @@ import_control_library_file <- function(path, existing = list(), overwrite = TRU
       nature = "nature|性質|控制類型",
       approach = "approach|取向|預防偵測|控制活動類型",
       type = "type|類型",
-      company_status = "company_status|控制現況描述|現況",
-      design_gap_note = "design_gap_note|控制設計差異說明",
       related_policy = "related_policy|相關政策或程序",
       related_law = "related_law|相關法令",
-      related_document = "related_document|相關文件",
-      effectiveness = "effectiveness|控制有效性評估",
-      residual_risk = "residual_risk|可能潛在風險",
-      improvement = "improvement|建議改善方式",
+      related_document = paste0("related_document|", CONTROL_EVIDENCE_DOCUMENT_LABEL, "|相關文件"),
       inputs = "inputs|投入",
       review_steps = "review_steps|steps|步驟",
       outputs = "outputs|產出",
+      # 故意不映射公司現況／有效性／潛在風險／改善建議，避免污染設計庫
       detailed_description = "detailed_description|控制描述|描述",
       summary_description = "summary_description|摘要",
       tags = "tags|標籤"
@@ -485,10 +789,51 @@ normalize_rcm_header_cell <- function(x) {
   # strip parenthetical English / notes
   x <- sub("（.*$", "", x)
   x <- sub("\\(.*$", "", x)
-  trimws(x)
+  x <- trimws(x)
+  # 輝能／各版本欄名別名 → 標準鍵
+  aliases <- c(
+    "控制活動編號" = "控制編號",
+    "控制目標編號" = "控制目標編號",
+    "頻率" = "控制頻率",
+    "現況描述" = "控制現況描述",
+    "相關資訊系統" = "相關系統",
+    "相關政策及程序" = "相關政策或程序",
+    "佐證文件" = "相關文件",
+    "建議" = "建議改善方式",
+    "風險範籌" = "風險範疇",
+    "編號" = "子作業編號",
+    "名稱" = "子作業名稱"
+  )
+  if (nzchar(x) && x %in% names(aliases)) x <- unname(aliases[[x]])
+  x
 }
 
-rcm_row_to_control <- function(row) {
+# 循環名稱正規化（輝能短名／別名 → APP 九大循環或擴充循環）
+normalize_rcm_cycle_name <- function(cycle_raw, sheet_name = "") {
+  cy <- trimws(as.character(cycle_raw %||% ""))
+  sh <- trimws(as.character(sheet_name %||% ""))
+  if (!nzchar(cy) && nzchar(sh)) {
+    cy <- sub("^RCM[_＿]?", "", sh)
+    cy <- gsub("[,，]", "、", cy)
+  }
+  if (!nzchar(cy)) return("")
+  # already canonical
+  if (cy %in% CYCLES_NINE || cy %in% c("企業層級", "財務報導循環")) return(cy)
+  if (grepl("資訊|電腦", cy)) return("電腦化資訊系統循環")
+  if (grepl("銷售|收款", cy)) return("銷售及收款循環")
+  if (grepl("採購|付款", cy)) return("採購及付款循環")
+  if (grepl("^生產|生產循環", cy)) return("生產循環")
+  if (grepl("薪工|人事|薪資", cy)) return("薪工循環")
+  if (grepl("融資|借款", cy)) return("融資循環")
+  if (grepl("固定資產|不動產|廠房及設備|PPE", cy)) return("固定資產循環")
+  if (grepl("投資", cy)) return("投資循環")
+  if (grepl("研發", cy)) return("研發循環")
+  if (grepl("財務報導", cy)) return("財務報導循環")
+  if (grepl("企業層級|EL|Entity", cy, ignore.case = TRUE)) return("企業層級")
+  cy
+}
+
+rcm_row_to_control <- function(row, sheet_name = "", id_prefix = "PL") {
   getv <- function(... ) {
     keys <- c(...)
     for (k in keys) {
@@ -502,24 +847,41 @@ rcm_row_to_control <- function(row) {
     }
     ""
   }
-  cycle_raw <- getv("循環名稱")
-  cycle <- if (grepl("資訊", cycle_raw)) "電腦化資訊系統循環" else cycle_raw
+  cycle <- normalize_rcm_cycle_name(getv("循環名稱"), sheet_name = sheet_name)
   risk_factor <- getv("風險因素")
   risk_desc <- getv("風險描述")
   risk_cat <- getv("風險類別")
+  cid <- getv("控制編號", "控制活動編號")
+  if (!nzchar(cid)) cid <- getv("控制目標編號")
+  spid <- getv("子作業編號")
+  spn <- getv("子作業名稱")
+  # 企業層級：原則／關注點補進風險描述
+  if (identical(cycle, "企業層級")) {
+    principle <- getv("原則")
+    pof <- getv("關注點")
+    if (!nzchar(risk_desc) && nzchar(principle)) {
+      risk_desc <- principle
+    } else if (nzchar(principle)) {
+      risk_desc <- paste(risk_desc, principle, sep = "／")
+    }
+    if (nzchar(pof)) {
+      risk_desc <- paste(c(risk_desc[nzchar(risk_desc)], paste0("關注點：", pof)), collapse = "\n")
+    }
+  }
   ctrl <- list(
-    control_id = getv("控制編號"),
+    control_id = cid,
     library_id = {
-      cid <- getv("控制編號")
-      if (nzchar(cid)) paste0("JL-", cid) else NULL
+      if (nzchar(cid)) paste0(id_prefix, "-", cid) else NULL
     },
+    company = getv("公司"),
     title = {
       obj <- getv("控制目標")
-      if (nzchar(obj)) obj else paste(getv("子作業名稱"), getv("風險因素"), sep = "｜")
+      if (nzchar(obj)) obj else paste(spn, risk_factor, sep = "｜")
     },
     cycle = cycle,
-    sub_process_id = getv("子作業編號"),
-    sub_process = getv("子作業名稱"),
+    cycle_code = getv("循環編號"),
+    sub_process_id = spid,
+    sub_process = spn,
     risk_factor = risk_factor,
     risk_name = risk_factor,
     risk_description = risk_desc,
@@ -530,36 +892,64 @@ rcm_row_to_control <- function(row) {
     significant_account = getv("會計科目"),
     control_objective = getv("控制目標"),
     control_activity = getv("控制活動"),
-    nature = normalize_control_type_manual_auto(getv("控制類型")),
-    approach = normalize_control_activity_type_pd(getv("控制活動類型")),
-    frequency = getv("控制頻率"),
-    company_status = getv("控制現況描述"),
-    design_gap_note = getv("控制設計差異說明"),
-    related_system = getv("相關系統"),
-    iuc_or_system = getv("相關系統", "相關文件"),
-    related_policy = getv("相關政策或程序"),
-    related_law = getv("相關法令"),
-    related_document = getv("相關文件"),
-    responsible_unit = getv("流程負責單位"),
-    effectiveness = getv("控制有效性評估"),
-    residual_risk = getv("可能潛在風險"),
-    improvement = getv("建議改善方式"),
-    outputs = getv("相關文件"),
-    detailed_description = getv("控制現況描述"),
+    nature = normalize_control_type_manual_auto(getv("控制性質", "控制類型")),
+    approach = normalize_control_activity_type_pd(getv("控制方式", "控制活動類型")),
+    frequency = getv("控制頻率", "頻率"),
+    # 現況／分析評估不入庫（由 strip_non_design_control_fields 再保險清空）
+    company_status = "",
+    design_gap_note = "",
+    related_system = getv("相關系統", "相關資訊系統"),
+    iuc = getv("相關文件-控制用文件", "IUC"),
+    iuc_or_system = getv("相關文件-控制用文件", "IUC", "相關系統", "相關資訊系統",
+                         CONTROL_EVIDENCE_DOCUMENT_LABEL, "相關文件"),
+    related_policy = getv("相關政策與制度", "相關政策或程序", "相關政策及程序"),
+    related_law = getv("相關法規", "相關法令"),
+    related_law_url = {
+      url <- getv("相關法規連結", "法規有效網址連結")
+      if (nzchar(trimws(url))) {
+        trimws(url)
+      } else {
+        law_raw <- getv("相關法規", "相關法令")
+        if (grepl("｜", law_raw, fixed = TRUE)) {
+          trimws(sub("^.*｜", "", law_raw))
+        } else {
+          ""
+        }
+      }
+    },
+    related_documents = "",
+    related_document = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件", "相關文件", "佐證文件"),
+    responsible_unit = getv("控制點負責單位", "流程負責單位"),
+    effectiveness = "",
+    residual_risk = "",
+    improvement = "",
+    outputs = getv(CONTROL_EVIDENCE_DOCUMENT_LABEL, "控制佐證文件", "相關文件", "佐證文件"),
+    risk_principle = getv("風險面向"),
+    risk_area = getv("風險範疇", "風險範籌"),
+    assertions = getv("控制聲明", "聲明"),
+    detailed_description = "",
     key_control = "Y"
   )
   ctrl
 }
 
-import_rcm_xlsx_as_library <- function(path) {
+import_rcm_xlsx_as_library <- function(path,
+                                       source = "rcm_xlsx",
+                                       tags = character(),
+                                       id_prefix = "PL",
+                                       company_default = "") {
   if (!requireNamespace("readxl", quietly = TRUE)) {
     stop("需要 readxl 套件以匯入 RCM xlsx：install.packages(\"readxl\")")
   }
   sheets <- readxl::excel_sheets(path)
-  sheet <- sheets[[1]]
-  # Prefer sheet named like 資訊循環 / RCM
-  hit <- grep("循環|RCM|控制", sheets, ignore.case = TRUE)
-  if (length(hit)) sheet <- sheets[[hit[[1]]]]
+  # 優先 RCM_ 資料頁（略過封面／文件資訊／修改）
+  rcm_hit <- grep("^RCM", sheets, ignore.case = TRUE)
+  if (length(rcm_hit)) {
+    sheet <- sheets[[rcm_hit[[1]]]]
+  } else {
+    hit <- grep("循環|RCM|控制|企業層級", sheets, ignore.case = TRUE)
+    sheet <- if (length(hit)) sheets[[hit[[1]]]] else sheets[[1]]
+  }
 
   header_row <- readxl::read_excel(path, sheet = sheet, col_names = FALSE, n_max = 2)
   headers <- vapply(seq_len(ncol(header_row)), function(j) {
@@ -592,23 +982,31 @@ import_rcm_xlsx_as_library <- function(path) {
       return(FALSE)
     }
     if (identical(cid, "") && identical(obj, "") && identical(act, "")) return(FALSE)
-    # Prefer rows with an EC-/SP- style id or non-empty objective+activity
     nzchar(obj) || nzchar(act)
   }, logical(1))
   df <- df[keep, , drop = FALSE]
 
+  sheet_cycle <- normalize_rcm_cycle_name("", sheet_name = sheet)
+  # 不寫入企業專屬標籤／公司名；去識別於 library_item_from_control
+  base_tags <- unique(c(tags, "RCM", sheet_cycle[nzchar(sheet_cycle)]))
+  base_tags <- base_tags[!base_tags %in% CLIENT_NAME_MARKERS]
   items <- lapply(seq_len(nrow(df)), function(i) {
     row <- as.list(df[i, , drop = FALSE])
-    # unlist length-1
     row <- lapply(row, function(x) if (length(x)) x[[1]] else x)
-    ctrl <- rcm_row_to_control(row)
-    # Skip if control_id still looks like a header label
+    ctrl <- rcm_row_to_control(row, sheet_name = sheet, id_prefix = id_prefix)
+    if (!nzchar(ctrl$cycle %||% "")) ctrl$cycle <- sheet_cycle
+    # 公司欄一律不入庫（即使 xlsx／default 有值）
+    ctrl$company <- ""
     if (identical(ctrl$control_id, "控制編號") ||
         (!nzchar(ctrl$control_objective %||% "") && !nzchar(ctrl$control_activity %||% ""))) {
       return(NULL)
     }
-    library_item_from_control(ctrl, tags = c("鯨鏈RCM", "資訊循環", "首批"),
-                              source = "jinglian_batch")
+    library_item_from_control(
+      ctrl,
+      tags = unique(c(base_tags, ctrl$cycle %||% "")),
+      source = source,
+      deidentify = TRUE
+    )
   })
   Filter(Negate(is.null), items)
 }

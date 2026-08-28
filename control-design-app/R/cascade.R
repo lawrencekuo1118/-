@@ -6,11 +6,15 @@
 SIX_CONTROL_STATUS_RULES <- c(
   control_objective = "控制目標",
   control_activity = "控制活動",
-  nature = "控制類型（人工／自動）",
-  approach = "控制活動類型（預防／偵測）",
+  nature = "控制性質（人工／自動）",
+  approach = "控制方式（預防／偵測／矯正）",
   frequency = "控制頻率",
-  responsible_unit = "流程負責單位",
-  iuc_or_system = "IUC／相關系統"
+  responsible_unit = "控制點負責單位",
+  iuc_or_system = if (exists("CONTROL_IUC_DOCUMENT_LABEL", inherits = TRUE)) {
+    CONTROL_IUC_DOCUMENT_LABEL
+  } else {
+    "相關文件-控制用文件"
+  }
 )
 # Note: objective+activity are cascade-selected; the six operational items for
 # status scaffolding are nature/approach/frequency/owner/IUC + steps derived from activity.
@@ -25,22 +29,27 @@ nzchar_trim <- function(x) {
   x[[1]]
 }
 
-# Enforce: one activity ↔ exactly one 預防/偵測 attribute
+# Enforce: one activity ↔ exactly one 預防/偵測/矯正 attribute
 normalize_single_activity_type <- function(approach) {
   raw <- nzchar_trim(approach)
   if (!nzchar(raw)) return("")
   # Reject mixed before normalizing
-  if (grepl("預防|Preventive", raw, ignore.case = TRUE) &&
-      grepl("偵測|Detective", raw, ignore.case = TRUE)) {
-    return("")
-  }
+  n_hit <- sum(c(
+    grepl("預防|Preventive", raw, ignore.case = TRUE),
+    grepl("偵測|Detective", raw, ignore.case = TRUE),
+    grepl("矯正|Corrective", raw, ignore.case = TRUE)
+  ))
+  if (n_hit > 1L) return("")
   if (grepl("預防\\+|預防＋|Preventive\\s*\\+", raw, ignore.case = TRUE)) return("")
   at <- if (exists("normalize_control_activity_type_pd", mode = "function")) {
     normalize_control_activity_type_pd(raw)
   } else raw
-  if (at %in% c("預防性控制", "偵測性控制")) return(at)
-  if (grepl("預防", at)) return("預防性控制")
-  if (grepl("偵測", at)) return("偵測性控制")
+  if (at %in% c("預防性", "偵測性", "矯正性", "預防性控制", "偵測性控制")) {
+    return(normalize_control_activity_type_pd(at))
+  }
+  if (grepl("預防", at)) return("預防性")
+  if (grepl("偵測", at)) return("偵測性")
+  if (grepl("矯正", at)) return("矯正性")
   ""
 }
 
@@ -67,6 +76,8 @@ library_controls_flat <- function(library, cycle = NULL) {
       sub_process = nzchar_trim(c$sub_process),
       risk_factor = nzchar_trim(c$risk_factor %||% c$risk_name),
       risk_name = nzchar_trim(c$risk_name %||% c$risk_factor),
+      risk_principle = nzchar_trim(c$risk_principle),
+      risk_area = nzchar_trim(c$risk_area),
       risk_description = nzchar_trim(c$risk_description),
       risk_category = {
         if (exists("normalize_risk_category", mode = "function")) {
@@ -86,17 +97,50 @@ library_controls_flat <- function(library, cycle = NULL) {
       },
       frequency = nzchar_trim(c$frequency),
       responsible_unit = nzchar_trim(c$responsible_unit),
-      iuc_or_system = nzchar_trim(c$related_system %||% c$iuc_or_system),
-      related_document = nzchar_trim(c$related_document %||% c$outputs),
-      company_status = nzchar_trim(c$company_status %||% c$detailed_description),
-      control_id = nzchar_trim(c$control_id),
+      iuc_or_system = nzchar_trim(c$iuc %||% c$iuc_or_system),
+      related_system = nzchar_trim(c$related_system),
+      romm_classification = nzchar_trim(c$romm_classification),
       significant_account = nzchar_trim(c$significant_account),
-      design_gap_note = nzchar_trim(c$design_gap_note),
+      assertions = nzchar_trim(c$assertions),
       related_policy = nzchar_trim(c$related_policy),
       related_law = nzchar_trim(c$related_law),
+      related_document = nzchar(nzchar_trim(c$related_document %||% c$outputs)) ||
+        pbc_ids_are_filled(c$related_document_pbc_ids),
+      type = nzchar_trim(c$type),
+      inputs = nzchar_trim(c$inputs),
+      review_steps = nzchar_trim(c$review_steps),
+      outputs = nzchar_trim(c$outputs),
+      investigation_threshold = nzchar_trim(c$investigation_threshold),
+      company_status = nzchar_trim(c$company_status %||% c$detailed_description),
+      design_gap_note = nzchar_trim(c$design_gap_note),
+      control_id = nzchar_trim(c$control_id),
       raw = c
     )
   })
+}
+
+# 引導候選來源：永遠合併內建種子（九大循環可直接選），毋須先匯入底稿
+# 快取種子，避免每次刷新選單都重跑 seed（約 1–2 秒）導致 UI 卡住／訊息錯序
+.cascade_builtin_library_cache <- new.env(parent = emptyenv())
+
+cascade_builtin_library <- function(force = FALSE) {
+  if (!isTRUE(force) && !is.null(.cascade_builtin_library_cache$items)) {
+    return(.cascade_builtin_library_cache$items)
+  }
+  items <- tryCatch(seed_control_library(TRUE), error = function(e) list())
+  .cascade_builtin_library_cache$items <- items
+  items
+}
+
+cascade_source_library <- function(user_library = list()) {
+  # 磁碟／session 庫已夠大時直接用，避免每次選單刷新都 merge 種子
+  if (length(user_library) >= 100L) return(user_library)
+  builtin <- cascade_builtin_library()
+  if (!length(user_library)) return(builtin)
+  if (!exists("merge_libraries", mode = "function")) {
+    return(c(builtin, user_library))
+  }
+  merge_libraries(builtin, user_library, overwrite = FALSE)
 }
 
 sub_process_key <- function(spid, spn) {
@@ -104,8 +148,258 @@ sub_process_key <- function(spid, spn) {
 }
 
 parse_sub_process_key <- function(key) {
-  parts <- strsplit(nzchar_trim(key), "\\|\\|", perl = TRUE)[[1]]
+  key <- nzchar_trim(key)
+  if (!nzchar(key)) return(list(id = "", name = ""))
+  if (!grepl("\\|\\|", key, fixed = FALSE)) {
+    # 純名稱（APP 顯示用）或純編號
+    if (grepl("^[A-Z]{2}-\\d+", key)) {
+      return(list(id = key, name = ""))
+    }
+    return(list(id = "", name = key))
+  }
+  parts <- strsplit(key, "\\|\\|", perl = TRUE)[[1]]
   list(id = parts[[1]] %||% "", name = if (length(parts) > 1) parts[[2]] else "")
+}
+
+# 子作業名稱 selectize：畫面永遠只顯示／選取純名稱；編號由關聯查表帶入
+sub_process_filter_key <- function(spid, spn) {
+  spn <- trimws(as.character(spn %||% ""))
+  spid <- trimws(as.character(spid %||% ""))
+  if (grepl("\\|\\|", spn, fixed = FALSE)) return(spn)
+  nm <- sub_process_name_from_value(spn)
+  if (nzchar(nm) && nzchar(spid)) return(sub_process_key(spid, nm))
+  if (nzchar(nm)) return(nm)
+  if (nzchar(spid)) return(spid)
+  ""
+}
+
+sub_process_name_from_value <- function(val) {
+  val <- trimws(as.character(val %||% ""))
+  if (!nzchar(val)) return("")
+  if (grepl("\\|\\|", val, fixed = FALSE)) {
+    return(parse_sub_process_key(val)$name)
+  }
+  # 純編號不當成名稱
+  if (grepl("^[A-Z]{2}-\\d+(-\\d+)?$", val)) return("")
+  val
+}
+
+sub_process_id_from_value <- function(val, fallback_id = "") {
+  val <- trimws(as.character(val %||% ""))
+  fb <- trimws(as.character(fallback_id %||% ""))
+  if (grepl("\\|\\|", val, fixed = FALSE)) {
+    sp <- parse_sub_process_key(val)
+    if (nzchar(sp$id)) sp$id else fb
+  } else if (grepl("^[A-Z]{2}-\\d+", val)) {
+    val
+  } else {
+    fb
+  }
+}
+
+# 依名稱從範本列查出關聯子作業編號（同名取第一筆；可指定偏好編號）
+lookup_sub_process_id_for_name <- function(rows, name, preferred_id = "") {
+  nm <- nzchar_trim(name)
+  if (!nzchar(nm) || !length(rows)) return("")
+  pref <- nzchar_trim(preferred_id)
+  if (nzchar(pref)) {
+    hit <- Filter(function(r) {
+      identical(nzchar_trim(r$sub_process), nm) &&
+        identical(nzchar_trim(r$sub_process_id), pref)
+    }, rows)
+    if (length(hit)) return(pref)
+  }
+  for (r in rows) {
+    if (identical(nzchar_trim(r$sub_process), nm)) {
+      id <- nzchar_trim(r$sub_process_id)
+      if (nzchar(id)) return(id)
+    }
+  }
+  ""
+}
+
+# 子作業／控制編號前綴是否與目前循環編號一致（不一致則應清空／重選）
+id_matches_cycle_code <- function(id, cycle_code) {
+  id <- trimws(as.character(id %||% ""))
+  cycle_code <- trimws(as.character(cycle_code %||% ""))
+  if (!nzchar(id) || !nzchar(cycle_code)) return(TRUE)
+  if (!grepl("^[A-Z]{2}-", id)) return(TRUE)
+  id_cc <- sub("^([A-Z]{2})-.*$", "\\1", id)
+  known <- unique(unname(CYCLE_CODE_MAP))
+  if (!(id_cc %in% known)) return(TRUE)
+  identical(id_cc, cycle_code)
+}
+
+# 編號組成規則：
+#   子作業編號 = [循環編號]-[子作業序號]          例：EC-101
+#   控制編號   = [循環編號]-[子作業序號]-[控制序號] 例：EC-101-01
+parse_rcm_id_parts <- function(id) {
+  id <- trimws(as.character(id %||% ""))
+  if (!nzchar(id)) {
+    return(list(cycle = "", sub = "", ctrl = "", ok = FALSE))
+  }
+  # EC-101-01
+  m3 <- regmatches(id, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)-([0-9]+)$", id, perl = TRUE))[[1]]
+  if (length(m3) >= 4L) {
+    return(list(cycle = m3[[2]], sub = m3[[3]], ctrl = m3[[4]], ok = TRUE))
+  }
+  # EC-101
+  m2 <- regmatches(id, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)$", id, perl = TRUE))[[1]]
+  if (length(m2) >= 3L) {
+    return(list(cycle = m2[[2]], sub = m2[[3]], ctrl = "", ok = TRUE))
+  }
+  list(cycle = "", sub = id, ctrl = "", ok = FALSE)
+}
+
+compose_sub_process_id <- function(cycle_code, sub_no) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  sn <- trimws(as.character(sub_no %||% ""))
+  if (!nzchar(cc) || !nzchar(sn)) return("")
+  sprintf("%s-%s", cc, sn)
+}
+
+compose_control_id <- function(cycle_code, sub_no, ctrl_no) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  sn <- trimws(as.character(sub_no %||% ""))
+  if (!nzchar(cc) || !nzchar(sn)) return("")
+  n <- suppressWarnings(as.integer(ctrl_no))
+  if (is.na(n) || n < 1L) n <- 1L
+  sprintf("%s-%s-%02d", cc, sn, n)
+}
+
+# 自子作業編號取出序號（EC-101 → 101；已是純序號則原樣）
+sub_process_seq_from_id <- function(sub_process_id, cycle_code = "") {
+  sp <- trimws(as.character(sub_process_id %||% ""))
+  if (!nzchar(sp)) return("")
+  parts <- parse_rcm_id_parts(sp)
+  if (isTRUE(parts$ok) && nzchar(parts$sub)) return(parts$sub)
+  cc <- trimws(as.character(cycle_code %||% ""))
+  if (nzchar(cc) && startsWith(sp, paste0(cc, "-"))) {
+    return(sub(paste0("^", cc, "-"), "", sp))
+  }
+  sp
+}
+
+# 依循環編號重寫既有 ID 前綴（保留子作業序號／控制序號）
+recode_id_cycle_prefix <- function(id, new_cycle_code) {
+  id <- trimws(as.character(id %||% ""))
+  new_cycle_code <- trimws(as.character(new_cycle_code %||% ""))
+  if (!nzchar(id) || !nzchar(new_cycle_code)) return(id)
+  parts <- parse_rcm_id_parts(id)
+  if (!isTRUE(parts$ok) || !nzchar(parts$sub)) return(id)
+  known <- unique(unname(CYCLE_CODE_MAP))
+  if (!(parts$cycle %in% known)) return(id)
+  if (nzchar(parts$ctrl)) {
+    compose_control_id(new_cycle_code, parts$sub, parts$ctrl)
+  } else {
+    compose_sub_process_id(new_cycle_code, parts$sub)
+  }
+}
+
+# 寬鬆解析（含未完成 stub：CS-、CS-102-）
+parse_rcm_id_loose <- function(id) {
+  raw <- trimws(as.character(id %||% ""))
+  trailing_dash <- grepl("-$", raw)
+  core <- sub("-+$", "", raw)
+  if (!nzchar(core)) {
+    return(list(cycle = "", sub = "", ctrl = "", kind = "empty", trailing_dash = trailing_dash))
+  }
+  m3 <- regmatches(core, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)-([0-9]+)$", core, perl = TRUE))[[1]]
+  if (length(m3) >= 4L) {
+    return(list(cycle = m3[[2]], sub = m3[[3]], ctrl = m3[[4]], kind = "control", trailing_dash = FALSE))
+  }
+  m2 <- regmatches(core, regexec("^([A-Za-z0-9]+)-([A-Za-z0-9]+)$", core, perl = TRUE))[[1]]
+  if (length(m2) >= 3L) {
+    return(list(
+      cycle = m2[[2]], sub = m2[[3]], ctrl = "",
+      kind = if (trailing_dash) "control_stub" else "sub",
+      trailing_dash = trailing_dash
+    ))
+  }
+  if (grepl("^[A-Za-z0-9]+$", core)) {
+    return(list(cycle = core, sub = "", ctrl = "", kind = "cycle_only", trailing_dash = TRUE))
+  }
+  list(cycle = "", sub = core, ctrl = "", kind = "opaque", trailing_dash = trailing_dash)
+}
+
+# 循環編號為基準：子作業編號至少為「CC-」；不可改寫循環節
+sync_sub_process_id_value <- function(current, cycle_code) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  cur <- trimws(as.character(current %||% ""))
+  if (!nzchar(cc)) return(cur)
+  prefix <- paste0(cc, "-")
+  if (!nzchar(cur)) return(prefix)
+  if (startsWith(cur, prefix) || identical(cur, cc)) {
+    if (identical(cur, cc)) return(prefix)
+    p <- parse_rcm_id_loose(cur)
+    # 誤把控制編號貼進子作業欄時，截成兩節
+    if (identical(p$kind, "control") && nzchar(p$sub)) {
+      return(compose_sub_process_id(cc, p$sub))
+    }
+    return(cur)
+  }
+  p <- parse_rcm_id_loose(cur)
+  if (!nzchar(p$sub)) return(prefix)
+  compose_sub_process_id(cc, p$sub)
+}
+
+# 循環編號為基準：控制編號預填「CC-」或「CC-子作業-」；完整則保留控制序號
+sync_control_id_value <- function(current, cycle_code, sub_process_id = "") {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  cur <- trimws(as.character(current %||% ""))
+  sp <- trimws(as.character(sub_process_id %||% ""))
+  if (!nzchar(cc)) return(cur)
+  prefix <- paste0(cc, "-")
+  sn_sp <- parse_rcm_id_loose(sp)$sub
+  if (!nzchar(cur)) {
+    if (nzchar(sn_sp)) return(paste0(prefix, sn_sp, "-"))
+    return(prefix)
+  }
+  cp <- parse_rcm_id_loose(cur)
+  sn <- if (nzchar(sn_sp)) sn_sp else cp$sub
+  wrong_prefix <- !startsWith(cur, prefix) && !identical(cur, cc)
+  if (wrong_prefix) {
+    if (nzchar(sn) && nzchar(cp$ctrl)) return(compose_control_id(cc, sn, cp$ctrl))
+    if (nzchar(sn)) return(paste0(prefix, sn, "-"))
+    return(prefix)
+  }
+  if (!nzchar(sn)) {
+    if (identical(cur, cc) || identical(cur, prefix)) return(prefix)
+    return(cur)
+  }
+  if (nzchar(cp$ctrl)) {
+    if (nzchar(sn_sp) && !identical(cp$sub, sn_sp)) {
+      return(compose_control_id(cc, sn_sp, cp$ctrl))
+    }
+    return(cur)
+  }
+  base <- paste0(prefix, sn)
+  stub <- paste0(base, "-")
+  if (identical(cur, cc) || identical(cur, prefix) || identical(cur, base)) return(stub)
+  if (startsWith(cur, stub)) return(cur)
+  if (nzchar(sn_sp)) return(stub)
+  if (identical(cp$kind, "sub") || identical(cp$kind, "control_stub")) return(stub)
+  cur
+}
+
+# 控制編號已含子作業序號時，回推子作業編號（循環節仍以 cycle_code 為準）
+sub_process_id_from_control_id <- function(control_id, cycle_code) {
+  cc <- trimws(as.character(cycle_code %||% ""))
+  if (!nzchar(cc)) return(NA_character_)
+  p <- parse_rcm_id_loose(control_id)
+  if (!nzchar(p$sub)) return(NA_character_)
+  compose_sub_process_id(cc, p$sub)
+}
+
+sub_process_choice_label <- function(key) {
+  key <- trimws(as.character(key %||% ""))
+  if (!nzchar(key)) return("")
+  if (grepl("\\|\\|", key, fixed = FALSE)) {
+    sp <- parse_sub_process_key(key)
+    if (nzchar(sp$name)) return(sp$name)
+    return(sp$id)
+  }
+  key
 }
 
 activity_key <- function(activity, approach) {
@@ -130,10 +424,9 @@ filter_cascade_rows <- function(rows,
         (nzchar(sp$name) && identical(r$sub_process, sp$name))
     }, out)
   }
-  if (!is.null(risk_factor) && nzchar(risk_factor) && !identical(risk_factor, "__custom__")) {
-    out <- Filter(function(r) {
-      identical(r$risk_factor, risk_factor) || identical(r$risk_name, risk_factor)
-    }, out)
+  if (!is.null(risk_factor) && !identical(risk_factor, "__custom__") &&
+      length(parse_risk_factor_values(risk_factor))) {
+    out <- Filter(function(r) row_matches_risk_factor(r, risk_factor), out)
   }
   if (!is.null(objective) && nzchar(objective) && !identical(objective, "__custom__")) {
     out <- Filter(function(r) identical(r$control_objective, objective), out)
@@ -150,17 +443,10 @@ filter_cascade_rows <- function(rows,
 }
 
 cascade_sub_process_choices <- function(rows) {
-  keys <- unique(vapply(rows, function(r) {
-    if (!nzchar(r$sub_process_id) && !nzchar(r$sub_process)) return("")
-    sub_process_key(r$sub_process_id, r$sub_process)
-  }, character(1)))
-  keys <- keys[nzchar(keys)]
-  labels <- vapply(keys, function(k) {
-    sp <- parse_sub_process_key(k)
-    if (nzchar(sp$id) && nzchar(sp$name)) sprintf("%s｜%s", sp$id, sp$name)
-    else if (nzchar(sp$id)) sp$id else sp$name
-  }, character(1))
-  stats::setNames(keys, labels)
+  # 選單 value／label 皆為純名稱（永不夾帶編號）；同名保留第一筆
+  labels <- unique(vapply(rows, function(r) nzchar_trim(r$sub_process), character(1)))
+  labels <- labels[nzchar(labels)]
+  stats::setNames(labels, labels)
 }
 
 # Short tag label for 風險因素（風險描述之 tag；不含 []）
@@ -175,57 +461,107 @@ risk_factor_tag <- function(x) {
   if (nchar(tag) > 20) paste0(substr(tag, 1, 19), "…") else tag
 }
 
-# Apply library / RCM control into cascade wizard (single source for core design fields)
-apply_ctrl_to_cascade <- function(session, ctrl) {
+row_risk_factor_tags <- function(r) {
+  vals <- parse_risk_factor_values(r$risk_factor %||% r$risk_name %||% "")
+  tags <- unique(c(vals, vapply(vals, risk_factor_tag, character(1))))
+  tags[nzchar(tags)]
+}
+
+row_matches_risk_factor <- function(r, risk_factors) {
+  want <- unique(c(
+    parse_risk_factor_values(risk_factors),
+    vapply(parse_risk_factor_values(risk_factors), risk_factor_tag, character(1))
+  ))
+  want <- want[nzchar(want) & want != "__custom__"]
+  if (!length(want)) return(FALSE)
+  have <- row_risk_factor_tags(r)
+  any(want %in% have)
+}
+
+# 風險因素複選：僅以；分隔（保留名稱中的 /）
+parse_risk_factor_values <- function(x) {
+  if (is.character(x) && length(x) > 1L) {
+    vals <- trimws(x)
+    return(unique(vals[nzchar(vals)]))
+  }
+  raw <- trimws(as.character(x %||% ""))
+  if (!nzchar(raw)) return(character())
+  vals <- trimws(unlist(strsplit(raw, "[;；]+")))
+  unique(vals[nzchar(vals)])
+}
+
+join_risk_factor_values <- function(x) {
+  vals <- parse_risk_factor_values(x)
+  if (!length(vals)) return("")
+  paste(vals, collapse = "；")
+}
+
+# 風險因素複選：解析、正規化 tag、以；接合（RCM／必填檢核）
+format_risk_factor_text <- function(x) {
+  vals <- parse_risk_factor_values(x)
+  if (!length(vals)) return("")
+  tags <- unique(vapply(vals, risk_factor_tag, character(1)))
+  tags <- tags[nzchar(tags)]
+  join_risk_factor_values(tags)
+}
+
+risk_factors_are_filled <- function(x) {
+  length(parse_risk_factor_values(x)) > 0L
+}
+
+risk_factor_selection_from_ctrl <- function(ctrl) {
+  parse_risk_factor_values(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+}
+
+# Apply library / RCM control cycle (form fields filled by apply_supplement_from_ctrl)
+apply_ctrl_to_cascade <- function(session, ctrl, current_cycle = NULL) {
   ctrl <- as.list(ctrl)
   if (nzchar(ctrl$cycle %||% "")) {
-    updateSelectInput(session, "cycle", selected = ctrl$cycle)
-    updateTextInput(session, "cycle_code",
-                    value = {
-                      cc <- trimws(ctrl$cycle_code %||% "")
-                      if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle)
-                    })
-  }
-  spid <- ctrl$sub_process_id %||% ""
-  spn <- ctrl$sub_process %||% ""
-  if (nzchar(spid) || nzchar(spn)) {
-    updateSelectInput(session, "cascade_sub", selected = sub_process_key(spid, spn))
-    updateTextInput(session, "sub_process_id", value = spid)
-    updateTextInput(session, "sub_process", value = spn)
-  }
-  rf <- trimws(ctrl$risk_factor %||% ctrl$risk_name %||% "")
-  if (nzchar(rf)) {
-    updateSelectInput(session, "cascade_risk", selected = rf)
-  }
-  if (nzchar(ctrl$control_objective %||% "")) {
-    updateSelectInput(session, "cascade_objective", selected = ctrl$control_objective)
-  }
-  act <- ctrl$control_activity %||% ""
-  if (nzchar(act)) {
-    updateSelectInput(
-      session, "cascade_activity",
-      selected = activity_key(act, ctrl$approach %||% ctrl$control_activity_type)
-    )
-  }
-  iuc <- trimws(ctrl$iuc_or_system %||% ctrl$related_system %||% "")
-  if (nzchar(iuc)) {
-    updateSelectInput(session, "cascade_iuc", selected = iuc)
+    cur_cy <- trimws(as.character(current_cycle %||% ""))
+    if (!identical(cur_cy, ctrl$cycle)) {
+      updateSelectInput(session, "cycle", selected = ctrl$cycle)
+    }
+    cc <- trimws(ctrl$cycle_code %||% "")
+    if (!nzchar(cc)) cc <- cycle_code_for(ctrl$cycle)
+    updateTextInput(session, "cycle_code", value = cc)
   }
   invisible(ctrl)
 }
 
-apply_supplement_from_ctrl <- function(session, ctrl) {
+apply_supplement_from_ctrl <- function(session, ctrl, pbc_registry = NULL) {
   ctrl <- as.list(ctrl)
-  updateTextInput(session, "control_id", value = ctrl$control_id %||% ctrl$library_id %||% "")
+  # 範本庫不回填子作業／控制編號；僅當來源本身已有執行階段編號時才帶入
+  cid <- trimws(as.character(ctrl$control_id %||% ""))
+  if (nzchar(cid) && !grepl("^(LIB|JL|PL)-", cid)) {
+    updateTextInput(session, "control_id", value = cid)
+  }
   updateTextInput(session, "cycle_code", value = {
     cc <- trimws(ctrl$cycle_code %||% "")
     if (nzchar(cc)) cc else cycle_code_for(ctrl$cycle %||% "")
   })
-  updateTextInput(session, "sub_process_id", value = ctrl$sub_process_id %||% "")
-  updateTextInput(session, "sub_process", value = ctrl$sub_process %||% "")
-  rf <- risk_factor_tag(ctrl$risk_factor %||% ctrl$risk_name %||% "")
-  updateTextInput(session, "risk_factor", value = rf)
-  updateTextAreaInput(session, "risk_description", value = ctrl$risk_description %||% "")
+  spid <- trimws(as.character(ctrl$sub_process_id %||% ""))
+  if (nzchar(spid)) {
+    updateTextInput(session, "sub_process_id", value = spid)
+  }
+  # 選單永遠只選純名稱（編號另欄維護）
+  sp_sel <- sub_process_name_from_value(ctrl$sub_process %||% "")
+  updateSelectizeInput(session, "sub_process", selected = sp_sel)
+  rf_sel <- risk_factor_selection_from_ctrl(ctrl)
+  updateSelectizeInput(session, "risk_factor", selected = rf_sel)
+  if (nzchar(trimws(ctrl$risk_principle %||% ""))) {
+    rp <- trimws(ctrl$risk_principle)
+    updateSelectizeInput(session, "risk_principle",
+                         choices = stats::setNames(rp, rp), selected = rp, server = FALSE)
+  }
+  if (nzchar(trimws(ctrl$risk_area %||% ""))) {
+    ra <- trimws(ctrl$risk_area)
+    updateSelectizeInput(session, "risk_area",
+                         choices = stats::setNames(ra, ra), selected = ra, server = FALSE)
+  }
+  rd <- trimws(as.character(ctrl$risk_description %||% ""))
+  if (nzchar(rd)) {
+    updateTextAreaInput(session, "risk_description", value = rd)
+  }
   if (nzchar(trimws(ctrl$risk_category %||% ""))) {
     updateSelectInput(session, "risk_category", selected = ctrl$risk_category)
   }
@@ -244,16 +580,65 @@ apply_supplement_from_ctrl <- function(session, ctrl) {
       }
     }
   )
-  updateTextInput(session, "related_policy", value = ctrl$related_policy %||% "")
+  updateSelectizeInput(
+    session, "related_policy",
+    selected = expand_pbc_selection(ctrl$related_policy %||% "", pbc_registry)
+  )
+  updateSelectizeInput(
+    session, "related_documents",
+    choices = {
+      rd <- trimws(as.character(ctrl$related_documents %||% ""))
+      if (nzchar(rd)) stats::setNames(rd, rd) else character(0)
+    },
+    selected = trimws(as.character(ctrl$related_documents %||% "")),
+    server = FALSE
+  )
   updateSelectizeInput(session, "related_law",
                        selected = {
                          raw <- trimws(as.character(ctrl$related_law %||% ""))
                          if (!nzchar(raw)) character(0) else trimws(unlist(strsplit(raw, "[;；|/]+")))
                        })
-  updateTextInput(session, "related_document",
-                  value = ctrl$related_document %||% ctrl$outputs %||% "")
-  detail <- risk_attr_detail_from_ctrl(ctrl)
-  updateTextAreaInput(session, "risk_attr_detail", value = detail)
+  updateTextInput(session, "related_law_url",
+                  value = trimws(as.character(ctrl$related_law_url %||% "")))
+  doc_ids <- parse_pbc_id_values(ctrl$related_document_pbc_ids)
+  doc_sel <- expand_pbc_selection(
+    ctrl$related_document %||% ctrl$outputs %||% "",
+    pbc_registry,
+    stored_ids = doc_ids
+  )
+  updateSelectizeInput(session, "related_document_pbc", selected = doc_sel)
+  updateTextAreaInput(session, "control_objective", value = ctrl$control_objective %||% "")
+  updateTextAreaInput(session, "control_activity", value = ctrl$control_activity %||% "")
+  at <- normalize_control_activity_type_pd(ctrl$approach %||% ctrl$control_activity_type)
+  ct <- normalize_control_type_manual_auto(ctrl$nature %||% ctrl$control_type)
+  if (nzchar(at)) updateSelectInput(session, "approach", selected = at)
+  if (nzchar(ct)) updateSelectInput(session, "nature", selected = ct)
+  freq <- resolve_control_frequency(ct, ctrl$frequency %||% "")
+  if (nzchar(freq)) {
+    if (!(freq %in% FREQUENCY_CHOICES)) {
+      updateSelectInput(session, "frequency",
+                        choices = unique(c(FREQUENCY_CHOICES, freq)), selected = freq)
+    } else {
+      updateSelectInput(session, "frequency", selected = freq)
+    }
+  }
+  updateSelectizeInput(
+    session, "responsible_unit",
+    choices = {
+      ru <- trimws(as.character(ctrl$responsible_unit %||% ""))
+      if (nzchar(ru)) stats::setNames(ru, ru) else character(0)
+    },
+    selected = trimws(as.character(ctrl$responsible_unit %||% "")),
+    server = FALSE
+  )
+  updateSelectizeInput(
+    session, "iuc",
+    selected = expand_pbc_selection(
+      ctrl$iuc %||% ctrl$iuc_or_system %||% "",
+      pbc_registry
+    )
+  )
+  updateTextInput(session, "related_system", value = ctrl$related_system %||% "")
   as_vals <- parse_assertion_values(normalize_assertions_for_category(
     ctrl$assertions, ctrl$risk_category %||% ""
   ))
@@ -300,10 +685,8 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
     return(invisible(NULL))
   }
   det <- cascade_risk_detail(rows, risk_factor)
-  updateTextInput(session, "risk_factor", value = risk_factor_tag(risk_factor))
-  if (nzchar(det$risk_description)) {
-    updateTextAreaInput(session, "risk_description", value = det$risk_description)
-  }
+  updateSelectizeInput(session, "risk_factor", selected = risk_factor)
+  # 風險描述為質性文字：選 TAG 不覆寫已填內容
   if (nzchar(det$risk_category)) {
     updateSelectInput(session, "risk_category", selected = det$risk_category)
   }
@@ -311,52 +694,51 @@ apply_risk_detail_to_inputs <- function(session, rows, risk_factor) {
   if (is.list(r) && length(r) && nzchar(trimws(r$romm_classification %||% ""))) {
     updateSelectInput(session, "romm_classification", selected = r$romm_classification)
   }
-  kind <- risk_attr_kind_from_category(det$risk_category)
-  if (!nzchar(kind) && is.list(r) && length(r)) {
-    kind <- risk_attr_kind_from_ctrl(r)
-  }
-  if (!nzchar(kind)) kind <- "operations"
-  detail <- ""
-  if (is.list(r) && length(r)) {
-    strip <- function(x) gsub("^\\[[^\\]]+\\]\\s*", "", trimws(as.character(x %||% "")))
-    detail <- switch(kind,
-                     financial = strip(r$risk_attr_financial),
-                     operations = strip(r$risk_attr_operations),
-                     compliance = strip(r$risk_attr_compliance),
-                     "")
-    if (!nzchar(detail)) {
-      for (f in c(r$risk_attr_financial, r$risk_attr_operations, r$risk_attr_compliance)) {
-        d <- strip(f)
-        if (nzchar(d)) { detail <- d; break }
-      }
-    }
-  }
-  updateTextAreaInput(session, "risk_attr_detail", value = detail)
   invisible(det)
 }
 
 cascade_risk_choices <- function(rows) {
-  # value = canonical risk_factor; label = short tag（不含 []、不附描述）
-  factors <- unique(vapply(rows, function(r) r$risk_factor, character(1)))
-  factors <- factors[nzchar(factors)]
-  tags <- vapply(factors, risk_factor_tag, character(1))
-  labels <- tags
-  dup <- unique(tags[duplicated(tags) | duplicated(tags, fromLast = TRUE)])
-  if (length(dup)) {
-    for (i in seq_along(factors)) {
-      if (tags[i] %in% dup) {
-        alt <- gsub("\\[|\\]", "", factors[i])
-        labels[i] <- if (nchar(alt) > 28) paste0(substr(alt, 1, 27), "…") else alt
-      }
-    }
+  # 風險因素＝風險描述上的 TAG；選單 value／label 皆為短標記，可自訂新增
+  if (!length(rows)) return(character())
+  tags <- unique(unlist(lapply(rows, function(r) {
+    vals <- parse_risk_factor_values(r$risk_factor %||% r$risk_name %||% "")
+    if (!length(vals)) return(character())
+    vapply(vals, risk_factor_tag, character(1))
+  }), use.names = FALSE))
+  tags <- tags[nzchar(tags)]
+  if (!length(tags)) return(character())
+  stats::setNames(tags, tags)
+}
+
+# 依已選 TAG 推薦曾被標記的風險描述；未選 TAG 時列出範圍內全部描述（仍可自訂）
+cascade_risk_description_choices <- function(rows, risk_factors = character(0)) {
+  if (!length(rows)) return(character(0))
+  tags <- unique(c(
+    parse_risk_factor_values(risk_factors),
+    vapply(parse_risk_factor_values(risk_factors), risk_factor_tag, character(1))
+  ))
+  tags <- tags[nzchar(tags) & tags != "__custom__"]
+  scoped <- if (length(tags)) {
+    Filter(function(r) row_matches_risk_factor(r, tags), rows)
+  } else {
+    rows
   }
-  stats::setNames(factors, labels)
+  descs <- unique(vapply(scoped, function(r) nzchar_trim(r$risk_description), character(1)))
+  descs[nzchar(descs)]
+}
+
+risk_description_select_choices <- function(descs) {
+  descs <- unique(trimws(as.character(descs)))
+  descs <- descs[nzchar(descs)]
+  if (!length(descs)) return(character())
+  labels <- vapply(descs, function(d) {
+    if (nchar(d) > 80) paste0(substr(d, 1, 79), "…") else d
+  }, character(1))
+  stats::setNames(descs, labels)
 }
 
 cascade_risk_detail <- function(rows, risk_factor) {
-  hit <- Filter(function(r) {
-    identical(r$risk_factor, risk_factor) || identical(r$risk_name, risk_factor)
-  }, rows)
+  hit <- Filter(function(r) row_matches_risk_factor(r, risk_factor), rows)
   if (!length(hit)) {
     return(list(
       risk_factor = risk_factor, risk_category = "", risk_description = "",
@@ -413,13 +795,21 @@ cascade_iuc_choices <- function(rows, pbc_df = NULL) {
   iucs <- unique(vapply(rows, function(r) r$iuc_or_system, character(1)))
   iucs <- iucs[nzchar(iucs)]
   if (!is.null(pbc_df) && nrow(pbc_df)) {
+    pbc_use <- pbc_df
+    if (exists("filter_pbc_registry", mode = "function")) {
+      pbc_use <- filter_pbc_registry(pbc_df, exclude_kinds = PBC_KIND_POLICY)
+    } else if (exists("PBC_KIND_POLICY", mode = "variable")) {
+      pbc_use <- pbc_df[!vapply(pbc_df$pbc_kind, function(k) {
+        identical(trimws(as.character(k %||% "")), PBC_KIND_POLICY)
+      }, logical(1)), , drop = FALSE]
+    }
     extra <- unique(c(
-      as.character(pbc_df$reviewed_name),
-      as.character(pbc_df$client_pbc_name),
-      as.character(pbc_df$iuc_or_system),
+      as.character(pbc_use$reviewed_name),
+      as.character(pbc_use$client_pbc_name),
+      as.character(pbc_use$iuc_or_system),
       if (exists("format_pbc_reviewed_label", mode = "function")) {
-        vapply(seq_len(nrow(pbc_df)), function(i) {
-          format_pbc_reviewed_label(pbc_df$reviewed_name[i], pbc_df$pbc_kind[i])
+        vapply(seq_len(nrow(pbc_use)), function(i) {
+          format_pbc_reviewed_label(pbc_use$reviewed_name[i], pbc_use$pbc_kind[i])
         }, character(1))
       } else character()
     ))
@@ -431,7 +821,7 @@ cascade_iuc_choices <- function(rows, pbc_df = NULL) {
 
 # Selection completeness for unlocking 公司現況
 cascade_selection_ready <- function(sel) {
-  req <- c("cycle", "sub_process_id", "risk_factor", "control_objective",
+  req <- c("cycle", "risk_factor", "control_objective",
            "control_activity", "approach", "iuc_or_system")
   missing <- character()
   for (f in req) {
@@ -446,17 +836,17 @@ cascade_selection_ready <- function(sel) {
 # Six-rule gate for status writing (前置六大控制項目)
 six_status_rules_check <- function(ctrl) {
   missing <- character()
-  labels <- c(
-    nature = "控制類型（人工／自動）",
-    approach = "控制活動類型（預防／偵測・單一）",
+    labels <- c(
+    nature = "控制性質（人工／自動）",
+    approach = "控制方式（預防／偵測／矯正）",
     frequency = "控制頻率",
-    responsible_unit = "流程負責單位",
-    iuc_or_system = "IUC／相關系統",
+    responsible_unit = "控制點負責單位",
+    iuc_or_system = CONTROL_IUC_DOCUMENT_LABEL,
     control_activity = "控制活動"
   )
   for (f in names(labels)) {
     val <- if (identical(f, "iuc_or_system")) {
-      nzchar_trim(ctrl$iuc_or_system %||% ctrl$related_system)
+      ctrl_iuc_value(ctrl)
     } else if (identical(f, "approach")) {
       normalize_single_activity_type(ctrl$approach)
     } else nzchar_trim(ctrl[[f]])
@@ -474,7 +864,13 @@ assemble_status_scaffold <- function(ctrl) {
     sprintf("2. 控制活動類型：%s\n", nzchar_or(normalize_single_activity_type(ctrl$approach), "（缺）")),
     sprintf("3. 控制頻率：%s\n", nzchar_or(ctrl$frequency, "（缺）")),
     sprintf("4. 負責單位：%s\n", nzchar_or(ctrl$responsible_unit, "（缺）")),
-    sprintf("5. IUC／相關系統：%s\n", nzchar_or(ctrl$iuc_or_system %||% ctrl$related_system, "（缺）")),
+    sprintf("5. IUC：%s\n", nzchar_or(ctrl_iuc_value(ctrl), "（缺）")),
+    sprintf("   相關系統：%s\n",
+            if (is_automatic_control(ctrl$nature %||% ctrl$control_type)) {
+              nzchar_or(ctrl_related_system_value(ctrl), "（缺）")
+            } else {
+              nzchar_or(ctrl_related_system_value(ctrl), "（可空）")
+            }),
     sprintf("6. 控制活動：%s\n", nzchar_or(ctrl$control_activity, "（缺）")),
     "----\n",
     sprintf("控制目標：%s\n", nzchar_or(ctrl$control_objective, "（缺）")),
@@ -506,19 +902,31 @@ collect_existing_control_ids <- function(..., lists = list()) {
       } else {
         item$control_id %||% ""
       }
-      # also library_id JL-EC-101-01 → EC-101-01
-      lid <- item$library_id %||% ""
-      if (grepl("^JL-", lid)) cid <- c(cid, sub("^JL-", "", lid))
       ids <- c(ids, nzchar_trim(cid))
     }
   }
   unique(ids[nzchar(ids)])
 }
 
-next_rcm_control_id <- function(sub_process_id, existing_ids = character()) {
+next_rcm_control_id <- function(sub_process_id, existing_ids = character(),
+                                cycle_code = "") {
   sp <- nzchar_trim(sub_process_id)
-  if (!nzchar(sp)) sp <- "SP-001"
-  # Match {sp}-NN at end
+  cc <- trimws(as.character(cycle_code %||% ""))
+  # 正規化為 [循環]-[子作業序號]
+  if (nzchar(sp)) {
+    parts <- parse_rcm_id_parts(sp)
+    if (isTRUE(parts$ok) && nzchar(parts$sub)) {
+      if (!nzchar(cc)) cc <- parts$cycle
+      if (nzchar(cc)) sp <- compose_sub_process_id(cc, parts$sub)
+    } else if (nzchar(cc)) {
+      sn <- sub_process_seq_from_id(sp, cc)
+      if (nzchar(sn)) sp <- compose_sub_process_id(cc, sn)
+    }
+  }
+  if (!nzchar(sp)) {
+    if (nzchar(cc)) sp <- compose_sub_process_id(cc, "001") else sp <- "SP-001"
+  }
+  # Match {sp}-NN at end → 控制編號 = [循環]-[子作業序號]-[控制序號]
   pat <- paste0("^", gsub("([.\\-])", "\\\\\\1", sp), "-(\\d+)$")
   nums <- integer()
   for (id in existing_ids) {
@@ -526,6 +934,10 @@ next_rcm_control_id <- function(sub_process_id, existing_ids = character()) {
     if (length(m) >= 2) nums <- c(nums, as.integer(m[[2]]))
   }
   next_n <- if (length(nums)) max(nums) + 1L else 1L
+  parts <- parse_rcm_id_parts(sp)
+  if (isTRUE(parts$ok) && nzchar(parts$cycle) && nzchar(parts$sub)) {
+    return(compose_control_id(parts$cycle, parts$sub, next_n))
+  }
   sprintf("%s-%02d", sp, next_n)
 }
 
@@ -568,8 +980,9 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
     approach = normalize_single_activity_type(sel$approach),
     frequency = sel$frequency %||% "",
     responsible_unit = sel$responsible_unit %||% "",
-    iuc_or_system = sel$iuc_or_system %||% "",
-    related_system = sel$iuc_or_system %||% "",
+    iuc_or_system = sel$iuc %||% sel$iuc_or_system %||% "",
+    iuc = sel$iuc %||% sel$iuc_or_system %||% "",
+    related_system = sel$related_system %||% "",
     control_id = sel$control_id %||% "",
     significant_account = {
       ac <- nzchar_trim(sel$significant_account)
@@ -582,4 +995,108 @@ custom_cascade_to_library_item <- function(sel, tags = c("自訂新增")) {
     list(library_id = paste0("CUSTOM-", as.integer(Sys.time())), title = ctrl$control_objective,
          tags = tags, cycle = ctrl$cycle, control = ctrl)
   }
+}
+
+# ── 設計頁籤頂部簡約搜尋（依範本庫快速找欄位值）──────────────────────────
+.tab_search_limit <- 12L
+
+search_sub_process_hits <- function(rows, keyword = "", limit = .tab_search_limit) {
+  kw <- trimws(as.character(keyword %||% ""))
+  seen <- character()
+  out <- list()
+  for (r in rows) {
+    nm <- nzchar_trim(r$sub_process)
+    id <- nzchar_trim(r$sub_process_id)
+    if (!nzchar(nm)) next
+    if (nzchar(kw) && !grepl(kw, nm, fixed = TRUE) &&
+        !grepl(kw, id, fixed = TRUE) &&
+        !grepl(kw, nm, ignore.case = TRUE)) next
+    key <- paste(id, nm, sep = "\t")
+    if (key %in% seen) next
+    seen <- c(seen, key)
+    out[[length(out) + 1L]] <- list(
+      sub_process = nm,
+      sub_process_id = id,
+      label = nm
+    )
+    if (length(out) >= limit) break
+  }
+  out
+}
+
+search_risk_description_hits <- function(rows, category = "", factor_kw = "",
+                                         limit = .tab_search_limit) {
+  cat <- trimws(as.character(category %||% ""))
+  fkw <- trimws(as.character(factor_kw %||% ""))
+  seen <- character()
+  out <- list()
+  for (r in rows) {
+    if (nzchar(cat) && !identical(nzchar_trim(r$risk_category), cat)) next
+    rf <- nzchar_trim(r$risk_factor %||% r$risk_name)
+    desc <- nzchar_trim(r$risk_description)
+    if (!nzchar(desc)) next
+    if (nzchar(fkw) && !grepl(fkw, rf, ignore.case = TRUE) &&
+        !grepl(fkw, desc, ignore.case = TRUE)) next
+    key <- paste(rf, desc, sep = "\t")
+    if (key %in% seen) next
+    seen <- c(seen, key)
+    out[[length(out) + 1L]] <- list(
+      risk_factor = rf,
+      risk_category = nzchar_trim(r$risk_category),
+      risk_description = desc,
+      label = {
+        short <- if (nchar(desc) > 48) paste0(substr(desc, 1, 48), "…") else desc
+        if (nzchar(rf)) sprintf("[%s] %s", rf, short) else short
+      }
+    )
+    if (length(out) >= limit) break
+  }
+  out
+}
+
+search_control_activity_hits <- function(rows, approach = "", nature = "",
+                                         limit = .tab_search_limit) {
+  ap <- trimws(as.character(approach %||% ""))
+  nat <- trimws(as.character(nature %||% ""))
+  if (nzchar(ap) && exists("normalize_single_activity_type", mode = "function")) {
+    ap_n <- normalize_single_activity_type(ap)
+    if (nzchar(ap_n)) ap <- ap_n
+  }
+  if (nzchar(nat) && exists("normalize_control_type_manual_auto", mode = "function")) {
+    nat_n <- normalize_control_type_manual_auto(nat)
+    if (nzchar(nat_n)) nat <- nat_n
+  }
+  seen <- character()
+  out <- list()
+  for (r in rows) {
+    act <- nzchar_trim(r$control_activity)
+    if (!nzchar(act)) next
+    r_ap <- nzchar_trim(r$approach)
+    r_nat <- nzchar_trim(r$nature)
+    if (nzchar(ap)) {
+      r_ap_n <- if (exists("normalize_single_activity_type", mode = "function"))
+        normalize_single_activity_type(r_ap) else r_ap
+      if (!identical(r_ap_n, ap) && !grepl(ap, r_ap, fixed = TRUE)) next
+    }
+    if (nzchar(nat)) {
+      r_nat_n <- if (exists("normalize_control_type_manual_auto", mode = "function"))
+        normalize_control_type_manual_auto(r_nat) else r_nat
+      if (!identical(r_nat_n, nat) && !identical(r_nat, nat)) next
+    }
+    key <- act
+    if (key %in% seen) next
+    seen <- c(seen, key)
+    out[[length(out) + 1L]] <- list(
+      control_activity = act,
+      approach = r_ap,
+      nature = r_nat,
+      label = {
+        short <- if (nchar(act) > 56) paste0(substr(act, 1, 56), "…") else act
+        bits <- c(if (nzchar(r_nat)) r_nat, if (nzchar(r_ap)) r_ap)
+        if (length(bits)) sprintf("%s — %s", paste(bits, collapse = "／"), short) else short
+      }
+    )
+    if (length(out) >= limit) break
+  }
+  out
 }

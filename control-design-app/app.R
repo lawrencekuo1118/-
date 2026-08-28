@@ -536,6 +536,25 @@ ui <- page_navbar(
         .pbc-kind-format-row { grid-template-columns: 1fr; }
       }
 
+      /* PBC：規格說明｜如果存在 同列並排 */
+      .pbc-spec-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.5rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .pbc-spec-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      .pbc-spec-if-exists {
+        padding-top: 1.85rem;
+        white-space: nowrap;
+      }
+      .pbc-spec-if-exists .checkbox { margin-bottom: 0; }
+      @media (max-width: 768px) {
+        .pbc-spec-row { grid-template-columns: 1fr; }
+        .pbc-spec-if-exists { padding-top: 0; }
+      }
+
       /* PBC：ID｜互相勾稽 同列 1:2 並排 */
       .pbc-id-related-row {
         display: grid;
@@ -1335,9 +1354,16 @@ ui <- page_navbar(
           placeholder = "檢視後新命名", width = "100%"
         )
       ),
-      textAreaInput(
-        "pbc_spec", lab_opt("PBC規格說明"), rows = 3, width = "100%",
-        placeholder = "選填：取得／檢附要求與規格說明"
+      tags$div(
+        class = "pbc-spec-row",
+        textAreaInput(
+          "pbc_spec", lab_opt("PBC規格說明"), rows = 3, width = "100%",
+          placeholder = "選填：取得／檢附要求與規格說明"
+        ),
+        tags$div(
+          class = "pbc-spec-if-exists",
+          checkboxInput("pbc_if_exists", "如果存在", FALSE)
+        )
       ),
       tags$div(
         class = "pbc-kind-format-row",
@@ -3877,7 +3903,11 @@ server <- function(input, output, session) {
         pbc_file_format = input$pbc_file_format,
         related_pbc_ids = input$pbc_related,
         iuc_or_system = input$pbc_reviewed,
-        cycle = cycle_val, notes = input$pbc_notes
+        cycle = cycle_val,
+        notes = apply_pbc_if_exists_note(
+          input$pbc_notes,
+          isTRUE(input$pbc_if_exists)
+        )
       )
       rows <- expand_numbered_pbc_rows(base_row)
       reg <- pbc_reg()
@@ -3893,6 +3923,7 @@ server <- function(input, output, session) {
       updateTextInput(session, "pbc_client", value = "")
       updateTextInput(session, "pbc_reviewed", value = "")
       updateTextAreaInput(session, "pbc_spec", value = "")
+      updateCheckboxInput(session, "pbc_if_exists", value = FALSE)
       updateSelectInput(session, "pbc_kind", selected = "")
       updateSelectizeInput(session, "pbc_file_format", selected = "")
       updateSelectizeInput(session, "pbc_related", selected = character(0))
@@ -4000,6 +4031,10 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, "pbc_related", choices = ch_rel,
                          selected = rel_ids)
     updateTextInput(session, "pbc_notes", value = row$notes[[1]])
+    updateCheckboxInput(
+      session, "pbc_if_exists",
+      value = pbc_if_exists_from_notes(row$notes[[1]])
+    )
   }, ignoreInit = TRUE)
   observeEvent(input$pbc_delete, {
     if (!require_admin(is_admin(), session)) return()

@@ -112,7 +112,7 @@ button_interaction_registry <- function() {
       title = "PBC 資料庫",
       rows = list(
         list(id = "pbc_add", label = "登錄", page = "PBC",
-             prereq = "客戶原名或檢視後命名；未登入高權時按鈕仍可按（跳出登入後繼續）",
+             prereq = "客戶原名或檢視後命名；可勾「如果存在」寫入備註",
              effect = "upsert_pbc；更新表與命名對照",
              gate = "需欄位；高權於按下後檢查"),
         list(id = "pbc_delete", label = "刪除", page = "PBC",

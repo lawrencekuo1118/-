@@ -616,6 +616,16 @@ reg_spec <- upsert_pbc(empty_pbc_registry(), list(
 ))
 check(identical(reg_spec$pbc_spec[1], "1. 含所有系統\n2. 檢附盤點表"),
       "PBC 規格說明可寫入 registry")
+check(identical(
+  apply_pbc_if_exists_note("客戶備註", TRUE),
+  "客戶備註；如果存在"
+), "PBC 如果存在勾選寫入備註")
+check(identical(
+  apply_pbc_if_exists_note("客戶備註；如果存在", FALSE),
+  "客戶備註"
+), "PBC 如果存在取消勾選移除備註標記")
+check(isTRUE(pbc_if_exists_from_notes("客戶備註；如果存在")),
+      "PBC 備註可辨識如果存在")
 split_rows <- expand_numbered_pbc_rows(list(
   client_pbc_name = "1. 客戶需求Mail\n2. Voice of Customer",
   reviewed_name = "",
@@ -691,6 +701,9 @@ check(grepl("樣本檔案格式", app_src_pbc, fixed = TRUE),
 check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
         grepl("PBC規格說明", app_src_pbc, fixed = TRUE),
       "PBC 規格說明輸入位於整理表單")
+check(grepl('checkboxInput\\("pbc_if_exists", "如果存在"', app_src_pbc, fixed = TRUE) &&
+        grepl("pbc-spec-row", app_src_pbc, fixed = TRUE),
+      "PBC 規格說明旁含如果存在勾選框")
 check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
       "PBC 規格說明在證據類型／文件格式上方")
 check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&

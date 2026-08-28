@@ -5,6 +5,8 @@
 # pbc_kind        = 證據類型特別標示（螢幕截圖／EMAIL／系統表單／傳票／人工整理／政策制度）
 # pbc_file_format = 樣本檔案格式（.jpg／.png／.pptx 等）
 
+PBC_IF_EXISTS_NOTE <- "如果存在"
+
 PBC_KIND_CHOICES <- c(
   "請選擇證據類型…" = "",
   "螢幕截圖" = "螢幕截圖",
@@ -63,6 +65,25 @@ normalize_pbc_file_format <- function(x) {
 
 normalize_pbc_spec <- function(x) {
   trimws(as.character(x %||% ""))
+}
+
+pbc_if_exists_from_notes <- function(notes) {
+  notes <- trimws(as.character(notes %||% ""))
+  if (!nzchar(notes)) return(FALSE)
+  parts <- unlist(strsplit(notes, "[；;]+", perl = TRUE))
+  any(trimws(parts) == PBC_IF_EXISTS_NOTE)
+}
+
+apply_pbc_if_exists_note <- function(notes, if_exists) {
+  notes <- trimws(as.character(notes %||% ""))
+  parts <- if (nzchar(notes)) {
+    trimws(unlist(strsplit(notes, "[；;]+", perl = TRUE)))
+  } else {
+    character()
+  }
+  parts <- parts[nzchar(parts) & parts != PBC_IF_EXISTS_NOTE]
+  if (isTRUE(if_exists)) parts <- c(parts, PBC_IF_EXISTS_NOTE)
+  paste(parts, collapse = "；")
 }
 
 # 檢視後命名加上【類型】前綴，供 IUC／PBC 對照特別標示

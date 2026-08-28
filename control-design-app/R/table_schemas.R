@@ -61,7 +61,7 @@ table_schema_registry <- function() {
   pbc_rows <- list(
     .schema_col("ID", 1L, "pbc_id", "—"),
     .schema_col("循環", 2L, "cycle", "—"),
-    .schema_col("標準名稱", 3L, "format_pbc_reviewed_label(reviewed_name, pbc_kind)", "—"),
+    .schema_col("標準名稱", 3L, "reviewed_name", "不含證據類型前綴（另有證據類型欄）"),
     .schema_col("原始名稱", 4L, "client_pbc_name", "—"),
     .schema_col("證據類型", 5L, "pbc_kind", "依類型上色"),
     .schema_col("檔案格式", 6L, "pbc_file_format", "—"),

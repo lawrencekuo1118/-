@@ -1487,6 +1487,7 @@ server <- function(input, output, session) {
   rcm_preview_ctrl <- reactiveVal(NULL)
   applying_template <- reactiveVal(FALSE)
   lib_revision <- reactiveVal(0L)
+  pbc_form_cycle <- reactiveVal("")
 
   bump_rcm_views <- function(ctrl = NULL) {
     rcm_revision(rcm_revision() + 1L)
@@ -1993,12 +1994,20 @@ server <- function(input, output, session) {
     }
   })
   output$pbc_cycle_readonly <- renderUI({
-    cy <- input$cycle %||% ""
+    edit_id <- trimws(input$pbc_id %||% "")
+    form_cy <- trimws(pbc_form_cycle() %||% "")
+    sidebar_cy <- input$cycle %||% ""
+    if (nzchar(edit_id) && nzchar(form_cy)) {
+      return(tags$div(
+        class = "small text-muted mb-2",
+        sprintf("編輯中：循環將保留為「%s」。", form_cy)
+      ))
+    }
     tags$div(
       class = "small text-muted mb-2",
       "上方資料庫顯示全部循環，無需先選側邊欄循環。",
-      if (nzchar(cy)) {
-        tags$span(sprintf(" 登錄新筆將寫入循環：%s。", cy))
+      if (nzchar(sidebar_cy)) {
+        tags$span(sprintf(" 登錄新筆將寫入循環：%s。", sidebar_cy))
       } else {
         tags$span(" 登錄新筆時循環欄可留空。")
       }
@@ -3675,6 +3684,18 @@ server <- function(input, output, session) {
   # PBC
   observeEvent(input$pbc_add, {
     tryCatch({
+      edit_id <- trimws(input$pbc_id %||% "")
+      reg0 <- pbc_reg()
+      cycle_val <- if (nzchar(edit_id) && edit_id %in% reg0$pbc_id) {
+        stored <- trimws(pbc_form_cycle() %||% "")
+        if (nzchar(stored)) {
+          stored
+        } else {
+          trimws(reg0$cycle[reg0$pbc_id == edit_id][[1]] %||% "")
+        }
+      } else {
+        input$cycle %||% ""
+      }
       base_row <- list(
         pbc_id = input$pbc_id, client_pbc_name = input$pbc_client,
         reviewed_name = input$pbc_reviewed, pbc_spec = input$pbc_spec,
@@ -3682,7 +3703,7 @@ server <- function(input, output, session) {
         pbc_file_format = input$pbc_file_format,
         related_pbc_ids = input$pbc_related,
         iuc_or_system = input$pbc_reviewed,
-        cycle = input$cycle %||% "", notes = input$pbc_notes
+        cycle = cycle_val, notes = input$pbc_notes
       )
       rows <- expand_numbered_pbc_rows(base_row)
       reg <- pbc_reg()
@@ -3702,6 +3723,7 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, "pbc_file_format", selected = "")
       updateSelectizeInput(session, "pbc_related", selected = character(0))
       updateTextInput(session, "pbc_notes", value = "")
+      pbc_form_cycle("")
       msg <- if (length(rows) > 1L) {
         sprintf("已登錄 PBC（%d 筆）", length(rows))
       } else {
@@ -3725,9 +3747,7 @@ server <- function(input, output, session) {
     show <- data.frame(
       ID = df$pbc_id,
       循環 = df$cycle,
-      標準名稱 = vapply(seq_len(nrow(df)), function(i) {
-        format_pbc_reviewed_label(df$reviewed_name[i], df$pbc_kind[i])
-      }, character(1)),
+      標準名稱 = ifelse(nzchar(df$reviewed_name), df$reviewed_name, "—"),
       原始名稱 = df$client_pbc_name,
       證據類型 = ifelse(nzchar(df$pbc_kind), df$pbc_kind, "—"),
       檔案格式 = ifelse(nzchar(df$pbc_file_format), df$pbc_file_format, "—"),
@@ -3770,6 +3790,7 @@ server <- function(input, output, session) {
     s <- input$pbc_table_rows_selected
     if (is.null(s)) return()
     row <- pbc_reg()[s, , drop = FALSE]
+    pbc_form_cycle(trimws(row$cycle[[1]] %||% ""))
     updateTextInput(session, "pbc_id", value = row$pbc_id[[1]])
     updateTextInput(session, "pbc_client", value = row$client_pbc_name[[1]])
     updateTextInput(session, "pbc_reviewed", value = row$reviewed_name[[1]])

@@ -696,6 +696,14 @@ check(grepl(
   'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
   app_src_pbc, perl = TRUE),
       "PBC資料庫表欄位順序：ID→循環→標準名稱→原始名稱→證據類型→檔案格式→規格說明→勾稽→備註")
+check(grepl("標準名稱 = ifelse\\(nzchar\\(df\\$reviewed_name\\)", app_src_pbc, perl = TRUE) &&
+        !grepl("標準名稱[\\s\\S]{0,120}format_pbc_reviewed_label", app_src_pbc, perl = TRUE),
+      "PBC資料庫標準名稱不含證據類型前綴")
+check(grepl("pbc_form_cycle", app_src_pbc, fixed = TRUE) &&
+        grepl("pbc_form_cycle\\(trimws\\(row\\$cycle", app_src_pbc, perl = TRUE) &&
+        grepl("cycle_val <- if \\(nzchar\\(edit_id\\)", app_src_pbc, perl = TRUE) &&
+        grepl("編輯中：循環將保留為", app_src_pbc, fixed = TRUE),
+      "PBC 編輯時保留原循環別")
 check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
         grepl('div\\(class = "pbc-table-scroll-wrap", DTOutput\\("pbc_table"\\)\\)', app_src_pbc, perl = TRUE) &&
         grepl("\\.pbc-table-scroll-wrap[\\s\\S]*overflow-x: auto", app_src_pbc, perl = TRUE) &&

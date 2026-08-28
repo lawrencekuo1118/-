@@ -1206,6 +1206,11 @@ check(grepl("data-value=\\\\\"範本庫\\\\\"", app_src) &&
       "標題列隱藏範本庫／參數庫（改由側邊欄進入）")
 check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
+check(grepl('seed_if_missing_cycle\\("電腦化資訊系統循環"', app_src) &&
+        grepl('ch_iuc_all <- pbc_non_policy_choices\\(reg, cycle_filter = NULL\\)', app_src) &&
+        grepl('update_selectize\\("pbc_apply", ch_iuc_all\\)', app_src) &&
+        grepl("PBC 資料庫可直接查閱", app_src, fixed = TRUE),
+      "PBC資料庫不等待循環別即可顯示／選取")
 check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|nav_panel\\([\\s\\S]{0,80}"① 基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
       "基礎設定分頁內無循環名稱選框")
 check(!grepl("① 優先：從範本庫套用", app_src), "側邊欄已移除強制優先套用")

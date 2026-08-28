@@ -1639,6 +1639,7 @@ server <- function(input, output, session) {
       reg0 <<- load_pbc_registry(pbc_path_csv, pbc_path_json)
     }, error = function(e) NULL)
   }
+  seed_if_missing_cycle("電腦化資訊系統循環", "seed_it_cycle_pbc.R")
   seed_if_missing_cycle("財務報導循環", "seed_fr_cycle_pbc.R")
   seed_if_missing_cycle("銷售及收款循環", "seed_sc_cycle_pbc.R")
   seed_if_missing_cycle("薪工循環", "seed_py_cycle_pbc.R")
@@ -1699,6 +1700,25 @@ server <- function(input, output, session) {
       }
       lib(persist_lib(merged, force = TRUE))
     })
+  }, once = TRUE)
+
+  session$onFlushed(function() {
+    if (nrow(isolate(pbc_reg())) == 0L) {
+      reg <- load_pbc_registry(pbc_path_csv, pbc_path_json)
+      if (nrow(reg) == 0L) {
+        for (seed_nm in c("seed_it_cycle_pbc.R", "seed_fr_cycle_pbc.R",
+                          "seed_sc_cycle_pbc.R", "seed_py_cycle_pbc.R")) {
+          seed_script <- file.path(root, "data", seed_nm)
+          if (file.exists(seed_script)) {
+            tryCatch(sys.source(seed_script, envir = new.env(parent = globalenv())),
+                     error = function(e) NULL)
+          }
+        }
+        reg <- load_pbc_registry(pbc_path_csv, pbc_path_json)
+      }
+      if (nrow(reg) > 0L) pbc_reg(reg)
+    }
+    try(refresh_pbc_choices(), silent = TRUE)
   }, once = TRUE)
 
   persist_pbc <- function(reg) save_pbc_registry(reg, pbc_path_csv, pbc_path_json)
@@ -1777,7 +1797,7 @@ server <- function(input, output, session) {
   output$sidebar_cycle_hint <- renderUI({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
-      tags$div(class = "small text-danger", "必填：請先選定循環，訪談／設計／PBC 皆共用。")
+      tags$div(class = "small text-danger", "必填：請先選定循環（訪談／設計）；PBC 資料庫可直接查閱。")
     } else {
       tags$div(class = "small text-muted", sprintf("目前：%s", cy))
     }
@@ -1937,7 +1957,12 @@ server <- function(input, output, session) {
     cy <- input$cycle %||% ""
     tags$div(
       class = "small text-muted mb-2",
-      if (nzchar(cy)) sprintf("循環：%s（側邊欄）", cy) else "循環：共用／未選（側邊欄可指定）"
+      "上方資料庫顯示全部循環，無需先選側邊欄循環。",
+      if (nzchar(cy)) {
+        tags$span(sprintf(" 登錄新筆將寫入循環：%s。", cy))
+      } else {
+        tags$span(" 登錄新筆時循環欄可留空。")
+      }
     )
   })
 
@@ -2087,9 +2112,11 @@ server <- function(input, output, session) {
   refresh_pbc_choices <- function() {
     cy <- isolate(input$cycle %||% "")
     reg <- isolate(pbc_reg())
-    cf <- if (nzchar(cy)) cy else NULL
-    ch_iuc <- pbc_non_policy_choices(reg, cycle_filter = cf)
-    ch_policy <- pbc_policy_choices(reg, cycle_filter = cf)
+    cf_design <- if (nzchar(cy)) cy else NULL
+    # PBC 資料庫頁：不因側邊欄循環縮限選項／表格
+    ch_iuc_all <- pbc_non_policy_choices(reg, cycle_filter = NULL)
+    ch_iuc_design <- pbc_non_policy_choices(reg, cycle_filter = cf_design)
+    ch_policy_design <- pbc_policy_choices(reg, cycle_filter = cf_design)
     merge_selected <- function(cur, ch) {
       cur <- parse_text_list_values(cur)
       if (!length(cur)) return(cur)
@@ -2107,11 +2134,11 @@ server <- function(input, output, session) {
       pbc_choices_cache[[cache_key]] <- list(ch = ch, sel = cur)
       updateSelectizeInput(session, input_id, choices = ch, server = TRUE, selected = cur)
     }
-    update_selectize("pbc_apply", ch_iuc)
-    update_selectize("interview_pbc_link", ch_iuc)
-    update_selectize("related_document_pbc", ch_iuc)
-    update_selectize("iuc", ch_iuc)
-    update_selectize("related_policy", ch_policy)
+    update_selectize("pbc_apply", ch_iuc_all)
+    update_selectize("interview_pbc_link", ch_iuc_design)
+    update_selectize("related_document_pbc", ch_iuc_design)
+    update_selectize("iuc", ch_iuc_design)
+    update_selectize("related_policy", ch_policy_design)
     # 勾稽選單：排除目前編輯中的 ID
     excl <- trimws(isolate(input$pbc_id %||% ""))
     ch_rel <- pbc_related_link_choices(reg, exclude_id = excl)

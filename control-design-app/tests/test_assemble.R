@@ -1255,15 +1255,14 @@ check(grepl("design-stage-save-bar", app_src) &&
         grepl('nav_panel\\(\\s*"③ 控制設計"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE),
       "各階段儲存按鈕置於右上角")
 check(grepl("design-tab-filter-bar", app_src) &&
-        grepl("filter_basic_kw", app_src) &&
         grepl("filter_risk_category", app_src) &&
         grepl("filter_ctrl_approach", app_src) &&
         grepl("search_sub_process_hits", paste(readLines(file.path(root, "R/cascade.R"), encoding = "UTF-8"), collapse = "\n")),
-      "三階段頁籤有簡約搜尋篩選")
+      "風險／控制階段頁籤有簡約搜尋篩選")
 basic_tab <- sub('(?s).*nav_panel\\(\\s*"① 基礎設定"', 'nav_panel("① 基礎設定"', app_src, perl = TRUE)
 basic_tab <- sub('(?s)nav_panel\\(\\s*"② 風險辨識".*', "", basic_tab, perl = TRUE)
-check(grepl('sub_process_select_ui[\\s\\S]{0,500}filter_basic_kw', basic_tab, perl = TRUE),
-      "關鍵字篩選在子作業名稱輸入欄正下方")
+check(!grepl("filter_basic_kw", basic_tab, fixed = TRUE),
+      "基礎設定頁籤不含子作業關鍵字篩選")
 check(grepl("design_preview_basic", app_src) &&
         grepl("design_preview_risk", app_src) &&
         grepl("design_preview_control", app_src) &&
@@ -1474,6 +1473,18 @@ check(isTRUE(verify_admin_password("1118")), "預設高權密碼可驗證")
 check(!isTRUE(verify_admin_password("尬電SOX#Admin")), "舊預設密碼已停用")
 check(!isTRUE(verify_admin_password("wrong")), "錯誤密碼拒絕")
 check(!isTRUE(verify_admin_password("")), "空密碼拒絕")
+check(exists("set_action_button", mode = "function"), "按鈕條件閘道 helper 存在")
+app_gate <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("toggleButton", app_gate) && grepl("Button gates", app_gate),
+      "UI／server 含按鈕條件閘道（toggleButton）")
+check(grepl('gate\\("finalize_rcm_row"', app_gate) &&
+        grepl('gate\\("pbc_add"', app_gate) &&
+        grepl('gate\\("csa_scenario_save"', app_gate) &&
+        grepl('gate\\("apply_lib"', app_gate) &&
+        grepl('gate\\("download_interview"', app_gate),
+      "關鍵按鈕皆有條件閘道（定稿／PBC／CSA／範本／下載）")
+check(grepl("需完成引導", app_gate) && grepl("需高權登入", app_gate),
+      "條件未達成時有不可按提示文案")
 check(grepl("show_admin_login_modal|showModal", paste(readLines(file.path(root, "R/privilege.R"), encoding = "UTF-8"), collapse = "\n")) &&
         grepl("admin_prompt_lib|admin_prompt_param", app_src) &&
         !grepl("高權存取", app_src),

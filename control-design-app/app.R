@@ -127,6 +127,16 @@ ui <- page_navbar(
       el.disabled = !msg.enabled;
       el.classList.toggle('bg-light', !msg.enabled);
     });
+    Shiny.addCustomMessageHandler('toggleButton', function(msg) {
+      var el = document.getElementById(msg.id);
+      if (!el) return;
+      var on = !!msg.enabled;
+      el.disabled = !on;
+      el.classList.toggle('disabled', !on);
+      el.setAttribute('aria-disabled', on ? 'false' : 'true');
+      if (msg.title) el.setAttribute('title', msg.title);
+      else el.removeAttribute('title');
+    });
     Shiny.addCustomMessageHandler('toggleRelatedDocument', function(msg) {
       var el = document.getElementById('related_document_pbc');
       if (!el) return;
@@ -235,6 +245,7 @@ ui <- page_navbar(
       .btn-outline-success:hover { background-color: var(--brand-green); border-color: var(--brand-green); color: var(--brand-black); }
       .btn-outline-primary { color: var(--brand-blue); border-color: var(--brand-blue); }
       .btn-outline-primary:hover { background-color: var(--brand-blue); color: var(--brand-white); }
+      .btn.disabled, .btn:disabled { opacity: 0.55; cursor: not-allowed; pointer-events: auto; }
       .accordion-button:not(.collapsed) { background-color: rgba(134,188,37,0.12); color: var(--brand-blue); box-shadow: inset 0 -1px 0 var(--brand-green); }
       .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.25); }
       .form-control:focus, .form-select:focus { border-color: var(--brand-green); box-shadow: 0 0 0 0.2rem rgba(134,188,37,0.2); }
@@ -731,13 +742,6 @@ ui <- page_navbar(
                       placeholder = "循環編號-子作業序號（例：EC-101）",
                       width = "100%"),
             uiOutput("sub_process_select_ui"),
-            div(
-              class = "design-tab-filter-bar",
-              tags$div(class = "filter-title", "關鍵字篩選 — 快速找出相關子作業名稱"),
-              textInput("filter_basic_kw", NULL, value = "", width = "100%",
-                        placeholder = "輸入子作業名稱或編號關鍵字…"),
-              uiOutput("filter_basic_hits")
-            ),
             textInput("control_id", lab_opt("控制編號"), value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("design_preview_basic")
@@ -1577,50 +1581,11 @@ server <- function(input, output, session) {
     }
   })
 
-  # 設計頁籤頂部簡約搜尋：依範本庫找子作業／風險描述／控制活動
+  # 設計頁籤頂部簡約搜尋：依範本庫找風險描述／控制活動
   tab_filter_rows <- reactive({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) return(list())
     library_controls_flat(cascade_source_library(lib()), cycle = cy)
-  })
-  output$filter_basic_hits <- renderUI({
-    kw <- input$filter_basic_kw %||% ""
-    hits <- search_sub_process_hits(tab_filter_rows(), keyword = kw)
-    if (!length(hits)) {
-      return(tags$div(class = "small text-muted",
-                      if (!nzchar(input$cycle %||% "")) "請先選定循環" else "無相符子作業"))
-    }
-    tags$div(
-      class = "design-tab-filter-hits",
-      lapply(seq_along(hits), function(i) {
-        h <- hits[[i]]
-        actionLink(
-          paste0("filter_basic_pick_", i),
-          label = h$label,
-          class = "btn btn-link",
-          onclick = sprintf(
-            "Shiny.setInputValue('filter_basic_apply', {nm:%s, id:%s, nonce:Math.random()}, {priority:'event'}); return false;",
-            jsonlite::toJSON(h$sub_process, auto_unbox = TRUE),
-            jsonlite::toJSON(h$sub_process_id %||% "", auto_unbox = TRUE)
-          )
-        )
-      })
-    )
-  })
-  observeEvent(input$filter_basic_apply, {
-    v <- input$filter_basic_apply
-    if (is.null(v)) return()
-    nm <- as.character(v$nm %||% "")
-    id <- as.character(v$id %||% "")
-    if (!nzchar(nm)) return()
-    if (nzchar(id)) {
-      freezeReactiveValue(input, "sub_process_id")
-      updateTextInput(session, "sub_process_id", value = id)
-    }
-    freezeReactiveValue(input, "sub_process")
-    refresh_sub_process_choices(force = TRUE)
-    updateSelectizeInput(session, "sub_process", selected = nm)
-    showNotification(sprintf("已帶入子作業：%s", nm), type = "message", duration = 3)
   })
   output$filter_risk_hits <- renderUI({
     hits <- search_risk_description_hits(
@@ -3869,6 +3834,132 @@ server <- function(input, output, session) {
     rcm_revision()
     datatable(detect_gaps_many(controls()), rownames = FALSE,
               options = list(scrollX = TRUE, pageLength = 8, dom = "tip"))
+  })
+
+  # ---- Button gates：條件未達成則不可按（避免單獨執行失敗）----
+  observe({
+    admin <- isTRUE(is_admin())
+    sel <- tryCatch(resolve_cascade_selection(), error = function(e) list())
+    cascade_ok <- isTRUE(tryCatch(cascade_selection_ready(sel)$ready, error = function(e) FALSE))
+    draft <- tryCatch(current_draft_from_inputs(), error = function(e) list())
+    design_ok <- isTRUE(tryCatch(design_required_check(draft)$ok, error = function(e) FALSE))
+    oa_ok <- isTRUE(tryCatch(
+      rcm_objective_activity_check(draft$control_objective, draft$control_activity)$ok,
+      error = function(e) FALSE
+    ))
+    can_finalize <- cascade_ok && design_ok && oa_ok &&
+      isTRUE(tryCatch(activity_type_ok(sel$approach), error = function(e) FALSE))
+
+    risk_cat <- trimws(as.character(
+      input$risk_category %||% sel$risk_category %||% ""
+    ))
+    reporting <- is_reporting_risk_category(risk_cat)
+    both_custom <- identical(input$cascade_objective, "__custom__") &&
+      identical(input$cascade_activity, "__custom__")
+    has_custom_oa <- nzchar(trimws(input$custom_objective %||% "")) ||
+      nzchar(trimws(input$custom_activity %||% ""))
+    has_sel_oa <- nzchar(trimws(sel$control_objective %||% "")) &&
+      nzchar(trimws(sel$control_activity %||% ""))
+    approach_ok <- isTRUE(tryCatch(activity_type_ok(sel$approach), error = function(e) FALSE))
+
+    lib_picked <- nzchar(trimws(input$lib_pick %||% ""))
+    lib_row <- length(input$lib_table_rows_selected %||% integer()) > 0
+    ctrl_row <- length(input$control_table_rows_selected %||% integer()) > 0
+    param_row <- length(input$param_table_rows_selected %||% integer()) > 0
+    pbc_row <- length(input$pbc_table_rows_selected %||% integer()) > 0
+    n_lib <- length(lib())
+    n_ctrl <- length(controls())
+    n_ready <- length(Filter(function(c) {
+      isTRUE((c$rcm_ready$ready %||% is_rcm_row_ready(c)$ready))
+    }, controls()))
+    n_fin <- length(Filter(is_control_finalized_for_rcm, controls()))
+    csa_ctrl <- tryCatch(csa_edit_ctrl(), error = function(e) NULL)
+    has_csa_ctrl <- !is.null(csa_ctrl)
+    n_csa_sc <- if (has_csa_ctrl) length(csa_ctrl$csa_scenarios %||% list()) else 0L
+    csa_name_ok <- nzchar(trimws(input$csa_scenario_name %||% ""))
+    admin_lib_id <- nzchar(trimws(input$admin_lib_id %||% ""))
+    param_fields_ok <- nzchar(trimws(input$admin_param_name %||% "")) &&
+      nzchar(trimws(input$admin_param_value %||% ""))
+    pbc_fields_ok <- nzchar(trimws(input$pbc_client %||% "")) ||
+      nzchar(trimws(input$pbc_reviewed %||% ""))
+
+    iv_n <- tryCatch(nrow(interview_worksheet()), error = function(e) 0L)
+    csa_n <- tryCatch(
+      nrow(controls_to_csa(selected_worksheet_controls_sa(),
+                           input$csa_elements %||% DEFAULT_CSA_ELEMENTS,
+                           finalized_only = TRUE)),
+      error = function(e) 0L
+    )
+    n_pbc <- nrow(pbc_reg())
+    n_param <- nrow(param_store())
+
+    gate <- function(id, ok, tip_off) {
+      set_action_button(session, id, ok, if (isTRUE(ok)) "" else tip_off)
+    }
+
+    # 風險控制點設計
+    gate("finalize_rcm_row", can_finalize,
+         "需完成引導②～⑥且設計必填／目標活動分欄通過後才可定稿")
+    gate("collect_ready_to_lib", admin, "需高權登入後才可累積範本庫")
+    gate("save_custom_cascade", admin && has_sel_oa && approach_ok,
+         if (!admin) "需高權登入"
+         else if (!has_sel_oa) "需具備控制目標與控制活動"
+         else "自訂活動須指定單一預防／偵測")
+    gate("account_select_all", reporting, "僅報導面可選會計科目")
+    gate("oa_swap", both_custom, "請於引導④⑤皆選「自訂新增」後再對調")
+    gate("oa_split_suggest", both_custom || has_custom_oa || has_sel_oa,
+         "請先有控制目標／活動內容")
+
+    # 控制點測試設計（CSA）
+    gate("csa_scenario_add", has_csa_ctrl, "請先選擇已定版控制點")
+    gate("csa_scenario_save", has_csa_ctrl && csa_name_ok,
+         if (!has_csa_ctrl) "請先選擇已定版控制點" else "請填寫控制現況情境名稱")
+    gate("csa_scenario_dup", has_csa_ctrl, "請先選擇已定版控制點")
+    gate("csa_scenario_del", has_csa_ctrl && n_csa_sc > 1L,
+         if (!has_csa_ctrl) "請先選擇已定版控制點"
+         else "至少保留一組情境（目前無可刪）")
+
+    # 範本庫
+    gate("apply_lib", lib_picked, "請先選擇範本")
+    gate("apply_lib_selected_row", lib_row, "請先在表格選取一列範本")
+    gate("lib_delete", admin && lib_row,
+         if (!admin) "需高權登入" else "請選取範本列")
+    gate("save_to_lib", admin, "需高權登入")
+    gate("lib_add_current", admin, "需高權登入")
+    gate("lib_add_selected_control", admin && ctrl_row,
+         if (!admin) "需高權登入" else "請先在設計頁選取控制點")
+    gate("lib_add_all_ready", admin && n_ready > 0L,
+         if (!admin) "需高權登入" else "尚無 RCM 就緒控制點")
+    gate("import_jinglian_seed", admin, "需高權登入")
+    gate("admin_lib_load_row", admin && lib_row,
+         if (!admin) "需高權登入" else "請先選取範本列")
+    gate("admin_lib_save_fields", admin && admin_lib_id,
+         if (!admin) "需高權登入" else "請先載入選取列")
+
+    # 參數庫
+    gate("param_apply_row", param_row, "請先在表格選取一列")
+    gate("param_refresh", admin, "需高權登入")
+    gate("admin_param_upsert", admin && param_fields_ok,
+         if (!admin) "需高權登入" else "請填寫參數名稱與選項值")
+    gate("admin_param_delete", admin && param_row,
+         if (!admin) "需高權登入" else "請先選取參數列")
+
+    # PBC
+    gate("pbc_add", pbc_fields_ok, "請至少填「客戶原名」或「檢視後命名」")
+    gate("pbc_delete", pbc_row, "請先選取 PBC 列")
+
+    # 下載（無資料時不可按）
+    gate("download_interview", iv_n > 0L, "尚無訪談題綱可下載")
+    gate("download_csa", csa_n > 0L, "尚無已定版控制點測試步驟可下載")
+    gate("download_rcm", n_ctrl > 0L, "尚無 RCM 列可下載")
+    gate("download_pbc", n_pbc > 0L, "PBC 資料庫尚無資料")
+    gate("download_lib_csv", n_lib > 0L, "範本庫尚無資料")
+    gate("download_lib_json", n_lib > 0L, "範本庫尚無資料")
+    gate("download_params", n_param > 0L, "參數庫尚無資料")
+    gate("download_params_json", n_param > 0L, "參數庫尚無資料")
+
+    # 高權登出僅登入後可按
+    gate("admin_logout", admin, "尚未登入高權")
   })
 
   output$download_rcm <- downloadHandler(

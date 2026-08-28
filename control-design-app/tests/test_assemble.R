@@ -1244,6 +1244,14 @@ check(grepl("control-attr-row", app_src) &&
         grepl("repeat\\(3, minmax\\(0, 1fr\\)\\)", app_src) &&
         grepl('control-attr-row[\\s\\S]*"approach"[\\s\\S]*"nature"[\\s\\S]*"frequency"', app_src, perl = TRUE),
       "控制方式／性質／頻率三欄並排")
+check(grepl("risk-principle-area-row", app_src) &&
+        grepl('risk-principle-area-row[\\s\\S]*"risk_principle"[\\s\\S]*"risk_area"', app_src, perl = TRUE) &&
+        grepl('risk-principle-area-row[\\s\\S]*minmax\\(0, 1fr\\) minmax\\(0, 1fr\\)', app_src, perl = TRUE),
+      "風險面向與風險範疇 1:1 同列並排")
+check(grepl("risk-factor-category-row", app_src) &&
+        grepl('risk-factor-category-row[\\s\\S]*"risk_factor"[\\s\\S]*"risk_category"', app_src, perl = TRUE) &&
+        grepl('risk-factor-category-row[\\s\\S]*minmax\\(0, 2fr\\) minmax\\(0, 1fr\\)', app_src, perl = TRUE),
+      "風險因素與風險類別 2:1 同列並排")
 check(!grepl("請先選控制性質與風險類別；人工且非法遵面時", app_src),
       "控制佐證文件無待選灰色說明")
 check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),

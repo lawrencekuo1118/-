@@ -412,6 +412,32 @@ ui <- page_navbar(
         .pbc-kind-format-row { grid-template-columns: 1fr; }
       }
 
+      /* 風險面向｜風險範疇 同列 1:1 並排 */
+      .risk-principle-area-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .risk-principle-area-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .risk-principle-area-row { grid-template-columns: 1fr; }
+      }
+
+      /* 風險因素｜風險類別 同列 2:1 並排 */
+      .risk-factor-category-row {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 0.75rem 1rem;
+        align-items: start;
+        margin-bottom: 0.35rem;
+      }
+      .risk-factor-category-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      @media (max-width: 768px) {
+        .risk-factor-category-row { grid-template-columns: 1fr; }
+      }
+
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
         display: grid !important;
@@ -766,41 +792,47 @@ ui <- page_navbar(
             ),
             p(class = "small text-muted mb-2",
               "風險因素是風險描述上的標記（TAG）。風險描述可手動撰寫；上方篩選可帶入參考描述。同一控制點僅一種風險類別。"),
-            selectizeInput(
-              "risk_principle", "風險面向",
-              choices = NULL, multiple = FALSE, width = "100%",
-              options = list(
-                create = TRUE, createOnBlur = TRUE, maxItems = 1,
-                placeholder = "Risk Principle；可選建議或自訂"
+            div(
+              class = "risk-principle-area-row",
+              selectizeInput(
+                "risk_principle", "風險面向",
+                choices = NULL, multiple = FALSE, width = "100%",
+                options = list(
+                  create = TRUE, createOnBlur = TRUE, maxItems = 1,
+                  placeholder = "Risk Principle；可選建議或自訂"
+                )
+              ),
+              selectizeInput(
+                "risk_area", "風險範疇",
+                choices = NULL, multiple = FALSE, width = "100%",
+                options = list(
+                  create = TRUE, createOnBlur = TRUE, maxItems = 1,
+                  placeholder = "Risk Area；可選建議或自訂"
+                )
               )
             ),
-            selectizeInput(
-              "risk_area", "風險範疇",
-              choices = NULL, multiple = FALSE, width = "100%",
-              options = list(
-                create = TRUE, createOnBlur = TRUE, maxItems = 1,
-                placeholder = "Risk Area；可選建議或自訂"
-              )
-            ),
-            selectizeInput(
-              "risk_factor", lab_req("風險因素"),
-              choices = NULL, multiple = TRUE, width = "100%",
-              options = list(
-                create = TRUE,
-                createOnBlur = TRUE,
-                placeholder = "可複選建議 TAG 或手動新增風險因素",
-                plugins = list("remove_button")
+            div(
+              class = "risk-factor-category-row",
+              selectizeInput(
+                "risk_factor", lab_req("風險因素"),
+                choices = NULL, multiple = TRUE, width = "100%",
+                options = list(
+                  create = TRUE,
+                  createOnBlur = TRUE,
+                  placeholder = "可複選建議 TAG 或手動新增風險因素",
+                  plugins = list("remove_button")
+                )
+              ),
+              selectInput(
+                "risk_category", lab_req("風險類別"),
+                choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
+                selected = "", width = "100%"
               )
             ),
             uiOutput("risk_factor_hint"),
             textAreaInput(
               "risk_description", lab_req("風險描述"), rows = 3, width = "100%",
               placeholder = "描述此控制點對應之風險內涵"
-            ),
-            selectInput(
-              "risk_category", lab_req("風險類別"),
-              choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
-              selected = "", width = "100%"
             ),
             uiOutput("significant_account_hint"),
             selectizeInput(

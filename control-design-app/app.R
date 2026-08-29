@@ -700,6 +700,39 @@ ui <- page_navbar(
         gap: 0.75rem;
         align-items: end;
       }
+      .judgment-history-import-row {
+        align-items: center;
+      }
+      .judgment-history-import-row .shiny-input-container {
+        margin-bottom: 0;
+        width: 100%;
+      }
+      .judgment-history-import-row .form-group {
+        margin-bottom: 0;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+      }
+      .judgment-history-import-row .control-label {
+        margin-bottom: 0;
+        white-space: nowrap;
+        flex: 0 0 auto;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+      .judgment-history-import-row .input-group {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .judgment-history-import-row .input-group .form-control,
+      .judgment-history-import-row .input-group .btn,
+      .judgment-history-import-row .input-group .input-group-text {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+        line-height: 1.35;
+        min-height: 0;
+      }
       @media (max-width: 768px) {
         .judgment-search-table th {
           width: 4.5rem;
@@ -1087,7 +1120,7 @@ ui <- page_navbar(
                )),
         column(4,
                actionButton("judgment_learn_rules", "從歷史結果更新判斷規則",
-                            class = "btn-outline-secondary btn-sm mt-4"),
+                            class = "btn-outline-secondary btn-sm"),
                uiOutput("judgment_rules_status"))
       ),
       DTOutput("judgment_table")

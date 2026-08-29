@@ -622,6 +622,73 @@ ui <- page_navbar(
         .interview-risk-control-row { grid-template-columns: 1fr; }
       }
 
+      .judgment-search-table {
+        width: 100%;
+        table-layout: fixed;
+      }
+      .judgment-search-table th {
+        width: 5.75rem;
+        min-width: 5.75rem;
+        white-space: nowrap;
+        vertical-align: middle;
+        padding-right: 0.75rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+      .judgment-search-table td {
+        vertical-align: middle;
+      }
+      .judgment-search-table .shiny-input-container {
+        margin-bottom: 0;
+        width: 100%;
+        max-width: 100%;
+      }
+      .judgment-search-table .form-control,
+      .judgment-search-table .input-group {
+        width: 100%;
+        max-width: 100%;
+      }
+      .judgment-case-no-row {
+        display: grid;
+        grid-template-columns: minmax(4.5rem, 0.75fr) minmax(5.5rem, 1.25fr) minmax(4.5rem, 0.75fr) minmax(4.5rem, 0.75fr);
+        gap: 0.5rem 0.75rem;
+        align-items: end;
+      }
+      .judgment-period-row {
+        display: grid;
+        grid-template-columns: minmax(11rem, 1fr) auto minmax(11rem, 1fr);
+        gap: 0.5rem 0.75rem;
+        align-items: end;
+      }
+      .judgment-period-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      .judgment-period-row .form-control { width: 100%; max-width: 100%; }
+      .judgment-period-sep {
+        align-self: center;
+        white-space: nowrap;
+        padding: 0 0.15rem 0.45rem;
+        line-height: 1;
+      }
+      .judgment-kb-row {
+        display: grid;
+        grid-template-columns: minmax(5rem, 7rem) minmax(5rem, 7rem);
+        gap: 0.75rem;
+        align-items: end;
+      }
+      @media (max-width: 768px) {
+        .judgment-search-table th {
+          width: 4.5rem;
+          min-width: 4.5rem;
+        }
+        .judgment-case-no-row,
+        .judgment-period-row {
+          grid-template-columns: 1fr;
+        }
+        .judgment-period-sep {
+          padding: 0;
+          text-align: center;
+        }
+      }
+
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
         display: grid !important;
@@ -847,7 +914,7 @@ ui <- page_navbar(
                 strong("基礎設定 → 風險辨識 → 控制設計"),
                 "（須依序；", tags$span(class = "text-danger", "*"), " 為必填）。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"), "（1 控制點 ↔ 1 RCM 列）。"),
-      tags$li(tags$strong("判決書查詢"), "：司法院裁判書進階查詢、自動摘要與標的公司財務營運影響評估。"),
+      tags$li(tags$strong("判決書查詢"), "：司法院裁判書進階查詢、抓取判決內文與結果分析。"),
         tags$li(tags$strong("訪談問項設計"), "／", tags$strong("控制點測試設計"),
                 "：對齊已定稿 RCM。"),
         tags$li(tags$strong("PBC／RCM"), "檢視匯出；需要時再開",
@@ -859,7 +926,7 @@ ui <- page_navbar(
       card_header("各頁籤用途"),
       div(
         class = "home-tabs-grid",
-        div(class = "home-tab-card", strong("判決書查詢"), "司法院裁判書爬蟲、摘要與財務影響評估。"),
+        div(class = "home-tab-card", strong("判決書查詢"), "司法院裁判書爬蟲、判決內文與結果分析。"),
         div(class = "home-tab-card", strong("訪談問項設計"), "已定稿 RCM → 訪談題綱。"),
         div(class = "home-tab-card", strong("風險控制點設計"), "分頁籤填寫基礎／風險／控制；定稿寫入 RCM。"),
         div(class = "home-tab-card", strong("控制點測試設計"), "CSA 測試步驟與情境組。"),
@@ -893,8 +960,8 @@ ui <- page_navbar(
           target = "_blank",
           "司法院裁判書查詢系統"
         ),
-        "；抓取後依判斷規則（關鍵字→分析結論）產出摘要與財務營運影響評估（供審計／內控參考，非法律意見）。",
-        "可匯入過去大量分析之 ",
+        "；抓取判決全文與主文，並依判斷規則（關鍵字→結果分析）產出分析結論（供審計／內控參考，非法律意見）。",
+        "可匯入過去分析之 ",
         tags$code(".xlsx"),
         " 以累積學習判斷規則。",
         tags$br(),
@@ -904,15 +971,13 @@ ui <- page_navbar(
                textAreaInput(
                  "judgment_result_url", "查詢結果 URL（選填）",
                  placeholder = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?...",
-                 rows = 2, resize = "vertical"
+                 rows = 2, resize = "vertical", width = "100%"
                ))
       ),
       fluidRow(
-        column(4, textInput("judgment_target_company", "查詢標的公司（影響分析用）",
-                            placeholder = "例：甲公司股份有限公司")),
-        column(4, numericInput("judgment_max_results", "抓取筆數上限", value = 20,
+        column(6, numericInput("judgment_max_results", "抓取筆數上限（最近期）", value = 30,
                                min = 1, max = 100, step = 1)),
-        column(4, uiOutput("judgment_status_box"))
+        column(6, uiOutput("judgment_status_box"))
       ),
       fluidRow(
         column(8,
@@ -926,22 +991,6 @@ ui <- page_navbar(
                actionButton("judgment_learn_rules", "從歷史結果更新判斷規則",
                             class = "btn-outline-secondary btn-sm mt-4"),
                uiOutput("judgment_rules_status"))
-      ),
-      fluidRow(
-        column(6,
-               checkboxInput(
-                 "judgment_apply_cause_exclusion", "套用案由排除（降為無明顯影響）",
-                 value = TRUE
-               )),
-        column(6,
-               checkboxInput(
-                 "judgment_hide_low_impact", "結果表隱藏已排除案由",
-                 value = TRUE
-               ))
-      ),
-      tags$details(class = "mb-2",
-        tags$summary(class = "small text-muted", "低營運影響案由排除清單（可展開）"),
-        uiOutput("judgment_cause_filter_list")
       ),
       fluidRow(
         column(4,
@@ -963,46 +1012,53 @@ ui <- page_navbar(
         tags$tr(
           tags$th("裁判字號"),
           tags$td(
-            fluidRow(
-              column(2, textInput("judgment_year", NULL, placeholder = "年度")),
-              column(3, textInput("judgment_case", NULL, placeholder = "字別")),
-              column(2, textInput("judgment_no", NULL, placeholder = "起始號")),
-              column(2, textInput("judgment_no_end", NULL, placeholder = "結束號"))
+            div(
+              class = "judgment-case-no-row",
+              textInput("judgment_year", NULL, placeholder = "年度", width = "100%"),
+              textInput("judgment_case", NULL, placeholder = "字別", width = "100%"),
+              textInput("judgment_no", NULL, placeholder = "起始號", width = "100%"),
+              textInput("judgment_no_end", NULL, placeholder = "結束號", width = "100%")
             )
           )
         ),
         tags$tr(
           tags$th("裁判期間"),
           tags$td(
-            fluidRow(
-              column(2, textInput("judgment_dy1", NULL, placeholder = "起年")),
-              column(2, textInput("judgment_dm1", NULL, placeholder = "起月")),
-              column(2, textInput("judgment_dd1", NULL, placeholder = "起日")),
-              column(1, tags$span(class = "text-muted", "至")),
-              column(2, textInput("judgment_dy2", NULL, placeholder = "迄年")),
-              column(2, textInput("judgment_dm2", NULL, placeholder = "迄月")),
-              column(2, textInput("judgment_dd2", NULL, placeholder = "迄日"))
+            div(
+              class = "judgment-period-row",
+              dateInput(
+                "judgment_date_start", "起日",
+                value = NULL, format = "yyyy-mm-dd",
+                width = "100%"
+              ),
+              tags$span(class = "text-muted judgment-period-sep", "至"),
+              dateInput(
+                "judgment_date_end", "迄日",
+                value = NULL, format = "yyyy-mm-dd",
+                width = "100%"
+              )
             )
           )
         ),
         tags$tr(
           tags$th("裁判案由"),
-          tags$td(textInput("judgment_title", NULL, placeholder = "請輸入檢索字詞"))
+          tags$td(textInput("judgment_title", NULL, placeholder = "請輸入檢索字詞", width = "100%"))
         ),
         tags$tr(
           tags$th("裁判主文"),
-          tags$td(textInput("judgment_jmain", NULL, placeholder = "請輸入檢索字詞"))
+          tags$td(textInput("judgment_jmain", NULL, placeholder = "請輸入檢索字詞", width = "100%"))
         ),
         tags$tr(
           tags$th("全文內容"),
-          tags$td(textInput("judgment_kw", NULL, placeholder = "請輸入檢索字詞"))
+          tags$td(textInput("judgment_kw", NULL, placeholder = "請輸入檢索字詞", width = "100%"))
         ),
         tags$tr(
           tags$th("裁判大小"),
           tags$td(
-            fluidRow(
-              column(2, textInput("judgment_kb_start", NULL, placeholder = "起 K")),
-              column(2, textInput("judgment_kb_end", NULL, placeholder = "迄 K"))
+            div(
+              class = "judgment-kb-row",
+              textInput("judgment_kb_start", NULL, placeholder = "起 K", width = "100%"),
+              textInput("judgment_kb_end", NULL, placeholder = "迄 K", width = "100%")
             )
           )
         )
@@ -4203,6 +4259,8 @@ server <- function(input, output, session) {
     courts <- input$judgment_court %||% character()
     courts <- unique(trimws(as.character(courts)))
     courts <- courts[nzchar(courts)]
+    start <- judgment_date_to_form_parts(input$judgment_date_start)
+    end <- judgment_date_to_form_parts(input$judgment_date_end)
     list(
       jud_court = courts,
       jud_sys = input$judgment_sys %||% character(),
@@ -4210,8 +4268,8 @@ server <- function(input, output, session) {
       jud_case = input$judgment_case,
       jud_no = input$judgment_no,
       jud_no_end = input$judgment_no_end,
-      dy1 = input$judgment_dy1, dm1 = input$judgment_dm1, dd1 = input$judgment_dd1,
-      dy2 = input$judgment_dy2, dm2 = input$judgment_dm2, dd2 = input$judgment_dd2,
+      dy1 = start$dy, dm1 = start$dm, dd1 = start$dd,
+      dy2 = end$dy, dm2 = end$dm, dd2 = end$dd,
       jud_title = input$judgment_title,
       jud_jmain = input$judgment_jmain,
       jud_kw = input$judgment_kw,
@@ -4225,20 +4283,8 @@ server <- function(input, output, session) {
   output$judgment_rules_status <- renderUI({
     tags$div(
       class = "small text-muted pt-1",
-      judgment_rules_summary_text(data_dir = data_dir),
-      tags$br(),
-      judgment_cause_filter_summary(data_dir = data_dir)
+      judgment_rules_summary_text(data_dir = data_dir)
     )
-  })
-
-  output$judgment_cause_filter_list <- renderUI({
-    filters <- judgment_cause_filters_load(data_dir = data_dir)
-    items <- lapply(filters, function(f) {
-      pats <- paste(as.character(f$patterns %||% character()), collapse = "、")
-      if (!nzchar(pats)) pats <- paste(as.character(f$case_types %||% ""), collapse = "、")
-      tags$li(sprintf("%s（%s）— %s", f$label %||% "", f$group %||% "", pats))
-    })
-    tags$ul(class = "small text-muted mb-0", items)
   })
 
   observeEvent(input$judgment_learn_rules, {
@@ -4260,20 +4306,13 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$judgment_run, {
-    target <- trimws(input$judgment_target_company %||% input$company %||% "")
-    if (!nzchar(target)) {
-      showNotification("請輸入查詢標的公司（供財務營運影響分析）", type = "warning")
-      return()
-    }
     params <- judgment_collect_params()
     res <- NULL
     withProgress(message = "裁判書查詢中…", value = 0, {
       res <- tryCatch(
         judgment_crawl(
           params,
-          target_company = target,
           data_dir = data_dir,
-          apply_cause_exclusion = isTRUE(input$judgment_apply_cause_exclusion),
           progress_cb = function(msg) {
             incProgress(0.05, detail = msg)
           }
@@ -4285,13 +4324,8 @@ server <- function(input, output, session) {
       )
     })
     if (is.null(res)) return()
-    excluded_n <- sum(res$營運影響篩選 == "已排除", na.rm = TRUE)
     judgment_results(res)
-    judgment_last_msg(sprintf(
-      "完成：共 %d 筆（標的公司：%s%s）",
-      nrow(res), target,
-      if (excluded_n > 0L) sprintf("；案由已排除 %d 筆", excluded_n) else ""
-    ))
+    judgment_last_msg(sprintf("完成：共 %d 筆", nrow(res)))
     showNotification(
       if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
       type = if (nrow(res)) "message" else "warning"
@@ -4306,10 +4340,6 @@ server <- function(input, output, session) {
 
   output$judgment_table <- renderDT({
     df <- judgment_results()
-    if (nrow(df) && isTRUE(input$judgment_hide_low_impact) &&
-        "營運影響篩選" %in% names(df)) {
-      df <- df[df$營運影響篩選 != "已排除" | is.na(df$營運影響篩選), , drop = FALSE]
-    }
     if (!nrow(df)) {
       return(datatable(
         empty_judgment_results_frame(),
@@ -4331,15 +4361,14 @@ server <- function(input, output, session) {
 
   output$download_judgment <- downloadHandler(
     filename = function() {
-      co <- trimws(input$judgment_target_company %||% input$company %||% "公司")
+      co <- trimws(input$company %||% "查詢")
       sprintf("判決書分析_%s_%s.xlsx", co, format(Sys.Date(), "%Y%m%d"))
     },
     content = function(file) {
       df <- judgment_results()
       if (!nrow(df)) stop("尚無判決書分析結果可下載")
-      target <- trimws(input$judgment_target_company %||% input$company %||% "")
       with_loading(
-        write_judgment_xlsx(df, judgment_collect_params(), target_company = target, path = file)
+        write_judgment_xlsx(df, judgment_collect_params(), path = file)
       )
     }
   )

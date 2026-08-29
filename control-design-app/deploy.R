@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # deploy.R — deploy Godamn SOX to shinyapps.io
 #
 # Required environment variables (https://www.shinyapps.io/admin/#/tokens):
@@ -11,17 +12,9 @@
 #   export SHINYAPPS_SECRET="..."
 #   Rscript deploy.R
 
-install_if_missing <- function(pkg) {
-  if (requireNamespace(pkg, quietly = TRUE)) return(invisible(TRUE))
-  install.packages(pkg, repos = "https://cloud.r-project.org")
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    stop("Failed to install package: ", pkg, call. = FALSE)
-  }
-  invisible(TRUE)
-}
-
-for (pkg in c("rsconnect", "shiny", "bslib", "DT", "jsonlite", "readxl", "writexl")) {
-  install_if_missing(pkg)
+if (!requireNamespace("rsconnect", quietly = TRUE)) {
+  stop("Package 'rsconnect' is required. Install it or run via GitHub Actions setup-r-dependencies.",
+       call. = FALSE)
 }
 
 library(rsconnect)

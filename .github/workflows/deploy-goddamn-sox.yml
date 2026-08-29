@@ -1,4 +1,4 @@
-name: Deploy Goddamn SOX
+name: CI/CD Goddamn SOX
 
 on:
   push:
@@ -6,15 +6,74 @@ on:
     paths:
       - "control-design-app/**"
       - ".github/workflows/deploy-goddamn-sox.yml"
+    paths-ignore:
+      - "control-design-app/rsconnect/**"
+  pull_request:
+    branches: [master]
+    paths:
+      - "control-design-app/**"
+      - ".github/workflows/deploy-goddamn-sox.yml"
   workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: "Tests only (skip shinyapps deploy)"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: deploy-goddamn-sox
+  group: ci-cd-goddamn-sox-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  test:
+    name: test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: control-design-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: control-design-app
+          extra-packages: |
+            any::shiny
+            any::bslib
+            any::DT
+            any::jsonlite
+            any::readxl
+            any::writexl
+            any::httr2
+
+      - name: Run assemble tests
+        run: Rscript tests/test_assemble.R
+
+  deploy:
+    name: deploy
+    needs: test
+    if: |
+      needs.test.result == 'success' &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+        (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy)
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      SHINYAPPS_ACCOUNT: hopesmasher1118
+      SHINYAPPS_APPNAME: goddamn-sox
+      SHINYAPPS_URL: https://hopesmasher1118.shinyapps.io/goddamn-sox/
+      DCF_PATH: control-design-app/rsconnect/shinyapps.io/hopesmasher1118/goddamn-sox.dcf
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +99,10 @@ jobs:
         run: |
           if [ -z "${{ secrets.SHINYAPPS_TOKEN }}" ] || [ -z "${{ secrets.SHINYAPPS_SECRET }}" ]; then
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Missing SHINYAPPS_TOKEN or SHINYAPPS_SECRET — skipping deploy."
-            echo "Add them at GitHub → Settings → Secrets → Actions (from https://www.shinyapps.io/admin/#/tokens)"
+            echo "::warning::CD inactive — missing SHINYAPPS_TOKEN or SHINYAPPS_SECRET."
+            echo "Add repo Secrets at GitHub → Settings → Secrets → Actions"
+            echo "Token source: https://www.shinyapps.io/admin/#/tokens"
+            echo "See .github/CD.md"
           else
             echo "available=true" >> "$GITHUB_OUTPUT"
           fi
@@ -50,8 +111,49 @@ jobs:
         if: steps.creds.outputs.available == 'true'
         working-directory: control-design-app
         env:
-          SHINYAPPS_ACCOUNT: hopesmasher1118
-          SHINYAPPS_APPNAME: goddamn-sox
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: Rscript deploy.R
+
+      - name: Verify live app responds
+        if: steps.creds.outputs.available == 'true'
+        run: |
+          code=""
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" "$SHINYAPPS_URL" || true)
+            if [ "$code" = "200" ]; then
+              echo "Live app OK (HTTP $code): $SHINYAPPS_URL"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $code — retry in 15s"
+            sleep 15
+          done
+          echo "::error::Live app check failed (last HTTP $code): $SHINYAPPS_URL"
+          exit 1
+
+      - name: Record deploy bundle in git
+        if: steps.creds.outputs.available == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$DCF_PATH"
+          if git diff --staged --quiet; then
+            echo "No bundle record change to commit."
+            exit 0
+          fi
+          git commit -m "ci: record goddamn-sox deploy bundle from GitHub Actions [skip ci]"
+          git push
+
+      - name: CD summary
+        if: always()
+        run: |
+          if [ "${{ steps.creds.outputs.available }}" = "true" ]; then
+            echo "### CD deploy finished" >> "$GITHUB_STEP_SUMMARY"
+            echo "- App: $SHINYAPPS_URL" >> "$GITHUB_STEP_SUMMARY"
+            if [ -f "$DCF_PATH" ]; then
+              echo "- bundleId: $(grep '^bundleId:' "$DCF_PATH" | cut -d' ' -f2-)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "### CD skipped (credentials not configured)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Configure \`SHINYAPPS_TOKEN\` and \`SHINYAPPS_SECRET\` — see [.github/CD.md](.github/CD.md)" >> "$GITHUB_STEP_SUMMARY"
+          fi

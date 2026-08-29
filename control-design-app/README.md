@@ -65,7 +65,7 @@ export SHINYAPPS_SECRET="..."
 Rscript deploy.R
 ```
 
-**GitHub Actions 自動部署**：push 至 `master` 且 `control-design-app/**` 有變更時，workflow `.github/workflows/deploy-goddamn-sox.yml` 會部署至 shinyapps.io。請在 repo Secrets 設定 `SHINYAPPS_TOKEN` 與 `SHINYAPPS_SECRET`（取自 [shinyapps.io Tokens](https://www.shinyapps.io/admin/#/tokens)）。
+**GitHub Actions CI/CD**：push 至 `master` 且 `control-design-app/**` 有變更時，先跑測試再自動部署至 shinyapps.io。設定方式見 [`.github/CD.md`](../.github/CD.md)（需在 repo Secrets 設定 `SHINYAPPS_TOKEN` 與 `SHINYAPPS_SECRET`）。
 
 修改 PBC／範本庫／參數庫後，請先 commit `data/` 至 GitHub 再 deploy，才會同步至線上。
 

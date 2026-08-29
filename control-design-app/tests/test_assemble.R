@@ -1986,6 +1986,13 @@ check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", a
       "判決書分頁含歷史學習規則 UI")
 check(
   grepl(
+    'judgment-search-table[\\s\\S]*抓取判決全文[\\s\\S]*judgment-history-import-row',
+    app_txt, perl = TRUE
+  ),
+  "判決書說明整併置於歷史匯入區塊正上方"
+)
+check(
+  grepl(
     'judgment_history_xlsx[\\s\\S]*DTOutput\\("judgment_table"\\)',
     app_txt, perl = TRUE
   ),

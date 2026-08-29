@@ -715,7 +715,7 @@ check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
       "PBC 規格說明輸入位於整理表單")
 pbc_panel <- sub('(?s).*nav_panel\\(\\s*"PBC資料庫"', 'nav_panel("PBC資料庫"', app_src_pbc, perl = TRUE)
 pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE)
-check(grepl('checkboxInput\\("pbc_if_exists", "如果存在"', app_src_pbc, fixed = TRUE) &&
+check(grepl('checkboxInput("pbc_if_exists", "如果存在"', app_src_pbc, fixed = TRUE) &&
         grepl("pbc-spec-row", app_src_pbc, fixed = TRUE),
       "PBC 規格說明旁含如果存在勾選框")
 check(grepl("download_pbc_samples", app_src_pbc, fixed = TRUE) &&
@@ -725,7 +725,7 @@ check(grepl("download_pbc_samples", app_src_pbc, fixed = TRUE) &&
         grepl("pbc_filter_by_cycle", app_src_pbc, fixed = TRUE) &&
         grepl("write_pbc_sample_xlsx", app_src_pbc, fixed = TRUE),
       "PBC 總表支援複選匯出樣本需求 xlsx（按鈕在區塊右上角）")
-check(grepl('pbc_spec[\\s\\S]{0,220}pbc-kind-format-row', app_src_pbc, perl = TRUE),
+check(grepl('pbc-spec-row[\\s\\S]{0,400}pbc-kind-format-row', pbc_panel, perl = TRUE),
       "PBC 規格說明在證據類型／文件格式上方")
 check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&
         grepl("pbc-name-map-arrow", app_src_pbc, fixed = TRUE) &&
@@ -735,9 +735,10 @@ check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&
 check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE),
       "PBC 規格說明在名稱並排列正下方")
 check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
-        grepl('card_header\\(\\s*"PBC資料庫"', pbc_panel) &&
+        grepl("pbc-db-card-title", pbc_panel, fixed = TRUE) &&
+        grepl('"PBC資料庫"', pbc_panel, fixed = TRUE) &&
         grepl('card_header\\(\\s*"PBC增列設定"', pbc_panel) &&
-        regexpr('card_header\\(\\s*"PBC資料庫"', pbc_panel)[[1]] <
+        regexpr('"PBC資料庫"', pbc_panel)[[1]] <
           regexpr('card_header\\(\\s*"PBC增列設定"', pbc_panel)[[1]],
       "PBC資料庫表在增列設定上方（非左右雙欄）")
 check(grepl(
@@ -811,7 +812,8 @@ check(grepl("匯入 CSV／Excel", app_src_pbc, fixed = TRUE) &&
         grepl('accept\\s*=\\s*c\\(\\s*"\\.csv"\\s*,\\s*"\\.xlsx"', app_src_pbc, perl = TRUE),
       "PBC 匯入接受 CSV 與 Excel")
 # Shiny 1.14+：server 啟動時不可在非 reactive 脈絡讀取 reactiveVal（會斷線 Reload）
-check(grepl("reg0 <- load_pbc_registry\\(", app_src_pbc, perl = TRUE) &&
+check(grepl("reg0 <- get_cached_file_data\\(", app_src_pbc, perl = TRUE) &&
+        grepl("load_pbc_registry", app_src_pbc, perl = TRUE) &&
         grepl("pbc_reg <- reactiveVal\\(reg0\\)", app_src_pbc, perl = TRUE) &&
         !grepl("pbc_reg <- reactiveVal\\([^\\n]+\\)\\s*\\n\\s*reg0 <- pbc_reg\\(",
                app_src_pbc, perl = TRUE),
@@ -1539,12 +1541,12 @@ check(isTRUE(design_required_check(modifyList(d1, list(
 check(grepl('selectizeInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素複選選單")
 check(grepl('multiple\\s*=\\s*TRUE', app_src) && grepl('"risk_factor"', app_src),
       "風險因素為複選 selectize")
-check(grepl("isolate\\(refresh_risk_factor_choices", app_src) &&
-        grepl("isolate\\(input\\$risk_factor", app_src) &&
-        grepl("risk_factor_choices_cache", app_src),
+check(grepl("risk_factor_select_ui", app_src) &&
+        grepl('freezeReactiveValue\\(input, "risk_factor"\\)', app_src) &&
+        grepl("isolate\\(input\\$risk_factor", app_src),
       "風險因素多選不因 observe 誤追蹤而反覆重建選單")
 check(grepl("applying_template|apply_template_to_form", app_src) &&
-        grepl("applying_template\\(\\)\\) return\\(\\)", app_src),
+        grepl("isTRUE\\(applying_template\\(\\)\\) return\\(\\)", app_src),
       "套用範本時不觸發循環清空子作業")
 check(grepl("lib_revision", app_src) &&
         grepl("pbc_choices_cache", app_src) &&
@@ -1571,7 +1573,7 @@ check(grepl(
 ), "風險因素位於風險範疇與風險描述之間")
 check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*risk_description_select_ui', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
-check(grepl("風險因素是風險描述上的標記", app_src), "風險因素以 TAG 說明")
+check(grepl("建議風險因素 TAG", app_src), "風險因素以 TAG 說明")
 check(grepl('control_objective_select_ui', app_src) &&
         grepl('#control_objective-selectized', app_src),
       "控制目標為建議選單（可自訂）")

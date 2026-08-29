@@ -975,9 +975,15 @@ ui <- page_navbar(
                ))
       ),
       fluidRow(
-        column(6, numericInput("judgment_max_results", "抓取筆數上限（最近期）", value = 30,
+        column(4,
+               textInput(
+                 "judgment_target_company", "查詢標的公司（影響分析用）",
+                 value = "", width = "100%",
+                 placeholder = "同步自左側公司名稱"
+               )),
+        column(4, numericInput("judgment_max_results", "抓取筆數上限（最近期）", value = 30,
                                min = 1, max = 100, step = 1)),
-        column(6, uiOutput("judgment_status_box"))
+        column(4, uiOutput("judgment_status_box"))
       ),
       fluidRow(
         column(8,
@@ -4255,6 +4261,14 @@ server <- function(input, output, session) {
   judgment_results <- reactiveVal(empty_judgment_results_frame())
   judgment_last_msg <- reactiveVal("")
 
+  observeEvent(input$company, {
+    updateTextInput(
+      session,
+      "judgment_target_company",
+      value = trimws(input$company %||% "")
+    )
+  }, ignoreNULL = FALSE, ignoreInit = FALSE)
+
   judgment_collect_params <- function() {
     courts <- input$judgment_court %||% character()
     courts <- unique(trimws(as.character(courts)))
@@ -4307,11 +4321,13 @@ server <- function(input, output, session) {
 
   observeEvent(input$judgment_run, {
     params <- judgment_collect_params()
+    target <- trimws(input$judgment_target_company %||% input$company %||% "")
     res <- NULL
     withProgress(message = "裁判書查詢中…", value = 0, {
       res <- tryCatch(
         judgment_crawl(
           params,
+          target_company = target,
           data_dir = data_dir,
           progress_cb = function(msg) {
             incProgress(0.05, detail = msg)
@@ -4325,7 +4341,11 @@ server <- function(input, output, session) {
     })
     if (is.null(res)) return()
     judgment_results(res)
-    judgment_last_msg(sprintf("完成：共 %d 筆", nrow(res)))
+    judgment_last_msg(sprintf(
+      "完成：共 %d 筆%s",
+      nrow(res),
+      if (nzchar(target)) sprintf("（標的公司：%s）", target) else ""
+    ))
     showNotification(
       if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
       type = if (nrow(res)) "message" else "warning"
@@ -4361,14 +4381,17 @@ server <- function(input, output, session) {
 
   output$download_judgment <- downloadHandler(
     filename = function() {
-      co <- trimws(input$company %||% "查詢")
+      co <- trimws(input$judgment_target_company %||% input$company %||% "查詢")
       sprintf("判決書分析_%s_%s.xlsx", co, format(Sys.Date(), "%Y%m%d"))
     },
     content = function(file) {
       df <- judgment_results()
       if (!nrow(df)) stop("尚無判決書分析結果可下載")
       with_loading(
-        write_judgment_xlsx(df, judgment_collect_params(), path = file)
+        write_judgment_xlsx(
+          df, judgment_collect_params(), path = file,
+          target_company = trimws(input$judgment_target_company %||% input$company %||% "")
+        )
       )
     }
   )

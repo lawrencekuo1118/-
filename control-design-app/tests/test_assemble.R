@@ -444,6 +444,12 @@ check(grepl("訪談引導（依序選取）", paste(readLines(file.path(root, "a
         !grepl("引導設計（依序選取）", paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")),
       "訪談保留引導；風險控制點設計已移除引導設計區塊")
 app_txt <- paste(readLines(file.path(root, "app.R"), encoding = "UTF-8"), collapse = "\n")
+check(grepl("interview_preview_open", app_txt) &&
+        grepl('req\\(input\\$interview_preview_open\\)', app_txt) &&
+        grepl("design_preview_open", app_txt) &&
+        grepl("csa_preview_open", app_txt) &&
+        grepl("interviewPreviewCollapse", app_txt),
+      "預覽抽屜 DataTable 延後至 collapse 展開後渲染")
 check(grepl("interview_preview_df\\(interview_worksheet\\(\\)\\)", app_txt),
       "訪談預覽表使用 interview_preview_df 過濾欄位")
 interview_panel <- sub('(?s).*nav_panel\\(\\s*"訪談問項設計"', 'nav_panel("訪談問項設計"', app_txt, perl = TRUE)

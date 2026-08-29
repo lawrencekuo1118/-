@@ -251,6 +251,32 @@ ui <- page_navbar(
       $(document).on('shiny:connected', hideBootSpinner);
       $(document).on('shiny:disconnected', showBootSpinner);
     })();
+    // 預覽抽屜內 DataTable 須等 collapse 展開後再渲染（避免 Ajax error tn/7）
+    (function() {
+      var collapseInputMap = {
+        interviewPreviewCollapse: 'interview_preview_open',
+        designPreviewCollapse: 'design_preview_open',
+        csaPreviewCollapse: 'csa_preview_open'
+      };
+      function notifyCollapseOpen(id) {
+        var inputId = collapseInputMap[id];
+        if (!inputId || !window.Shiny) return;
+        Shiny.setInputValue(inputId, Date.now(), {priority: 'event'});
+        setTimeout(function() {
+          if (!window.jQuery) return;
+          jQuery('#' + id).find('table.dataTable').each(function() {
+            try {
+              if (jQuery.fn.dataTable && jQuery.fn.dataTable.isDataTable(this)) {
+                jQuery(this).DataTable().columns.adjust();
+              }
+            } catch (err) {}
+          });
+        }, 50);
+      }
+      document.addEventListener('shown.bs.collapse', function(ev) {
+        if (ev.target && ev.target.id) notifyCollapseOpen(ev.target.id);
+      });
+    })();
     // 選單已選項目：雙擊即可拉回輸入框修改（create=true 時寫入新值；儲存後入參數庫）
     (function() {
       function selectizeFromItem($item) {
@@ -2836,8 +2862,11 @@ server <- function(input, output, session) {
       sub_key = input$interview_sub %||% ""
     )
     if (!length(scoped)) {
-      updateSelectizeInput(session, "interview_risk_pick", choices = character(), server = TRUE)
-      updateSelectizeInput(session, "interview_control_pick", choices = character(), server = TRUE)
+      empty_iv <- stats::setNames("", "（請先選子作業）")
+      updateSelectizeInput(session, "interview_risk_pick", choices = empty_iv,
+                           selected = character())
+      updateSelectizeInput(session, "interview_control_pick", choices = empty_iv,
+                           selected = character())
       return()
     }
     ch_risk <- interview_risk_choices(scoped)
@@ -2845,14 +2874,14 @@ server <- function(input, output, session) {
     sel_risk <- intersect(cur_risk, unname(ch_risk))
     updateSelectizeInput(
       session, "interview_risk_pick",
-      choices = ch_risk, server = TRUE, selected = sel_risk
+      choices = ch_risk, selected = sel_risk
     )
     ctrl_pool <- filter_interview_controls_by_risk(scoped, sel_risk)
     ch_ctrl <- interview_control_choices(ctrl_pool)
     cur_ctrl <- input$interview_control_pick %||% character()
     updateSelectizeInput(
       session, "interview_control_pick",
-      choices = ch_ctrl, server = TRUE,
+      choices = ch_ctrl,
       selected = intersect(cur_ctrl, unname(ch_ctrl))
     )
   })
@@ -4023,6 +4052,8 @@ server <- function(input, output, session) {
     )
   })
   output$control_table <- renderDT({
+    req(identical(input$main_nav, "風險控制點設計"))
+    req(input$design_preview_open)
     datatable(controls_df(), selection = "single", rownames = FALSE,
               options = dt_loading_opts(pageLength = 6, dom = "t", ordering = FALSE))
   })
@@ -4684,10 +4715,17 @@ server <- function(input, output, session) {
     )
   })
   output$interview_table <- renderDT({
-    datatable(interview_preview_df(interview_worksheet()),
-              rownames = FALSE, options = dt_loading_opts())
+    req(identical(input$main_nav, "訪談問項設計"))
+    req(input$interview_preview_open)
+    df <- tryCatch(
+      interview_preview_df(interview_worksheet()),
+      error = function(e) empty_interview_df()
+    )
+    datatable(df, rownames = FALSE, options = dt_loading_opts(scrollX = TRUE))
   })
   output$csa_table <- renderDT({
+    req(identical(input$main_nav, "控制點測試設計"))
+    req(input$csa_preview_open)
     datatable(controls_to_csa(selected_worksheet_controls_sa(), input$csa_elements,
                               finalized_only = TRUE),
               rownames = FALSE, options = dt_loading_opts())

@@ -6,6 +6,7 @@ on:
     paths:
       - "control-design-app/**"
       - ".github/workflows/deploy-goddamn-sox.yml"
+  workflow_dispatch:
 
 concurrency:
   group: deploy-goddamn-sox
@@ -31,7 +32,17 @@ jobs:
             any::DT
             any::jsonlite
             any::readxl
+            any::readxl
             any::writexl
+            any::httr2
+
+      - name: Verify shinyapps credentials
+        run: |
+          if [ -z "${{ secrets.SHINYAPPS_TOKEN }}" ] || [ -z "${{ secrets.SHINYAPPS_SECRET }}" ]; then
+            echo "::error::Missing SHINYAPPS_TOKEN or SHINYAPPS_SECRET repo secrets."
+            echo "Add them at GitHub → Settings → Secrets → Actions (from https://www.shinyapps.io/admin/#/tokens)"
+            exit 1
+          fi
 
       - name: Deploy to shinyapps.io
         working-directory: control-design-app

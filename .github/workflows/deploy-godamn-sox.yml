@@ -21,11 +21,15 @@ jobs:
         with:
           use-public-rspm: true
 
+      - name: System dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
       - name: Install R packages
         run: |
           pkgs <- c("rsconnect", "shiny", "bslib", "DT", "jsonlite", "readxl", "writexl")
           install.packages(pkgs, repos = "https://cloud.r-project.org")
-          stopifnot(vapply(pkgs, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1)))
+          missing <- pkgs[!vapply(pkgs, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1))]
+          if (length(missing)) stop("Missing packages: ", paste(missing, collapse = ", "))
         shell: Rscript {0}
 
       - name: Deploy to shinyapps.io

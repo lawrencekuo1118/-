@@ -1906,7 +1906,7 @@ for (fp in locale_scan_files) {
 }
 check(!length(locale_hits), sprintf("用語僅台灣／美式專有名詞（違規：%s）", paste(locale_hits, collapse = ",")))
 
-# Judgment crawler: parse / summarize / impact / xlsx
+# Judgment crawler: parse / summarize / result analysis / xlsx
 fix_list_html <- paste(readLines(
   file.path(root, "tests/fixtures/judgment_result_list.html"),
   encoding = "UTF-8", warn = FALSE
@@ -1920,18 +1920,15 @@ fix_detail_html <- paste(readLines(
 detail <- judgment_parse_detail(fix_detail_html)
 check(grepl("駁回", detail$裁判主文 %||% ""), "判決主文擷取")
 summary <- judgment_summarize(detail, "甲公司")
-impact <- judgment_rules_assess(summary, detail$全文, "甲公司", data_dir = file.path(root, "data"))
-check(impact$財務營運影響等級 %in% JUDGMENT_IMPACT_LEVELS, "財務影響等級合法")
-check(impact$財務營運影響等級 %in% c("高", "中"), "掏空／背信應判中高影響")
-check(nzchar(impact$裁判分析結論 %||% ""), "規則引擎產出裁判分析結論")
+result <- judgment_rules_assess(summary, detail$全文, data_dir = file.path(root, "data"))
+check(nzchar(result$結果分析 %||% ""), "規則引擎產出結果分析")
+check(grepl("掏空|背信|駁回|未命中", result$結果分析), "結果分析含規則結論或未命中提示")
 tmp_jud_xlsx <- tempfile(fileext = ".xlsx")
 write_judgment_xlsx(
-  data.frame(序號 = 1L, 查詢標的公司 = "甲公司", 裁判字號 = "測試", 內容摘要 = summary,
-             財務營運影響等級 = impact$財務營運影響等級, 影響分數 = impact$影響分數,
-             影響分析說明 = impact$影響分析說明, 命中關鍵字 = impact$命中關鍵字,
-             裁判分析結論 = impact$裁判分析結論,
+  data.frame(序號 = 1L, 裁判字號 = "測試", 裁判主文 = detail$裁判主文,
+             結果分析 = result$結果分析,
              全文 = detail$全文, check.names = FALSE, stringsAsFactors = FALSE),
-  list(jud_kw = "掏空"), "甲公司", tmp_jud_xlsx
+  list(jud_kw = "掏空"), tmp_jud_xlsx
 )
 check(file.exists(tmp_jud_xlsx) && file.info(tmp_jud_xlsx)$size > 100L, "判決書 xlsx 匯出")
 check(
@@ -1955,49 +1952,20 @@ rules_seed <- judgment_rules_load(data_dir = file.path(root, "data"))
 check(length(rules_seed$rules %||% list()) >= 5L, "內建判斷規則已載入")
 hist_df <- data.frame(
   命中關鍵字 = c("掏空、背信", "駁回"),
-  財務營運影響等級 = c("高", "低"),
-  影響分析說明 = c("涉及掏空可能影響財務", "程序終結影響低"),
+  結果分析 = c("涉及掏空可能影響財務", "程序終結影響低"),
   stringsAsFactors = FALSE
 )
 learned <- judgment_learn_from_history(hist_df)
 check(length(learned$rules) >= 2L, "可從歷史分析學習規則")
 merged <- judgment_rules_merge(rules_seed, learned)
 check(length(merged$rules) >= length(rules_seed$rules), "規則合併保留既有與學習條目")
-analysis <- judgment_analyze_detail(detail, "甲公司", data_dir = file.path(root, "data"))
-check(grepl("【字號】|【主文】", analysis$內容摘要), "判斷模組產出規則摘要")
-check(nzchar(analysis$裁判分析結論 %||% ""), "判斷模組產出分析結論")
+analysis <- judgment_analyze_detail(detail, data_dir = file.path(root, "data"))
+check(nzchar(analysis$結果分析 %||% ""), "判斷模組產出結果分析")
 check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", app_txt),
       "判決書分頁含歷史學習規則 UI")
 check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
-
-cause_filters <- judgment_cause_filters_load(data_dir = file.path(root, "data"))
-check(length(cause_filters) >= 10L, "低營運影響案由規則已載入")
-traffic_detail <- list(
-  案由 = "侵權行為損害賠償(交通)",
-  案件類別 = "民事",
-  全文 = "被告駕車追撞原告機車",
-  裁判主文 = "原告之訴駁回",
-  裁判字號 = "測試交通"
-)
-traffic_excl <- judgment_cause_match_low_impact(
-  traffic_detail$案由, traffic_detail$案件類別, traffic_detail$全文,
-  data_dir = file.path(root, "data")
-)
-check(isTRUE(traffic_excl$excluded), "交通案由應排除")
-fraud_detail <- list(
-  案由 = "背信",
-  案件類別 = "刑事",
-  全文 = "被告公司掏空財務、虛增營收",
-  裁判主文 = "",
-  裁判字號 = "測試背信"
-)
-fraud_excl <- judgment_cause_match_low_impact(
-  fraud_detail$案由, fraud_detail$案件類別, fraud_detail$全文,
-  data_dir = file.path(root, "data")
-)
-check(!isTRUE(fraud_excl$excluded), "背信案由不應排除")
-check(grepl("judgment_apply_cause_exclusion", app_txt) && grepl("judgment_hide_low_impact", app_txt),
-      "判決書分頁含案由排除選項")
+check(!grepl("judgment_target_company", app_txt), "判決書分頁已移除標的公司影響分析欄位")
+check(!grepl("judgment_apply_cause_exclusion", app_txt), "判決書分頁已移除案由排除選項")
 
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")

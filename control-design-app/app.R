@@ -847,7 +847,7 @@ ui <- page_navbar(
                 strong("基礎設定 → 風險辨識 → 控制設計"),
                 "（須依序；", tags$span(class = "text-danger", "*"), " 為必填）。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"), "（1 控制點 ↔ 1 RCM 列）。"),
-      tags$li(tags$strong("判決書查詢"), "：司法院裁判書進階查詢、自動摘要與標的公司財務營運影響評估。"),
+      tags$li(tags$strong("判決書查詢"), "：司法院裁判書進階查詢、抓取判決內文與結果分析。"),
         tags$li(tags$strong("訪談問項設計"), "／", tags$strong("控制點測試設計"),
                 "：對齊已定稿 RCM。"),
         tags$li(tags$strong("PBC／RCM"), "檢視匯出；需要時再開",
@@ -859,7 +859,7 @@ ui <- page_navbar(
       card_header("各頁籤用途"),
       div(
         class = "home-tabs-grid",
-        div(class = "home-tab-card", strong("判決書查詢"), "司法院裁判書爬蟲、摘要與財務影響評估。"),
+        div(class = "home-tab-card", strong("判決書查詢"), "司法院裁判書爬蟲、判決內文與結果分析。"),
         div(class = "home-tab-card", strong("訪談問項設計"), "已定稿 RCM → 訪談題綱。"),
         div(class = "home-tab-card", strong("風險控制點設計"), "分頁籤填寫基礎／風險／控制；定稿寫入 RCM。"),
         div(class = "home-tab-card", strong("控制點測試設計"), "CSA 測試步驟與情境組。"),
@@ -893,8 +893,8 @@ ui <- page_navbar(
           target = "_blank",
           "司法院裁判書查詢系統"
         ),
-        "；抓取後依判斷規則（關鍵字→分析結論）產出摘要與財務營運影響評估（供審計／內控參考，非法律意見）。",
-        "可匯入過去大量分析之 ",
+        "；抓取判決全文與主文，並依判斷規則（關鍵字→結果分析）產出分析結論（供審計／內控參考，非法律意見）。",
+        "可匯入過去分析之 ",
         tags$code(".xlsx"),
         " 以累積學習判斷規則。",
         tags$br(),
@@ -908,11 +908,9 @@ ui <- page_navbar(
                ))
       ),
       fluidRow(
-        column(4, textInput("judgment_target_company", "查詢標的公司（影響分析用）",
-                            placeholder = "例：甲公司股份有限公司")),
-        column(4, numericInput("judgment_max_results", "抓取筆數上限", value = 20,
+        column(6, numericInput("judgment_max_results", "抓取筆數上限", value = 20,
                                min = 1, max = 100, step = 1)),
-        column(4, uiOutput("judgment_status_box"))
+        column(6, uiOutput("judgment_status_box"))
       ),
       fluidRow(
         column(8,
@@ -926,22 +924,6 @@ ui <- page_navbar(
                actionButton("judgment_learn_rules", "從歷史結果更新判斷規則",
                             class = "btn-outline-secondary btn-sm mt-4"),
                uiOutput("judgment_rules_status"))
-      ),
-      fluidRow(
-        column(6,
-               checkboxInput(
-                 "judgment_apply_cause_exclusion", "套用案由排除（降為無明顯影響）",
-                 value = TRUE
-               )),
-        column(6,
-               checkboxInput(
-                 "judgment_hide_low_impact", "結果表隱藏已排除案由",
-                 value = TRUE
-               ))
-      ),
-      tags$details(class = "mb-2",
-        tags$summary(class = "small text-muted", "低營運影響案由排除清單（可展開）"),
-        uiOutput("judgment_cause_filter_list")
       ),
       fluidRow(
         column(4,
@@ -4225,20 +4207,8 @@ server <- function(input, output, session) {
   output$judgment_rules_status <- renderUI({
     tags$div(
       class = "small text-muted pt-1",
-      judgment_rules_summary_text(data_dir = data_dir),
-      tags$br(),
-      judgment_cause_filter_summary(data_dir = data_dir)
+      judgment_rules_summary_text(data_dir = data_dir)
     )
-  })
-
-  output$judgment_cause_filter_list <- renderUI({
-    filters <- judgment_cause_filters_load(data_dir = data_dir)
-    items <- lapply(filters, function(f) {
-      pats <- paste(as.character(f$patterns %||% character()), collapse = "、")
-      if (!nzchar(pats)) pats <- paste(as.character(f$case_types %||% ""), collapse = "、")
-      tags$li(sprintf("%s（%s）— %s", f$label %||% "", f$group %||% "", pats))
-    })
-    tags$ul(class = "small text-muted mb-0", items)
   })
 
   observeEvent(input$judgment_learn_rules, {
@@ -4260,20 +4230,13 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$judgment_run, {
-    target <- trimws(input$judgment_target_company %||% input$company %||% "")
-    if (!nzchar(target)) {
-      showNotification("請輸入查詢標的公司（供財務營運影響分析）", type = "warning")
-      return()
-    }
     params <- judgment_collect_params()
     res <- NULL
     withProgress(message = "裁判書查詢中…", value = 0, {
       res <- tryCatch(
         judgment_crawl(
           params,
-          target_company = target,
           data_dir = data_dir,
-          apply_cause_exclusion = isTRUE(input$judgment_apply_cause_exclusion),
           progress_cb = function(msg) {
             incProgress(0.05, detail = msg)
           }
@@ -4285,13 +4248,8 @@ server <- function(input, output, session) {
       )
     })
     if (is.null(res)) return()
-    excluded_n <- sum(res$營運影響篩選 == "已排除", na.rm = TRUE)
     judgment_results(res)
-    judgment_last_msg(sprintf(
-      "完成：共 %d 筆（標的公司：%s%s）",
-      nrow(res), target,
-      if (excluded_n > 0L) sprintf("；案由已排除 %d 筆", excluded_n) else ""
-    ))
+    judgment_last_msg(sprintf("完成：共 %d 筆", nrow(res)))
     showNotification(
       if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
       type = if (nrow(res)) "message" else "warning"
@@ -4306,10 +4264,6 @@ server <- function(input, output, session) {
 
   output$judgment_table <- renderDT({
     df <- judgment_results()
-    if (nrow(df) && isTRUE(input$judgment_hide_low_impact) &&
-        "營運影響篩選" %in% names(df)) {
-      df <- df[df$營運影響篩選 != "已排除" | is.na(df$營運影響篩選), , drop = FALSE]
-    }
     if (!nrow(df)) {
       return(datatable(
         empty_judgment_results_frame(),
@@ -4331,15 +4285,14 @@ server <- function(input, output, session) {
 
   output$download_judgment <- downloadHandler(
     filename = function() {
-      co <- trimws(input$judgment_target_company %||% input$company %||% "公司")
+      co <- trimws(input$company %||% "查詢")
       sprintf("判決書分析_%s_%s.xlsx", co, format(Sys.Date(), "%Y%m%d"))
     },
     content = function(file) {
       df <- judgment_results()
       if (!nrow(df)) stop("尚無判決書分析結果可下載")
-      target <- trimws(input$judgment_target_company %||% input$company %||% "")
       with_loading(
-        write_judgment_xlsx(df, judgment_collect_params(), target_company = target, path = file)
+        write_judgment_xlsx(df, judgment_collect_params(), path = file)
       )
     }
   )

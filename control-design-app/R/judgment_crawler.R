@@ -1,4 +1,4 @@
-# 司法院裁判書查詢（Default_AD.aspx）爬蟲 + 摘要 + 財務營運影響評估
+# 司法院裁判書查詢（Default_AD.aspx）爬蟲 + 判決內文 + 結果分析
 # 資料來源：https://judgment.judicial.gov.tw/FJUD/Default_AD.aspx（非官方 API）
 
 JUDGMENT_SEARCH_URL <- "https://judgment.judicial.gov.tw/FJUD/Default_AD.aspx"
@@ -60,8 +60,6 @@ JUDGMENT_CASE_TYPE_CHOICES <- c(
   "行政" = "A",
   "懲戒" = "P"
 )
-
-JUDGMENT_IMPACT_LEVELS <- c("高", "中", "低", "無明顯影響")
 
 judgment_user_agent <- function() {
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -397,7 +395,6 @@ judgment_summarize <- function(detail, target_company = "") {
 empty_judgment_results_frame <- function() {
   data.frame(
     序號 = integer(),
-    查詢標的公司 = character(),
     法院 = character(),
     裁判字號 = character(),
     裁判日期 = character(),
@@ -405,14 +402,7 @@ empty_judgment_results_frame <- function() {
     案件類別 = character(),
     連結 = character(),
     裁判主文 = character(),
-    內容摘要 = character(),
-    財務營運影響等級 = character(),
-    影響分數 = integer(),
-    影響分析說明 = character(),
-    命中關鍵字 = character(),
-    裁判分析結論 = character(),
-    營運影響篩選 = character(),
-    案由排除原因 = character(),
+    結果分析 = character(),
     全文 = character(),
     check.names = FALSE,
     stringsAsFactors = FALSE
@@ -467,11 +457,8 @@ judgment_fetch_detail <- function(url) {
 
 judgment_crawl_listing <- function(
     listing,
-    target_company = "",
     progress_cb = NULL,
-    data_dir = NULL,
-    apply_cause_exclusion = TRUE) {
-  target_company <- judgment_trim(target_company)
+    data_dir = NULL) {
   if (!nrow(listing)) return(empty_judgment_results_frame())
   step <- function(msg) {
     if (is.function(progress_cb)) progress_cb(msg)
@@ -491,15 +478,9 @@ judgment_crawl_listing <- function(
       )
     )
     if (!nzchar(detail$裁判字號)) detail$裁判字號 <- listing$裁判字號[[i]]
-    analysis <- judgment_analyze_detail(
-      detail,
-      target_company = target_company,
-      data_dir = data_dir,
-      apply_cause_exclusion = apply_cause_exclusion
-    )
+    analysis <- judgment_analyze_detail(detail, data_dir = data_dir)
     rows[[length(rows) + 1L]] <- data.frame(
       序號 = i,
-      查詢標的公司 = target_company,
       法院 = sub("\\s+.*", "", detail$裁判字號 %||% listing$裁判字號[[i]]),
       裁判字號 = detail$裁判字號 %||% listing$裁判字號[[i]],
       裁判日期 = "",
@@ -507,14 +488,7 @@ judgment_crawl_listing <- function(
       案件類別 = analysis$案件類別 %||% detail$案件類別 %||% "",
       連結 = url,
       裁判主文 = detail$裁判主文,
-      內容摘要 = analysis$內容摘要,
-      財務營運影響等級 = analysis$財務營運影響等級,
-      影響分數 = analysis$影響分數,
-      影響分析說明 = analysis$影響分析說明,
-      命中關鍵字 = analysis$命中關鍵字,
-      裁判分析結論 = analysis$裁判分析結論,
-      營運影響篩選 = analysis$營運影響篩選,
-      案由排除原因 = analysis$案由排除原因,
+      結果分析 = analysis$結果分析,
       全文 = detail$全文,
       check.names = FALSE,
       stringsAsFactors = FALSE
@@ -526,13 +500,10 @@ judgment_crawl_listing <- function(
 
 judgment_crawl <- function(
     params,
-    target_company = "",
     progress_cb = NULL,
-    data_dir = NULL,
-    apply_cause_exclusion = TRUE) {
+    data_dir = NULL) {
   chk <- judgment_validate_params(params)
   if (!isTRUE(chk$ok)) stop(chk$msg)
-  target_company <- judgment_trim(target_company)
 
   step <- function(msg) {
     if (is.function(progress_cb)) progress_cb(msg)
@@ -545,25 +516,17 @@ judgment_crawl <- function(
     if (nzchar(err)) stop(err)
     step("解析查詢結果…")
     listing <- judgment_fetch_result_list(page$html, chk$max_results)
-    return(judgment_crawl_listing(
-      listing, target_company, progress_cb,
-      data_dir = data_dir,
-      apply_cause_exclusion = apply_cause_exclusion
-    ))
+    return(judgment_crawl_listing(listing, progress_cb, data_dir = data_dir))
   }
 
   step("連線司法院裁判書查詢…")
   search <- judgment_search_submit(params)
   step("解析查詢結果…")
   listing <- judgment_fetch_result_list(search$html, search$max_results)
-  judgment_crawl_listing(
-    listing, target_company, progress_cb,
-    data_dir = data_dir,
-    apply_cause_exclusion = apply_cause_exclusion
-  )
+  judgment_crawl_listing(listing, progress_cb, data_dir = data_dir)
 }
 
-judgment_params_sheet <- function(params, target_company = "") {
+judgment_params_sheet <- function(params) {
   p <- as.list(params)
   labs <- c(
     jud_court = "法院",
@@ -580,11 +543,9 @@ judgment_params_sheet <- function(params, target_company = "") {
     KbStart = "裁判大小起(K)",
     KbEnd = "裁判大小迄(K)",
     max_results = "抓取筆數上限",
-    result_url = "查詢結果 URL",
-    target_company = "查詢標的公司"
+    result_url = "查詢結果 URL"
   )
   vals <- lapply(names(labs), function(nm) {
-    if (identical(nm, "target_company")) return(judgment_trim(target_company))
     if (identical(nm, "jud_court")) {
       courts <- p$jud_court %||% character()
       if (!length(courts) || !any(nzchar(courts))) return("所有法院")
@@ -605,7 +566,7 @@ judgment_params_sheet <- function(params, target_company = "") {
   )
 }
 
-write_judgment_xlsx <- function(results, params, target_company, path) {
+write_judgment_xlsx <- function(results, params, path) {
   if (!requireNamespace("writexl", quietly = TRUE)) {
     stop("需要 writexl 套件以匯出 xlsx：install.packages(\"writexl\")")
   }
@@ -619,7 +580,7 @@ write_judgment_xlsx <- function(results, params, target_company, path) {
   }
   writexl::write_xlsx(
     list(
-      查詢條件 = judgment_params_sheet(params, target_company = target_company),
+      查詢條件 = judgment_params_sheet(params),
       判決分析 = export
     ),
     path

@@ -461,12 +461,17 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl("interviewPreviewCollapse", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
-        grepl("interview_live_box", app_txt) &&
+        grepl("interview_scaffold_box", app_txt) &&
+        grepl("interview_worksheet_stats", app_txt) &&
         grepl("5W1H 回答鏈（人事時地物）", app_txt, fixed = TRUE) &&
         grepl("interview_answer_scaffold", app_txt) &&
         !grepl("interview_scaffold_preview", app_txt) &&
-        grepl('download_interview[\\s\\S]{0,400}interview_live_box', app_txt, perl = TRUE) &&
-        !grepl('card\\([\\s\\S]{0,120}interview_live_box', app_txt, perl = TRUE) &&
+        grepl('download_interview[\\s\\S]{0,400}interview_scaffold_box', app_txt, perl = TRUE) &&
+        !grepl('card\\([\\s\\S]{0,120}interview_scaffold_box', app_txt, perl = TRUE) &&
+        grepl("interview_choices_cache", app_txt) &&
+        grepl('observeEvent\\(input\\$interview_risk_pick', app_txt) &&
+        grepl("interview_status_steps", app_txt) &&
+        grepl("interview_status_summary", app_txt) &&
         grepl("interview_paragraph", app_txt) &&
         !grepl('layout_columns[\\s\\S]{0,200}interview_sub', interview_panel, perl = TRUE) &&
         grepl('design-preview-drawer[\\s\\S]*interviewPreviewCollapse[\\s\\S]*interview_table', interview_panel, perl = TRUE) &&
@@ -490,6 +495,31 @@ check(!grepl("interview_source", app_txt) &&
         grepl('lab_req\\("循環"\\)', app_txt) &&
         length(gregexpr('selectInput\\(\\s*"cycle"', app_txt, perl = TRUE)[[1]]) == 1L,
       "訪談／設計共用側邊欄循環（無題綱來源、無頁內循環選框）")
+
+# 訪談選單快取：相同 choices/selected 應 skip update（防 selectize 閃跳）
+iv_cache <- new.env(parent = emptyenv())
+iv_choice_maps_equal <- function(ch, prev_ch) {
+  identical(unname(ch), unname(prev_ch)) && identical(names(ch), names(prev_ch))
+}
+iv_selection_equal <- function(sel, prev_sel) {
+  identical(as.character(sel), as.character(prev_sel))
+}
+iv_cache_update_count <- 0L
+iv_cache_update <- function(key, ch, sel) {
+  prev <- iv_cache[[key]] %||% list(ch = NULL, sel = NULL)
+  if (iv_choice_maps_equal(ch, prev$ch) && iv_selection_equal(sel, prev$sel)) {
+    return(invisible(FALSE))
+  }
+  iv_cache[[key]] <- list(ch = ch, sel = sel)
+  iv_cache_update_count <<- iv_cache_update_count + 1L
+  invisible(TRUE)
+}
+ch_a <- c("未授權存取" = "未授權存取", "資料外洩" = "資料外洩")
+check(isTRUE(iv_cache_update("risk", ch_a, character())), "訪談快取首次寫入")
+check(!isTRUE(iv_cache_update("risk", ch_a, character())), "訪談快取相同 choices/selected 跳過")
+check(isTRUE(iv_cache_update("risk", ch_a, "未授權存取")), "訪談快取 selection 變更才更新")
+check(!isTRUE(iv_cache_update("risk", ch_a, "未授權存取")), "訪談快取 selection 穩定後跳過")
+check(identical(iv_cache_update_count, 2L), "訪談快取僅兩次有效更新")
 
 # finalized-only: unsigned control excluded from multi helper when not ready
 not_ready <- modifyList(d1, list(control_activity = d1$control_objective, rcm_ready = list(ready = FALSE)))

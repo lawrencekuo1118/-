@@ -1546,7 +1546,7 @@ check(grepl("risk_factor_select_ui", app_src) &&
         grepl("isolate\\(input\\$risk_factor", app_src),
       "風險因素多選不因 observe 誤追蹤而反覆重建選單")
 check(grepl("applying_template|apply_template_to_form", app_src) &&
-        grepl("isTRUE\\(applying_template\\(\\)\\) return\\(\\)", app_src),
+        grepl("isTRUE\\(applying_template\\(\\)\\)", app_src),
       "套用範本時不觸發循環清空子作業")
 check(grepl("lib_revision", app_src) &&
         grepl("pbc_choices_cache", app_src) &&

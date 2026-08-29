@@ -892,7 +892,17 @@ ui <- page_navbar(
           target = "_blank",
           "司法院裁判書查詢系統"
         ),
-        "；抓取後自動產出摘要，並依關鍵字與標的公司名稱評估是否可能嚴重影響整體財務營運（供審計／內控參考，非法律意見）。"),
+        "；抓取後自動產出摘要，並依關鍵字與標的公司名稱評估是否可能嚴重影響整體財務營運（供審計／內控參考，非法律意見）。",
+        tags$br(),
+        "若自動查詢失敗：請至官網查詢後，於左側「查詢結果」按右鍵複製完整網址，貼至下方「查詢結果 URL」再執行。"),
+      fluidRow(
+        column(12,
+               textAreaInput(
+                 "judgment_result_url", "查詢結果 URL（選填）",
+                 placeholder = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?...",
+                 rows = 2, resize = "vertical"
+               ))
+      ),
       fluidRow(
         column(4, textInput("judgment_target_company", "查詢標的公司（影響分析用）",
                             placeholder = "例：甲公司股份有限公司")),
@@ -4174,7 +4184,8 @@ server <- function(input, output, session) {
       jud_kw = input$judgment_kw,
       KbStart = input$judgment_kb_start,
       KbEnd = input$judgment_kb_end,
-      max_results = input$judgment_max_results
+      max_results = input$judgment_max_results,
+      result_url = input$judgment_result_url
     )
   }
 

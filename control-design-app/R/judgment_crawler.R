@@ -93,6 +93,12 @@ judgment_response_error_text <- function(html) {
 judgment_validate_params <- function(params) {
   params <- as.list(params)
   msgs <- character()
+  result_url <- judgment_trim(params$result_url %||% "")
+  if (nzchar(result_url) &&
+      !grepl("^https?://[^/]*judicial\\.gov\\.tw/.+(qryresultlst|data)\\.aspx", result_url, ignore.case = TRUE)) {
+    msgs <- c(msgs, "查詢結果 URL 須為司法院 qryresultlst.aspx 或 data.aspx 完整網址")
+    result_url <- ""
+  }
   kw <- judgment_trim(params$jud_kw)
   title <- judgment_trim(params$jud_title)
   jmain <- judgment_trim(params$jud_jmain)
@@ -102,8 +108,19 @@ judgment_validate_params <- function(params) {
   has_case_no <- any(nzchar(judgment_trim(c(
     params$jud_year, params$jud_case, params$jud_no, params$jud_no_end
   ))))
+  if (nzchar(result_url)) {
+    max_n <- suppressWarnings(as.integer(params$max_results %||% 20L))
+    if (is.na(max_n) || max_n < 1L) max_n <- 20L
+    if (max_n > 100L) msgs <- c(msgs, "單次最多抓取 100 筆（司法院單次查詢上限 500 筆）")
+    return(list(
+      ok = !length(msgs),
+      msg = if (length(msgs)) paste(unique(msgs), collapse = "；") else "OK",
+      max_results = min(max_n, 100L),
+      result_url = result_url
+    ))
+  }
   if (!nzchar(kw) && !nzchar(title) && !nzchar(jmain) && !has_period && !has_case_no) {
-    msgs <- c(msgs, "請至少填寫：全文內容、裁判案由、裁判主文、裁判字號或裁判期間之一")
+    msgs <- c(msgs, "請至少填寫：全文內容、裁判案由、裁判主文、裁判字號、裁判期間之一；或貼上查詢結果 URL")
   }
   if (grepl("(^[\\+\\-&\\)])|([\\+\\-&\\(]$)", kw, perl = TRUE)) {
     msgs <- c(msgs, "全文檢索字詞首尾不可為 + - & ( )")
@@ -114,8 +131,18 @@ judgment_validate_params <- function(params) {
   list(
     ok = !length(msgs),
     msg = if (length(msgs)) paste(unique(msgs), collapse = "；") else "OK",
-    max_results = min(max_n, 100L)
+    max_results = min(max_n, 100L),
+    result_url = ""
   )
+}
+
+judgment_normalize_result_url <- function(url) {
+  url <- judgment_trim(url)
+  if (!nzchar(url)) return("")
+  if (!grepl("^https?://[^/]*judicial\\.gov\\.tw/.+(qryresultlst|data)\\.aspx", url, ignore.case = TRUE)) {
+    stop("查詢結果 URL 須為司法院裁判書系統之 qryresultlst.aspx 或 data.aspx 完整網址")
+  }
+  url
 }
 
 judgment_build_post_body <- function(params, viewstate, viewstate_gen, event_validation) {
@@ -143,11 +170,29 @@ judgment_build_post_body <- function(params, viewstate, viewstate_gen, event_val
   sys <- unique(judgment_trim(sys))
   sys <- sys[nzchar(sys) & sys %in% unname(JUDGMENT_CASE_TYPE_CHOICES)]
   out <- as.list(vals)
-  if (length(sys)) {
-    for (s in sys) out[[length(out) + 1L]] <- s
-    names(out)[(length(out) - length(sys) + 1L):length(out)] <- rep("jud_sys", length(sys))
-  }
+  if (length(sys)) out$jud_sys <- sys
   out
+}
+
+judgment_encode_form_body <- function(body) {
+  parts <- character()
+  for (nm in names(body)) {
+    val <- body[[nm]]
+    if (identical(nm, "jud_sys") && length(val) > 1L) {
+      for (v in val) {
+        parts <- c(parts, paste0("jud_sys=", URLencode(as.character(v), reserved = TRUE)))
+      }
+    } else {
+      parts <- c(
+        parts,
+        paste0(
+          URLencode(nm, reserved = TRUE), "=",
+          URLencode(as.character(val %||% ""), reserved = TRUE)
+        )
+      )
+    }
+  }
+  paste(parts, collapse = "&")
 }
 
 judgment_perform_get <- function(url, referer = NULL) {
@@ -173,14 +218,18 @@ judgment_perform_post_form <- function(url, body, referer = NULL) {
   if (!requireNamespace("httr2", quietly = TRUE)) {
     stop("需要 httr2 套件以連線司法院裁判書系統")
   }
+  payload <- judgment_encode_form_body(body)
   req <- httr2::request(url) |>
     httr2::req_method("POST") |>
     httr2::req_headers(
       `User-Agent` = judgment_user_agent(),
-      `Content-Type` = "application/x-www-form-urlencoded",
-      Referer = referer %||% JUDGMENT_SEARCH_URL
+      `Content-Type` = "application/x-www-form-urlencoded; charset=UTF-8",
+      `Content-Length` = as.character(nchar(payload, type = "bytes")),
+      Referer = referer %||% JUDGMENT_SEARCH_URL,
+      Origin = JUDGMENT_SITE_ORIGIN,
+      Accept = "text/html,application/xhtml+xml"
     ) |>
-    httr2::req_body_form(!!!body)
+    httr2::req_body_raw(payload)
   resp <- httr2::req_perform(req)
   list(
     status = httr2::resp_status(resp),
@@ -407,7 +456,12 @@ judgment_search_submit <- function(params) {
   )
   post <- judgment_perform_post_form(JUDGMENT_SEARCH_URL, body, referer = JUDGMENT_SEARCH_URL)
   err <- judgment_response_error_text(post$html)
-  if (nzchar(err)) stop(err)
+  if (nzchar(err)) {
+    stop(paste0(
+      err,
+      "。若持續失敗，請至官網手動查詢後，將左側「查詢結果」之 qryresultlst.aspx 完整網址貼入「查詢結果 URL」欄再執行。"
+    ))
+  }
 
   list(html = post$html, max_results = chk$max_results)
 }
@@ -432,22 +486,12 @@ judgment_fetch_detail <- function(url) {
   judgment_parse_detail(page$html, url = url)
 }
 
-judgment_crawl <- function(params, target_company = "", progress_cb = NULL) {
-  chk <- judgment_validate_params(params)
-  if (!isTRUE(chk$ok)) stop(chk$msg)
+judgment_crawl_listing <- function(listing, target_company = "", progress_cb = NULL) {
   target_company <- judgment_trim(target_company)
-
+  if (!nrow(listing)) return(empty_judgment_results_frame())
   step <- function(msg) {
     if (is.function(progress_cb)) progress_cb(msg)
   }
-  step("連線司法院裁判書查詢…")
-  search <- judgment_search_submit(params)
-  step("解析查詢結果…")
-  listing <- judgment_fetch_result_list(search$html, search$max_results)
-  if (!nrow(listing)) {
-    return(empty_judgment_results_frame())
-  }
-
   rows <- list()
   for (i in seq_len(nrow(listing))) {
     step(sprintf("抓取全文 %d / %d…", i, nrow(listing)))
@@ -489,6 +533,32 @@ judgment_crawl <- function(params, target_company = "", progress_cb = NULL) {
   do.call(rbind, rows)
 }
 
+judgment_crawl <- function(params, target_company = "", progress_cb = NULL) {
+  chk <- judgment_validate_params(params)
+  if (!isTRUE(chk$ok)) stop(chk$msg)
+  target_company <- judgment_trim(target_company)
+
+  step <- function(msg) {
+    if (is.function(progress_cb)) progress_cb(msg)
+  }
+
+  if (nzchar(chk$result_url %||% "")) {
+    step("讀取查詢結果 URL…")
+    page <- judgment_perform_get(chk$result_url, referer = JUDGMENT_SEARCH_URL)
+    err <- judgment_response_error_text(page$html)
+    if (nzchar(err)) stop(err)
+    step("解析查詢結果…")
+    listing <- judgment_fetch_result_list(page$html, chk$max_results)
+    return(judgment_crawl_listing(listing, target_company, progress_cb))
+  }
+
+  step("連線司法院裁判書查詢…")
+  search <- judgment_search_submit(params)
+  step("解析查詢結果…")
+  listing <- judgment_fetch_result_list(search$html, search$max_results)
+  judgment_crawl_listing(listing, target_company, progress_cb)
+}
+
 judgment_params_sheet <- function(params, target_company = "") {
   p <- as.list(params)
   labs <- c(
@@ -506,6 +576,7 @@ judgment_params_sheet <- function(params, target_company = "") {
     KbStart = "裁判大小起(K)",
     KbEnd = "裁判大小迄(K)",
     max_results = "抓取筆數上限",
+    result_url = "查詢結果 URL",
     target_company = "查詢標的公司"
   )
   vals <- lapply(names(labs), function(nm) {

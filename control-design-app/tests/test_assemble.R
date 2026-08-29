@@ -1907,8 +1907,15 @@ check(
   ),
   "判決書分頁在首頁與訪談之間"
 )
+check(grepl("judgment_result_url", app_txt) && grepl("qryresultlst", app_txt),
+      "判決書分頁含查詢結果 URL 手動貼上欄位")
 check(grepl("judgment_crawler\\.R", app_txt) && grepl("JUDGMENT_COURT_CHOICES", app_txt),
       "app 載入判決書爬蟲模組")
+url_chk <- judgment_validate_params(list(
+  result_url = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?ty=JUDBOOK",
+  max_results = 5L
+))
+check(isTRUE(url_chk$ok) && nzchar(url_chk$result_url), "查詢結果 URL 可單獨作為查詢條件")
 
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")

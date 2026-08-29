@@ -986,19 +986,6 @@ ui <- page_navbar(
         column(4, uiOutput("judgment_status_box"))
       ),
       fluidRow(
-        column(8,
-               fileInput(
-                 "judgment_history_xlsx", "匯入歷史分析結果（選填）",
-                 accept = c(".xlsx", ".xls"),
-                 buttonLabel = "選擇 xlsx",
-                 placeholder = "含「判決分析」工作表"
-               )),
-        column(4,
-               actionButton("judgment_learn_rules", "從歷史結果更新判斷規則",
-                            class = "btn-outline-secondary btn-sm mt-4"),
-               uiOutput("judgment_rules_status"))
-      ),
-      fluidRow(
         column(4,
                selectizeInput(
                  "judgment_court", "法院（可複選；空白＝所有法院）",
@@ -1068,6 +1055,20 @@ ui <- page_navbar(
             )
           )
         )
+      ),
+      fluidRow(
+        class = "judgment-history-import-row mb-2",
+        column(8,
+               fileInput(
+                 "judgment_history_xlsx", "匯入歷史分析結果（選填）",
+                 accept = c(".xlsx", ".xls"),
+                 buttonLabel = "選擇 xlsx",
+                 placeholder = "含「判決分析」工作表"
+               )),
+        column(4,
+               actionButton("judgment_learn_rules", "從歷史結果更新判斷規則",
+                            class = "btn-outline-secondary btn-sm mt-4"),
+               uiOutput("judgment_rules_status"))
       ),
       DTOutput("judgment_table")
     )

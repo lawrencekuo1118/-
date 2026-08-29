@@ -1971,6 +1971,13 @@ analysis <- judgment_analyze_detail(detail, data_dir = file.path(root, "data"))
 check(nzchar(analysis$結果分析 %||% ""), "判斷模組產出結果分析")
 check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", app_txt),
       "判決書分頁含歷史學習規則 UI")
+check(
+  grepl(
+    'judgment_history_xlsx[\\s\\S]*DTOutput\\("judgment_table"\\)',
+    app_txt, perl = TRUE
+  ),
+  "歷史分析匯入區塊位於結果表格上方"
+)
 check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
 check(grepl("judgment_target_company", app_txt), "判決書分頁含查詢標的公司欄位")
 check(grepl('updateTextInput\\([\\s\\S]*"judgment_target_company"', app_txt, perl = TRUE),

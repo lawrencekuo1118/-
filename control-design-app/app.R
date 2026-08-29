@@ -1,4 +1,4 @@
-# Godamn SOX — compact UI
+# Goddamn SOX — compact UI
 # Run: shiny::runApp("control-design-app")
 
 library(shiny)
@@ -73,8 +73,8 @@ fill_inputs_from_ctrl <- function(session, ctrl, lib_items = NULL, pbc_registry 
 
 ui <- page_navbar(
   id = "main_nav",
-  title = "Godamn SOX",
-  window_title = "Godamn SOX",
+  title = "Goddamn SOX",
+  window_title = "Goddamn SOX",
   theme = bs_theme(
     version = 5,
     primary = BRAND_BLUE,
@@ -831,7 +831,7 @@ ui <- page_navbar(
     "首頁",
     div(
       class = "home-hero",
-      tags$h2("Godamn SOX"),
+      tags$h2("Goddamn SOX"),
       p("輔助設計標準內部控制點，產出 RCM、訪談題綱與 CSA 測試步驟。")
     ),
     card(

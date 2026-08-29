@@ -1,6 +1,6 @@
-# Godamn SOX (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
+# Goddamn SOX (Shiny) — Form 4120SR / RCM / CSA **v1.0.0**
 
-線上版：<https://hopesmasher1118.shinyapps.io/godamn-sox/>
+線上版：<https://hopesmasher1118.shinyapps.io/goddamn-sox/>
 
 輔助**快速且精準**設計標準內部控制點，並產出 RCM、訪談問題與 CSA 底稿。
 
@@ -49,11 +49,11 @@ shiny::runApp("control-design-app")
 
 ## 部署（shinyapps.io）
 
-僅部署至 **godamn-sox**（舊版 `control-design` 已退役，請勿再更新）：
+僅部署至 **goddamn-sox**（舊版 `control-design` 已退役，請勿再更新）：
 
 ```r
 setwd("control-design-app")
-rsconnect::deployApp(appDir = ".", appName = "godamn-sox", account = "hopesmasher1118")
+rsconnect::deployApp(appDir = ".", appName = "goddamn-sox", account = "hopesmasher1118")
 ```
 
 或：
@@ -65,7 +65,7 @@ export SHINYAPPS_SECRET="..."
 Rscript deploy.R
 ```
 
-**GitHub Actions 自動部署**：push 至 `master` 且 `control-design-app/**` 有變更時，workflow `.github/workflows/deploy-godamn-sox.yml` 會部署至 shinyapps.io。請在 repo Secrets 設定 `SHINYAPPS_TOKEN` 與 `SHINYAPPS_SECRET`（取自 [shinyapps.io Tokens](https://www.shinyapps.io/admin/#/tokens)）。
+**GitHub Actions 自動部署**：push 至 `master` 且 `control-design-app/**` 有變更時，workflow `.github/workflows/deploy-goddamn-sox.yml` 會部署至 shinyapps.io。請在 repo Secrets 設定 `SHINYAPPS_TOKEN` 與 `SHINYAPPS_SECRET`（取自 [shinyapps.io Tokens](https://www.shinyapps.io/admin/#/tokens)）。
 
 修改 PBC／範本庫／參數庫後，請先 commit `data/` 至 GitHub 再 deploy，才會同步至線上。
 

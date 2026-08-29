@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
-# deploy.R — deploy Godamn SOX to shinyapps.io
+# deploy.R — deploy Goddamn SOX to shinyapps.io
 #
 # Required environment variables (https://www.shinyapps.io/admin/#/tokens):
 #   SHINYAPPS_ACCOUNT  (default: hopesmasher1118)
-#   SHINYAPPS_APPNAME  (default: godamn-sox)
+#   SHINYAPPS_APPNAME  (default: goddamn-sox)
 #   SHINYAPPS_TOKEN
 #   SHINYAPPS_SECRET
 #
@@ -20,7 +20,7 @@ if (!requireNamespace("rsconnect", quietly = TRUE)) {
 library(rsconnect)
 
 account <- Sys.getenv("SHINYAPPS_ACCOUNT", unset = "hopesmasher1118")
-app_name <- Sys.getenv("SHINYAPPS_APPNAME", unset = "godamn-sox")
+app_name <- Sys.getenv("SHINYAPPS_APPNAME", unset = "goddamn-sox")
 token <- Sys.getenv("SHINYAPPS_TOKEN", unset = "")
 secret <- Sys.getenv("SHINYAPPS_SECRET", unset = "")
 

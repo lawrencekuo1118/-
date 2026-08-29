@@ -1,8 +1,8 @@
-# Godamn SOX — v1.0.0
+# Goddamn SOX — v1.0.0
 
 第一版交付（2026-08-21）
 
-線上版：<https://hopesmasher1118.shinyapps.io/godamn-sox/>
+線上版：<https://hopesmasher1118.shinyapps.io/goddamn-sox/>
 
 ## 範圍
 - 引導設計：循環 → 子作業 → 風險 → 目標 → 活動（單一預防/偵測）→ IUC → 六大就緒後公司現況

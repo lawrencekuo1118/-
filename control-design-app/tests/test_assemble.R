@@ -411,9 +411,9 @@ check(any(grepl("PBC 資料庫|客戶權限報表|使用者權限清冊",
                 iv_pbc[["訪談問題"]][iv_pbc$element_key == "5w1h_what"])),
       "What 探針題寫入已串接 PBC")
 sc_partial <- interview_answer_scaffold(c("when", "how", "next_step"))
-check(grepl("以何頻率.*做什麼（具體控制行為）.*才會進行什麼下一步", sc_partial) &&
+check(grepl("做什麼（具體控制行為）.*以何頻率.*才會進行什麼下一步", sc_partial) &&
         grepl("→", sc_partial),
-      "使用者可勾選模組拼湊回答架構")
+      "5W1H 模組順序以 HOW 起首拼湊回答架構")
 lib_iv <- library_items_as_interview_controls(list(
   list(library_id = "LIB-T", cycle = "資訊循環",
        control = list(cycle = "資訊循環", sub_process = "存取管理作業",
@@ -461,7 +461,7 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl("interviewPreviewCollapse", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
-        grepl("interview_5w1h_how", app_txt) &&
+        grepl("interview_5w1h_input_id", app_txt) &&
         grepl("interview-5w1h-fields", app_txt) &&
         grepl("INTERVIEW_5W1H_DEFAULT_PROMPTS", app_txt) &&
         grepl("interview_5w1h_prompts_from_values", app_txt) &&

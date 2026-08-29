@@ -2011,6 +2011,13 @@ check(
   ),
   "歷史分析匯入區塊位於結果表格上方"
 )
+check(
+  grepl(
+    'judgment_result_url[\\s\\S]*judgment_history_xlsx',
+    app_txt, perl = TRUE
+  ),
+  "查詢結果 URL 欄位位於歷史匯入欄位正上方"
+)
 check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
 check(grepl("judgment_target_company", app_txt), "判決書分頁含查詢標的公司欄位")
 check(grepl('updateTextInput\\([\\s\\S]*"judgment_target_company"', app_txt, perl = TRUE),

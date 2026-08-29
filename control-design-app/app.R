@@ -953,19 +953,6 @@ ui <- page_navbar(
           )
         )
       ),
-      p(class = "text-muted small mb-2",
-        "資料來源：",
-        tags$a(
-          href = "https://judgment.judicial.gov.tw/FJUD/Default_AD.aspx",
-          target = "_blank",
-          "司法院裁判書查詢系統"
-        ),
-        "；抓取判決全文與主文，並依判斷規則（關鍵字→結果分析）產出分析結論（供審計／內控參考，非法律意見）。",
-        "可匯入過去分析之 ",
-        tags$code(".xlsx"),
-        " 以累積學習判斷規則。",
-        tags$br(),
-        "若自動查詢失敗：請至官網查詢後，於左側「查詢結果」按右鍵複製完整網址，貼至下方「查詢結果 URL」再執行。"),
       fluidRow(
         column(12,
                textAreaInput(
@@ -1055,6 +1042,13 @@ ui <- page_navbar(
             )
           )
         )
+      ),
+      p(
+        class = "text-muted small mb-2",
+        "抓取判決全文與主文，並依判斷規則（關鍵字→結果分析）產出分析結論（供審計／內控參考，非法律意見）。",
+        "可匯入過去分析之 ", tags$code(".xlsx"), " 以累積學習判斷規則。",
+        "若自動查詢失敗：請至官網查詢後，於左側「查詢結果」按右鍵複製完整網址，",
+        "貼至上方「查詢結果 URL」欄位再執行。"
       ),
       fluidRow(
         class = "judgment-history-import-row mb-2",

@@ -41,7 +41,7 @@ sync_iuc_aliases <- function(ctrl) {
 # 訪談問項設計
 # 主目標：針對不同循環／子作業下之「預期風險」與「預期控制目標／活動」深入且快速了解
 # 每題答案必須含人事時地物鏈：
-#   以何頻率 → 誰取得什麼文件或資訊(IUC) → 做什麼（具體控制行為）→ 才會進行什麼下一步
+#   以何頻率 → 在何處／哪個系統 → 誰取得什麼文件或資訊(IUC) → 做什麼（具體控制行為）→ 才會進行什麼下一步
 DEFAULT_INTERVIEW_ELEMENTS <- c(
   "risk", "control_objective", "control_activity"
 )
@@ -73,6 +73,7 @@ INTERVIEW_WALKTHROUGH_EXTRA <- c(
 INTERVIEW_ANSWER_SCAFFOLD <- paste0(
   "請以人事時地物回答：",
   "以何頻率 → ",
+  "在何處／哪個系統 → ",
   "誰取得什麼文件或資訊(IUC) → ",
   "做什麼（具體控制行為）→ ",
   "才會進行什麼下一步"
@@ -81,6 +82,7 @@ INTERVIEW_ANSWER_SCAFFOLD <- paste0(
 # 可勾選之 5W1H 模組（拼湊組建；預設組合成上列鏈；What 可串 PBC）
 INTERVIEW_5W1H_MODULES <- c(
   when = "以何頻率",
+  where = "在何處／哪個系統",
   who = "誰（執行／覆核）",
   what = "取得什麼文件或資訊(IUC)",
   how = "做什麼（具體控制行為）",
@@ -92,11 +94,17 @@ DEFAULT_INTERVIEW_5W1H <- names(INTERVIEW_5W1H_MODULES)
 # 各模組對應之獨立探針題（可依勾選拼湊成題綱列）
 INTERVIEW_5W1H_PROBE_LABELS <- c(
   when = "模組｜以何頻率",
+  where = "模組｜在何處／系統",
   who = "模組｜誰",
   what = "模組｜IUC／PBC",
   how = "模組｜具體控制行為",
   next_step = "模組｜下一步"
 )
+
+interview_5w1h_module_order <- function(modules) {
+  mods <- as.character(modules %||% character())
+  names(INTERVIEW_5W1H_MODULES)[names(INTERVIEW_5W1H_MODULES) %in% mods]
+}
 
 # ---- RCM 範本欄位（Internal Control Lab 範本_RCM；多餘欄排除；缺值＝NA）----
 RCM_HEADER_GROUPS <- list(
@@ -563,22 +571,18 @@ is_rcm_preview_ctrl <- function(ctrl) {
 
 # ---- Interview：循環／子作業下預期風險與預期目標／活動（人事時地物鏈）----
 interview_answer_scaffold <- function(modules = DEFAULT_INTERVIEW_5W1H) {
-  mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
+  mods <- interview_5w1h_module_order(modules)
   if (!length(mods)) return(INTERVIEW_ANSWER_SCAFFOLD)
-  # 全選時使用標準鏈（頻率→誰取得IUC→做什麼→下一步）
+  # 全選時使用標準鏈（時→地→人→物→事→下一步）
   if (setequal(mods, DEFAULT_INTERVIEW_5W1H)) return(INTERVIEW_ANSWER_SCAFFOLD)
-  bits <- unname(INTERVIEW_5W1H_MODULES[mods])
-  # 若同時勾 who + what，合併為「誰取得什麼文件或資訊(IUC)」
-  if (all(c("who", "what") %in% mods)) {
-    bits <- character()
-    for (m in mods) {
-      if (identical(m, "who")) {
-        bits <- c(bits, "誰取得什麼文件或資訊(IUC)")
-      } else if (identical(m, "what")) {
-        next
-      } else {
-        bits <- c(bits, INTERVIEW_5W1H_MODULES[[m]])
-      }
+  bits <- character()
+  for (m in mods) {
+    if (identical(m, "who") && "what" %in% mods) {
+      bits <- c(bits, "誰取得什麼文件或資訊(IUC)")
+    } else if (identical(m, "what") && "who" %in% mods) {
+      next
+    } else {
+      bits <- c(bits, INTERVIEW_5W1H_MODULES[[m]])
     }
   }
   paste0("請以人事時地物回答：", paste(bits, collapse = " → "))
@@ -589,10 +593,16 @@ interview_people_place_suffix <- function(modules = DEFAULT_INTERVIEW_5W1H) {
   paste0("（答案必含：", interview_answer_scaffold(modules), "）")
 }
 
+# 5W1H 獨立探針題：僅提示該模組，避免重複整段回答鏈
+interview_module_probe_suffix <- function(key) {
+  lab <- INTERVIEW_5W1H_MODULES[[key]] %||% key
+  sprintf("（本探針請回答：%s）", lab)
+}
+
 # 依勾選模組順序拼湊探針題（可串 PBC 於 what）
 interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
                                       pbc_hint = "") {
-  mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
+  mods <- interview_5w1h_module_order(modules)
   if (!length(mods)) return(list())
   act <- nzchar_or(ctrl$control_activity, "該控制活動")
   obj <- nzchar_or(ctrl$control_objective, "該控制目標")
@@ -600,6 +610,8 @@ interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
   iuc <- nzchar_or(ctrl_iuc_value(ctrl), "（待補 IUC）")
   freq <- nzchar_or(resolve_control_frequency(ctrl$nature, ctrl$frequency), "所訂頻率")
   owner <- nzchar_or(ctrl$responsible_unit, "負責單位")
+  sys <- nzchar_or(ctrl_related_system_value(ctrl), "（待補相關系統）")
+  sub_nm <- nzchar_or(ctrl$sub_process, "（子作業）")
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡")
   pbc_txt <- trimws(as.character(pbc_hint %||% ""))
   if (!nzchar(pbc_txt)) pbc_txt <- "（請自 PBC 資料庫選取）"
@@ -611,6 +623,14 @@ interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
         act, risk_label, freq
       ),
       evidence = "簽核紀錄／系統 log／排程"
+    ),
+    where = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["where"]]),
+      question = sprintf(
+        "【在何處／哪個系統】就「%s／%s」活動「%s」：實際在哪個系統、場域或通路執行？設計相關系統「%s」。",
+        sub_nm, owner, act, sys
+      ),
+      evidence = "系統清單／場域說明／流程圖"
     ),
     who = list(
       element = unname(INTERVIEW_5W1H_PROBE_LABELS[["who"]]),
@@ -799,7 +819,7 @@ interview_element_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H) {
     control_activity = list(
       element = unname(INTERVIEW_ELEMENTS[["control_activity"]]),
       question = paste0(sprintf(
-        "就「%s／%s」預期控制活動「%s」：請走查實際執行——以何頻率、誰取得什麼文件或資訊(IUC)、做什麼具體控制行為、才會進行什麼下一步。",
+        "就「%s／%s」預期控制活動「%s」：請走查實際執行——以何頻率、在何處／哪個系統、誰取得什麼文件或資訊(IUC)、做什麼具體控制行為、才會進行什麼下一步。",
         cycle_nm, sub_nm, act
       ), suffix),
       evidence = "現場示範／螢幕錄影／逐步說明"
@@ -937,7 +957,7 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
                                  include_module_rows = TRUE) {
   bank <- interview_element_bank(ctrl, modules = modules)
   elements <- intersect(as.character(elements %||% character()), names(bank))
-  mods <- intersect(as.character(modules %||% character()), names(INTERVIEW_5W1H_MODULES))
+  mods <- interview_5w1h_module_order(modules)
   cid <- derive_control_id(ctrl, 1L)
   scaffold <- interview_answer_scaffold(mods)
   pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg)
@@ -998,7 +1018,7 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
         `題號` = length(rows) + 1L,
         `元素` = item$element,
         element_key = paste0("5w1h_", key),
-        `訪談問題` = paste0(item$question, interview_people_place_suffix(mods)),
+        `訪談問題` = paste0(item$question, interview_module_probe_suffix(key)),
         `回答架構_5W1H` = scaffold,
         `設計摘要` = INTERVIEW_5W1H_MODULES[[key]],
         `預期佐證_PBC` = item$evidence %||% "",

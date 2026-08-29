@@ -1153,7 +1153,6 @@ ui <- page_navbar(
         class = "collapse",
         div(
           class = "design-preview-body",
-          uiOutput("interview_scaffold_preview"),
           DTOutput("interview_table"),
           verbatimTextOutput("interview_paragraph")
         )
@@ -2621,15 +2620,24 @@ server <- function(input, output, session) {
     )
   }
 
-  output$interview_scaffold_preview <- renderUI({
+  output$interview_live_box <- renderUI({
+    iv <- interview_worksheet()
     mods <- input$interview_5w1h %||% character()
-    if (!length(mods)) {
-      return(tags$div(class = "alert alert-warning py-1 mb-2 small", "尚未勾選 5W1H 模組。"))
+    sc <- if (length(mods)) {
+      interview_answer_scaffold(mods)
+    } else {
+      "（尚未勾選 5W1H 模組；請於下方「5W1H／PBC」勾選）"
     }
-    sc <- interview_answer_scaffold(mods)
-    tags$div(
-      class = "small border rounded p-2 mb-2 bg-light",
-      tags$strong("5W1H 預覽："), sc
+    tagList(
+      tags$div(
+        class = "small border rounded p-2 mb-2 bg-light",
+        tags$strong("5W1H 回答鏈（人事時地物）："),
+        tags$span(class = "ms-1", sc)
+      ),
+      tags$div(
+        class = "small text-muted",
+        sprintf("題綱列數：%d｜5W1H 模組：%d", nrow(iv), length(mods))
+      )
     )
   })
 
@@ -2655,24 +2663,12 @@ server <- function(input, output, session) {
                 length(scoped)))
   })
 
-  output$interview_live_box <- renderUI({
-    iv <- interview_worksheet()
-    mods <- input$interview_5w1h %||% character()
-    tags$div(
-      class = "mb-2",
-      tags$div(class = "small text-muted",
-               sprintf("題綱列數：%d｜5W1H 模組：%d",
-                       nrow(iv), length(mods))),
-      tags$div(class = "small text-muted",
-               "每題答案鏈：以何頻率 → 誰取得什麼文件或資訊(IUC) → 做什麼 → 下一步")
-    )
-  })
-
   output$interview_paragraph <- renderText({
     iv <- interview_worksheet()
     if (!nrow(iv)) return("（尚無訪談題綱；請先於側邊欄選循環，再選①子作業）")
     lines <- sprintf("%s. [%s] %s", iv[["題號"]], iv[["元素"]], iv[["訪談問題"]])
-    paste(utils::head(lines, 12), collapse = "\n")
+    paste(utils::head(lines, 12), collapse = "
+")
   })
 
   observeEvent(input$cycle, {

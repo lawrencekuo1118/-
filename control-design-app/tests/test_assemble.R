@@ -363,14 +363,14 @@ check(!any(INTERVIEW_PREVIEW_HIDDEN_COLS %in% names(iv_prev)),
       "訪談預覽表隱藏回答架構／設計摘要／受訪者回答等欄")
 check(identical(as.character(iv[["控制編號"]][1]), derive_control_id(d1, 1L)),
       "訪談對齊控制編號")
-check(all(grepl("以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步|人事時地物",
+check(all(grepl("以何頻率.*在何處|以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步|人事時地物",
                 iv[["回答架構_5W1H"]])),
       "訪談題含人事時地物回答鏈")
 check(all(grepl("答案必含|人事時地物|以何頻率", iv[["訪談問題"]])),
       "每題問項答案須含人事時地物")
-check(grepl("以何頻率 → 誰取得什麼文件或資訊\\(IUC\\) → 做什麼（具體控制行為）→ 才會進行什麼下一步",
+check(grepl("以何頻率 → 在何處／哪個系統 → 誰取得什麼文件或資訊\\(IUC\\) → 做什麼（具體控制行為）→ 才會進行什麼下一步",
             INTERVIEW_ANSWER_SCAFFOLD),
-      "標準回答鏈＝頻率→誰取得IUC→做什麼→下一步")
+      "標準回答鏈＝時→地→人→物→事→下一步")
 check(identical(DEFAULT_INTERVIEW_ELEMENTS,
                 c("risk", "control_objective", "control_activity")),
       "預設焦點＝預期風險／目標／活動（深入且快速）")
@@ -378,7 +378,7 @@ check(any(grepl("預期|實際|現況|走查|誰", iv[["訪談問題"]])),
       "訪談問題導向預期風險／目標／活動與實際執行現況")
 iv_act <- control_to_interview(d1, elements = c("control_activity"),
                                include_module_rows = FALSE)
-check(grepl("以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步",
+check(grepl("以何頻率.*在何處|以何頻率.*誰取得什麼文件或資訊\\(IUC\\).*做什麼.*下一步",
             iv_act[["訪談問題"]][1]),
       "控制活動題明示人事時地物回答鏈")
 iv_mod <- control_to_interview(d1, elements = c("iuc"), modules = c("what", "who"),
@@ -456,6 +456,9 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_live_box", app_txt) &&
+        grepl("5W1H 回答鏈（人事時地物）", app_txt, fixed = TRUE) &&
+        grepl("interview_answer_scaffold", app_txt) &&
+        !grepl("interview_scaffold_preview", app_txt) &&
         grepl('download_interview[\\s\\S]{0,400}interview_live_box', app_txt, perl = TRUE) &&
         !grepl('card\\([\\s\\S]{0,120}interview_live_box', app_txt, perl = TRUE) &&
         grepl("interview_paragraph", app_txt) &&
@@ -579,10 +582,14 @@ check(nrow(control_to_interview(
   include_module_rows = FALSE
 )) >= 5,
       "完整走查可產出擴充題綱")
+check("where" %in% names(INTERVIEW_5W1H_MODULES), "5W1H 模組含在何處／哪個系統（地）")
+where_probe <- interview_5w1h_probe_bank(d1, modules = "where")[["where"]]
+check(!is.null(where_probe) && grepl("在何處", where_probe$question),
+      "何地探針題可產出")
 check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS,
                                 modules = DEFAULT_INTERVIEW_5W1H,
-                                include_module_rows = TRUE)) == 8L,
-      "焦點三題＋五個 5W1H 模組探針可拼湊")
+                                include_module_rows = TRUE)) == 9L,
+      "焦點三題＋六個 5W1H 模組探針可拼湊")
 
 # PBC
 reg <- empty_pbc_registry()

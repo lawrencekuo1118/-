@@ -710,6 +710,8 @@ check(grepl("樣本檔案格式", app_src_pbc, fixed = TRUE),
 check(grepl('textAreaInput\\(\\s*"pbc_spec"', app_src_pbc, perl = TRUE) &&
         grepl("PBC規格說明", app_src_pbc, fixed = TRUE),
       "PBC 規格說明輸入位於整理表單")
+pbc_panel <- sub('(?s).*nav_panel\\(\\s*"PBC資料庫"', 'nav_panel("PBC資料庫"', app_src_pbc, perl = TRUE)
+pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE)
 check(grepl('checkboxInput\\("pbc_if_exists", "如果存在"', app_src_pbc, fixed = TRUE) &&
         grepl("pbc-spec-row", app_src_pbc, fixed = TRUE),
       "PBC 規格說明旁含如果存在勾選框")
@@ -729,8 +731,6 @@ check(grepl("pbc-name-map-row", app_src_pbc, fixed = TRUE) &&
       "PBC 原名與檢視後命名 1:1 並排含右箭頭")
 check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE),
       "PBC 規格說明在名稱並排列正下方")
-pbc_panel <- sub('(?s).*nav_panel\\(\\s*"PBC資料庫"', 'nav_panel("PBC資料庫"', app_src_pbc, perl = TRUE)
-pbc_panel <- sub('(?s)nav_panel\\(\\s*"範本庫".*', "", pbc_panel, perl = TRUE)
 check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
         grepl('card_header\\(\\s*"PBC資料庫"', pbc_panel) &&
         grepl('card_header\\(\\s*"PBC增列設定"', pbc_panel) &&

@@ -56,6 +56,17 @@ setwd("control-design-app")
 rsconnect::deployApp(appDir = ".", appName = "godamn-sox", account = "hopesmasher1118")
 ```
 
+或：
+
+```bash
+cd control-design-app
+export SHINYAPPS_TOKEN="..."
+export SHINYAPPS_SECRET="..."
+Rscript deploy.R
+```
+
+**GitHub Actions 自動部署**：push 至 `master` 且 `control-design-app/**` 有變更時，workflow `.github/workflows/deploy-godamn-sox.yml` 會部署至 shinyapps.io。請在 repo Secrets 設定 `SHINYAPPS_TOKEN` 與 `SHINYAPPS_SECRET`（取自 [shinyapps.io Tokens](https://www.shinyapps.io/admin/#/tokens)）。
+
 修改 PBC／範本庫／參數庫後，請先 commit `data/` 至 GitHub 再 deploy，才會同步至線上。
 
 ## 測試

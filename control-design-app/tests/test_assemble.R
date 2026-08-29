@@ -17,6 +17,7 @@ source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm.R"), local = TRUE)
 source(file.path(root, "R", "csa.R"), local = TRUE)
 source(file.path(root, "R", "judgment_crawler.R"), local = TRUE)
+source(file.path(root, "R", "judgment_rules.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
@@ -1860,6 +1861,7 @@ locale_scan_files <- c(
   file.path(root, "R", "rcm.R"),
   file.path(root, "R", "csa.R"),
   file.path(root, "R", "judgment_crawler.R"),
+  file.path(root, "R", "judgment_rules.R"),
   file.path(root, "R", "cascade.R"),
   file.path(root, "R", "00_constants.R"),
   file.path(root, "data", "jinglian_it_rcm_batch.json")
@@ -1888,14 +1890,16 @@ fix_detail_html <- paste(readLines(
 detail <- judgment_parse_detail(fix_detail_html)
 check(grepl("駁回", detail$裁判主文 %||% ""), "判決主文擷取")
 summary <- judgment_summarize(detail, "甲公司")
-impact <- judgment_assess_financial_impact(summary, detail$全文, "甲公司")
+impact <- judgment_rules_assess(summary, detail$全文, "甲公司", data_dir = file.path(root, "data"))
 check(impact$財務營運影響等級 %in% JUDGMENT_IMPACT_LEVELS, "財務影響等級合法")
 check(impact$財務營運影響等級 %in% c("高", "中"), "掏空／背信應判中高影響")
+check(nzchar(impact$裁判分析結論 %||% ""), "規則引擎產出裁判分析結論")
 tmp_jud_xlsx <- tempfile(fileext = ".xlsx")
 write_judgment_xlsx(
   data.frame(序號 = 1L, 查詢標的公司 = "甲公司", 裁判字號 = "測試", 內容摘要 = summary,
              財務營運影響等級 = impact$財務營運影響等級, 影響分數 = impact$影響分數,
              影響分析說明 = impact$影響分析說明, 命中關鍵字 = impact$命中關鍵字,
+             裁判分析結論 = impact$裁判分析結論,
              全文 = detail$全文, check.names = FALSE, stringsAsFactors = FALSE),
   list(jud_kw = "掏空"), "甲公司", tmp_jud_xlsx
 )
@@ -1917,17 +1921,24 @@ url_chk <- judgment_validate_params(list(
 ))
 check(isTRUE(url_chk$ok) && nzchar(url_chk$result_url), "查詢結果 URL 可單獨作為查詢條件")
 
-check(!judgment_llm_available(""), "未設定 API key 時 LLM 不可用")
-llm_json <- '{"summary":"被告掏空公司資金","impact_level":"高","impact_score":85,"impact_rationale":"涉及背信與侵占","keywords":"掏空,背信"}'
-llm_parsed <- judgment_llm_parse_response(llm_json)
-check(grepl("掏空", llm_parsed$內容摘要), "LLM 回應解析摘要")
-check(llm_parsed$財務營運影響等級 == "高", "LLM 回應解析影響等級")
-check(grepl("【LLM】", llm_parsed$影響分析說明), "LLM 影響說明標記")
-rule_only <- judgment_analyze_detail(detail, "甲公司", use_llm = FALSE)
-check(grepl("【字號】|【主文】", rule_only$內容摘要), "關閉 LLM 時使用規則摘要")
-check(!grepl("【LLM】", rule_only$影響分析說明 %||% ""), "規則模式不含 LLM 標記")
-check(grepl("judgment_use_llm", app_txt) && grepl("judgment_llm_status", app_txt),
-      "判決書分頁含 LLM 選項")
+rules_seed <- judgment_rules_load(data_dir = file.path(root, "data"))
+check(length(rules_seed$rules %||% list()) >= 5L, "內建判斷規則已載入")
+hist_df <- data.frame(
+  命中關鍵字 = c("掏空、背信", "駁回"),
+  財務營運影響等級 = c("高", "低"),
+  影響分析說明 = c("涉及掏空可能影響財務", "程序終結影響低"),
+  stringsAsFactors = FALSE
+)
+learned <- judgment_learn_from_history(hist_df)
+check(length(learned$rules) >= 2L, "可從歷史分析學習規則")
+merged <- judgment_rules_merge(rules_seed, learned)
+check(length(merged$rules) >= length(rules_seed$rules), "規則合併保留既有與學習條目")
+analysis <- judgment_analyze_detail(detail, "甲公司", data_dir = file.path(root, "data"))
+check(grepl("【字號】|【主文】", analysis$內容摘要), "判斷模組產出規則摘要")
+check(nzchar(analysis$裁判分析結論 %||% ""), "判斷模組產出分析結論")
+check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", app_txt),
+      "判決書分頁含歷史學習規則 UI")
+check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
 
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")

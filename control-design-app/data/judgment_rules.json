@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-29",
+  "rules": [
+    {
+      "keywords": ["掏空", "背信", "侵占", "詐欺", "洗錢"],
+      "impact_level": "高",
+      "score_weight": 18,
+      "conclusion": "涉及掏空、背信或侵占等刑事爭議，可能嚴重影響公司財務與持續經營",
+      "category": "刑事/公司治理",
+      "source_count": 0
+    },
+    {
+      "keywords": ["虛增", "財報不實", "財報不实", "內部控制重大缺失"],
+      "impact_level": "高",
+      "score_weight": 18,
+      "conclusion": "財報不實或內控重大缺失，可能觸及公開發行公司財務報導與內控責任",
+      "category": "財報/內控",
+      "source_count": 0
+    },
+    {
+      "keywords": ["破產", "重整", "清算", "停止上市", "下市", "摘牌", "退市"],
+      "impact_level": "高",
+      "score_weight": 20,
+      "conclusion": "涉及破產、重整或下市等事件，對整體財務營運衝擊極高",
+      "category": "財務/存續",
+      "source_count": 0
+    },
+    {
+      "keywords": ["無法表示意見", "否定意見", "持續經營重大疑慮"],
+      "impact_level": "高",
+      "score_weight": 16,
+      "conclusion": "查核或財務報告意見顯示重大疑慮，可能影響投資人與債權人信心",
+      "category": "查核/財報",
+      "source_count": 0
+    },
+    {
+      "keywords": ["內線交易", "證券交易法", "公開發行"],
+      "impact_level": "高",
+      "score_weight": 14,
+      "conclusion": "涉及證券交易法或內線交易，可能引發監管處分與民事求償",
+      "category": "法遵/證券",
+      "source_count": 0
+    },
+    {
+      "keywords": ["損害賠償", "違約金", "罰鍰", "罰款", "行政裁罰", "連帶責任"],
+      "impact_level": "中",
+      "score_weight": 8,
+      "conclusion": "可能產生損害賠償、罰款或連帶責任，需評估現金流與或有負債",
+      "category": "民事/行政",
+      "source_count": 0
+    },
+    {
+      "keywords": ["勞資爭議", "解僱", "契約解除", "競業禁止", "營業秘密"],
+      "impact_level": "中",
+      "score_weight": 8,
+      "conclusion": "勞動、契約或營業秘密爭議，可能影響營運穩定與人力成本",
+      "category": "營運/勞動",
+      "source_count": 0
+    },
+    {
+      "keywords": ["假扣押", "假處分", "支付命令"],
+      "impact_level": "中",
+      "score_weight": 10,
+      "conclusion": "程序性保全或支付命令，可能限制資產處分或增加短期財務壓力",
+      "category": "程序/保全",
+      "source_count": 0
+    },
+    {
+      "keywords": ["駁回", "不受理", "撤回", "和解成立", "調解成立"],
+      "impact_level": "低",
+      "score_weight": 2,
+      "conclusion": "程序終結、駁回或和解，對財務營運直接衝擊通常較低",
+      "category": "程序/終局",
+      "source_count": 0
+    },
+    {
+      "keywords": ["部分勝訴", "部分敗訴"],
+      "impact_level": "低",
+      "score_weight": 3,
+      "conclusion": "部分勝敗，需依主文金額與義務內容進一步評估實際影響",
+      "category": "民事/終局",
+      "source_count": 0
+    }
+  ]
+}

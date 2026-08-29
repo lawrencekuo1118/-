@@ -27,6 +27,7 @@ source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm.R"), local = TRUE)
 source(file.path(root, "R", "csa.R"), local = TRUE)
 source(file.path(root, "R", "judgment_crawler.R"), local = TRUE)
+source(file.path(root, "R", "judgment_rules.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
@@ -892,10 +893,10 @@ ui <- page_navbar(
           target = "_blank",
           "司法院裁判書查詢系統"
         ),
-        "；抓取後自動產出摘要，並依關鍵字與標的公司名稱評估是否可能嚴重影響整體財務營運（供審計／內控參考，非法律意見）。",
-        "可勾選 LLM 以 OpenAI 產出更精簡摘要與影響說明（伺服器需設定 ",
-        tags$code("OPENAI_API_KEY"),
-        "）。",
+        "；抓取後依判斷規則（關鍵字→分析結論）產出摘要與財務營運影響評估（供審計／內控參考，非法律意見）。",
+        "可匯入過去大量分析之 ",
+        tags$code(".xlsx"),
+        " 以累積學習判斷規則。",
         tags$br(),
         "若自動查詢失敗：請至官網查詢後，於左側「查詢結果」按右鍵複製完整網址，貼至下方「查詢結果 URL」再執行。"),
       fluidRow(
@@ -914,12 +915,17 @@ ui <- page_navbar(
         column(4, uiOutput("judgment_status_box"))
       ),
       fluidRow(
-        column(6,
-               checkboxInput(
-                 "judgment_use_llm", "使用 LLM 摘要與影響分析",
-                 value = FALSE
+        column(8,
+               fileInput(
+                 "judgment_history_xlsx", "匯入歷史分析結果（選填）",
+                 accept = c(".xlsx", ".xls"),
+                 buttonLabel = "選擇 xlsx",
+                 placeholder = "含「判決分析」工作表"
                )),
-        column(6, uiOutput("judgment_llm_status"))
+        column(4,
+               actionButton("judgment_learn_rules", "從歷史結果更新判斷規則",
+                            class = "btn-outline-secondary btn-sm mt-4"),
+               uiOutput("judgment_rules_status"))
       ),
       fluidRow(
         column(4,
@@ -4196,30 +4202,37 @@ server <- function(input, output, session) {
       KbStart = input$judgment_kb_start,
       KbEnd = input$judgment_kb_end,
       max_results = input$judgment_max_results,
-      result_url = input$judgment_result_url,
-      use_llm = isTRUE(input$judgment_use_llm)
+      result_url = input$judgment_result_url
     )
   }
 
-  output$judgment_llm_status <- renderUI({
-    if (judgment_llm_available()) {
-      tags$div(class = "small text-success pt-2",
-               sprintf("LLM 可用（模型：%s）", judgment_llm_default_model()))
-    } else {
-      tags$div(class = "small text-muted pt-2",
-               "未偵測到 OPENAI_API_KEY；將使用關鍵字規則分析")
-    }
+  output$judgment_rules_status <- renderUI({
+    tags$div(class = "small text-muted pt-1", judgment_rules_summary_text(data_dir = data_dir))
   })
+
+  observeEvent(input$judgment_learn_rules, {
+    up <- input$judgment_history_xlsx
+    if (is.null(up) || is.null(up$datapath) || !length(up$datapath)) {
+      showNotification("請先選擇歷史分析 xlsx 檔", type = "warning")
+      return()
+    }
+    merged <- tryCatch(
+      judgment_update_rules_from_xlsx(up$datapath[[1]], data_dir = data_dir),
+      error = function(e) {
+        showNotification(conditionMessage(e), type = "error", duration = 10)
+        NULL
+      }
+    )
+    if (is.null(merged)) return()
+    n <- length(merged$rules %||% list())
+    showNotification(sprintf("判斷規則已更新（共 %d 條）", n), type = "message")
+  }, ignoreInit = TRUE)
 
   observeEvent(input$judgment_run, {
     target <- trimws(input$judgment_target_company %||% input$company %||% "")
     if (!nzchar(target)) {
       showNotification("請輸入查詢標的公司（供財務營運影響分析）", type = "warning")
       return()
-    }
-    use_llm <- isTRUE(input$judgment_use_llm)
-    if (use_llm && !judgment_llm_available()) {
-      showNotification("未設定 OPENAI_API_KEY，改以關鍵字規則分析", type = "warning")
     }
     params <- judgment_collect_params()
     res <- NULL
@@ -4228,7 +4241,7 @@ server <- function(input, output, session) {
         judgment_crawl(
           params,
           target_company = target,
-          use_llm = use_llm,
+          data_dir = data_dir,
           progress_cb = function(msg) {
             incProgress(0.05, detail = msg)
           }
@@ -4241,11 +4254,7 @@ server <- function(input, output, session) {
     })
     if (is.null(res)) return()
     judgment_results(res)
-    judgment_last_msg(sprintf(
-      "完成：共 %d 筆（標的公司：%s%s）",
-      nrow(res), target,
-      if (use_llm && judgment_llm_available()) "；LLM 分析" else ""
-    ))
+    judgment_last_msg(sprintf("完成：共 %d 筆（標的公司：%s）", nrow(res), target))
     showNotification(
       if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
       type = if (nrow(res)) "message" else "warning"

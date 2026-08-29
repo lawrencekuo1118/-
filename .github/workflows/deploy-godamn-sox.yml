@@ -21,6 +21,13 @@ jobs:
         with:
           use-public-rspm: true
 
+      - name: Install R packages
+        run: |
+          pkgs <- c("rsconnect", "shiny", "bslib", "DT", "jsonlite", "readxl", "writexl")
+          install.packages(pkgs, repos = "https://cloud.r-project.org")
+          stopifnot(vapply(pkgs, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1)))
+        shell: Rscript {0}
+
       - name: Deploy to shinyapps.io
         working-directory: control-design-app
         env:

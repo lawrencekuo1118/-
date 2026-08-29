@@ -11,10 +11,17 @@
 #   export SHINYAPPS_SECRET="..."
 #   Rscript deploy.R
 
-for (pkg in c("rsconnect", "shiny", "bslib", "DT", "jsonlite", "readxl", "writexl")) {
+install_if_missing <- function(pkg) {
+  if (requireNamespace(pkg, quietly = TRUE)) return(invisible(TRUE))
+  install.packages(pkg, repos = "https://cloud.r-project.org")
   if (!requireNamespace(pkg, quietly = TRUE)) {
-    install.packages(pkg, repos = "https://cloud.r-project.org")
+    stop("Failed to install package: ", pkg, call. = FALSE)
   }
+  invisible(TRUE)
+}
+
+for (pkg in c("rsconnect", "shiny", "bslib", "DT", "jsonlite", "readxl", "writexl")) {
+  install_if_missing(pkg)
 }
 
 library(rsconnect)

@@ -1013,14 +1013,6 @@ ui <- page_navbar(
         )
       ),
       fluidRow(
-        column(12,
-               textAreaInput(
-                 "judgment_result_url", "查詢結果 URL（選填）",
-                 placeholder = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?...",
-                 rows = 2, resize = "vertical", width = "100%"
-               ))
-      ),
-      fluidRow(
         column(4,
                textInput(
                  "judgment_target_company", "查詢標的公司（影響分析用）",
@@ -1107,7 +1099,16 @@ ui <- page_navbar(
         "抓取判決全文與主文，並依判斷規則（關鍵字→結果分析）產出分析結論（供審計／內控參考，非法律意見）。",
         "可匯入過去分析之 ", tags$code(".xlsx"), " 以累積學習判斷規則。",
         "若自動查詢失敗：請至官網查詢後，於左側「查詢結果」按右鍵複製完整網址，",
-        "貼至上方「查詢結果 URL」欄位再執行。"
+        "貼至「查詢結果 URL」欄位再執行。"
+      ),
+      fluidRow(
+        class = "judgment-result-url-row mb-2",
+        column(12,
+               textAreaInput(
+                 "judgment_result_url", "查詢結果 URL（選填）",
+                 placeholder = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?...",
+                 rows = 2, resize = "vertical", width = "100%"
+               ))
       ),
       fluidRow(
         class = "judgment-history-import-row mb-2",

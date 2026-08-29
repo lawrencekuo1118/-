@@ -209,9 +209,10 @@ judgment_rules_assess <- function(summary, full_text, rules_obj = NULL, data_dir
 
 judgment_analyze_detail <- function(
     detail,
+    target_company = "",
     rules_obj = NULL,
     data_dir = NULL) {
-  summary <- judgment_summarize(detail)
+  summary <- judgment_summarize(detail, target_company = target_company)
   result <- judgment_rules_assess(
     summary,
     detail$全文 %||% "",

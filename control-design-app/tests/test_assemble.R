@@ -1972,7 +1972,9 @@ check(nzchar(analysis$結果分析 %||% ""), "判斷模組產出結果分析")
 check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", app_txt),
       "判決書分頁含歷史學習規則 UI")
 check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
-check(!grepl("judgment_target_company", app_txt), "判決書分頁已移除標的公司影響分析欄位")
+check(grepl("judgment_target_company", app_txt), "判決書分頁含查詢標的公司欄位")
+check(grepl('updateTextInput\\([\\s\\S]*"judgment_target_company"', app_txt, perl = TRUE),
+      "側邊欄公司名稱同步至查詢標的公司")
 check(!grepl("judgment_apply_cause_exclusion", app_txt), "判決書分頁已移除案由排除選項")
 
 # Fast load: persisted library JSON skips re-normalization

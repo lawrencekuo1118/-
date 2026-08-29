@@ -42,5 +42,4 @@ Rscript deploy.R
 
 ## Notes
 
-- Commits that only change `control-design-app/rsconnect/**` do **not** re-trigger deploy (avoids loop from bundle record commits).
-- Bundle record commits use `[skip ci]` in the message; GitHub path filters also exclude `rsconnect/`.
+- Commits with message `ci: record goddamn-sox deploy bundle` skip the pipeline (avoids loop from bundle record commits).

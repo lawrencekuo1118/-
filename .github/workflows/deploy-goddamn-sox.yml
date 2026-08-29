@@ -6,8 +6,6 @@ on:
     paths:
       - "control-design-app/**"
       - ".github/workflows/deploy-goddamn-sox.yml"
-    paths-ignore:
-      - "control-design-app/rsconnect/**"
   pull_request:
     branches: [master]
     paths:
@@ -31,6 +29,7 @@ permissions:
 jobs:
   test:
     name: test
+    if: ${{ !contains(github.event.head_commit.message, 'ci: record goddamn-sox deploy bundle') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,6 +61,7 @@ jobs:
     needs: test
     if: |
       needs.test.result == 'success' &&
+      !contains(github.event.head_commit.message, 'ci: record goddamn-sox deploy bundle') &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
         (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy)

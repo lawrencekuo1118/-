@@ -1917,6 +1917,18 @@ url_chk <- judgment_validate_params(list(
 ))
 check(isTRUE(url_chk$ok) && nzchar(url_chk$result_url), "查詢結果 URL 可單獨作為查詢條件")
 
+check(!judgment_llm_available(""), "未設定 API key 時 LLM 不可用")
+llm_json <- '{"summary":"被告掏空公司資金","impact_level":"高","impact_score":85,"impact_rationale":"涉及背信與侵占","keywords":"掏空,背信"}'
+llm_parsed <- judgment_llm_parse_response(llm_json)
+check(grepl("掏空", llm_parsed$內容摘要), "LLM 回應解析摘要")
+check(llm_parsed$財務營運影響等級 == "高", "LLM 回應解析影響等級")
+check(grepl("【LLM】", llm_parsed$影響分析說明), "LLM 影響說明標記")
+rule_only <- judgment_analyze_detail(detail, "甲公司", use_llm = FALSE)
+check(grepl("【字號】|【主文】", rule_only$內容摘要), "關閉 LLM 時使用規則摘要")
+check(!grepl("【LLM】", rule_only$影響分析說明 %||% ""), "規則模式不含 LLM 標記")
+check(grepl("judgment_use_llm", app_txt) && grepl("judgment_llm_status", app_txt),
+      "判決書分頁含 LLM 選項")
+
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")
 if (file.exists(lib_path)) {

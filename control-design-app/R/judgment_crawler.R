@@ -418,6 +418,165 @@ judgment_assess_financial_impact <- function(summary, full_text, target_company 
   )
 }
 
+# --- LLM 摘要與影響分析（OpenAI Chat Completions；無 API key 時自動退回關鍵字規則）---
+
+judgment_llm_default_model <- function() {
+  m <- judgment_trim(Sys.getenv("OPENAI_MODEL", unset = "gpt-4o-mini"))
+  if (!nzchar(m)) "gpt-4o-mini" else m
+}
+
+judgment_llm_api_key <- function(api_key = NULL) {
+  key <- judgment_trim(api_key %||% Sys.getenv("OPENAI_API_KEY", unset = ""))
+  if (!nzchar(key)) "" else key
+}
+
+judgment_llm_available <- function(api_key = NULL) {
+  nzchar(judgment_llm_api_key(api_key))
+}
+
+judgment_llm_truncate <- function(text, max_chars = 12000L) {
+  text <- judgment_trim(text)
+  if (!nzchar(text)) return("")
+  if (nchar(text) <= max_chars) return(text)
+  paste0(substr(text, 1, max_chars), "\n…（以下省略）")
+}
+
+judgment_llm_build_prompt <- function(detail, target_company = "") {
+  company <- judgment_trim(target_company)
+  company_line <- if (nzchar(company)) {
+    sprintf("查詢標的公司：%s（請特別評估對該公司整體財務與營運之可能衝擊）", company)
+  } else {
+    "查詢標的公司：（未指定）"
+  }
+  body <- judgment_llm_truncate(paste(
+    c(
+      sprintf("裁判字號：%s", judgment_trim(detail$裁判字號 %||% "")),
+      sprintf("主文：%s", judgment_trim(detail$裁判主文 %||% "")),
+      sprintf("全文：%s", judgment_llm_truncate(detail$全文 %||% "", 10000L))
+    ),
+    collapse = "\n\n"
+  ))
+  list(
+    system = paste(
+      "你是台灣司法判決書分析助理，協助內部審計與內控人員快速理解判決重點。",
+      "請以繁體中文回答，且僅輸出單一 JSON 物件（勿 markdown），欄位：",
+      "summary（200字內判決摘要）、impact_level（高/中/低/無明顯影響）、",
+      "impact_score（0-100整數）、impact_rationale（影響說明）、keywords（逗號分隔關鍵字）。",
+      "impact_level 須為：高、中、低、無明顯影響 其中之一。",
+      sep = ""
+    ),
+    user = paste(company_line, body, sep = "\n\n")
+  )
+}
+
+judgment_llm_parse_response <- function(raw) {
+  raw <- judgment_trim(raw)
+  if (!nzchar(raw)) stop("LLM 回應為空")
+  json_txt <- raw
+  if (grepl("```", raw, fixed = TRUE)) {
+    m <- regexpr("```(?:json)?\\s*([\\s\\S]*?)\\s*```", raw, perl = TRUE, ignore.case = TRUE)
+    if (m[1] > 0) json_txt <- regmatches(raw, m)[[1]]
+    json_txt <- sub("^```(?:json)?\\s*", "", json_txt, perl = TRUE, ignore.case = TRUE)
+    json_txt <- sub("\\s*```$", "", json_txt, perl = TRUE)
+  }
+  m_obj <- regexpr("\\{[\\s\\S]*\\}", json_txt, perl = TRUE)
+  if (m_obj[1] > 0) json_txt <- regmatches(json_txt, m_obj)[[1]]
+  if (!requireNamespace("jsonlite", quietly = TRUE)) stop("需要 jsonlite 以解析 LLM 回應")
+  obj <- jsonlite::fromJSON(json_txt, simplifyVector = TRUE)
+  level <- judgment_trim(obj$impact_level %||% obj$財務營運影響等級 %||% "")
+  if (!level %in% JUDGMENT_IMPACT_LEVELS) {
+    level <- if (grepl("^高", level)) "高" else if (grepl("^中", level)) "中" else if (grepl("^低", level)) "低" else "無明顯影響"
+  }
+  score <- suppressWarnings(as.integer(obj$impact_score %||% obj$影響分數 %||% 0L))
+  if (is.na(score)) score <- 0L
+  score <- max(0L, min(100L, score))
+  summary <- judgment_trim(obj$summary %||% obj$內容摘要 %||% "")
+  rationale <- judgment_trim(obj$impact_rationale %||% obj$影響分析說明 %||% "")
+  keywords <- judgment_trim(obj$keywords %||% obj$命中關鍵字 %||% "")
+  if (!nzchar(summary)) stop("LLM 回應缺少 summary")
+  list(
+    內容摘要 = summary,
+    財務營運影響等級 = level,
+    影響分數 = score,
+    影響分析說明 = if (nzchar(rationale)) paste0("【LLM】", rationale) else "【LLM】已完成影響評估",
+    命中關鍵字 = keywords
+  )
+}
+
+judgment_llm_chat <- function(messages, api_key = NULL, model = NULL, timeout_secs = 90L) {
+  key <- judgment_llm_api_key(api_key)
+  if (!nzchar(key)) stop("未設定 OPENAI_API_KEY，無法使用 LLM 分析")
+  if (!requireNamespace("httr2", quietly = TRUE)) stop("需要 httr2 套件以呼叫 LLM API")
+  model <- judgment_trim(model %||% judgment_llm_default_model())
+  req <- httr2::request("https://api.openai.com/v1/chat/completions") |>
+    httr2::req_method("POST") |>
+    httr2::req_headers(
+      Authorization = paste("Bearer", key),
+      `Content-Type` = "application/json"
+    ) |>
+    httr2::req_body_json(list(
+      model = model,
+      temperature = 0.2,
+      response_format = list(type = "json_object"),
+      messages = messages
+    ), auto_unbox = TRUE) |>
+    httr2::req_timeout(as.numeric(timeout_secs))
+  resp <- httr2::req_perform(req)
+  status <- httr2::resp_status(resp)
+  body <- httr2::resp_body_string(resp)
+  if (status >= 400L) {
+    err <- tryCatch(jsonlite::fromJSON(body, simplifyVector = TRUE)$error$message, error = function(e) body)
+    stop(sprintf("LLM API 錯誤 (%s): %s", status, judgment_trim(as.character(err))))
+  }
+  parsed <- jsonlite::fromJSON(body, simplifyVector = FALSE)
+  content <- parsed$choices[[1]]$message$content %||% ""
+  judgment_llm_parse_response(as.character(content))
+}
+
+judgment_llm_analyze <- function(detail, target_company = "", api_key = NULL, model = NULL) {
+  prompt <- judgment_llm_build_prompt(detail, target_company = target_company)
+  judgment_llm_chat(
+    list(
+      list(role = "system", content = prompt$system),
+      list(role = "user", content = prompt$user)
+    ),
+    api_key = api_key,
+    model = model
+  )
+}
+
+judgment_analyze_detail <- function(
+    detail,
+    target_company = "",
+    use_llm = FALSE,
+    api_key = NULL,
+    model = NULL,
+    progress_cb = NULL) {
+  if (isTRUE(use_llm) && judgment_llm_available(api_key)) {
+    step <- function(msg) {
+      if (is.function(progress_cb)) progress_cb(msg)
+    }
+    step("LLM 摘要與影響分析中…")
+    llm <- tryCatch(
+      judgment_llm_analyze(detail, target_company = target_company, api_key = api_key, model = model),
+      error = function(e) {
+        step(sprintf("LLM 失敗，改用關鍵字規則：%s", conditionMessage(e)))
+        NULL
+      }
+    )
+    if (!is.null(llm)) return(llm)
+  }
+  summary <- judgment_summarize(detail, target_company = target_company)
+  impact <- judgment_assess_financial_impact(summary, detail$全文, target_company = target_company)
+  list(
+    內容摘要 = summary,
+    財務營運影響等級 = impact$財務營運影響等級,
+    影響分數 = impact$影響分數,
+    影響分析說明 = impact$影響分析說明,
+    命中關鍵字 = impact$命中關鍵字
+  )
+}
+
 empty_judgment_results_frame <- function() {
   data.frame(
     序號 = integer(),
@@ -486,7 +645,13 @@ judgment_fetch_detail <- function(url) {
   judgment_parse_detail(page$html, url = url)
 }
 
-judgment_crawl_listing <- function(listing, target_company = "", progress_cb = NULL) {
+judgment_crawl_listing <- function(
+    listing,
+    target_company = "",
+    progress_cb = NULL,
+    use_llm = FALSE,
+    api_key = NULL,
+    model = NULL) {
   target_company <- judgment_trim(target_company)
   if (!nrow(listing)) return(empty_judgment_results_frame())
   step <- function(msg) {
@@ -507,8 +672,14 @@ judgment_crawl_listing <- function(listing, target_company = "", progress_cb = N
       )
     )
     if (!nzchar(detail$裁判字號)) detail$裁判字號 <- listing$裁判字號[[i]]
-    summary <- judgment_summarize(detail, target_company = target_company)
-    impact <- judgment_assess_financial_impact(summary, detail$全文, target_company = target_company)
+    analysis <- judgment_analyze_detail(
+      detail,
+      target_company = target_company,
+      use_llm = use_llm,
+      api_key = api_key,
+      model = model,
+      progress_cb = progress_cb
+    )
     rows[[length(rows) + 1L]] <- data.frame(
       序號 = i,
       查詢標的公司 = target_company,
@@ -519,21 +690,27 @@ judgment_crawl_listing <- function(listing, target_company = "", progress_cb = N
       案件類別 = "",
       連結 = url,
       裁判主文 = detail$裁判主文,
-      內容摘要 = summary,
-      財務營運影響等級 = impact$財務營運影響等級,
-      影響分數 = impact$影響分數,
-      影響分析說明 = impact$影響分析說明,
-      命中關鍵字 = impact$命中關鍵字,
+      內容摘要 = analysis$內容摘要,
+      財務營運影響等級 = analysis$財務營運影響等級,
+      影響分數 = analysis$影響分數,
+      影響分析說明 = analysis$影響分析說明,
+      命中關鍵字 = analysis$命中關鍵字,
       全文 = detail$全文,
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
-    Sys.sleep(0.35)
+    Sys.sleep(if (isTRUE(use_llm)) 0.6 else 0.35)
   }
   do.call(rbind, rows)
 }
 
-judgment_crawl <- function(params, target_company = "", progress_cb = NULL) {
+judgment_crawl <- function(
+    params,
+    target_company = "",
+    progress_cb = NULL,
+    use_llm = FALSE,
+    api_key = NULL,
+    model = NULL) {
   chk <- judgment_validate_params(params)
   if (!isTRUE(chk$ok)) stop(chk$msg)
   target_company <- judgment_trim(target_company)
@@ -549,14 +726,20 @@ judgment_crawl <- function(params, target_company = "", progress_cb = NULL) {
     if (nzchar(err)) stop(err)
     step("解析查詢結果…")
     listing <- judgment_fetch_result_list(page$html, chk$max_results)
-    return(judgment_crawl_listing(listing, target_company, progress_cb))
+    return(judgment_crawl_listing(
+      listing, target_company, progress_cb,
+      use_llm = use_llm, api_key = api_key, model = model
+    ))
   }
 
   step("連線司法院裁判書查詢…")
   search <- judgment_search_submit(params)
   step("解析查詢結果…")
   listing <- judgment_fetch_result_list(search$html, search$max_results)
-  judgment_crawl_listing(listing, target_company, progress_cb)
+  judgment_crawl_listing(
+    listing, target_company, progress_cb,
+    use_llm = use_llm, api_key = api_key, model = model
+  )
 }
 
 judgment_params_sheet <- function(params, target_company = "") {
@@ -577,10 +760,15 @@ judgment_params_sheet <- function(params, target_company = "") {
     KbEnd = "裁判大小迄(K)",
     max_results = "抓取筆數上限",
     result_url = "查詢結果 URL",
+    use_llm = "使用 LLM 分析",
     target_company = "查詢標的公司"
   )
   vals <- lapply(names(labs), function(nm) {
     if (identical(nm, "target_company")) return(judgment_trim(target_company))
+    if (identical(nm, "use_llm")) {
+      v <- p$use_llm %||% FALSE
+      return(if (isTRUE(v)) "是" else "否")
+    }
     if (identical(nm, "jud_court")) {
       courts <- p$jud_court %||% character()
       if (!length(courts) || !any(nzchar(courts))) return("所有法院")

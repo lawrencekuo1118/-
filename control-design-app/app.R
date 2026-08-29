@@ -893,6 +893,9 @@ ui <- page_navbar(
           "司法院裁判書查詢系統"
         ),
         "；抓取後自動產出摘要，並依關鍵字與標的公司名稱評估是否可能嚴重影響整體財務營運（供審計／內控參考，非法律意見）。",
+        "可勾選 LLM 以 OpenAI 產出更精簡摘要與影響說明（伺服器需設定 ",
+        tags$code("OPENAI_API_KEY"),
+        "）。",
         tags$br(),
         "若自動查詢失敗：請至官網查詢後，於左側「查詢結果」按右鍵複製完整網址，貼至下方「查詢結果 URL」再執行。"),
       fluidRow(
@@ -909,6 +912,14 @@ ui <- page_navbar(
         column(4, numericInput("judgment_max_results", "抓取筆數上限", value = 20,
                                min = 1, max = 100, step = 1)),
         column(4, uiOutput("judgment_status_box"))
+      ),
+      fluidRow(
+        column(6,
+               checkboxInput(
+                 "judgment_use_llm", "使用 LLM 摘要與影響分析",
+                 value = FALSE
+               )),
+        column(6, uiOutput("judgment_llm_status"))
       ),
       fluidRow(
         column(4,
@@ -4185,15 +4196,30 @@ server <- function(input, output, session) {
       KbStart = input$judgment_kb_start,
       KbEnd = input$judgment_kb_end,
       max_results = input$judgment_max_results,
-      result_url = input$judgment_result_url
+      result_url = input$judgment_result_url,
+      use_llm = isTRUE(input$judgment_use_llm)
     )
   }
+
+  output$judgment_llm_status <- renderUI({
+    if (judgment_llm_available()) {
+      tags$div(class = "small text-success pt-2",
+               sprintf("LLM 可用（模型：%s）", judgment_llm_default_model()))
+    } else {
+      tags$div(class = "small text-muted pt-2",
+               "未偵測到 OPENAI_API_KEY；將使用關鍵字規則分析")
+    }
+  })
 
   observeEvent(input$judgment_run, {
     target <- trimws(input$judgment_target_company %||% input$company %||% "")
     if (!nzchar(target)) {
       showNotification("請輸入查詢標的公司（供財務營運影響分析）", type = "warning")
       return()
+    }
+    use_llm <- isTRUE(input$judgment_use_llm)
+    if (use_llm && !judgment_llm_available()) {
+      showNotification("未設定 OPENAI_API_KEY，改以關鍵字規則分析", type = "warning")
     }
     params <- judgment_collect_params()
     res <- NULL
@@ -4202,6 +4228,7 @@ server <- function(input, output, session) {
         judgment_crawl(
           params,
           target_company = target,
+          use_llm = use_llm,
           progress_cb = function(msg) {
             incProgress(0.05, detail = msg)
           }
@@ -4214,7 +4241,11 @@ server <- function(input, output, session) {
     })
     if (is.null(res)) return()
     judgment_results(res)
-    judgment_last_msg(sprintf("完成：共 %d 筆（標的公司：%s）", nrow(res), target))
+    judgment_last_msg(sprintf(
+      "完成：共 %d 筆（標的公司：%s%s）",
+      nrow(res), target,
+      if (use_llm && judgment_llm_available()) "；LLM 分析" else ""
+    ))
     showNotification(
       if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
       type = if (nrow(res)) "message" else "warning"

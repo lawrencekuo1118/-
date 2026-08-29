@@ -302,6 +302,46 @@ judgment_clean_text <- function(html) {
   judgment_trim(txt)
 }
 
+judgment_parse_case_type <- function(title) {
+  title <- judgment_trim(title)
+  if (!nzchar(title)) return("")
+  if (grepl("刑事", title)) return("刑事")
+  if (grepl("行政", title)) return("行政")
+  if (grepl("憲法", title)) return("憲法")
+  if (grepl("懲戒", title)) return("懲戒")
+  if (grepl("民事", title)) return("民事")
+  ""
+}
+
+judgment_extract_cause <- function(html, txt, title = "") {
+  html <- judgment_trim(html)
+  txt <- judgment_trim(txt)
+  title <- judgment_trim(title)
+  if (nzchar(html)) {
+    m <- regexpr("裁判案由[^<]*</[^>]+>\\s*<[^>]+>([^<]+)", html, perl = TRUE, ignore.case = TRUE)
+    if (m[1] > 0) {
+      cause <- judgment_trim(sub(".*>([^<]+)$", "\\1", regmatches(html, m)[[1]], perl = TRUE))
+      if (nzchar(cause)) return(cause)
+    }
+  }
+  if (nzchar(txt)) {
+    m <- regexpr("(?m)^裁判案由\\s*[:：]?\\s*(.+)$", txt, perl = TRUE)
+    if (m[1] > 0) {
+      cause <- judgment_trim(regmatches(txt, m)[[1]])
+      cause <- sub("^裁判案由\\s*[:：]?\\s*", "", cause, perl = TRUE)
+      if (nzchar(cause)) return(cause)
+    }
+  }
+  if (nzchar(title)) {
+    m <- regexpr("號\\s*(?:民事|刑事|行政|憲法|懲戒)?[^\\s]*\\s+(.+)$", title, perl = TRUE)
+    if (m[1] > 0) {
+      cause <- judgment_trim(sub("^.*號\\s*(?:民事|刑事|行政|憲法|懲戒)?[^\\s]*\\s+", "", title, perl = TRUE))
+      if (nzchar(cause) && !grepl("判決|裁定", cause)) return(cause)
+    }
+  }
+  ""
+}
+
 judgment_parse_detail <- function(html, url = "") {
   txt <- judgment_clean_text(html)
   main <- judgment_extract_section(txt, "主文")
@@ -314,12 +354,16 @@ judgment_parse_detail <- function(html, url = "") {
   title <- ""
   m_title <- regexpr("<title>\\s*([^<]+)\\s*</title>", html, perl = TRUE, ignore.case = TRUE)
   if (m_title[1] > 0) title <- judgment_trim(sub(".*<title>\\s*([^<]+)\\s*</title>.*", "\\1", regmatches(html, m_title)[[1]], perl = TRUE))
+  cause <- judgment_extract_cause(html, txt, title = title)
+  case_type <- judgment_parse_case_type(title)
   list(
     裁判字號 = title,
     裁判主文 = main,
     事實及理由摘要來源 = paste(c(facts, reasoning), collapse = "\n"),
     全文 = txt,
-    連結 = url
+    連結 = url,
+    案由 = cause,
+    案件類別 = case_type
   )
 }
 
@@ -367,6 +411,8 @@ empty_judgment_results_frame <- function() {
     影響分析說明 = character(),
     命中關鍵字 = character(),
     裁判分析結論 = character(),
+    營運影響篩選 = character(),
+    案由排除原因 = character(),
     全文 = character(),
     check.names = FALSE,
     stringsAsFactors = FALSE
@@ -423,7 +469,8 @@ judgment_crawl_listing <- function(
     listing,
     target_company = "",
     progress_cb = NULL,
-    data_dir = NULL) {
+    data_dir = NULL,
+    apply_cause_exclusion = TRUE) {
   target_company <- judgment_trim(target_company)
   if (!nrow(listing)) return(empty_judgment_results_frame())
   step <- function(msg) {
@@ -447,7 +494,8 @@ judgment_crawl_listing <- function(
     analysis <- judgment_analyze_detail(
       detail,
       target_company = target_company,
-      data_dir = data_dir
+      data_dir = data_dir,
+      apply_cause_exclusion = apply_cause_exclusion
     )
     rows[[length(rows) + 1L]] <- data.frame(
       序號 = i,
@@ -455,8 +503,8 @@ judgment_crawl_listing <- function(
       法院 = sub("\\s+.*", "", detail$裁判字號 %||% listing$裁判字號[[i]]),
       裁判字號 = detail$裁判字號 %||% listing$裁判字號[[i]],
       裁判日期 = "",
-      案由 = "",
-      案件類別 = "",
+      案由 = analysis$案由 %||% detail$案由 %||% "",
+      案件類別 = analysis$案件類別 %||% detail$案件類別 %||% "",
       連結 = url,
       裁判主文 = detail$裁判主文,
       內容摘要 = analysis$內容摘要,
@@ -465,6 +513,8 @@ judgment_crawl_listing <- function(
       影響分析說明 = analysis$影響分析說明,
       命中關鍵字 = analysis$命中關鍵字,
       裁判分析結論 = analysis$裁判分析結論,
+      營運影響篩選 = analysis$營運影響篩選,
+      案由排除原因 = analysis$案由排除原因,
       全文 = detail$全文,
       check.names = FALSE,
       stringsAsFactors = FALSE
@@ -478,7 +528,8 @@ judgment_crawl <- function(
     params,
     target_company = "",
     progress_cb = NULL,
-    data_dir = NULL) {
+    data_dir = NULL,
+    apply_cause_exclusion = TRUE) {
   chk <- judgment_validate_params(params)
   if (!isTRUE(chk$ok)) stop(chk$msg)
   target_company <- judgment_trim(target_company)
@@ -496,7 +547,8 @@ judgment_crawl <- function(
     listing <- judgment_fetch_result_list(page$html, chk$max_results)
     return(judgment_crawl_listing(
       listing, target_company, progress_cb,
-      data_dir = data_dir
+      data_dir = data_dir,
+      apply_cause_exclusion = apply_cause_exclusion
     ))
   }
 
@@ -506,7 +558,8 @@ judgment_crawl <- function(
   listing <- judgment_fetch_result_list(search$html, search$max_results)
   judgment_crawl_listing(
     listing, target_company, progress_cb,
-    data_dir = data_dir
+    data_dir = data_dir,
+    apply_cause_exclusion = apply_cause_exclusion
   )
 }
 

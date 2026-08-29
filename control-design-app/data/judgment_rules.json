@@ -82,5 +82,25 @@
       "category": "民事/終局",
       "source_count": 0
     }
+  ],
+  "low_impact_causes": [
+    {"patterns": ["侵權行為損害賠償(交通)", "交通損害賠償"], "case_types": ["民事"], "label": "個人交通事故", "group": "民事"},
+    {"patterns": ["返還土地權狀"], "case_types": ["民事"], "label": "個人土地權狀", "group": "民事"},
+    {"patterns": ["返還不動產"], "case_types": ["民事"], "label": "個人不动产返還", "group": "民事"},
+    {"patterns": ["確認贈與", "撤銷贈與"], "case_types": ["民事"], "label": "個人贈與", "group": "民事"},
+    {"patterns": ["鄰地通行", "界址", "排水"], "case_types": ["民事"], "label": "鄰地糾紛", "group": "民事"},
+    {"patterns": ["分割遺產", "遺產清儀", "遺產分配"], "case_types": ["民事"], "label": "個人繼承", "group": "民事"},
+    {"patterns": ["離婚", "監護", "扶養", "收養", "家事保護"], "case_types": ["民事"], "label": "家事事件", "group": "家事"},
+    {"patterns": ["毒品", "施用毒品", "持有毒品"], "case_types": ["刑事"], "label": "個人毒品", "group": "刑事"},
+    {"patterns": ["公共危險", "不能安全駕駛", "酒駕", "酒後駕車"], "case_types": ["刑事"], "label": "個人酒駕", "group": "刑事"},
+    {"patterns": ["過失傷害", "過失致死"], "case_types": ["刑事"], "label": "個人過失傷害", "group": "刑事"},
+    {"patterns": ["妨害名譽", "誹謗", "侮辱"], "case_types": ["刑事"], "label": "個人妨害名譽", "group": "刑事"},
+    {"patterns": ["傷害"], "case_types": ["刑事"], "label": "個人傷害", "group": "刑事"},
+    {"patterns": ["通姦", "妨害家庭"], "case_types": ["刑事"], "label": "個人妨害家庭", "group": "刑事"},
+    {"patterns": ["訴願決定"], "case_types": ["行政"], "label": "個人訴願", "group": "行政"},
+    {"patterns": ["國民年金", "健保", "全民健康保險"], "case_types": ["行政"], "label": "個人社會保險", "group": "行政"},
+    {"patterns": ["入出境", "移民", "居留"], "case_types": ["行政"], "label": "個人入出境", "group": "行政"},
+    {"patterns": [], "case_types": ["憲法"], "label": "憲法事件", "group": "憲法"},
+    {"patterns": [], "case_types": ["懲戒"], "label": "公務員懲戒", "group": "懲戒"}
   ]
 }

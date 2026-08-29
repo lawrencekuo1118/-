@@ -928,6 +928,22 @@ ui <- page_navbar(
                uiOutput("judgment_rules_status"))
       ),
       fluidRow(
+        column(6,
+               checkboxInput(
+                 "judgment_apply_cause_exclusion", "套用案由排除（降為無明顯影響）",
+                 value = TRUE
+               )),
+        column(6,
+               checkboxInput(
+                 "judgment_hide_low_impact", "結果表隱藏已排除案由",
+                 value = TRUE
+               ))
+      ),
+      tags$details(class = "mb-2",
+        tags$summary(class = "small text-muted", "低營運影響案由排除清單（可展開）"),
+        uiOutput("judgment_cause_filter_list")
+      ),
+      fluidRow(
         column(4,
                selectizeInput(
                  "judgment_court", "法院（可複選；空白＝所有法院）",
@@ -4207,7 +4223,22 @@ server <- function(input, output, session) {
   }
 
   output$judgment_rules_status <- renderUI({
-    tags$div(class = "small text-muted pt-1", judgment_rules_summary_text(data_dir = data_dir))
+    tags$div(
+      class = "small text-muted pt-1",
+      judgment_rules_summary_text(data_dir = data_dir),
+      tags$br(),
+      judgment_cause_filter_summary(data_dir = data_dir)
+    )
+  })
+
+  output$judgment_cause_filter_list <- renderUI({
+    filters <- judgment_cause_filters_load(data_dir = data_dir)
+    items <- lapply(filters, function(f) {
+      pats <- paste(as.character(f$patterns %||% character()), collapse = "、")
+      if (!nzchar(pats)) pats <- paste(as.character(f$case_types %||% ""), collapse = "、")
+      tags$li(sprintf("%s（%s）— %s", f$label %||% "", f$group %||% "", pats))
+    })
+    tags$ul(class = "small text-muted mb-0", items)
   })
 
   observeEvent(input$judgment_learn_rules, {
@@ -4242,6 +4273,7 @@ server <- function(input, output, session) {
           params,
           target_company = target,
           data_dir = data_dir,
+          apply_cause_exclusion = isTRUE(input$judgment_apply_cause_exclusion),
           progress_cb = function(msg) {
             incProgress(0.05, detail = msg)
           }
@@ -4253,8 +4285,13 @@ server <- function(input, output, session) {
       )
     })
     if (is.null(res)) return()
+    excluded_n <- sum(res$營運影響篩選 == "已排除", na.rm = TRUE)
     judgment_results(res)
-    judgment_last_msg(sprintf("完成：共 %d 筆（標的公司：%s）", nrow(res), target))
+    judgment_last_msg(sprintf(
+      "完成：共 %d 筆（標的公司：%s%s）",
+      nrow(res), target,
+      if (excluded_n > 0L) sprintf("；案由已排除 %d 筆", excluded_n) else ""
+    ))
     showNotification(
       if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
       type = if (nrow(res)) "message" else "warning"
@@ -4269,6 +4306,10 @@ server <- function(input, output, session) {
 
   output$judgment_table <- renderDT({
     df <- judgment_results()
+    if (nrow(df) && isTRUE(input$judgment_hide_low_impact) &&
+        "營運影響篩選" %in% names(df)) {
+      df <- df[df$營運影響篩選 != "已排除" | is.na(df$營運影響篩選), , drop = FALSE]
+    }
     if (!nrow(df)) {
       return(datatable(
         empty_judgment_results_frame(),

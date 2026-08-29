@@ -1940,6 +1940,35 @@ check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", a
       "判決書分頁含歷史學習規則 UI")
 check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
 
+cause_filters <- judgment_cause_filters_load(data_dir = file.path(root, "data"))
+check(length(cause_filters) >= 10L, "低營運影響案由規則已載入")
+traffic_detail <- list(
+  案由 = "侵權行為損害賠償(交通)",
+  案件類別 = "民事",
+  全文 = "被告駕車追撞原告機車",
+  裁判主文 = "原告之訴駁回",
+  裁判字號 = "測試交通"
+)
+traffic_excl <- judgment_cause_match_low_impact(
+  traffic_detail$案由, traffic_detail$案件類別, traffic_detail$全文,
+  data_dir = file.path(root, "data")
+)
+check(isTRUE(traffic_excl$excluded), "交通案由應排除")
+fraud_detail <- list(
+  案由 = "背信",
+  案件類別 = "刑事",
+  全文 = "被告公司掏空財務、虛增營收",
+  裁判主文 = "",
+  裁判字號 = "測試背信"
+)
+fraud_excl <- judgment_cause_match_low_impact(
+  fraud_detail$案由, fraud_detail$案件類別, fraud_detail$全文,
+  data_dir = file.path(root, "data")
+)
+check(!isTRUE(fraud_excl$excluded), "背信案由不應排除")
+check(grepl("judgment_apply_cause_exclusion", app_txt) && grepl("judgment_hide_low_impact", app_txt),
+      "判決書分頁含案由排除選項")
+
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")
 if (file.exists(lib_path)) {

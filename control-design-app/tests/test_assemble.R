@@ -1851,6 +1851,36 @@ fin_comp <- finalize_control_as_rcm_row(without_pbc_doc(modifyList(base, list(
 check(isTRUE(fin_comp$ok), "遵循面可定稿")
 check(!nzchar(trimws(fin_comp$control$assertions %||% "")), "遵循面定稿無 Assertions")
 
+# Brand: Goddamn SOX / goddamn-sox（禁止舊拼字 godamn）
+wrong_brand_pat <- "godamn-sox|Godamn SOX|deploy-godamn-sox|godamn-sox\\.dcf"
+brand_files <- c(
+  file.path(root, "app.R"),
+  file.path(root, "deploy.R"),
+  file.path(root, "run_v1.R"),
+  file.path(root, "README.md"),
+  file.path(root, "RELEASE_v1.md"),
+  file.path(root, "..", "README.md"),
+  file.path(root, "..", ".github", "workflows", "deploy-goddamn-sox.yml"),
+  file.path(root, "rsconnect", "shinyapps.io", "hopesmasher1118", "goddamn-sox.dcf")
+)
+brand_hits <- character()
+for (fp in brand_files) {
+  if (!file.exists(fp)) next
+  txt <- paste(readLines(fp, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  if (grepl(wrong_brand_pat, txt, perl = TRUE)) {
+    brand_hits <- c(brand_hits, fp)
+  }
+}
+check(!length(brand_hits), sprintf("品牌拼字無 godamn（違規：%s）", paste(basename(brand_hits), collapse = ", ")))
+check(file.exists(file.path(root, "rsconnect", "shinyapps.io", "hopesmasher1118", "goddamn-sox.dcf")),
+      "rsconnect 使用 goddamn-sox.dcf")
+check(!file.exists(file.path(root, "rsconnect", "shinyapps.io", "hopesmasher1118", "godamn-sox.dcf")),
+      "已移除 godamn-sox.dcf")
+check(file.exists(file.path(root, "..", ".github", "workflows", "deploy-goddamn-sox.yml")),
+      "deploy workflow 為 deploy-goddamn-sox.yml")
+check(!file.exists(file.path(root, "..", ".github", "workflows", "deploy-godamn-sox.yml")),
+      "已移除 deploy-godamn-sox.yml")
+
 # Locale: ban Mainland / HK-Macau terms in UI + committed seed (Taiwan + US proper nouns only)
 banned_locale <- c(
   "資料數據", "大批量", "重覆", "系統帳戶", "安裝或設置", "應設置密碼",

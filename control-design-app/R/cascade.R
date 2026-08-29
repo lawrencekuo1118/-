@@ -854,7 +854,7 @@ cascade_iuc_choices <- function(rows, pbc_df = NULL) {
     pbc_use <- pbc_df
     if (exists("filter_pbc_registry", mode = "function")) {
       pbc_use <- filter_pbc_registry(pbc_df, exclude_kinds = PBC_KIND_POLICY)
-    } else if (exists("PBC_KIND_POLICY", mode = "variable")) {
+    } else if (exists("PBC_KIND_POLICY")) {
       pbc_use <- pbc_df[!vapply(pbc_df$pbc_kind, function(k) {
         identical(trimws(as.character(k %||% "")), PBC_KIND_POLICY)
       }, logical(1)), , drop = FALSE]

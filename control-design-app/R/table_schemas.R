@@ -17,7 +17,7 @@
 }
 
 table_schema_registry <- function() {
-  rcm_cols <- if (exists("RCM_HEADERS", mode = "variable")) {
+  rcm_cols <- if (exists("RCM_HEADERS")) {
     RCM_HEADERS
   } else {
     character()
@@ -84,7 +84,7 @@ table_schema_registry <- function() {
   } else {
     character()
   }
-  iv_hidden <- if (exists("INTERVIEW_PREVIEW_HIDDEN_COLS", mode = "variable")) {
+  iv_hidden <- if (exists("INTERVIEW_PREVIEW_HIDDEN_COLS")) {
     INTERVIEW_PREVIEW_HIDDEN_COLS
   } else {
     character()

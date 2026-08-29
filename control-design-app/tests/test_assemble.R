@@ -1952,6 +1952,8 @@ check(identical(period_parts$dy, "113") && period_parts$dm == "3" && period_part
       "裁判期間日期轉民國年月日")
 check(grepl("judgment_date_start", app_txt) && grepl("judgment_date_end", app_txt),
       "判決書分頁裁判期間改為日期輸入")
+check(grepl("judgment-search-table", app_txt) && grepl("judgment-case-no-row", app_txt),
+      "判決書查詢表單使用 grid 排版")
 check(!grepl("judgment_dy1", app_txt), "判決書分頁已移除年月日文字欄位")
 
 rules_seed <- judgment_rules_load(data_dir = file.path(root, "data"))

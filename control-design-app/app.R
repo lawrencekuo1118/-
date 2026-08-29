@@ -622,9 +622,72 @@ ui <- page_navbar(
         .interview-risk-control-row { grid-template-columns: 1fr; }
       }
 
+      .judgment-search-table {
+        width: 100%;
+        table-layout: fixed;
+      }
+      .judgment-search-table th {
+        width: 5.75rem;
+        min-width: 5.75rem;
+        white-space: nowrap;
+        vertical-align: middle;
+        padding-right: 0.75rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+      .judgment-search-table td {
+        vertical-align: middle;
+      }
+      .judgment-search-table .shiny-input-container {
+        margin-bottom: 0;
+        width: 100%;
+        max-width: 100%;
+      }
+      .judgment-search-table .form-control,
+      .judgment-search-table .input-group {
+        width: 100%;
+        max-width: 100%;
+      }
+      .judgment-case-no-row {
+        display: grid;
+        grid-template-columns: minmax(4.5rem, 0.75fr) minmax(5.5rem, 1.25fr) minmax(4.5rem, 0.75fr) minmax(4.5rem, 0.75fr);
+        gap: 0.5rem 0.75rem;
+        align-items: end;
+      }
+      .judgment-period-row {
+        display: grid;
+        grid-template-columns: minmax(11rem, 1fr) auto minmax(11rem, 1fr);
+        gap: 0.5rem 0.75rem;
+        align-items: end;
+      }
       .judgment-period-row .shiny-input-container { margin-bottom: 0; width: 100%; }
-      .judgment-period-row .form-control { width: 100%; }
-      .judgment-period-sep { padding-top: 2.25rem; }
+      .judgment-period-row .form-control { width: 100%; max-width: 100%; }
+      .judgment-period-sep {
+        align-self: center;
+        white-space: nowrap;
+        padding: 0 0.15rem 0.45rem;
+        line-height: 1;
+      }
+      .judgment-kb-row {
+        display: grid;
+        grid-template-columns: minmax(5rem, 7rem) minmax(5rem, 7rem);
+        gap: 0.75rem;
+        align-items: end;
+      }
+      @media (max-width: 768px) {
+        .judgment-search-table th {
+          width: 4.5rem;
+          min-width: 4.5rem;
+        }
+        .judgment-case-no-row,
+        .judgment-period-row {
+          grid-template-columns: 1fr;
+        }
+        .judgment-period-sep {
+          padding: 0;
+          text-align: center;
+        }
+      }
 
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
@@ -949,11 +1012,12 @@ ui <- page_navbar(
         tags$tr(
           tags$th("裁判字號"),
           tags$td(
-            fluidRow(
-              column(2, textInput("judgment_year", NULL, placeholder = "年度")),
-              column(3, textInput("judgment_case", NULL, placeholder = "字別")),
-              column(2, textInput("judgment_no", NULL, placeholder = "起始號")),
-              column(2, textInput("judgment_no_end", NULL, placeholder = "結束號"))
+            div(
+              class = "judgment-case-no-row",
+              textInput("judgment_year", NULL, placeholder = "年度", width = "100%"),
+              textInput("judgment_case", NULL, placeholder = "字別", width = "100%"),
+              textInput("judgment_no", NULL, placeholder = "起始號", width = "100%"),
+              textInput("judgment_no_end", NULL, placeholder = "結束號", width = "100%")
             )
           )
         ),
@@ -962,46 +1026,39 @@ ui <- page_navbar(
           tags$td(
             div(
               class = "judgment-period-row",
-              fluidRow(
-                column(
-                  5,
-                  dateInput(
-                    "judgment_date_start", "起日",
-                    value = NULL, format = "yyyy-mm-dd",
-                    width = "100%"
-                  )
-                ),
-                column(1, tags$div(class = "text-muted text-center judgment-period-sep", "至")),
-                column(
-                  5,
-                  dateInput(
-                    "judgment_date_end", "迄日",
-                    value = NULL, format = "yyyy-mm-dd",
-                    width = "100%"
-                  )
-                )
+              dateInput(
+                "judgment_date_start", "起日",
+                value = NULL, format = "yyyy-mm-dd",
+                width = "100%"
+              ),
+              tags$span(class = "text-muted judgment-period-sep", "至"),
+              dateInput(
+                "judgment_date_end", "迄日",
+                value = NULL, format = "yyyy-mm-dd",
+                width = "100%"
               )
             )
           )
         ),
         tags$tr(
           tags$th("裁判案由"),
-          tags$td(textInput("judgment_title", NULL, placeholder = "請輸入檢索字詞"))
+          tags$td(textInput("judgment_title", NULL, placeholder = "請輸入檢索字詞", width = "100%"))
         ),
         tags$tr(
           tags$th("裁判主文"),
-          tags$td(textInput("judgment_jmain", NULL, placeholder = "請輸入檢索字詞"))
+          tags$td(textInput("judgment_jmain", NULL, placeholder = "請輸入檢索字詞", width = "100%"))
         ),
         tags$tr(
           tags$th("全文內容"),
-          tags$td(textInput("judgment_kw", NULL, placeholder = "請輸入檢索字詞"))
+          tags$td(textInput("judgment_kw", NULL, placeholder = "請輸入檢索字詞", width = "100%"))
         ),
         tags$tr(
           tags$th("裁判大小"),
           tags$td(
-            fluidRow(
-              column(2, textInput("judgment_kb_start", NULL, placeholder = "起 K")),
-              column(2, textInput("judgment_kb_end", NULL, placeholder = "迄 K"))
+            div(
+              class = "judgment-kb-row",
+              textInput("judgment_kb_start", NULL, placeholder = "起 K", width = "100%"),
+              textInput("judgment_kb_end", NULL, placeholder = "迄 K", width = "100%")
             )
           )
         )

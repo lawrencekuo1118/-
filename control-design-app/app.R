@@ -647,6 +647,8 @@ ui <- page_navbar(
       @media (max-width: 768px) {
         .interview-risk-control-row { grid-template-columns: 1fr; }
       }
+      .interview-5w1h-fields .form-group { margin-bottom: 0.75rem; }
+      .interview-5w1h-fields textarea.form-control { min-height: 3rem; }
 
       .judgment-search-table {
         width: 100%;
@@ -1180,14 +1182,22 @@ ui <- page_navbar(
         ),
         accordion_panel(
           "5W1H／PBC",
-          checkboxGroupInput(
-            "interview_5w1h", NULL,
-            choices = INTERVIEW_5W1H_MODULES, selected = DEFAULT_INTERVIEW_5W1H
-          ),
-          checkboxInput(
-            "interview_include_modules",
-            "將勾選之 5W1H 模組展開為獨立探針題",
-            value = TRUE
+          tags$div(
+            class = "interview-5w1h-fields",
+            tags$p(
+              class = "small text-muted mb-2",
+              "依 HOW → WHAT → WHEN → WHO → WHERE → NEXT 列出訪談問句；",
+              "HOW 中的 XX 將代入②風險或控制點風險名稱。"
+            ),
+            lapply(INTERVIEW_5W1H_FIELD_ORDER, function(key) {
+              textAreaInput(
+                interview_5w1h_input_id(key),
+                sprintf("%s", INTERVIEW_5W1H_FIELD_LABELS[[key]]),
+                value = INTERVIEW_5W1H_DEFAULT_PROMPTS[[key]],
+                rows = 2,
+                width = "100%"
+              )
+            })
           )
         )
       ),
@@ -1195,7 +1205,6 @@ ui <- page_navbar(
         class = "d-flex gap-1 flex-wrap mt-2",
         downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-success btn-sm")
       ),
-      uiOutput("interview_scaffold_box"),
       textOutput("interview_worksheet_stats"),
     ),
     div(
@@ -2707,6 +2716,21 @@ server <- function(input, output, session) {
     try(refresh_design_text_param_choices(), silent = TRUE)
   }, once = TRUE)
 
+  interview_primary_risk_label <- function() {
+    picks <- unique(trimws(as.character(input$interview_risk_pick %||% character())))
+    picks <- picks[nzchar(picks)]
+    if (length(picks)) return(picks[[1]])
+    scoped <- interview_scoped_controls()
+    if (length(scoped)) {
+      for (ctrl in scoped) {
+        tags <- parse_risk_factor_values(ctrl$risk_factor %||% ctrl$risk_name %||% "")
+        tags <- tags[nzchar(tags)]
+        if (length(tags)) return(tags[[1]])
+      }
+    }
+    "該"
+  }
+
   interview_worksheet <- function() {
     cs <- interview_pool_controls()
     cs <- filter_controls_by_cycle_sub(
@@ -2716,34 +2740,33 @@ server <- function(input, output, session) {
     )
     cs <- filter_interview_controls_by_risk(cs, input$interview_risk_pick %||% character())
     cs <- filter_interview_controls_by_ids(cs, input$interview_control_pick %||% character())
-    mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
+    prompts <- interview_5w1h_prompts_from_values(
+      input,
+      risk_label = interview_primary_risk_label()
+    )
     controls_to_interview(
       cs, input$interview_elements,
       finalized_only = FALSE,
-      modules = mods,
+      modules = INTERVIEW_5W1H_FIELD_ORDER,
       pbc_reg = pbc_reg(),
-      include_module_rows = isTRUE(input$interview_include_modules %||% TRUE)
+      include_module_rows = TRUE,
+      custom_5w1h_prompts = prompts
     )
   }
 
-  output$interview_scaffold_box <- renderUI({
-    mods <- input$interview_5w1h %||% character()
-    sc <- if (length(mods)) {
-      interview_answer_scaffold(mods)
-    } else {
-      "（尚未勾選 5W1H 模組；請於下方「5W1H／PBC」勾選）"
-    }
-    tags$div(
-      class = "small border rounded p-2 mb-2 bg-light",
-      tags$strong("5W1H 回答鏈（人事時地物）："),
-      tags$span(class = "ms-1", sc)
-    )
-  })
   output$interview_worksheet_stats <- renderText({
     iv <- interview_worksheet()
-    mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
-    sprintf("題綱列數：%d｜5W1H 模組：%d", nrow(iv), length(mods))
+    sprintf("題綱列數：%d｜5W1H 面向：%d", nrow(iv), length(INTERVIEW_5W1H_FIELD_ORDER))
   })
+
+  reset_interview_5w1h_fields <- function() {
+    for (key in INTERVIEW_5W1H_FIELD_ORDER) {
+      updateTextAreaInput(
+        session, interview_5w1h_input_id(key),
+        value = INTERVIEW_5W1H_DEFAULT_PROMPTS[[key]]
+      )
+    }
+  }
 
   output$interview_guide_banner <- renderUI({
     cy <- input$cycle %||% ""
@@ -4697,14 +4720,14 @@ server <- function(input, output, session) {
   })
   observeEvent(input$ws_select_core_iv, {
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
-    updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
+    reset_interview_5w1h_fields()
   })
   observeEvent(input$ws_select_full_iv, {
     updateCheckboxGroupInput(
       session, "interview_elements",
       selected = unique(c(DEFAULT_INTERVIEW_ELEMENTS, INTERVIEW_WALKTHROUGH_EXTRA))
     )
-    updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
+    reset_interview_5w1h_fields()
   })
   observeEvent(input$ws_reset_iv, {
     clear_interview_choices_cache()
@@ -4713,8 +4736,7 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, "interview_risk_pick", selected = character())
     updateSelectizeInput(session, "interview_control_pick", selected = character())
     updateCheckboxGroupInput(session, "interview_elements", selected = DEFAULT_INTERVIEW_ELEMENTS)
-    updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
-    updateCheckboxInput(session, "interview_include_modules", value = TRUE)
+    reset_interview_5w1h_fields()
   })
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)

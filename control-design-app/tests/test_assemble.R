@@ -461,13 +461,16 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl("interviewPreviewCollapse", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
-        grepl("interview_scaffold_box", app_txt) &&
+        grepl("interview_5w1h_how", app_txt) &&
+        grepl("interview-5w1h-fields", app_txt) &&
+        grepl("INTERVIEW_5W1H_DEFAULT_PROMPTS", app_txt) &&
+        grepl("interview_5w1h_prompts_from_values", app_txt) &&
+        !grepl('checkboxGroupInput\\([\\s\\S]*"interview_5w1h"', app_txt, perl = TRUE) &&
+        !grepl("interview_include_modules", app_txt) &&
+        !grepl("interview_scaffold_box", app_txt) &&
         grepl("interview_worksheet_stats", app_txt) &&
-        grepl("5W1H 回答鏈（人事時地物）", app_txt, fixed = TRUE) &&
-        grepl("interview_answer_scaffold", app_txt) &&
-        !grepl("interview_scaffold_preview", app_txt) &&
-        grepl('download_interview[\\s\\S]{0,400}interview_scaffold_box', app_txt, perl = TRUE) &&
-        !grepl('card\\([\\s\\S]{0,120}interview_scaffold_box', app_txt, perl = TRUE) &&
+        grepl('download_interview[\\s\\S]{0,400}interview_worksheet_stats', app_txt, perl = TRUE) &&
+        !grepl('card\\([\\s\\S]{0,120}interview_worksheet_stats', app_txt, perl = TRUE) &&
         grepl("interview_choices_cache", app_txt) &&
         grepl('observeEvent\\(input\\$interview_risk_pick', app_txt) &&
         grepl("interview_status_steps", app_txt) &&
@@ -619,7 +622,21 @@ check(nrow(control_to_interview(
 )) >= 5,
       "完整走查可產出擴充題綱")
 check("where" %in% names(INTERVIEW_5W1H_MODULES), "5W1H 模組含在何處／哪個系統（地）")
-where_probe <- interview_5w1h_probe_bank(d1, modules = "where")[["where"]]
+check(identical(DEFAULT_INTERVIEW_5W1H[[1]], "how"), "5W1H 預設順序以 HOW 起首")
+check(grepl("如何因應XX風險", INTERVIEW_5W1H_DEFAULT_PROMPTS[["how"]], fixed = TRUE),
+      "HOW 預設問句含 XX 風險占位")
+check(
+  identical(
+    format_interview_5w1h_prompt(INTERVIEW_5W1H_DEFAULT_PROMPTS[["how"]], "未授權存取"),
+    "請問貴公司如何因應未授權存取風險？"
+  ),
+  "5W1H 問句可代入風險名稱"
+)
+where_probe <- interview_5w1h_probe_bank(
+  d1, modules = "where",
+  custom_prompts = c(where = "在何處／哪個系統執行？")
+)[["where"]]
+check(grepl("在何處", where_probe$question), "5W1H 自訂問句可覆寫探針題")
 check(!is.null(where_probe) && grepl("在何處", where_probe$question),
       "何地探針題可產出")
 check(nrow(control_to_interview(fin_ok, DEFAULT_INTERVIEW_ELEMENTS,

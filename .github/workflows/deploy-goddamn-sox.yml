@@ -1,14 +1,14 @@
-name: Deploy Godamn SOX
+name: Deploy Goddamn SOX
 
 on:
   push:
     branches: [master]
     paths:
       - "control-design-app/**"
-      - ".github/workflows/deploy-godamn-sox.yml"
+      - ".github/workflows/deploy-goddamn-sox.yml"
 
 concurrency:
-  group: deploy-godamn-sox
+  group: deploy-goddamn-sox
   cancel-in-progress: true
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
         working-directory: control-design-app
         env:
           SHINYAPPS_ACCOUNT: hopesmasher1118
-          SHINYAPPS_APPNAME: godamn-sox
+          SHINYAPPS_APPNAME: goddamn-sox
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: Rscript deploy.R

@@ -26,6 +26,7 @@ source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm.R"), local = TRUE)
 source(file.path(root, "R", "csa.R"), local = TRUE)
+source(file.path(root, "R", "judgment_crawler.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
@@ -845,6 +846,7 @@ ui <- page_navbar(
                 strong("基礎設定 → 風險辨識 → 控制設計"),
                 "（須依序；", tags$span(class = "text-danger", "*"), " 為必填）。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"), "（1 控制點 ↔ 1 RCM 列）。"),
+      tags$li(tags$strong("判決書查詢"), "：司法院裁判書進階查詢、自動摘要與標的公司財務營運影響評估。"),
         tags$li(tags$strong("訪談問項設計"), "／", tags$strong("控制點測試設計"),
                 "：對齊已定稿 RCM。"),
         tags$li(tags$strong("PBC／RCM"), "檢視匯出；需要時再開",
@@ -856,6 +858,7 @@ ui <- page_navbar(
       card_header("各頁籤用途"),
       div(
         class = "home-tabs-grid",
+        div(class = "home-tab-card", strong("判決書查詢"), "司法院裁判書爬蟲、摘要與財務影響評估。"),
         div(class = "home-tab-card", strong("訪談問項設計"), "已定稿 RCM → 訪談題綱。"),
         div(class = "home-tab-card", strong("風險控制點設計"), "分頁籤填寫基礎／風險／控制；定稿寫入 RCM。"),
         div(class = "home-tab-card", strong("控制點測試設計"), "CSA 測試步驟與情境組。"),
@@ -864,6 +867,104 @@ ui <- page_navbar(
         div(class = "home-tab-card", strong("範本庫"), "可跳過套用；寫入需高權。"),
         div(class = "home-tab-card", strong("參數庫"), "查詢／套用；維護需高權。")
       )
+    )
+  ),
+  nav_panel(
+    "判決書查詢",
+    card(
+      card_header(
+        div(
+          class = "d-flex justify-content-between align-items-center flex-wrap gap-2",
+          span("司法院裁判書查詢（對齊進階查詢欄位）"),
+          div(
+            class = "d-flex gap-1 flex-wrap",
+            downloadButton("download_judgment", "下載分析結果 .xlsx",
+                           class = "btn-success btn-sm"),
+            actionButton("judgment_run", "開始爬取並分析",
+                           class = "btn-primary btn-sm")
+          )
+        )
+      ),
+      p(class = "text-muted small mb-2",
+        "資料來源：",
+        tags$a(
+          href = "https://judgment.judicial.gov.tw/FJUD/Default_AD.aspx",
+          target = "_blank",
+          "司法院裁判書查詢系統"
+        ),
+        "；抓取後自動產出摘要，並依關鍵字與標的公司名稱評估是否可能嚴重影響整體財務營運（供審計／內控參考，非法律意見）。"),
+      fluidRow(
+        column(4, textInput("judgment_target_company", "查詢標的公司（影響分析用）",
+                            placeholder = "例：甲公司股份有限公司")),
+        column(4, numericInput("judgment_max_results", "抓取筆數上限", value = 20,
+                               min = 1, max = 100, step = 1)),
+        column(4, uiOutput("judgment_status_box"))
+      ),
+      fluidRow(
+        column(4,
+               selectizeInput(
+                 "judgment_court", "法院（可複選；空白＝所有法院）",
+                 choices = JUDGMENT_COURT_CHOICES,
+                 selected = "",
+                 multiple = TRUE,
+                 options = list(placeholder = "所有法院")
+               )),
+        column(8,
+               checkboxGroupInput(
+                 "judgment_sys", "案件類別（未勾選＝全選）",
+                 choices = JUDGMENT_CASE_TYPE_CHOICES,
+                 inline = TRUE
+               ))
+      ),
+      tags$table(class = "table table-sm table-borderless judgment-search-table mb-2",
+        tags$tr(
+          tags$th("裁判字號"),
+          tags$td(
+            fluidRow(
+              column(2, textInput("judgment_year", NULL, placeholder = "年度")),
+              column(3, textInput("judgment_case", NULL, placeholder = "字別")),
+              column(2, textInput("judgment_no", NULL, placeholder = "起始號")),
+              column(2, textInput("judgment_no_end", NULL, placeholder = "結束號"))
+            )
+          )
+        ),
+        tags$tr(
+          tags$th("裁判期間"),
+          tags$td(
+            fluidRow(
+              column(2, textInput("judgment_dy1", NULL, placeholder = "起年")),
+              column(2, textInput("judgment_dm1", NULL, placeholder = "起月")),
+              column(2, textInput("judgment_dd1", NULL, placeholder = "起日")),
+              column(1, tags$span(class = "text-muted", "至")),
+              column(2, textInput("judgment_dy2", NULL, placeholder = "迄年")),
+              column(2, textInput("judgment_dm2", NULL, placeholder = "迄月")),
+              column(2, textInput("judgment_dd2", NULL, placeholder = "迄日"))
+            )
+          )
+        ),
+        tags$tr(
+          tags$th("裁判案由"),
+          tags$td(textInput("judgment_title", NULL, placeholder = "請輸入檢索字詞"))
+        ),
+        tags$tr(
+          tags$th("裁判主文"),
+          tags$td(textInput("judgment_jmain", NULL, placeholder = "請輸入檢索字詞"))
+        ),
+        tags$tr(
+          tags$th("全文內容"),
+          tags$td(textInput("judgment_kw", NULL, placeholder = "請輸入檢索字詞"))
+        ),
+        tags$tr(
+          tags$th("裁判大小"),
+          tags$td(
+            fluidRow(
+              column(2, textInput("judgment_kb_start", NULL, placeholder = "起 K")),
+              column(2, textInput("judgment_kb_end", NULL, placeholder = "迄 K"))
+            )
+          )
+        )
+      ),
+      DTOutput("judgment_table")
     )
   ),
   nav_panel(
@@ -4051,6 +4152,106 @@ server <- function(input, output, session) {
       with_loading(write_pbc_sample_xlsx(reg, file))
     }
   )
+  # 判決書查詢（司法院裁判書爬蟲 + 摘要 + 財務影響）
+  judgment_results <- reactiveVal(empty_judgment_results_frame())
+  judgment_last_msg <- reactiveVal("")
+
+  judgment_collect_params <- function() {
+    courts <- input$judgment_court %||% character()
+    courts <- unique(trimws(as.character(courts)))
+    courts <- courts[nzchar(courts)]
+    list(
+      jud_court = courts,
+      jud_sys = input$judgment_sys %||% character(),
+      jud_year = input$judgment_year,
+      jud_case = input$judgment_case,
+      jud_no = input$judgment_no,
+      jud_no_end = input$judgment_no_end,
+      dy1 = input$judgment_dy1, dm1 = input$judgment_dm1, dd1 = input$judgment_dd1,
+      dy2 = input$judgment_dy2, dm2 = input$judgment_dm2, dd2 = input$judgment_dd2,
+      jud_title = input$judgment_title,
+      jud_jmain = input$judgment_jmain,
+      jud_kw = input$judgment_kw,
+      KbStart = input$judgment_kb_start,
+      KbEnd = input$judgment_kb_end,
+      max_results = input$judgment_max_results
+    )
+  }
+
+  observeEvent(input$judgment_run, {
+    target <- trimws(input$judgment_target_company %||% input$company %||% "")
+    if (!nzchar(target)) {
+      showNotification("請輸入查詢標的公司（供財務營運影響分析）", type = "warning")
+      return()
+    }
+    params <- judgment_collect_params()
+    res <- NULL
+    withProgress(message = "裁判書查詢中…", value = 0, {
+      res <- tryCatch(
+        judgment_crawl(
+          params,
+          target_company = target,
+          progress_cb = function(msg) {
+            incProgress(0.05, detail = msg)
+          }
+        ),
+        error = function(e) {
+          showNotification(conditionMessage(e), type = "error", duration = 10)
+          NULL
+        }
+      )
+    })
+    if (is.null(res)) return()
+    judgment_results(res)
+    judgment_last_msg(sprintf("完成：共 %d 筆（標的公司：%s）", nrow(res), target))
+    showNotification(
+      if (nrow(res)) sprintf("判決書分析完成（%d 筆）", nrow(res)) else "查無符合條件之判決書",
+      type = if (nrow(res)) "message" else "warning"
+    )
+  }, ignoreInit = TRUE)
+
+  output$judgment_status_box <- renderUI({
+    msg <- judgment_last_msg()
+    if (!nzchar(msg)) msg <- "尚未執行查詢"
+    tags$div(class = "small text-muted pt-4", msg)
+  })
+
+  output$judgment_table <- renderDT({
+    df <- judgment_results()
+    if (!nrow(df)) {
+      return(datatable(
+        empty_judgment_results_frame(),
+        rownames = FALSE, width = "100%",
+        options = dt_loading_opts(
+          pageLength = 10,
+          ordering = FALSE,
+          emptyTable = "尚無結果；請設定查詢條件後按「開始爬取並分析」。"
+        )
+      ))
+    }
+    show <- df[, setdiff(names(df), "全文"), drop = FALSE]
+    datatable(
+      show, rownames = FALSE, width = "100%",
+      options = dt_loading_opts(pageLength = 10, scrollX = TRUE, ordering = FALSE),
+      escape = FALSE
+    )
+  })
+
+  output$download_judgment <- downloadHandler(
+    filename = function() {
+      co <- trimws(input$judgment_target_company %||% input$company %||% "公司")
+      sprintf("判決書分析_%s_%s.xlsx", co, format(Sys.Date(), "%Y%m%d"))
+    },
+    content = function(file) {
+      df <- judgment_results()
+      if (!nrow(df)) stop("尚無判決書分析結果可下載")
+      target <- trimws(input$judgment_target_company %||% input$company %||% "")
+      with_loading(
+        write_judgment_xlsx(df, judgment_collect_params(), target_company = target, path = file)
+      )
+    }
+  )
+
   # RCM / worksheets (訪談問項、自我評估測試步驟)
   output$rcm_table <- renderDT({
     df <- rcm_display_df()
@@ -4409,6 +4610,7 @@ server <- function(input, output, session) {
     )
     n_param <- nrow(param_store())
     pbc_view_n <- tryCatch(nrow(pbc_table_view()), error = function(e) 0L)
+    judgment_n <- tryCatch(nrow(judgment_results()), error = function(e) 0L)
 
     gate <- function(id, ok, tip_off) {
       set_action_button(session, id, ok, if (isTRUE(ok)) "" else tip_off)
@@ -4454,6 +4656,7 @@ server <- function(input, output, session) {
     gate("pbc_delete", admin && pbc_row,
          if (!admin) "需高權登入" else "請先選取 PBC 列")
     gate("download_pbc_samples", pbc_view_n > 0L, "目前表內無 PBC 可匯出")
+    gate("download_judgment", judgment_n > 0L, "尚無判決書分析結果可下載")
 
     # 下載（無資料時不可按）
     gate("download_interview", iv_n > 0L, "尚無訪談題綱可下載")

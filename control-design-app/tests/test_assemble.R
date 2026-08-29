@@ -16,6 +16,7 @@ source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm.R"), local = TRUE)
 source(file.path(root, "R", "csa.R"), local = TRUE)
+source(file.path(root, "R", "judgment_crawler.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
@@ -1251,13 +1252,13 @@ miss_dl <- setdiff(dl_ids, dlh_ids)
 check(!length(miss_btn), sprintf("全部 actionButton 有 observeEvent（缺：%s）", paste(miss_btn, collapse = ",")))
 check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺：%s）", paste(miss_dl, collapse = ",")))
 check(length(btn_ids) >= 16, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
-check(length(dl_ids) >= 5, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
+check(length(dl_ids) >= 6, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
 
 # 選項列順序與名稱
 nav_titles <- regmatches(app_src, gregexpr('nav_panel\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]]
 nav_titles <- sub('nav_panel\\(\\s*"([^"]+)".*', "\\1", nav_titles, perl = TRUE)
 nav_titles <- nav_titles[!nav_titles %in% c("① 基礎設定", "② 風險辨識", "③ 控制設計")]
-expect_nav <- c("首頁", "訪談問項設計", "風險控制點設計", "控制點測試設計",
+expect_nav <- c("首頁", "判決書查詢", "訪談問項設計", "風險控制點設計", "控制點測試設計",
                 "RCM", "PBC資料庫", "範本庫", "參數庫")
 check(identical(nav_titles, expect_nav),
       sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
@@ -1858,6 +1859,7 @@ locale_scan_files <- c(
   file.path(root, "app.R"),
   file.path(root, "R", "rcm.R"),
   file.path(root, "R", "csa.R"),
+  file.path(root, "R", "judgment_crawler.R"),
   file.path(root, "R", "cascade.R"),
   file.path(root, "R", "00_constants.R"),
   file.path(root, "data", "jinglian_it_rcm_batch.json")
@@ -1871,6 +1873,42 @@ for (fp in locale_scan_files) {
   }
 }
 check(!length(locale_hits), sprintf("用語僅台灣／美式專有名詞（違規：%s）", paste(locale_hits, collapse = ",")))
+
+# Judgment crawler: parse / summarize / impact / xlsx
+fix_list_html <- paste(readLines(
+  file.path(root, "tests/fixtures/judgment_result_list.html"),
+  encoding = "UTF-8", warn = FALSE
+), collapse = "\n")
+links <- judgment_parse_result_links(fix_list_html)
+check(nrow(links) >= 2L, "判決書結果列表解析")
+fix_detail_html <- paste(readLines(
+  file.path(root, "tests/fixtures/judgment_detail.html"),
+  encoding = "UTF-8", warn = FALSE
+), collapse = "\n")
+detail <- judgment_parse_detail(fix_detail_html)
+check(grepl("駁回", detail$裁判主文 %||% ""), "判決主文擷取")
+summary <- judgment_summarize(detail, "甲公司")
+impact <- judgment_assess_financial_impact(summary, detail$全文, "甲公司")
+check(impact$財務營運影響等級 %in% JUDGMENT_IMPACT_LEVELS, "財務影響等級合法")
+check(impact$財務營運影響等級 %in% c("高", "中"), "掏空／背信應判中高影響")
+tmp_jud_xlsx <- tempfile(fileext = ".xlsx")
+write_judgment_xlsx(
+  data.frame(序號 = 1L, 查詢標的公司 = "甲公司", 裁判字號 = "測試", 內容摘要 = summary,
+             財務營運影響等級 = impact$財務營運影響等級, 影響分數 = impact$影響分數,
+             影響分析說明 = impact$影響分析說明, 命中關鍵字 = impact$命中關鍵字,
+             全文 = detail$全文, check.names = FALSE, stringsAsFactors = FALSE),
+  list(jud_kw = "掏空"), "甲公司", tmp_jud_xlsx
+)
+check(file.exists(tmp_jud_xlsx) && file.info(tmp_jud_xlsx)$size > 100L, "判決書 xlsx 匯出")
+check(
+  grepl(
+    'nav_panel\\(\\s*"首頁"[\\s\\S]*nav_panel\\(\\s*"判決書查詢"[\\s\\S]*nav_panel\\(\\s*"訪談問項設計"',
+    app_txt, perl = TRUE
+  ),
+  "判決書分頁在首頁與訪談之間"
+)
+check(grepl("judgment_crawler\\.R", app_txt) && grepl("JUDGMENT_COURT_CHOICES", app_txt),
+      "app 載入判決書爬蟲模組")
 
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")

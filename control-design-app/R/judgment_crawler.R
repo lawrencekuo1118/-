@@ -107,8 +107,8 @@ judgment_validate_params <- function(params) {
     params$jud_year, params$jud_case, params$jud_no, params$jud_no_end
   ))))
   if (nzchar(result_url)) {
-    max_n <- suppressWarnings(as.integer(params$max_results %||% 20L))
-    if (is.na(max_n) || max_n < 1L) max_n <- 20L
+    max_n <- suppressWarnings(as.integer(params$max_results %||% 30L))
+    if (is.na(max_n) || max_n < 1L) max_n <- 30L
     if (max_n > 100L) msgs <- c(msgs, "單次最多抓取 100 筆（司法院單次查詢上限 500 筆）")
     return(list(
       ok = !length(msgs),
@@ -123,8 +123,8 @@ judgment_validate_params <- function(params) {
   if (grepl("(^[\\+\\-&\\)])|([\\+\\-&\\(]$)", kw, perl = TRUE)) {
     msgs <- c(msgs, "全文檢索字詞首尾不可為 + - & ( )")
   }
-  max_n <- suppressWarnings(as.integer(params$max_results %||% 20L))
-  if (is.na(max_n) || max_n < 1L) max_n <- 20L
+  max_n <- suppressWarnings(as.integer(params$max_results %||% 30L))
+  if (is.na(max_n) || max_n < 1L) max_n <- 30L
   if (max_n > 100L) msgs <- c(msgs, "單次最多抓取 100 筆（司法院單次查詢上限 500 筆）")
   list(
     ok = !length(msgs),
@@ -435,7 +435,7 @@ judgment_search_submit <- function(params) {
   list(html = post$html, max_results = chk$max_results)
 }
 
-judgment_fetch_result_list <- function(search_html, max_results = 20L) {
+judgment_fetch_result_list <- function(search_html, max_results = 30L) {
   links <- judgment_parse_result_links(search_html)
   if (!nrow(links)) {
     # 可能包在 iframe：再抓 qryresultlst

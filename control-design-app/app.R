@@ -908,7 +908,7 @@ ui <- page_navbar(
                ))
       ),
       fluidRow(
-        column(6, numericInput("judgment_max_results", "抓取筆數上限", value = 20,
+        column(6, numericInput("judgment_max_results", "抓取筆數上限（最近期）", value = 30,
                                min = 1, max = 100, step = 1)),
         column(6, uiOutput("judgment_status_box"))
       ),

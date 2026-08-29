@@ -14,7 +14,8 @@ if (!file.exists(file.path(root, "R", "library.R"))) {
 source(file.path(root, "R", "00_constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
 source(file.path(root, "R", "objective_activity.R"), local = TRUE)
-source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
+source(file.path(root, "R", "rcm.R"), local = TRUE)
+source(file.path(root, "R", "csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 
 tpl_dir <- file.path(root, "templates")

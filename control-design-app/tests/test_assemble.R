@@ -14,7 +14,8 @@ source(file.path(root, "R", "00_constants.R"), local = TRUE)
 source(file.path(root, "R", "assemble.R"), local = TRUE)
 source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
-source(file.path(root, "R", "rcm_csa.R"), local = TRUE)
+source(file.path(root, "R", "rcm.R"), local = TRUE)
+source(file.path(root, "R", "csa.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
@@ -467,7 +468,7 @@ check(!grepl("interview_source", app_txt) &&
         !grepl("① 題綱來源", app_txt) &&
         !grepl("已定稿 RCM（實際設計列）", app_txt) &&
         !grepl("範本庫預期（風險／目標／活動）", app_txt) &&
-        !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm_csa.R"), encoding = "UTF-8"), collapse = "\n")) &&
+        !grepl("INTERVIEW_SOURCE_CHOICES", paste(readLines(file.path(root, "R/rcm.R"), encoding = "UTF-8"), collapse = "\n")) &&
         !grepl("interview_cycle", app_txt) &&
         grepl("interview_risk_pick", app_txt) &&
         grepl("interview_control_pick", app_txt) &&
@@ -1855,7 +1856,8 @@ banned_locale <- c(
 )
 locale_scan_files <- c(
   file.path(root, "app.R"),
-  file.path(root, "R", "rcm_csa.R"),
+  file.path(root, "R", "rcm.R"),
+  file.path(root, "R", "csa.R"),
   file.path(root, "R", "cascade.R"),
   file.path(root, "R", "00_constants.R"),
   file.path(root, "data", "jinglian_it_rcm_batch.json")

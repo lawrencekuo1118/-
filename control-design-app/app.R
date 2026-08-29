@@ -1131,7 +1131,8 @@ ui <- page_navbar(
     "訪談問項設計",
     card(
       card_header("訪談引導（依序選取）"),
-      uiOutput("interview_status"),
+      uiOutput("interview_status_steps"),
+      textOutput("interview_status_summary"),
       uiOutput("interview_guide_banner"),
       # 循環於側邊欄；此處①子作業 → ②風險 → ③控制點
       selectInput(
@@ -1194,7 +1195,8 @@ ui <- page_navbar(
         class = "d-flex gap-1 flex-wrap mt-2",
         downloadButton("download_interview", "下載訪談題綱 CSV", class = "btn-success btn-sm")
       ),
-      uiOutput("interview_live_box")
+      uiOutput("interview_scaffold_box"),
+      textOutput("interview_worksheet_stats"),
     ),
     div(
       class = "design-preview-drawer",
@@ -2602,6 +2604,50 @@ server <- function(input, output, session) {
   # PBC／Assertions 選單快取：避免同內容反覆 update 造成跳閃
   pbc_choices_cache <- new.env(parent = emptyenv())
   assertions_ui_cache <- new.env(parent = emptyenv())
+  interview_choices_cache <- new.env(parent = emptyenv())
+
+  choice_maps_equal <- function(ch, prev_ch) {
+    identical(unname(ch), unname(prev_ch)) && identical(names(ch), names(prev_ch))
+  }
+  selection_equal <- function(sel, prev_sel) {
+    identical(as.character(sel), as.character(prev_sel))
+  }
+  update_interview_selectize <- function(input_id, ch, sel) {
+    prev <- interview_choices_cache[[input_id]] %||% list(ch = NULL, sel = NULL)
+    if (choice_maps_equal(ch, prev$ch) && selection_equal(sel, prev$sel)) {
+      return(invisible(NULL))
+    }
+    interview_choices_cache[[input_id]] <- list(ch = ch, sel = sel)
+    updateSelectizeInput(session, input_id, choices = ch, selected = sel)
+  }
+  update_interview_sub_choices <- function(ch, sel) {
+    prev <- interview_choices_cache[["interview_sub"]] %||% list(ch = NULL, sel = NULL)
+    if (choice_maps_equal(ch, prev$ch) && selection_equal(sel, prev$sel)) {
+      return(invisible(NULL))
+    }
+    interview_choices_cache[["interview_sub"]] <- list(ch = ch, sel = sel)
+    updateSelectInput(session, "interview_sub", choices = ch, selected = sel)
+  }
+  clear_interview_choices_cache <- function() {
+    for (id in c("interview_sub", "interview_risk_pick", "interview_control_pick")) {
+      interview_choices_cache[[id]] <- NULL
+    }
+  }
+  refresh_interview_control_pick <- function(scoped, sel_risk) {
+    empty_iv <- stats::setNames("", "（請先選子作業）")
+    if (!length(scoped)) {
+      update_interview_selectize("interview_control_pick", empty_iv, character())
+      return(invisible(NULL))
+    }
+    ch_ctrl <- interview_control_choices(
+      filter_interview_controls_by_risk(scoped, sel_risk)
+    )
+    cur_ctrl <- isolate(input$interview_control_pick %||% character())
+    update_interview_selectize(
+      "interview_control_pick", ch_ctrl,
+      intersect(cur_ctrl, unname(ch_ctrl))
+    )
+  }
 
   refresh_pbc_choices <- function() {
     cy <- isolate(input$cycle %||% "")
@@ -2680,25 +2726,23 @@ server <- function(input, output, session) {
     )
   }
 
-  output$interview_live_box <- renderUI({
-    iv <- interview_worksheet()
+  output$interview_scaffold_box <- renderUI({
     mods <- input$interview_5w1h %||% character()
     sc <- if (length(mods)) {
       interview_answer_scaffold(mods)
     } else {
       "（尚未勾選 5W1H 模組；請於下方「5W1H／PBC」勾選）"
     }
-    tagList(
-      tags$div(
-        class = "small border rounded p-2 mb-2 bg-light",
-        tags$strong("5W1H 回答鏈（人事時地物）："),
-        tags$span(class = "ms-1", sc)
-      ),
-      tags$div(
-        class = "small text-muted",
-        sprintf("題綱列數：%d｜5W1H 模組：%d", nrow(iv), length(mods))
-      )
+    tags$div(
+      class = "small border rounded p-2 mb-2 bg-light",
+      tags$strong("5W1H 回答鏈（人事時地物）："),
+      tags$span(class = "ms-1", sc)
     )
+  })
+  output$interview_worksheet_stats <- renderText({
+    iv <- interview_worksheet()
+    mods <- input$interview_5w1h %||% DEFAULT_INTERVIEW_5W1H
+    sprintf("題綱列數：%d｜5W1H 模組：%d", nrow(iv), length(mods))
   })
 
   output$interview_guide_banner <- renderUI({
@@ -2853,15 +2897,22 @@ server <- function(input, output, session) {
   interview_sub_ui_state <- new.env(parent = emptyenv())
   interview_sub_ui_state$cycle <- NULL
 
+  interview_scoped_controls <- reactive({
+    filter_controls_by_cycle_sub(
+      interview_pool_controls(),
+      cycle = input$cycle %||% "",
+      sub_key = input$interview_sub %||% ""
+    )
+  })
+
   observe({
     cy <- input$cycle %||% ""
     lib_revision()
     if (!nzchar(cy)) {
       interview_sub_ui_state$cycle <- ""
-      updateSelectInput(
-        session, "interview_sub",
-        choices = c("① 請先於側邊欄選擇循環…" = ""),
-        selected = ""
+      update_interview_sub_choices(
+        c("① 請先於側邊欄選擇循環…" = ""),
+        ""
       )
       return()
     }
@@ -2881,44 +2932,33 @@ server <- function(input, output, session) {
     } else {
       ""
     }
-    updateSelectInput(
-      session, "interview_sub",
-      choices = c(stats::setNames("", label0), ch_sub),
-      selected = sel
-    )
+    update_interview_sub_choices(c(stats::setNames("", label0), ch_sub), sel)
   })
 
   observe({
-    pool <- interview_pool_controls()
-    scoped <- filter_controls_by_cycle_sub(
-      pool,
-      cycle = input$cycle %||% "",
-      sub_key = input$interview_sub %||% ""
-    )
+    input$cycle
+    input$interview_sub
+    lib_revision()
+    scoped <- interview_scoped_controls()
+    empty_iv <- stats::setNames("", "（請先選子作業）")
     if (!length(scoped)) {
-      empty_iv <- stats::setNames("", "（請先選子作業）")
-      updateSelectizeInput(session, "interview_risk_pick", choices = empty_iv,
-                           selected = character())
-      updateSelectizeInput(session, "interview_control_pick", choices = empty_iv,
-                           selected = character())
+      update_interview_selectize("interview_risk_pick", empty_iv, character())
+      update_interview_selectize("interview_control_pick", empty_iv, character())
       return()
     }
     ch_risk <- interview_risk_choices(scoped)
-    cur_risk <- input$interview_risk_pick %||% character()
+    cur_risk <- isolate(input$interview_risk_pick %||% character())
     sel_risk <- intersect(cur_risk, unname(ch_risk))
-    updateSelectizeInput(
-      session, "interview_risk_pick",
-      choices = ch_risk, selected = sel_risk
-    )
-    ctrl_pool <- filter_interview_controls_by_risk(scoped, sel_risk)
-    ch_ctrl <- interview_control_choices(ctrl_pool)
-    cur_ctrl <- input$interview_control_pick %||% character()
-    updateSelectizeInput(
-      session, "interview_control_pick",
-      choices = ch_ctrl,
-      selected = intersect(cur_ctrl, unname(ch_ctrl))
-    )
+    update_interview_selectize("interview_risk_pick", ch_risk, sel_risk)
+    refresh_interview_control_pick(scoped, sel_risk)
   })
+
+  observeEvent(input$interview_risk_pick, {
+    scoped <- interview_scoped_controls()
+    if (!length(scoped)) return()
+    sel_risk <- input$interview_risk_pick %||% character()
+    refresh_interview_control_pick(scoped, sel_risk)
+  }, ignoreInit = TRUE)
 
   observe({
     input$cycle
@@ -4667,6 +4707,7 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "interview_5w1h", selected = DEFAULT_INTERVIEW_5W1H)
   })
   observeEvent(input$ws_reset_iv, {
+    clear_interview_choices_cache()
     updateSelectInput(session, "interview_sub", selected = "")
     interview_sub_ui_state$cycle <- NULL
     updateSelectizeInput(session, "interview_risk_pick", selected = character())
@@ -4678,14 +4719,7 @@ server <- function(input, output, session) {
   observeEvent(input$ws_select_core_csa, {
     updateCheckboxGroupInput(session, "csa_elements", selected = DEFAULT_CSA_ELEMENTS)
   })
-  output$interview_status <- renderUI({
-    pool <- interview_pool_controls()
-    scoped <- filter_controls_by_cycle_sub(
-      pool,
-      cycle = input$cycle %||% "",
-      sub_key = input$interview_sub %||% ""
-    )
-    iv <- interview_worksheet()
+  output$interview_status_steps <- renderUI({
     steps <- c(
       sprintf("循環（側邊欄）：%s", if (nzchar(input$cycle %||% "")) "✓" else "○"),
       sprintf("①子作業：%s", if (nzchar(input$interview_sub %||% "")) "✓" else "○"),
@@ -4706,6 +4740,7 @@ server <- function(input, output, session) {
         tags$small(class = "text-muted", "請選①子作業（內建建議已就緒）。")
       ))
     }
+    scoped <- interview_scoped_controls()
     if (!length(scoped)) {
       return(tagList(
         tags$small(class = "text-muted", paste(steps, collapse = "｜")),
@@ -4714,14 +4749,16 @@ server <- function(input, output, session) {
                    "此子作業尚無建議列；可改選其他子作業，或至「風險控制點設計」新增後再訪談。")
       ))
     }
-    tagList(
-      tags$small(class = "text-muted", paste(steps, collapse = "｜")),
-      tags$br(),
-      tags$small(
-        class = "text-muted",
-        sprintf("%d 點 → 訪談問項 %d 則｜人事時地物回答架構", length(scoped), nrow(iv))
-      )
-    )
+    tags$small(class = "text-muted", paste(steps, collapse = "｜"))
+  })
+  output$interview_status_summary <- renderText({
+    if (!nzchar(input$cycle %||% "") || !nzchar(input$interview_sub %||% "")) {
+      return("")
+    }
+    scoped <- interview_scoped_controls()
+    if (!length(scoped)) return("")
+    iv <- interview_worksheet()
+    sprintf("%d 點 → 訪談問項 %d 則｜人事時地物回答架構", length(scoped), nrow(iv))
   })
   output$csa_status <- renderUI({
     cs <- selected_worksheet_controls_sa()

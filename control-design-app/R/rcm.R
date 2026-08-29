@@ -79,17 +79,67 @@ INTERVIEW_ANSWER_SCAFFOLD <- paste0(
   "才會進行什麼下一步"
 )
 
+# 5W1H 訪談面向（固定順序：HOW 起首；UI 以輸入欄取代勾選）
+INTERVIEW_5W1H_FIELD_ORDER <- c(
+  "how", "what", "when", "who", "where", "next_step"
+)
+
+INTERVIEW_5W1H_FIELD_LABELS <- c(
+  how = "HOW",
+  what = "WHAT",
+  when = "WHEN",
+  who = "WHO",
+  where = "WHERE",
+  next_step = "NEXT"
+)
+
+INTERVIEW_5W1H_DEFAULT_PROMPTS <- c(
+  how = "請問貴公司如何因應XX風險？",
+  what = "具體因應做法為何？",
+  when = "何時會發生且頻率如何？",
+  who = "由誰執行、由誰覆核？",
+  where = "在何處／哪個系統執行？",
+  next_step = "完成後的下一步／產出為何？"
+)
+
 # 可勾選之 5W1H 模組（拼湊組建；預設組合成上列鏈；What 可串 PBC）
 INTERVIEW_5W1H_MODULES <- c(
-  when = "以何頻率",
-  where = "在何處／哪個系統",
-  who = "誰（執行／覆核）",
-  what = "取得什麼文件或資訊(IUC)",
   how = "做什麼（具體控制行為）",
+  what = "取得什麼文件或資訊(IUC)",
+  when = "以何頻率",
+  who = "誰（執行／覆核）",
+  where = "在何處／哪個系統",
   next_step = "才會進行什麼下一步"
 )
 
-DEFAULT_INTERVIEW_5W1H <- names(INTERVIEW_5W1H_MODULES)
+DEFAULT_INTERVIEW_5W1H <- INTERVIEW_5W1H_FIELD_ORDER
+
+interview_5w1h_input_id <- function(key) {
+  paste0("interview_5w1h_", key)
+}
+
+format_interview_5w1h_prompt <- function(text, risk_label = "該") {
+  out <- trimws(as.character(text %||% ""))
+  if (!nzchar(out)) return("")
+  risk_label <- trimws(as.character(risk_label %||% "該"))
+  if (!nzchar(risk_label)) risk_label <- "該"
+  out <- gsub("XX", risk_label, out, fixed = TRUE)
+  if (grepl("%s", out, fixed = TRUE)) out <- sprintf(out, risk_label)
+  out
+}
+
+interview_5w1h_prompts_from_values <- function(values, risk_label = "該") {
+  vals <- values %||% list()
+  out <- character()
+  for (key in INTERVIEW_5W1H_FIELD_ORDER) {
+    raw <- trimws(as.character(vals[[interview_5w1h_input_id(key)]] %||% ""))
+    if (!nzchar(raw)) {
+      raw <- INTERVIEW_5W1H_DEFAULT_PROMPTS[[key]] %||% ""
+    }
+    out[[key]] <- format_interview_5w1h_prompt(raw, risk_label)
+  }
+  out
+}
 
 # 各模組對應之獨立探針題（可依勾選拼湊成題綱列）
 INTERVIEW_5W1H_PROBE_LABELS <- c(
@@ -103,7 +153,8 @@ INTERVIEW_5W1H_PROBE_LABELS <- c(
 
 interview_5w1h_module_order <- function(modules) {
   mods <- as.character(modules %||% character())
-  names(INTERVIEW_5W1H_MODULES)[names(INTERVIEW_5W1H_MODULES) %in% mods]
+  if (!length(mods)) return(character())
+  INTERVIEW_5W1H_FIELD_ORDER[INTERVIEW_5W1H_FIELD_ORDER %in% mods]
 }
 
 # ---- RCM 範本欄位（Internal Control Lab 範本_RCM；多餘欄排除；缺值＝NA）----
@@ -601,7 +652,7 @@ interview_module_probe_suffix <- function(key) {
 
 # 依勾選模組順序拼湊探針題（可串 PBC 於 what）
 interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
-                                      pbc_hint = "") {
+                                      pbc_hint = "", custom_prompts = NULL) {
   mods <- interview_5w1h_module_order(modules)
   if (!length(mods)) return(list())
   act <- nzchar_or(ctrl$control_activity, "該控制活動")
@@ -615,53 +666,79 @@ interview_5w1h_probe_bank <- function(ctrl, modules = DEFAULT_INTERVIEW_5W1H,
   outp <- nzchar_or(ctrl$related_document %||% ctrl$outputs, "簽核／軌跡")
   pbc_txt <- trimws(as.character(pbc_hint %||% ""))
   if (!nzchar(pbc_txt)) pbc_txt <- "（請自 PBC 資料庫選取）"
+  use_custom <- !is.null(custom_prompts) && length(custom_prompts)
+  custom_prompt_text <- function(key) {
+    if (!isTRUE(use_custom)) return("")
+    if (is.null(custom_prompts) || !length(custom_prompts)) return("")
+    nm <- names(custom_prompts)
+    if (is.null(nm) || !key %in% nm) return("")
+    trimws(as.character(custom_prompts[[key]]))
+  }
   probes <- list(
-    when = list(
-      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["when"]]),
-      question = sprintf(
-        "【以何頻率】就預期活動「%s」（對應風險「%s」）：實際以何頻率／何時執行？設計頻率「%s」是否一致？",
-        act, risk_label, freq
-      ),
-      evidence = "簽核紀錄／系統 log／排程"
-    ),
-    where = list(
-      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["where"]]),
-      question = sprintf(
-        "【在何處／哪個系統】就「%s／%s」活動「%s」：實際在哪個系統、場域或通路執行？設計相關系統「%s」。",
-        sub_nm, owner, act, sys
-      ),
-      evidence = "系統清單／場域說明／流程圖"
-    ),
-    who = list(
-      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["who"]]),
-      question = sprintf(
-        "【誰】「%s」由「%s」的誰執行、誰覆核？有無代理／交接？",
-        act, owner
-      ),
-      evidence = "權責表／簽核軌跡"
+    how = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["how"]]),
+      question = {
+        custom_q <- custom_prompt_text("how")
+        if (nzchar(custom_q)) custom_q else sprintf(
+          "【做什麼（具體控制行為）】為達成目標「%s」，實際做哪些具體步驟／判斷／比對？",
+          obj
+        )
+      },
+      evidence = "操作示範／逐步軌跡"
     ),
     what = list(
       element = unname(INTERVIEW_5W1H_PROBE_LABELS[["what"]]),
-      question = sprintf(
-        "【取得什麼文件或資訊(IUC)】執行時取得哪些文件／系統資訊？設計 IUC「%s」。請對照 PBC 資料庫：%s",
-        iuc, pbc_txt
-      ),
+      question = {
+        custom_q <- custom_prompt_text("what")
+        if (nzchar(custom_q)) custom_q else sprintf(
+          "【取得什麼文件或資訊(IUC)】執行時取得哪些文件／系統資訊？設計 IUC「%s」。請對照 PBC 資料庫：%s",
+          iuc, pbc_txt
+        )
+      },
       evidence = paste(iuc, pbc_txt, sep = "；")
     ),
-    how = list(
-      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["how"]]),
-      question = sprintf(
-        "【做什麼（具體控制行為）】為達成目標「%s」，實際做哪些具體步驟／判斷／比對？",
-        obj
-      ),
-      evidence = "操作示範／逐步軌跡"
+    when = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["when"]]),
+      question = {
+        custom_q <- custom_prompt_text("when")
+        if (nzchar(custom_q)) custom_q else sprintf(
+          "【以何頻率】就預期活動「%s」（對應風險「%s」）：實際以何頻率／何時執行？設計頻率「%s」是否一致？",
+          act, risk_label, freq
+        )
+      },
+      evidence = "簽核紀錄／系統 log／排程"
+    ),
+    who = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["who"]]),
+      question = {
+        custom_q <- custom_prompt_text("who")
+        if (nzchar(custom_q)) custom_q else sprintf(
+          "【誰】「%s」由「%s」的誰執行、誰覆核？有無代理／交接？",
+          act, owner
+        )
+      },
+      evidence = "權責表／簽核軌跡"
+    ),
+    where = list(
+      element = unname(INTERVIEW_5W1H_PROBE_LABELS[["where"]]),
+      question = {
+        custom_q <- custom_prompt_text("where")
+        if (nzchar(custom_q)) custom_q else sprintf(
+          "【在何處／哪個系統】就「%s／%s」活動「%s」：實際在哪個系統、場域或通路執行？設計相關系統「%s」。",
+          sub_nm, owner, act, sys
+        )
+      },
+      evidence = "系統清單／場域說明／流程圖"
     ),
     next_step = list(
       element = unname(INTERVIEW_5W1H_PROBE_LABELS[["next_step"]]),
-      question = sprintf(
-        "【才會進行什麼下一步】完成「%s」後產出／交付給誰、例外如何關閉？預期產出「%s」。",
-        act, outp
-      ),
+      question = {
+        custom_q <- custom_prompt_text("next_step")
+        if (nzchar(custom_q)) custom_q else sprintf(
+          "【才會進行什麼下一步】完成「%s」後產出／交付給誰、例外如何關閉？預期產出「%s」。",
+          act, outp
+        )
+      },
       evidence = outp
     )
   )
@@ -954,13 +1031,15 @@ interview_preview_df <- function(df) {
 control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
                                  modules = DEFAULT_INTERVIEW_5W1H,
                                  pbc_reg = NULL,
-                                 include_module_rows = TRUE) {
+                                 include_module_rows = TRUE,
+                                 custom_5w1h_prompts = NULL) {
   bank <- interview_element_bank(ctrl, modules = modules)
   elements <- intersect(as.character(elements %||% character()), names(bank))
   mods <- interview_5w1h_module_order(modules)
   cid <- derive_control_id(ctrl, 1L)
   scaffold <- interview_answer_scaffold(mods)
   pbc_hint <- suggest_interview_pbc(ctrl, pbc_reg)
+  use_custom_5w1h <- !is.null(custom_5w1h_prompts) && length(custom_5w1h_prompts)
   meta <- list(
     `控制編號` = cid,
     `循環` = ctrl$cycle %||% "",
@@ -1005,9 +1084,17 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
     )
   }
   if (isTRUE(include_module_rows) && length(mods)) {
-    probes <- interview_5w1h_probe_bank(ctrl, modules = mods, pbc_hint = pbc_hint)
+    probes <- interview_5w1h_probe_bank(
+      ctrl, modules = mods, pbc_hint = pbc_hint,
+      custom_prompts = custom_5w1h_prompts
+    )
     for (key in names(probes)) {
       item <- probes[[key]]
+      q_text <- if (isTRUE(use_custom_5w1h)) {
+        item$question
+      } else {
+        paste0(item$question, interview_module_probe_suffix(key))
+      }
       rows[[length(rows) + 1L]] <- data.frame(
         `控制編號` = meta$`控制編號`,
         `循環` = meta$`循環`,
@@ -1018,7 +1105,7 @@ control_to_interview <- function(ctrl, elements = DEFAULT_INTERVIEW_ELEMENTS,
         `題號` = length(rows) + 1L,
         `元素` = item$element,
         element_key = paste0("5w1h_", key),
-        `訪談問題` = paste0(item$question, interview_module_probe_suffix(key)),
+        `訪談問題` = q_text,
         `回答架構_5W1H` = scaffold,
         `設計摘要` = INTERVIEW_5W1H_MODULES[[key]],
         `預期佐證_PBC` = item$evidence %||% "",
@@ -1040,7 +1127,8 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
                                   finalized_only = TRUE,
                                   modules = DEFAULT_INTERVIEW_5W1H,
                                   pbc_reg = NULL,
-                                  include_module_rows = TRUE) {
+                                  include_module_rows = TRUE,
+                                  custom_5w1h_prompts = NULL) {
   if (!length(controls)) return(empty_interview_df())
   if (isTRUE(finalized_only)) {
     controls <- Filter(is_control_finalized_for_rcm, controls)
@@ -1049,7 +1137,8 @@ controls_to_interview <- function(controls, elements = DEFAULT_INTERVIEW_ELEMENT
   do.call(rbind, lapply(controls, control_to_interview,
                         elements = elements, modules = modules,
                         pbc_reg = pbc_reg,
-                        include_module_rows = include_module_rows))
+                        include_module_rows = include_module_rows,
+                        custom_5w1h_prompts = custom_5w1h_prompts))
 }
 
 

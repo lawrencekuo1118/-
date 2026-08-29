@@ -57,7 +57,7 @@ button_interaction_registry <- function() {
       title = "訪談問項設計",
       rows = list(
         list(id = "ws_select_core_iv", label = "深入且快速", page = "訪談",
-             prereq = "—", effect = "勾選核心訪談元素＋5W1H", gate = "無"),
+             prereq = "—", effect = "勾選核心訪談元素並還原 5W1H 問句", gate = "無"),
         list(id = "ws_select_full_iv", label = "完整走查", page = "訪談",
              prereq = "—", effect = "勾選完整元素（含 Walkthrough 額外項）", gate = "無"),
         list(id = "ws_reset_iv", label = "重設訪談選取", page = "訪談",

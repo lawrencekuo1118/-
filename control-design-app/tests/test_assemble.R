@@ -16,6 +16,8 @@ source(file.path(root, "R", "objective_activity.R"), local = TRUE)
 source(file.path(root, "R", "pbc_registry.R"), local = TRUE)
 source(file.path(root, "R", "rcm.R"), local = TRUE)
 source(file.path(root, "R", "csa.R"), local = TRUE)
+source(file.path(root, "R", "judgment_crawler.R"), local = TRUE)
+source(file.path(root, "R", "judgment_rules.R"), local = TRUE)
 source(file.path(root, "R", "library.R"), local = TRUE)
 source(file.path(root, "R", "cascade.R"), local = TRUE)
 source(file.path(root, "R", "parameter_store.R"), local = TRUE)
@@ -1251,13 +1253,13 @@ miss_dl <- setdiff(dl_ids, dlh_ids)
 check(!length(miss_btn), sprintf("全部 actionButton 有 observeEvent（缺：%s）", paste(miss_btn, collapse = ",")))
 check(!length(miss_dl), sprintf("全部 downloadButton 有 downloadHandler（缺：%s）", paste(miss_dl, collapse = ",")))
 check(length(btn_ids) >= 16, sprintf("設計頁按鈕數量合理（實際 %d）", length(btn_ids)))
-check(length(dl_ids) >= 5, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
+check(length(dl_ids) >= 6, sprintf("下載按鈕數量合理（實際 %d）", length(dl_ids)))
 
 # 選項列順序與名稱
 nav_titles <- regmatches(app_src, gregexpr('nav_panel\\(\\s*"([^"]+)"', app_src, perl = TRUE))[[1]]
 nav_titles <- sub('nav_panel\\(\\s*"([^"]+)".*', "\\1", nav_titles, perl = TRUE)
 nav_titles <- nav_titles[!nav_titles %in% c("① 基礎設定", "② 風險辨識", "③ 控制設計")]
-expect_nav <- c("首頁", "訪談問項設計", "風險控制點設計", "控制點測試設計",
+expect_nav <- c("首頁", "判決書查詢", "訪談問項設計", "風險控制點設計", "控制點測試設計",
                 "RCM", "PBC資料庫", "範本庫", "參數庫")
 check(identical(nav_titles, expect_nav),
       sprintf("選項列順序正確（實際：%s）", paste(nav_titles, collapse = "｜")))
@@ -1858,6 +1860,8 @@ locale_scan_files <- c(
   file.path(root, "app.R"),
   file.path(root, "R", "rcm.R"),
   file.path(root, "R", "csa.R"),
+  file.path(root, "R", "judgment_crawler.R"),
+  file.path(root, "R", "judgment_rules.R"),
   file.path(root, "R", "cascade.R"),
   file.path(root, "R", "00_constants.R"),
   file.path(root, "data", "jinglian_it_rcm_batch.json")
@@ -1871,6 +1875,99 @@ for (fp in locale_scan_files) {
   }
 }
 check(!length(locale_hits), sprintf("用語僅台灣／美式專有名詞（違規：%s）", paste(locale_hits, collapse = ",")))
+
+# Judgment crawler: parse / summarize / impact / xlsx
+fix_list_html <- paste(readLines(
+  file.path(root, "tests/fixtures/judgment_result_list.html"),
+  encoding = "UTF-8", warn = FALSE
+), collapse = "\n")
+links <- judgment_parse_result_links(fix_list_html)
+check(nrow(links) >= 2L, "判決書結果列表解析")
+fix_detail_html <- paste(readLines(
+  file.path(root, "tests/fixtures/judgment_detail.html"),
+  encoding = "UTF-8", warn = FALSE
+), collapse = "\n")
+detail <- judgment_parse_detail(fix_detail_html)
+check(grepl("駁回", detail$裁判主文 %||% ""), "判決主文擷取")
+summary <- judgment_summarize(detail, "甲公司")
+impact <- judgment_rules_assess(summary, detail$全文, "甲公司", data_dir = file.path(root, "data"))
+check(impact$財務營運影響等級 %in% JUDGMENT_IMPACT_LEVELS, "財務影響等級合法")
+check(impact$財務營運影響等級 %in% c("高", "中"), "掏空／背信應判中高影響")
+check(nzchar(impact$裁判分析結論 %||% ""), "規則引擎產出裁判分析結論")
+tmp_jud_xlsx <- tempfile(fileext = ".xlsx")
+write_judgment_xlsx(
+  data.frame(序號 = 1L, 查詢標的公司 = "甲公司", 裁判字號 = "測試", 內容摘要 = summary,
+             財務營運影響等級 = impact$財務營運影響等級, 影響分數 = impact$影響分數,
+             影響分析說明 = impact$影響分析說明, 命中關鍵字 = impact$命中關鍵字,
+             裁判分析結論 = impact$裁判分析結論,
+             全文 = detail$全文, check.names = FALSE, stringsAsFactors = FALSE),
+  list(jud_kw = "掏空"), "甲公司", tmp_jud_xlsx
+)
+check(file.exists(tmp_jud_xlsx) && file.info(tmp_jud_xlsx)$size > 100L, "判決書 xlsx 匯出")
+check(
+  grepl(
+    'nav_panel\\(\\s*"首頁"[\\s\\S]*nav_panel\\(\\s*"判決書查詢"[\\s\\S]*nav_panel\\(\\s*"訪談問項設計"',
+    app_txt, perl = TRUE
+  ),
+  "判決書分頁在首頁與訪談之間"
+)
+check(grepl("judgment_result_url", app_txt) && grepl("qryresultlst", app_txt),
+      "判決書分頁含查詢結果 URL 手動貼上欄位")
+check(grepl("judgment_crawler\\.R", app_txt) && grepl("JUDGMENT_COURT_CHOICES", app_txt),
+      "app 載入判決書爬蟲模組")
+url_chk <- judgment_validate_params(list(
+  result_url = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?ty=JUDBOOK",
+  max_results = 5L
+))
+check(isTRUE(url_chk$ok) && nzchar(url_chk$result_url), "查詢結果 URL 可單獨作為查詢條件")
+
+rules_seed <- judgment_rules_load(data_dir = file.path(root, "data"))
+check(length(rules_seed$rules %||% list()) >= 5L, "內建判斷規則已載入")
+hist_df <- data.frame(
+  命中關鍵字 = c("掏空、背信", "駁回"),
+  財務營運影響等級 = c("高", "低"),
+  影響分析說明 = c("涉及掏空可能影響財務", "程序終結影響低"),
+  stringsAsFactors = FALSE
+)
+learned <- judgment_learn_from_history(hist_df)
+check(length(learned$rules) >= 2L, "可從歷史分析學習規則")
+merged <- judgment_rules_merge(rules_seed, learned)
+check(length(merged$rules) >= length(rules_seed$rules), "規則合併保留既有與學習條目")
+analysis <- judgment_analyze_detail(detail, "甲公司", data_dir = file.path(root, "data"))
+check(grepl("【字號】|【主文】", analysis$內容摘要), "判斷模組產出規則摘要")
+check(nzchar(analysis$裁判分析結論 %||% ""), "判斷模組產出分析結論")
+check(grepl("judgment_learn_rules", app_txt) && grepl("judgment_rules_status", app_txt),
+      "判決書分頁含歷史學習規則 UI")
+check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
+
+cause_filters <- judgment_cause_filters_load(data_dir = file.path(root, "data"))
+check(length(cause_filters) >= 10L, "低營運影響案由規則已載入")
+traffic_detail <- list(
+  案由 = "侵權行為損害賠償(交通)",
+  案件類別 = "民事",
+  全文 = "被告駕車追撞原告機車",
+  裁判主文 = "原告之訴駁回",
+  裁判字號 = "測試交通"
+)
+traffic_excl <- judgment_cause_match_low_impact(
+  traffic_detail$案由, traffic_detail$案件類別, traffic_detail$全文,
+  data_dir = file.path(root, "data")
+)
+check(isTRUE(traffic_excl$excluded), "交通案由應排除")
+fraud_detail <- list(
+  案由 = "背信",
+  案件類別 = "刑事",
+  全文 = "被告公司掏空財務、虛增營收",
+  裁判主文 = "",
+  裁判字號 = "測試背信"
+)
+fraud_excl <- judgment_cause_match_low_impact(
+  fraud_detail$案由, fraud_detail$案件類別, fraud_detail$全文,
+  data_dir = file.path(root, "data")
+)
+check(!isTRUE(fraud_excl$excluded), "背信案由不應排除")
+check(grepl("judgment_apply_cause_exclusion", app_txt) && grepl("judgment_hide_low_impact", app_txt),
+      "判決書分頁含案由排除選項")
 
 # Fast load: persisted library JSON skips re-normalization
 lib_path <- file.path(root, "data", "control_library.json")

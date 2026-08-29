@@ -904,7 +904,7 @@ ui <- page_navbar(
                textAreaInput(
                  "judgment_result_url", "查詢結果 URL（選填）",
                  placeholder = "https://judgment.judicial.gov.tw/FJUD/qryresultlst.aspx?...",
-                 rows = 2, resize = "vertical"
+                 rows = 2, resize = "vertical", width = "100%"
                ))
       ),
       fluidRow(

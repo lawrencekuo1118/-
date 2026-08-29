@@ -622,6 +622,10 @@ ui <- page_navbar(
         .interview-risk-control-row { grid-template-columns: 1fr; }
       }
 
+      .judgment-period-row .shiny-input-container { margin-bottom: 0; width: 100%; }
+      .judgment-period-row .form-control { width: 100%; }
+      .judgment-period-sep { padding-top: 2.25rem; }
+
       /* 控制目標與聲明設定並排：等高、桌面版維持雙欄 */
       .objective-assertions-row.bslib-grid {
         display: grid !important;
@@ -956,14 +960,27 @@ ui <- page_navbar(
         tags$tr(
           tags$th("裁判期間"),
           tags$td(
-            fluidRow(
-              column(2, textInput("judgment_dy1", NULL, placeholder = "起年")),
-              column(2, textInput("judgment_dm1", NULL, placeholder = "起月")),
-              column(2, textInput("judgment_dd1", NULL, placeholder = "起日")),
-              column(1, tags$span(class = "text-muted", "至")),
-              column(2, textInput("judgment_dy2", NULL, placeholder = "迄年")),
-              column(2, textInput("judgment_dm2", NULL, placeholder = "迄月")),
-              column(2, textInput("judgment_dd2", NULL, placeholder = "迄日"))
+            div(
+              class = "judgment-period-row",
+              fluidRow(
+                column(
+                  5,
+                  dateInput(
+                    "judgment_date_start", "起日",
+                    value = NULL, format = "yyyy-mm-dd",
+                    width = "100%"
+                  )
+                ),
+                column(1, tags$div(class = "text-muted text-center judgment-period-sep", "至")),
+                column(
+                  5,
+                  dateInput(
+                    "judgment_date_end", "迄日",
+                    value = NULL, format = "yyyy-mm-dd",
+                    width = "100%"
+                  )
+                )
+              )
             )
           )
         ),
@@ -4185,6 +4202,8 @@ server <- function(input, output, session) {
     courts <- input$judgment_court %||% character()
     courts <- unique(trimws(as.character(courts)))
     courts <- courts[nzchar(courts)]
+    start <- judgment_date_to_form_parts(input$judgment_date_start)
+    end <- judgment_date_to_form_parts(input$judgment_date_end)
     list(
       jud_court = courts,
       jud_sys = input$judgment_sys %||% character(),
@@ -4192,8 +4211,8 @@ server <- function(input, output, session) {
       jud_case = input$judgment_case,
       jud_no = input$judgment_no,
       jud_no_end = input$judgment_no_end,
-      dy1 = input$judgment_dy1, dm1 = input$judgment_dm1, dd1 = input$judgment_dd1,
-      dy2 = input$judgment_dy2, dm2 = input$judgment_dm2, dd2 = input$judgment_dd2,
+      dy1 = start$dy, dm1 = start$dm, dd1 = start$dd,
+      dy2 = end$dy, dm2 = end$dm, dd2 = end$dd,
       jud_title = input$judgment_title,
       jud_jmain = input$judgment_jmain,
       jud_kw = input$judgment_kw,

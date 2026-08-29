@@ -69,6 +69,32 @@ judgment_trim <- function(x) {
   trimws(as.character(x %||% ""))
 }
 
+judgment_date_to_form_parts <- function(x) {
+  empty <- list(dy = "", dm = "", dd = "")
+  if (is.null(x) || !length(x)) return(empty)
+  if (length(x) > 1L) x <- x[[1]]
+  if (inherits(x, "POSIXt")) x <- as.Date(x)
+  if (is.character(x)) {
+    x <- suppressWarnings(as.Date(x))
+  }
+  if (inherits(x, "Date") && is.na(x)) return(empty)
+  if (!inherits(x, "Date")) return(empty)
+  ad_year <- as.integer(format(x, "%Y"))
+  list(
+    dy = as.character(ad_year - 1911L),
+    dm = as.character(as.integer(format(x, "%m"))),
+    dd = as.character(as.integer(format(x, "%d")))
+  )
+}
+
+judgment_format_period <- function(dy, dm, dd) {
+  dy <- judgment_trim(dy)
+  dm <- judgment_trim(dm)
+  dd <- judgment_trim(dd)
+  if (!any(nzchar(c(dy, dm, dd)))) return("")
+  sprintf("民國%s年%s月%s日", dy, dm, dd)
+}
+
 judgment_extract_hidden <- function(name, html) {
   pat <- paste0('name="', name, '" id="', name, '" value="([^"]*)"')
   m <- regexpr(pat, html, perl = TRUE)
@@ -535,8 +561,8 @@ judgment_params_sheet <- function(params) {
     jud_case = "裁判字號字別",
     jud_no = "裁判字號起始號",
     jud_no_end = "裁判字號結束號",
-    dy1 = "裁判期間起年", dm1 = "裁判期間起月", dd1 = "裁判期間起日",
-    dy2 = "裁判期間迄年", dm2 = "裁判期間迄月", dd2 = "裁判期間迄日",
+    period_start = "裁判期間起日",
+    period_end = "裁判期間迄日",
     jud_title = "裁判案由",
     jud_jmain = "裁判主文",
     jud_kw = "全文內容",
@@ -546,6 +572,12 @@ judgment_params_sheet <- function(params) {
     result_url = "查詢結果 URL"
   )
   vals <- lapply(names(labs), function(nm) {
+    if (identical(nm, "period_start")) {
+      return(judgment_format_period(p$dy1, p$dm1, p$dd1))
+    }
+    if (identical(nm, "period_end")) {
+      return(judgment_format_period(p$dy2, p$dm2, p$dd2))
+    }
     if (identical(nm, "jud_court")) {
       courts <- p$jud_court %||% character()
       if (!length(courts) || !any(nzchar(courts))) return("所有法院")

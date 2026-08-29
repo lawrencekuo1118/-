@@ -1947,6 +1947,12 @@ url_chk <- judgment_validate_params(list(
   max_results = 5L
 ))
 check(isTRUE(url_chk$ok) && nzchar(url_chk$result_url), "查詢結果 URL 可單獨作為查詢條件")
+period_parts <- judgment_date_to_form_parts(as.Date("2024-03-15"))
+check(identical(period_parts$dy, "113") && period_parts$dm == "3" && period_parts$dd == "15",
+      "裁判期間日期轉民國年月日")
+check(grepl("judgment_date_start", app_txt) && grepl("judgment_date_end", app_txt),
+      "判決書分頁裁判期間改為日期輸入")
+check(!grepl("judgment_dy1", app_txt), "判決書分頁已移除年月日文字欄位")
 
 rules_seed <- judgment_rules_load(data_dir = file.path(root, "data"))
 check(length(rules_seed$rules %||% list()) >= 5L, "內建判斷規則已載入")

@@ -1880,6 +1880,17 @@ check(file.exists(file.path(root, "..", ".github", "workflows", "deploy-goddamn-
       "deploy workflow 為 deploy-goddamn-sox.yml")
 check(!file.exists(file.path(root, "..", ".github", "workflows", "deploy-godamn-sox.yml")),
       "已移除 deploy-godamn-sox.yml")
+wf_txt <- paste(readLines(
+  file.path(root, "..", ".github", "workflows", "deploy-goddamn-sox.yml"),
+  encoding = "UTF-8", warn = FALSE
+), collapse = "\n")
+check(grepl("CI/CD Goddamn SOX", wf_txt), "workflow 為 CI/CD 管線")
+check(grepl("jobs:[\\s\\S]*test:[\\s\\S]*deploy:", wf_txt, perl = TRUE), "CI/CD 含 test 與 deploy jobs")
+check(grepl("needs:\\s*test", wf_txt), "deploy 需等待 test 通過")
+check(grepl("pull_request:", wf_txt), "CI 於 PR 觸發")
+check(grepl("tests/test_assemble\\.R", wf_txt), "CI 執行 assemble 測試")
+check(grepl("paths-ignore:[\\s\\S]*rsconnect", wf_txt, perl = TRUE), "rsconnect 變更不觸發 CD")
+check(file.exists(file.path(root, "..", ".github", "CD.md")), "CD 設定說明存在")
 
 # Locale: ban Mainland / HK-Macau terms in UI + committed seed (Taiwan + US proper nouns only)
 banned_locale <- c(

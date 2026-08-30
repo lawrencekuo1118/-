@@ -269,7 +269,151 @@ judgment_absolute_url <- function(href) {
   paste0(JUDGMENT_SITE_ORIGIN, "/FJUD/", sub("^\\./", "", href))
 }
 
-judgment_parse_result_links <- function(html) {
+judgment_strip_inline_html <- function(html) {
+  html <- judgment_trim(html)
+  if (!nzchar(html)) return("")
+  txt <- gsub("(?s)<script[^>]*>.*?</script>", "", html, perl = TRUE)
+  txt <- gsub("(?s)<style[^>]*>.*?</style>", "", txt, perl = TRUE)
+  txt <- gsub("(?s)<span[^>]*class=\"highlight\"[^>]*>([^<]*)</span>", "\\1", txt, perl = TRUE)
+  txt <- gsub("<br[^>]*>", "\n", txt, perl = TRUE)
+  txt <- gsub("<[^>]+>", "", txt, perl = TRUE)
+  txt <- gsub("&nbsp;", " ", txt, fixed = TRUE)
+  txt <- gsub("&amp;", "&", txt, fixed = TRUE)
+  txt <- gsub("&lt;", "<", txt, fixed = TRUE)
+  txt <- gsub("&gt;", ">", txt, fixed = TRUE)
+  txt <- gsub("[ \t\r\n]+", " ", txt, perl = TRUE)
+  judgment_trim(txt)
+}
+
+judgment_date_from_fld <- function(href) {
+  href <- judgment_trim(href)
+  if (!nzchar(href)) return("")
+  m <- regexpr("fld=([^&\"']+)", href, perl = TRUE, ignore.case = TRUE)
+  if (m[1] == -1) return("")
+  fld <- sub(".*fld=([^&\"']+).*", "\\1", regmatches(href, m)[[1]], perl = TRUE)
+  parts <- strsplit(fld, ",", fixed = TRUE)[[1]]
+  if (length(parts) < 5L) return("")
+  ad <- judgment_trim(parts[[5L]])
+  if (!grepl("^\\d{8}$", ad)) return("")
+  roc <- as.integer(substr(ad, 1L, 4L)) - 1911L
+  sprintf("%d.%02d.%02d", roc, as.integer(substr(ad, 5L, 6L)), as.integer(substr(ad, 7L, 8L)))
+}
+
+judgment_extract_list_date <- function(row_html) {
+  row_html <- judgment_trim(row_html)
+  if (!nzchar(row_html)) return("")
+  m <- regexpr("\\b(\\d{2,3})\\.(\\d{1,2})\\.(\\d{1,2})\\b", row_html, perl = TRUE)
+  if (m[1] == -1) return("")
+  parts <- strsplit(regmatches(row_html, m)[[1]], ".", fixed = TRUE)[[1]]
+  if (length(parts) != 3L) return("")
+  sprintf("%s.%02d.%02d", parts[[1L]], as.integer(parts[[2L]]), as.integer(parts[[3L]]))
+}
+
+judgment_extract_list_category <- function(row_html) {
+  row_html <- judgment_strip_inline_html(row_html)
+  if (!nzchar(row_html)) return("")
+  m <- regexpr("\\b(\\d{2,3}\\.\\d{1,2}\\.\\d{1,2})\\s+([^\\s\\d\\.<]{2,12})", row_html, perl = TRUE)
+  if (m[1] == -1) return("")
+  sub("^.*\\d{2,3}\\.\\d{1,2}\\.\\d{1,2}\\s+", "", regmatches(row_html, m)[[1]], perl = TRUE)
+}
+
+judgment_extract_tdcut_snippet <- function(row_html) {
+  row_html <- judgment_trim(row_html)
+  if (!nzchar(row_html)) return("")
+  m <- regexpr('(?s)<span[^>]*class="tdCut"[^>]*>(.*?)</span>', row_html, perl = TRUE, ignore.case = TRUE)
+  if (m[1] == -1) return("")
+  judgment_strip_inline_html(regmatches(row_html, m)[[1]])
+}
+
+judgment_extract_jud_table_html <- function(html) {
+  html <- judgment_trim(html)
+  if (!nzchar(html)) return("")
+  m <- regexpr('(?s)<table[^>]*\\bid="jud"[^>]*>.*?</table>', html, perl = TRUE, ignore.case = TRUE)
+  if (m[1] == -1) return("")
+  regmatches(html, m)[[1]]
+}
+
+judgment_parse_jud_table_links <- function(html) {
+  table_html <- judgment_extract_jud_table_html(html)
+  if (!nzchar(table_html)) return(data.frame())
+
+  row_htmls <- regmatches(table_html, gregexpr("(?s)<tr[^>]*>.*?</tr>", table_html, perl = TRUE))[[1]]
+  if (!length(row_htmls)) return(data.frame())
+
+  records <- list()
+  pending_snippet <- ""
+  pending_category <- ""
+
+  flush_record <- function(href, title, row_html) {
+    href <- judgment_trim(href)
+    if (!nzchar(href) || !grepl("data\\.aspx", href, ignore.case = TRUE)) return(invisible(NULL))
+    title <- judgment_trim(title)
+    title <- sub("\\(\\d+[KkMm]?\\)\\s*$", "", title, perl = TRUE)
+    snippet <- pending_snippet
+    if (!nzchar(snippet)) snippet <- judgment_extract_tdcut_snippet(row_html)
+    date_val <- judgment_extract_list_date(row_html)
+    if (!nzchar(date_val)) date_val <- judgment_date_from_fld(href)
+    category <- pending_category
+    if (!nzchar(category)) category <- judgment_extract_list_category(row_html)
+    jid <- sub(".*fld=([^&\"']+).*", "\\1", href, perl = TRUE)
+    if (identical(jid, href)) jid <- ""
+    records[[length(records) + 1L]] <<- data.frame(
+      裁判字號 = title,
+      連結 = judgment_absolute_url(href),
+      judgment_id = jid,
+      裁判日期 = date_val,
+      列表案由 = category,
+      列表摘要 = snippet,
+      stringsAsFactors = FALSE
+    )
+    pending_snippet <<- ""
+    pending_category <<- ""
+    invisible(NULL)
+  }
+
+  for (row_html in row_htmls) {
+    hrefs <- regmatches(row_html, gregexpr('href="(data\\.aspx\\?[^"]+)"', row_html, perl = TRUE, ignore.case = TRUE))[[1]]
+    hrefs <- unique(sub('^href="([^"]+)"$', "\\1", hrefs))
+    hrefs <- hrefs[grepl("data\\.aspx", hrefs, ignore.case = TRUE)]
+    snippet <- judgment_extract_tdcut_snippet(row_html)
+
+    if (length(hrefs)) {
+      title_match <- regexpr('(?s)<a[^>]*href="data\\.aspx\\?[^"]+"[^>]*>(.*?)</a>', row_html, perl = TRUE, ignore.case = TRUE)
+      title <- if (title_match[1] > 0) {
+        judgment_strip_inline_html(regmatches(row_html, title_match)[[1]])
+      } else {
+        ""
+      }
+      flush_record(hrefs[[1]], title, row_html)
+    } else if (nzchar(snippet)) {
+      if (length(records)) {
+        idx <- length(records)
+        if (!nzchar(records[[idx]]$列表摘要[[1]])) {
+          records[[idx]]$列表摘要[[1]] <- snippet
+        }
+      } else {
+        pending_snippet <- snippet
+      }
+      cat_val <- judgment_extract_list_category(row_html)
+      if (nzchar(cat_val) && length(records)) {
+        idx <- length(records)
+        if (!nzchar(records[[idx]]$列表案由[[1]])) {
+          records[[idx]]$列表案由[[1]] <- cat_val
+        }
+      } else if (nzchar(cat_val)) {
+        pending_category <- cat_val
+      }
+    }
+  }
+
+  if (!length(records)) return(data.frame())
+  out <- do.call(rbind, records)
+  out <- out[!duplicated(out$連結), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+judgment_parse_result_links_legacy <- function(html) {
   html <- judgment_trim(html)
   if (!nzchar(html)) return(data.frame())
   hrefs <- regmatches(html, gregexpr('href="(data\\.aspx\\?[^"]+|qryresultlst\\.aspx\\?[^"]+)"', html, perl = TRUE))[[1]]
@@ -290,6 +434,9 @@ judgment_parse_result_links <- function(html) {
       裁判字號 = title,
       連結 = judgment_absolute_url(href),
       judgment_id = jid,
+      裁判日期 = judgment_date_from_fld(href),
+      列表案由 = "",
+      列表摘要 = "",
       stringsAsFactors = FALSE
     )
   })
@@ -297,6 +444,14 @@ judgment_parse_result_links <- function(html) {
   out <- out[!duplicated(out$連結), , drop = FALSE]
   rownames(out) <- NULL
   out
+}
+
+judgment_parse_result_links <- function(html) {
+  html <- judgment_trim(html)
+  if (!nzchar(html)) return(data.frame())
+  out <- judgment_parse_jud_table_links(html)
+  if (nrow(out)) return(out)
+  judgment_parse_result_links_legacy(html)
 }
 
 judgment_extract_section <- function(text, heading) {
@@ -428,6 +583,7 @@ empty_judgment_results_frame <- function() {
     案由 = character(),
     案件類別 = character(),
     連結 = character(),
+    列表摘要 = character(),
     裁判主文 = character(),
     結果分析 = character(),
     全文 = character(),
@@ -508,15 +664,19 @@ judgment_crawl_listing <- function(
     )
     if (!nzchar(detail$裁判字號)) detail$裁判字號 <- listing$裁判字號[[i]]
     analysis <- judgment_analyze_detail(detail, target_company = target_company, data_dir = data_dir)
+    list_date <- judgment_trim(listing$裁判日期[[i]] %||% "")
+    list_cause <- judgment_trim(listing$列表案由[[i]] %||% "")
+    list_snippet <- judgment_trim(listing$列表摘要[[i]] %||% "")
     rows[[length(rows) + 1L]] <- data.frame(
       序號 = i,
       查詢標的公司 = target_company,
       法院 = sub("\\s+.*", "", detail$裁判字號 %||% listing$裁判字號[[i]]),
       裁判字號 = detail$裁判字號 %||% listing$裁判字號[[i]],
-      裁判日期 = "",
-      案由 = analysis$案由 %||% detail$案由 %||% "",
+      裁判日期 = list_date,
+      案由 = analysis$案由 %||% detail$案由 %||% list_cause,
       案件類別 = analysis$案件類別 %||% detail$案件類別 %||% "",
       連結 = url,
+      列表摘要 = list_snippet,
       裁判主文 = detail$裁判主文,
       結果分析 = analysis$結果分析,
       全文 = detail$全文,

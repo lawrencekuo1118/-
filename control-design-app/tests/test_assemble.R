@@ -2018,7 +2018,17 @@ fix_list_html <- paste(readLines(
   encoding = "UTF-8", warn = FALSE
 ), collapse = "\n")
 links <- judgment_parse_result_links(fix_list_html)
-check(nrow(links) >= 2L, "判決書結果列表解析")
+check(nrow(links) >= 3L, "判決書結果列表解析")
+check(all(c("裁判日期", "列表案由", "列表摘要") %in% names(links)),
+      "列表解析含日期／案由／摘要欄")
+check(any(grepl("115\\.08\\.28", links$裁判日期)), "列表解析含裁判日期")
+check(any(grepl("公示催告|詐欺", links$列表案由)), "列表解析含列表案由")
+check(any(grepl("日月光", links$列表摘要)), "列表解析含 tdCut 摘要")
+legacy_links <- judgment_parse_result_links(
+  '<html><body><table><tr><td><a href="data.aspx?fld=TPDV,114,訴,9,20250101,1">測試判決</a></td></tr></table></body></html>'
+)
+check(nrow(legacy_links) == 1L && grepl("114\\.01\\.01", legacy_links$裁判日期[[1]]),
+      "無 table#jud 時仍走 legacy 解析並自 fld 推日期")
 fix_detail_html <- paste(readLines(
   file.path(root, "tests/fixtures/judgment_detail.html"),
   encoding = "UTF-8", warn = FALSE

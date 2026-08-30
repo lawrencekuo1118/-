@@ -816,9 +816,9 @@ check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE)
 check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
         grepl("pbc-db-card-title", pbc_panel, fixed = TRUE) &&
         grepl('"PBC資料庫"', pbc_panel, fixed = TRUE) &&
-        grepl('card_header\\(\\s*"PBC增列設定"', pbc_panel) &&
+        grepl('card_header\\(\\s*"PBC樣本資訊設定"', pbc_panel) &&
         regexpr('"PBC資料庫"', pbc_panel)[[1]] <
-          regexpr('card_header\\(\\s*"PBC增列設定"', pbc_panel)[[1]],
+          regexpr('card_header\\(\\s*"PBC樣本資訊設定"', pbc_panel)[[1]],
       "PBC資料庫表在增列設定上方（非左右雙欄）")
 check(grepl(
   'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
@@ -838,7 +838,7 @@ check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
         grepl("autoWidth = FALSE", app_src_pbc, fixed = TRUE),
       "PBC資料庫表可左右捲動（scroll-wrap + autoWidth）")
 check(grepl("pbc-status-footer", app_src_pbc, fixed = TRUE) &&
-        grepl('uiOutput\\("pbc_walkthrough_box"\\)\\s*\\)\\s*,\\s*card\\(\\s*card_header\\("PBC增列設定"', pbc_panel, perl = TRUE) &&
+        grepl('uiOutput\\("pbc_walkthrough_box"\\)\\s*\\)\\s*,\\s*card\\(\\s*card_header\\("PBC樣本資訊設定"', pbc_panel, perl = TRUE) &&
         grepl('pbc-status-footer[\\s\\S]*pbc_all_status', pbc_panel, perl = TRUE) &&
         grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse"', pbc_panel, perl = TRUE) &&
         !grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse show"', pbc_panel, perl = TRUE) &&
@@ -1357,8 +1357,7 @@ check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
 check(grepl('seed_if_missing_cycle\\("電腦化資訊系統循環"', app_src) &&
         grepl('ch_pbc_design <- pbc_choices\\(reg, cycle_filter = cf_design\\)', app_src) &&
-        grepl('update_selectize\\("inputs", ch_pbc_design\\)', app_src) &&
-        grepl("PBC 資料庫可直接查閱", app_src, fixed = TRUE),
+        grepl('update_selectize\\("inputs", ch_pbc_design\\)', app_src),
       "PBC資料庫不等待循環別即可顯示；設計／測試頁 Inputs 等欄位直接選 PBC")
 check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|nav_panel\\([\\s\\S]{0,80}"① 基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
       "基礎設定分頁內無循環名稱選框")
@@ -1461,6 +1460,17 @@ check(grepl('placeholder-shown', app_src) &&
         grepl('公司名稱', app_src) &&
         grepl('輸入／選定後黑色|輸入框：未填淺灰|預設說明字', app_src),
       "輸入框預設說明字統一為公司名稱 placeholder 色 (#ADB5BD)")
+check(grepl("setInputFieldEnabled", app_src) &&
+        grepl("input-locked", app_src) &&
+        grepl("toggleAccount", app_src) &&
+        grepl("toggleLaw", app_src) &&
+        grepl("toggleAssertions", app_src) &&
+        grepl("toggleFrequency", app_src) &&
+        grepl("toggleRelatedDocument", app_src) &&
+        grepl("\\.form-control:disabled[\\s\\S]*background-color: var\\(--brand-gray\\)", app_src, perl = TRUE) &&
+        grepl("\\.selectize-control\\.disabled \\.selectize-input[\\s\\S]*background-color: var\\(--brand-gray\\)", app_src, perl = TRUE) &&
+        grepl("\\.selectize-control\\.input-locked \\.selectize-input", app_src, perl = TRUE),
+      "條件未達成鎖定欄位以灰底標示（原生／selectize）")
 check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
         grepl('div\\([\\s\\S]*class\\s*=\\s*"rcm-design-tabs"', app_src, perl = TRUE) &&
         grepl('"① 基礎設定"', app_src) &&

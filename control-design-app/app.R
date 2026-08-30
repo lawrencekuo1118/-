@@ -1023,15 +1023,9 @@ ui <- page_navbar(
         )
       ),
       fluidRow(
-        column(4,
-               textInput(
-                 "judgment_target_company", "查詢標的公司（影響分析用）",
-                 value = "", width = "100%",
-                 placeholder = "同步自左側公司名稱"
-               )),
-        column(4, numericInput("judgment_max_results", "抓取筆數上限（最近期）", value = 30,
+        column(6, numericInput("judgment_max_results", "抓取筆數上限（最近期）", value = 30,
                                min = 1, max = 100, step = 1)),
-        column(4, uiOutput("judgment_status_box"))
+        column(6, uiOutput("judgment_status_box"))
       ),
       fluidRow(
         column(4,
@@ -4449,13 +4443,9 @@ server <- function(input, output, session) {
   judgment_results <- reactiveVal(empty_judgment_results_frame())
   judgment_last_msg <- reactiveVal("")
 
-  observeEvent(input$company, {
-    updateTextInput(
-      session,
-      "judgment_target_company",
-      value = trimws(input$company %||% "")
-    )
-  }, ignoreNULL = FALSE, ignoreInit = FALSE)
+  judgment_target_company <- reactive({
+    trimws(input$company %||% "")
+  })
 
   judgment_collect_params <- function() {
     courts <- input$judgment_court %||% character()
@@ -4509,7 +4499,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$judgment_run, {
     params <- judgment_collect_params()
-    target <- trimws(input$judgment_target_company %||% input$company %||% "")
+    target <- judgment_target_company()
     res <- NULL
     withProgress(message = "裁判書查詢中…", value = 0, {
       res <- tryCatch(
@@ -4569,7 +4559,8 @@ server <- function(input, output, session) {
 
   output$download_judgment <- downloadHandler(
     filename = function() {
-      co <- trimws(input$judgment_target_company %||% input$company %||% "查詢")
+      co <- judgment_target_company()
+      if (!nzchar(co)) co <- "查詢"
       sprintf("判決書分析_%s_%s.xlsx", co, format(Sys.Date(), "%Y%m%d"))
     },
     content = function(file) {
@@ -4578,7 +4569,7 @@ server <- function(input, output, session) {
       with_loading(
         write_judgment_xlsx(
           df, judgment_collect_params(), path = file,
-          target_company = trimws(input$judgment_target_company %||% input$company %||% "")
+          target_company = judgment_target_company()
         )
       )
     }

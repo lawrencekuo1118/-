@@ -4,7 +4,7 @@
 JUDGMENT_SEARCH_URL <- "https://judgment.judicial.gov.tw/FJUD/Default_AD.aspx"
 JUDGMENT_SITE_ORIGIN <- "https://judgment.judicial.gov.tw"
 
-# 結果表格／匯出欄位順序（不含隱藏的全文、查詢標的公司）
+# 結果表格／匯出欄位順序（不含隱藏的全文）
 JUDGMENT_RESULTS_TABLE_COLUMNS <- c(
   "序號", "法院", "裁判字號", "裁判日期", "案件類別", "案由",
   "列表摘要", "裁判主文", "結果分析", "連結"
@@ -12,7 +12,7 @@ JUDGMENT_RESULTS_TABLE_COLUMNS <- c(
 
 judgment_results_reorder <- function(df) {
   if (!is.data.frame(df)) return(df)
-  tail_cols <- c("查詢標的公司", "全文")
+  tail_cols <- c("全文")
   cols <- c(
     JUDGMENT_RESULTS_TABLE_COLUMNS[JUDGMENT_RESULTS_TABLE_COLUMNS %in% names(df)],
     tail_cols[tail_cols %in% names(df)],
@@ -668,7 +668,6 @@ empty_judgment_results_frame <- function() {
     裁判主文 = character(),
     結果分析 = character(),
     連結 = character(),
-    查詢標的公司 = character(),
     全文 = character(),
     check.names = FALSE,
     stringsAsFactors = FALSE
@@ -770,7 +769,6 @@ judgment_crawl_listing <- function(
       裁判主文 = detail$裁判主文,
       結果分析 = analysis$結果分析,
       連結 = url,
-      查詢標的公司 = target_company,
       全文 = detail$全文,
       check.names = FALSE,
       stringsAsFactors = FALSE

@@ -2081,8 +2081,8 @@ check(identical(
 ), "裁判書空結果表僅含指定顯示欄")
 check(identical(
   names(judgment_results_reorder(empty_judgment_results_frame())),
-  c(JUDGMENT_RESULTS_TABLE_COLUMNS, "查詢標的公司", "全文")
-), "裁判書完整結果含隱藏欄且順序一致")
+  c(JUDGMENT_RESULTS_TABLE_COLUMNS, "全文")
+), "裁判書完整結果含隱藏全文欄且順序一致")
 check(
   grepl(
     'nav_panel\\(\\s*"首頁"[\\s\\S]*nav_panel\\(\\s*"判決書查詢"[\\s\\S]*nav_panel\\(\\s*"訪談問項設計"',
@@ -2145,9 +2145,9 @@ check(
   "查詢結果 URL 欄位位於歷史匯入欄位正上方"
 )
 check(grepl("judgment_rules\\.R", app_txt), "app 載入判斷規則模組")
-check(grepl("judgment_target_company", app_txt), "判決書分頁含查詢標的公司欄位")
-check(grepl('updateTextInput\\([\\s\\S]*"judgment_target_company"', app_txt, perl = TRUE),
-      "側邊欄公司名稱同步至查詢標的公司")
+check(!grepl("judgment_target_company", app_txt), "判決書分頁已移除查詢標的公司欄位")
+check(grepl("judgment_target_company <- reactive", app_txt),
+      "判決書分析改以側邊欄公司名稱為標的")
 check(!grepl("judgment_apply_cause_exclusion", app_txt), "判決書分頁已移除案由排除選項")
 
 # Fast load: persisted library JSON skips re-normalization

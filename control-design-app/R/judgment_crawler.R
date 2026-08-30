@@ -4,6 +4,31 @@
 JUDGMENT_SEARCH_URL <- "https://judgment.judicial.gov.tw/FJUD/Default_AD.aspx"
 JUDGMENT_SITE_ORIGIN <- "https://judgment.judicial.gov.tw"
 
+# 結果表格／匯出欄位順序（不含隱藏的全文、查詢標的公司）
+JUDGMENT_RESULTS_TABLE_COLUMNS <- c(
+  "序號", "法院", "裁判字號", "裁判日期", "案件類別", "案由",
+  "列表摘要", "裁判主文", "結果分析", "連結"
+)
+
+judgment_results_reorder <- function(df) {
+  if (!is.data.frame(df)) return(df)
+  tail_cols <- c("查詢標的公司", "全文")
+  cols <- c(
+    JUDGMENT_RESULTS_TABLE_COLUMNS[JUDGMENT_RESULTS_TABLE_COLUMNS %in% names(df)],
+    tail_cols[tail_cols %in% names(df)],
+    setdiff(names(df), c(JUDGMENT_RESULTS_TABLE_COLUMNS, tail_cols))
+  )
+  if (!length(cols)) return(df)
+  df[, cols, drop = FALSE]
+}
+
+judgment_results_for_table <- function(df) {
+  if (!is.data.frame(df)) return(df)
+  cols <- JUDGMENT_RESULTS_TABLE_COLUMNS[JUDGMENT_RESULTS_TABLE_COLUMNS %in% names(df)]
+  if (!length(cols)) return(df[, character(), drop = FALSE])
+  df[, cols, drop = FALSE]
+}
+
 # 對齊進階查詢表單 jud_court（value → 標籤）
 JUDGMENT_COURT_CHOICES <- c(
   "所有法院" = "",
@@ -632,22 +657,22 @@ judgment_summarize <- function(detail, target_company = "") {
 }
 
 empty_judgment_results_frame <- function() {
-  data.frame(
+  judgment_results_reorder(data.frame(
     序號 = integer(),
-    查詢標的公司 = character(),
     法院 = character(),
     裁判字號 = character(),
     裁判日期 = character(),
-    案由 = character(),
     案件類別 = character(),
-    連結 = character(),
+    案由 = character(),
     列表摘要 = character(),
     裁判主文 = character(),
     結果分析 = character(),
+    連結 = character(),
+    查詢標的公司 = character(),
     全文 = character(),
     check.names = FALSE,
     stringsAsFactors = FALSE
-  )
+  ))
 }
 
 judgment_search_submit <- function(params, session = NULL) {
@@ -736,16 +761,16 @@ judgment_crawl_listing <- function(
     list_snippet <- judgment_trim(listing$列表摘要[[i]] %||% "")
     rows[[length(rows) + 1L]] <- data.frame(
       序號 = i,
-      查詢標的公司 = target_company,
       法院 = sub("\\s+.*", "", detail$裁判字號 %||% listing$裁判字號[[i]]),
       裁判字號 = detail$裁判字號 %||% listing$裁判字號[[i]],
       裁判日期 = list_date,
-      案由 = analysis$案由 %||% detail$案由 %||% list_cause,
       案件類別 = analysis$案件類別 %||% detail$案件類別 %||% "",
-      連結 = url,
+      案由 = analysis$案由 %||% detail$案由 %||% list_cause,
       列表摘要 = list_snippet,
       裁判主文 = detail$裁判主文,
       結果分析 = analysis$結果分析,
+      連結 = url,
+      查詢標的公司 = target_company,
       全文 = detail$全文,
       check.names = FALSE,
       stringsAsFactors = FALSE
@@ -851,7 +876,7 @@ write_judgment_xlsx <- function(results, params, path, target_company = "") {
     stop("需要 writexl 套件以匯出 xlsx：install.packages(\"writexl\")")
   }
   if (!is.data.frame(results)) results <- empty_judgment_results_frame()
-  export <- results
+  export <- judgment_results_reorder(results)
   if ("全文" %in% names(export)) {
     export$全文 <- vapply(export$全文, function(x) {
       x <- as.character(x %||% "")

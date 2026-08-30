@@ -2070,6 +2070,19 @@ write_judgment_xlsx(
   list(jud_kw = "掏空"), tmp_jud_xlsx
 )
 check(file.exists(tmp_jud_xlsx) && file.info(tmp_jud_xlsx)$size > 100L, "判決書 xlsx 匯出")
+check(identical(
+  JUDGMENT_RESULTS_TABLE_COLUMNS,
+  c("序號", "法院", "裁判字號", "裁判日期", "案件類別", "案由",
+    "列表摘要", "裁判主文", "結果分析", "連結")
+), "裁判書結果表格欄位順序")
+check(identical(
+  names(judgment_results_for_table(empty_judgment_results_frame())),
+  JUDGMENT_RESULTS_TABLE_COLUMNS
+), "裁判書空結果表僅含指定顯示欄")
+check(identical(
+  names(judgment_results_reorder(empty_judgment_results_frame())),
+  c(JUDGMENT_RESULTS_TABLE_COLUMNS, "查詢標的公司", "全文")
+), "裁判書完整結果含隱藏欄且順序一致")
 check(
   grepl(
     'nav_panel\\(\\s*"首頁"[\\s\\S]*nav_panel\\(\\s*"判決書查詢"[\\s\\S]*nav_panel\\(\\s*"訪談問項設計"',

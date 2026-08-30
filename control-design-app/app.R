@@ -4550,7 +4550,7 @@ server <- function(input, output, session) {
     df <- judgment_results()
     if (!nrow(df)) {
       return(datatable(
-        empty_judgment_results_frame(),
+        judgment_results_for_table(empty_judgment_results_frame()),
         rownames = FALSE, width = "100%",
         options = dt_loading_opts(
           pageLength = 10,
@@ -4559,7 +4559,7 @@ server <- function(input, output, session) {
         )
       ))
     }
-    show <- df[, setdiff(names(df), "全文"), drop = FALSE]
+    show <- judgment_results_for_table(df)
     datatable(
       show, rownames = FALSE, width = "100%",
       options = dt_loading_opts(pageLength = 10, scrollX = TRUE, ordering = FALSE),

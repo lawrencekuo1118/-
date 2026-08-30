@@ -816,9 +816,9 @@ check(grepl('pbc-name-map-row[\\s\\S]{0,500}pbc_spec', app_src_pbc, perl = TRUE)
 check(!grepl("layout_columns", pbc_panel, fixed = TRUE) &&
         grepl("pbc-db-card-title", pbc_panel, fixed = TRUE) &&
         grepl('"PBC資料庫"', pbc_panel, fixed = TRUE) &&
-        grepl('card_header\\(\\s*"PBC增列設定"', pbc_panel) &&
+        grepl('card_header\\(\\s*"PBC樣本資訊設定"', pbc_panel) &&
         regexpr('"PBC資料庫"', pbc_panel)[[1]] <
-          regexpr('card_header\\(\\s*"PBC增列設定"', pbc_panel)[[1]],
+          regexpr('card_header\\(\\s*"PBC樣本資訊設定"', pbc_panel)[[1]],
       "PBC資料庫表在增列設定上方（非左右雙欄）")
 check(grepl(
   'output\\$pbc_table[\\s\\S]*data\\.frame\\([\\s\\S]*ID = df\\$pbc_id[\\s\\S]*循環 = df\\$cycle[\\s\\S]*標準名稱[\\s\\S]*原始名稱 = df\\$client_pbc_name[\\s\\S]*證據類型[\\s\\S]*檔案格式[\\s\\S]*規格說明[\\s\\S]*勾稽[\\s\\S]*備註 = df\\$notes',
@@ -838,7 +838,7 @@ check(grepl("pbc-table-scroll-wrap", app_src_pbc, fixed = TRUE) &&
         grepl("autoWidth = FALSE", app_src_pbc, fixed = TRUE),
       "PBC資料庫表可左右捲動（scroll-wrap + autoWidth）")
 check(grepl("pbc-status-footer", app_src_pbc, fixed = TRUE) &&
-        grepl('uiOutput\\("pbc_walkthrough_box"\\)\\s*\\)\\s*,\\s*card\\(\\s*card_header\\("PBC增列設定"', pbc_panel, perl = TRUE) &&
+        grepl('uiOutput\\("pbc_walkthrough_box"\\)\\s*\\)\\s*,\\s*card\\(\\s*card_header\\("PBC樣本資訊設定"', pbc_panel, perl = TRUE) &&
         grepl('pbc-status-footer[\\s\\S]*pbc_all_status', pbc_panel, perl = TRUE) &&
         grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse"', pbc_panel, perl = TRUE) &&
         !grepl('id = "pbcNameMapCollapse"[\\s\\S]*class = "collapse show"', pbc_panel, perl = TRUE) &&

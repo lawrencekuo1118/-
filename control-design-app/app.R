@@ -1635,7 +1635,7 @@ ui <- page_navbar(
       uiOutput("pbc_walkthrough_box")
     ),
     card(
-      card_header("PBC增列設定"),
+      card_header("PBC樣本資訊設定"),
       uiOutput("pbc_cycle_readonly"),
       p(class = "small text-muted mb-2",
         tags$strong("登錄／刪除／匯入"), "需高權登入。"),

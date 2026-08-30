@@ -141,6 +141,17 @@ interview_5w1h_prompts_from_values <- function(values, risk_label = "該") {
   out
 }
 
+interview_5w1h_combined_question <- function(prompts) {
+  parts <- vapply(INTERVIEW_5W1H_FIELD_ORDER, function(key) {
+    trimws(as.character(prompts[[key]] %||% ""))
+  }, character(1))
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) {
+    return("（請於上方各面向填寫訪談問句）")
+  }
+  paste(parts, collapse = "")
+}
+
 # 各模組對應之獨立探針題（可依勾選拼湊成題綱列）
 INTERVIEW_5W1H_PROBE_LABELS <- c(
   when = "模組｜以何頻率",

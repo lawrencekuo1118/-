@@ -453,6 +453,20 @@ design_tab_cascade_rows <- function(lib_items, cycle, sub_process_id = "", sub_p
   if (nzchar(sub_key)) filter_cascade_rows(rows, sub_key = sub_key) else rows
 }
 
+design_tab_risk_factor_choices <- function(lib_items, cycle, sub_process_id = "", sub_process = "") {
+  rows <- design_tab_cascade_rows(lib_items, cycle, sub_process_id, sub_process)
+  if (!length(rows)) return(character())
+  cascade_risk_choices(rows)
+}
+
+design_cascade_scope_key <- function(cycle, sub_process_id = "", sub_process = "") {
+  paste(
+    trimws(as.character(cycle %||% "")),
+    sub_process_filter_key(sub_process_id %||% "", sub_process %||% ""),
+    sep = "|"
+  )
+}
+
 merge_param_store_choices <- function(ch, param_store, param_name) {
   param_names <- tryCatch(
     parameter_options(param_store, param_name),

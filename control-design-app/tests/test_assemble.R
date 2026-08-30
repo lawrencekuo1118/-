@@ -1625,6 +1625,19 @@ check(grepl("risk_factor_select_ui", app_src) &&
         grepl('freezeReactiveValue\\(input, "risk_factor"\\)', app_src) &&
         grepl("isolate\\(input\\$risk_factor", app_src),
       "風險因素多選不因 observe 誤追蹤而反覆重建選單")
+check(grepl("design_tab_risk_factor_choices", app_src) &&
+        grepl("design_cascade_scope_key", app_src) &&
+        !grepl('merge_param_store_choices\\([\\s\\S]{0,120}"風險因素"', app_src, perl = TRUE),
+      "風險因素建議僅依循環／子作業 cascade，不併入參數庫全域選項")
+if (length(jl)) {
+  ec_risks <- design_tab_risk_factor_choices(jl, "電腦化資訊系統循環")
+  rev_risks <- design_tab_risk_factor_choices(jl, "收入循環")
+  check(length(ec_risks) >= 1 && length(rev_risks) >= 0,
+        "不同循環可載入各自風險因素建議")
+  if (length(ec_risks) && length(rev_risks)) {
+    check(!identical(ec_risks, rev_risks), "不同循環的風險因素建議不相同")
+  }
+}
 check(grepl("applying_template|apply_template_to_form", app_src) &&
         grepl("isTRUE\\(applying_template\\(\\)\\)", app_src),
       "套用範本時不觸發循環清空子作業")

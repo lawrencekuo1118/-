@@ -2456,7 +2456,17 @@ server <- function(input, output, session) {
   sub_process_ui_state <- new.env(parent = emptyenv())
   sub_process_ui_state$cycle <- NULL
   sub_process_ui_tick <- reactiveVal(0L)
+  design_suggest_ui_state <- new.env(parent = emptyenv())
+  design_suggest_ui_state$scope <- NULL
   design_suggest_ui_tick <- reactiveVal(0L)
+
+  design_cascade_scope <- function(cy, sub_process_id = "", sub_process = "") {
+    design_cascade_scope_key(cy, sub_process_id, sub_process)
+  }
+
+  reset_design_cascade_scope <- function() {
+    design_suggest_ui_state$scope <- NULL
+  }
 
   refresh_sub_process_choices <- function(force = FALSE) {
     # renderUI 已依 cycle／lib 重繪；force 時再 bump 一次以重掛載選單
@@ -2531,11 +2541,13 @@ server <- function(input, output, session) {
   output$risk_factor_select_ui <- renderUI({
     tick <- design_suggest_ui_tick()
     cy <- input$cycle %||% ""
-    rows <- if (nzchar(cy)) {
-      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
-    } else list()
-    ch <- if (length(rows)) cascade_risk_choices(rows) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "風險因素")
+    spid <- input$sub_process_id %||% ""
+    spnm <- input$sub_process %||% ""
+    ch <- if (nzchar(cy)) {
+      design_tab_risk_factor_choices(lib(), cy, spid, spnm)
+    } else {
+      character()
+    }
     cur <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
     if (length(cur)) {
       extra <- cur[!cur %in% unname(ch)]
@@ -2544,17 +2556,18 @@ server <- function(input, output, session) {
       }
     }
     freezeReactiveValue(input, "risk_factor")
-    ch_ui <- if (length(ch)) ch else character()
+    placeholder <- if (nzchar(cy)) {
+      sprintf("可複選本循環建議 TAG 或手動新增（已載入 %d 項）", length(ch))
+    } else {
+      "請先於側邊欄選擇循環，以載入本循環建議 TAG"
+    }
     selectizeInput(
       "risk_factor", lab_req("風險因素"),
-      choices = ch_ui,
+      choices = ch,
       selected = cur,
       multiple = TRUE,
       width = "100%",
-      options = cascade_selectize_field_options(
-        "可複選建議 TAG 或手動新增風險因素",
-        multiple = TRUE
-      )
+      options = cascade_selectize_field_options(placeholder, multiple = TRUE)
     )
   })
 
@@ -2567,7 +2580,6 @@ server <- function(input, output, session) {
     rf <- input$risk_factor %||% character()
     descs <- if (length(rows)) cascade_risk_description_choices(rows, rf) else character(0)
     ch <- if (length(descs)) risk_description_select_choices(descs) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "風險描述")
     cur <- trimws(isolate(input$risk_description %||% ""))
     ch <- ensure_value_in_choices(ch, cur)
     freezeReactiveValue(input, "risk_description")
@@ -2590,7 +2602,6 @@ server <- function(input, output, session) {
       design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
     } else list()
     ch <- if (length(rows)) cascade_objective_choices(rows) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "控制目標")
     cur <- trimws(isolate(input$control_objective %||% ""))
     ch <- ensure_value_in_choices(ch, cur)
     freezeReactiveValue(input, "control_objective")
@@ -2613,7 +2624,6 @@ server <- function(input, output, session) {
       design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
     } else list()
     ch <- if (length(rows)) cascade_activity_text_choices(rows) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "控制活動")
     cur <- trimws(isolate(input$control_activity %||% ""))
     ch <- ensure_value_in_choices(ch, cur)
     freezeReactiveValue(input, "control_activity")
@@ -2831,10 +2841,16 @@ server <- function(input, output, session) {
     freezeReactiveValue(input, "sub_process")
     freezeReactiveValue(input, "sub_process_id")
     freezeReactiveValue(input, "control_id")
+    freezeReactiveValue(input, "risk_factor")
+    freezeReactiveValue(input, "risk_description")
+    freezeReactiveValue(input, "control_objective")
+    freezeReactiveValue(input, "control_activity")
     sub_process_ui_state$cycle <- NULL
+    reset_design_cascade_scope()
     updateTextInput(session, "sub_process_id", value = "")
     updateTextInput(session, "control_id", value = "")
     refresh_sub_process_choices(force = TRUE)
+    refresh_design_suggest_choices(force = TRUE)
   }, ignoreNULL = FALSE)
 
   observeEvent(lib(), {
@@ -2928,7 +2944,20 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observe({
-    # 僅依循環／子作業／範本庫修訂刷新建議 TAG 與 PBC 選單
+    # 循環／子作業範圍變更時清空連動建議欄，並刷新建議 TAG 與 PBC 選單
+    cy <- input$cycle %||% ""
+    spid <- input$sub_process_id %||% ""
+    spnm <- input$sub_process %||% ""
+    scope_key <- design_cascade_scope(cy, spid, spnm)
+    if (!identical(design_suggest_ui_state$scope, scope_key)) {
+      design_suggest_ui_state$scope <- scope_key
+      if (!isTRUE(applying_template())) {
+        freezeReactiveValue(input, "risk_factor")
+        freezeReactiveValue(input, "risk_description")
+        freezeReactiveValue(input, "control_objective")
+        freezeReactiveValue(input, "control_activity")
+      }
+    }
     input$cycle
     input$sub_process
     input$sub_process_id

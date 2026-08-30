@@ -142,14 +142,16 @@ interview_5w1h_prompts_from_values <- function(values, risk_label = "該") {
 }
 
 interview_5w1h_combined_question <- function(prompts) {
-  parts <- vapply(INTERVIEW_5W1H_FIELD_ORDER, function(key) {
-    trimws(as.character(prompts[[key]] %||% ""))
+  lines <- vapply(INTERVIEW_5W1H_FIELD_ORDER, function(key) {
+    txt <- trimws(as.character(prompts[[key]] %||% ""))
+    if (!nzchar(txt)) return("")
+    sprintf("%s：%s", INTERVIEW_5W1H_FIELD_LABELS[[key]], txt)
   }, character(1))
-  parts <- parts[nzchar(parts)]
-  if (!length(parts)) {
+  lines <- lines[nzchar(lines)]
+  if (!length(lines)) {
     return("（請於上方各面向填寫訪談問句）")
   }
-  paste(parts, collapse = "")
+  paste(lines, collapse = "\n")
 }
 
 # 各模組對應之獨立探針題（可依勾選拼湊成題綱列）

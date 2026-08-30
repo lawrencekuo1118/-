@@ -653,6 +653,9 @@ ui <- page_navbar(
       .interview-5w1h-fields textarea.form-control {
         background-color: var(--brand-gray);
       }
+      .interview-5w1h-fields textarea.form-control:placeholder-shown {
+        color: var(--input-placeholder) !important;
+      }
       .interview-5w1h-combined { margin-top: 0.25rem; }
       .interview-5w1h-combined .control-label {
         font-weight: 600;
@@ -1213,7 +1216,8 @@ ui <- page_navbar(
               textAreaInput(
                 interview_5w1h_input_id(key),
                 sprintf("%s", INTERVIEW_5W1H_FIELD_LABELS[[key]]),
-                value = INTERVIEW_5W1H_DEFAULT_PROMPTS[[key]],
+                value = "",
+                placeholder = INTERVIEW_5W1H_DEFAULT_PROMPTS[[key]],
                 rows = 2,
                 width = "100%"
               )
@@ -2796,7 +2800,7 @@ server <- function(input, output, session) {
     for (key in INTERVIEW_5W1H_FIELD_ORDER) {
       updateTextAreaInput(
         session, interview_5w1h_input_id(key),
-        value = INTERVIEW_5W1H_DEFAULT_PROMPTS[[key]]
+        value = ""
       )
     }
   }

@@ -464,6 +464,7 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl("interview_5w1h_input_id", app_txt) &&
         grepl("interview_5w1h_combined", app_txt) &&
         grepl("interview-5w1h-combined", app_txt) &&
+        grepl("placeholder = INTERVIEW_5W1H_DEFAULT_PROMPTS", app_txt) &&
         grepl("完整訪談問項", app_txt, fixed = TRUE) &&
         grepl("--brand-gray", app_txt) &&
         grepl("interview-5w1h-fields", app_txt) &&
@@ -647,7 +648,8 @@ combined_q <- interview_5w1h_combined_question(
 )
 check(grepl("如何因應未授權存取風險", combined_q, fixed = TRUE) &&
         grepl("具體因應做法", combined_q, fixed = TRUE) &&
-        grepl("何時會發生", combined_q, fixed = TRUE),
+        grepl("何時會發生", combined_q, fixed = TRUE) &&
+        grepl("HOW：", combined_q, fixed = TRUE),
       "5W1H 各面向可整併為完整訪談問項")
 where_probe <- interview_5w1h_probe_bank(
   d1, modules = "where",

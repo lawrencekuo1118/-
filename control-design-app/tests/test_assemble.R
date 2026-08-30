@@ -1170,7 +1170,7 @@ check(grepl("refresh_sub_process_choices\\(force", app_casc) &&
         grepl("refresh_design_suggest_choices\\(force", app_casc) &&
         grepl("input\\$main_nav", app_casc) &&
         grepl("sub_process_select_ui", app_casc) &&
-        grepl("risk_factor_select_ui", app_casc) &&
+        grepl("sync_risk_factor_selectize", app_casc) &&
         grepl("openOnFocus", app_casc),
       "進入設計分頁強制重送子作業與風險／控制建議選單")
 check(!grepl("updateSelectInput\\(session, \"cycle\", selected = \"\"\\)", app_casc),
@@ -1630,10 +1630,11 @@ check(isTRUE(design_required_check(modifyList(d1, list(
 check(grepl('selectizeInput\\(\\s*"risk_factor"', app_src), "風險辨識含風險因素複選選單")
 check(grepl('multiple\\s*=\\s*TRUE', app_src) && grepl('"risk_factor"', app_src),
       "風險因素為複選 selectize")
-check(grepl("risk_factor_select_ui", app_src) &&
-        grepl('freezeReactiveValue\\(input, "risk_factor"\\)', app_src) &&
-        grepl("isolate\\(input\\$risk_factor", app_src),
-      "風險因素多選不因 observe 誤追蹤而反覆重建選單")
+check(grepl("sync_risk_factor_selectize", app_src) &&
+        grepl("sync_risk_description_selectize", app_src) &&
+        grepl('updateSelectizeInput\\(\\s*session, "risk_factor"', app_src) &&
+        grepl('updateSelectizeInput\\(\\s*session, "risk_description"', app_src),
+      "風險因素／風險描述以 updateSelectize 同步建議（靜態欄位一開始即顯示）")
 check(grepl("design_tab_risk_factor_choices", app_src) &&
         grepl("design_cascade_scope_key", app_src) &&
         !grepl('merge_param_store_choices\\([\\s\\S]{0,120}"風險因素"', app_src, perl = TRUE),
@@ -1668,26 +1669,28 @@ check(isTRUE(design_required_check(modifyList(d1, list(
   risk_factor = "密碼管理；使用者帳號管理", risk_name = "密碼管理；使用者帳號管理"
 )))$ok),
       "風險因素複選可通過必填")
-check(grepl('risk_description_select_ui', app_src), "風險辨識含風險描述建議選單")
+check(grepl('selectizeInput\\(\\s*"risk_description"', app_src), "風險辨識含風險描述建議選單")
 check(grepl(
   'risk_area[\\s\\S]{0,500}risk_factor[\\s\\S]{0,500}risk_description',
   app_src, perl = TRUE
 ), "風險因素位於風險範疇與風險描述之間")
-check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*risk_description_select_ui', app_src, perl = TRUE),
+check(grepl('nav_panel\\([\\s\\S]*"② 風險辨識"[\\s\\S]*selectizeInput\\(\\s*"risk_description"', app_src, perl = TRUE),
       "風險描述位於風險辨識分頁內")
+check(grepl('selectizeInput\\(\\s*"risk_description"[\\s\\S]{0,400}design-tab-filter-bar', app_src, perl = TRUE),
+      "風險描述置於篩選列之前（一開始可見）")
 check(grepl("建議風險因素 TAG", app_src), "風險因素以 TAG 說明")
 check(grepl('control_objective_select_ui', app_src) &&
         grepl('#control_objective-selectized', app_src),
       "控制目標為建議選單（可自訂）")
-check(grepl('risk_description_select_ui', app_src) &&
+check(grepl('selectizeInput\\(\\s*"risk_description"', app_src) &&
         grepl('control_activity_select_ui', app_src),
       "風險描述與控制活動同為建議選單")
-check(grepl('risk_factor_select_ui', app_src) &&
+check(grepl('selectizeInput\\(\\s*"risk_factor"', app_src) &&
         grepl('cascade_selectize_field_options', app_src),
-      "風險因素與子作業相同 renderUI 建議選單")
+      "風險因素為靜態 selectize 建議選單")
 check(grepl("refresh_design_suggest_choices", app_src) &&
         grepl('updateSelectizeInput\\(session, \"risk_description\"', app_src),
-      "風險描述以 renderUI 建議選單、套用時 updateSelectize")
+      "風險描述以 updateSelectize 同步建議")
 check(grepl('selectInput\\(\\s*"risk_category"', app_src), "風險辨識含風險類別")
 check(grepl('selectInput\\(\\s*"romm_classification"', app_src), "風險辨識含 RoMM 分類")
 check(grepl('significant_account[\\s\\S]*romm_classification', app_src, perl = TRUE),

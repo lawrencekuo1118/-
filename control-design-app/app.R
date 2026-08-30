@@ -1275,18 +1275,6 @@ ui <- page_navbar(
               actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
             ),
             div(
-              class = "design-tab-filter-bar",
-              tags$div(class = "filter-title", "風險類別／風險因素篩選 — 快速找出相關風險描述"),
-              selectInput(
-                "filter_risk_category", NULL,
-                choices = c("全部風險類別…" = "", RISK_CATEGORY_CHOICES),
-                selected = "", width = "100%"
-              ),
-              textInput("filter_risk_factor_kw", NULL, value = "", width = "100%",
-                        placeholder = "風險因素關鍵字（可留空）…"),
-              uiOutput("filter_risk_hits")
-            ),
-            div(
               class = "risk-principle-area-row",
               selectizeInput(
                 "risk_principle", "風險面向",
@@ -1307,7 +1295,17 @@ ui <- page_navbar(
             ),
             div(
               class = "risk-factor-category-row",
-              uiOutput("risk_factor_select_ui"),
+              selectizeInput(
+                "risk_factor", lab_req("風險因素"),
+                choices = NULL,
+                selected = character(0),
+                multiple = TRUE,
+                width = "100%",
+                options = cascade_selectize_field_options(
+                  "請先於側邊欄選擇循環，以載入本循環建議 TAG",
+                  multiple = TRUE
+                )
+              ),
               selectInput(
                 "risk_category", lab_req("風險類別"),
                 choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
@@ -1315,7 +1313,27 @@ ui <- page_navbar(
               )
             ),
             uiOutput("risk_factor_hint"),
-            uiOutput("risk_description_select_ui"),
+            selectizeInput(
+              "risk_description", lab_req("風險描述"),
+              choices = NULL,
+              selected = "",
+              width = "100%",
+              options = cascade_selectize_field_options(
+                "選建議後可雙擊修改；或直接輸入風險描述"
+              )
+            ),
+            div(
+              class = "design-tab-filter-bar",
+              tags$div(class = "filter-title", "風險類別／風險因素篩選 — 快速找出相關風險描述"),
+              selectInput(
+                "filter_risk_category", NULL,
+                choices = c("全部風險類別…" = "", RISK_CATEGORY_CHOICES),
+                selected = "", width = "100%"
+              ),
+              textInput("filter_risk_factor_kw", NULL, value = "", width = "100%",
+                        placeholder = "風險因素關鍵字（可留空）…"),
+              uiOutput("filter_risk_hits")
+            ),
             uiOutput("significant_account_hint"),
             selectizeInput(
               "significant_account", "會計科目",
@@ -2467,7 +2485,69 @@ server <- function(input, output, session) {
     if (isTRUE(force)) {
       design_suggest_ui_tick(isolate(design_suggest_ui_tick()) + 1L)
     }
+    sync_risk_factor_selectize()
+    sync_risk_description_selectize()
   }
+
+  sync_risk_factor_selectize <- function() {
+    cy <- isolate(input$cycle %||% "")
+    spid <- isolate(input$sub_process_id %||% "")
+    spnm <- isolate(input$sub_process %||% "")
+    ch <- if (nzchar(cy)) {
+      design_tab_risk_factor_choices(isolate(lib()), cy, spid, spnm)
+    } else {
+      character()
+    }
+    cur <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
+    if (length(cur)) {
+      extra <- cur[!cur %in% unname(ch)]
+      if (length(extra)) {
+        ch <- c(ch, stats::setNames(extra, vapply(extra, risk_factor_tag, character(1))))
+      }
+    }
+    placeholder <- if (nzchar(cy)) {
+      sprintf("可複選本循環建議 TAG 或手動新增（已載入 %d 項）", length(ch))
+    } else {
+      "請先於側邊欄選擇循環，以載入本循環建議 TAG"
+    }
+    updateSelectizeInput(
+      session, "risk_factor",
+      choices = ch,
+      selected = cur,
+      options = cascade_selectize_field_options(placeholder, multiple = TRUE)
+    )
+  }
+
+  sync_risk_description_selectize <- function() {
+    cy <- isolate(input$cycle %||% "")
+    rows <- if (nzchar(cy)) {
+      design_tab_cascade_rows(
+        isolate(lib()), cy,
+        isolate(input$sub_process_id %||% ""),
+        isolate(input$sub_process %||% "")
+      )
+    } else {
+      list()
+    }
+    rf <- isolate(input$risk_factor %||% character())
+    descs <- if (length(rows)) cascade_risk_description_choices(rows, rf) else character(0)
+    ch <- if (length(descs)) risk_description_select_choices(descs) else character()
+    cur <- trimws(isolate(input$risk_description %||% ""))
+    ch <- ensure_value_in_choices(ch, cur)
+    ch_ui <- if (length(ch)) c("(請選擇或輸入描述)" = "", ch) else c("(請選擇或輸入描述)" = "")
+    updateSelectizeInput(
+      session, "risk_description",
+      choices = ch_ui,
+      selected = if (nzchar(cur)) cur else "",
+      options = cascade_selectize_field_options(
+        "選建議後可雙擊修改；或直接輸入風險描述"
+      )
+    )
+  }
+
+  observeEvent(input$risk_factor, {
+    sync_risk_description_selectize()
+  }, ignoreInit = TRUE)
 
   output$sub_process_select_ui <- renderUI({
     tick <- sub_process_ui_tick()
@@ -2523,63 +2603,6 @@ server <- function(input, output, session) {
         closeAfterSelect = TRUE,
         allowEmptyOption = TRUE,
         showEmptyOptionInDropdown = FALSE
-      )
-    )
-  })
-
-  output$risk_factor_select_ui <- renderUI({
-    tick <- design_suggest_ui_tick()
-    cy <- input$cycle %||% ""
-    spid <- input$sub_process_id %||% ""
-    spnm <- input$sub_process %||% ""
-    ch <- if (nzchar(cy)) {
-      design_tab_risk_factor_choices(lib(), cy, spid, spnm)
-    } else {
-      character()
-    }
-    cur <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
-    if (length(cur)) {
-      extra <- cur[!cur %in% unname(ch)]
-      if (length(extra)) {
-        ch <- c(ch, stats::setNames(extra, vapply(extra, risk_factor_tag, character(1))))
-      }
-    }
-    freezeReactiveValue(input, "risk_factor")
-    placeholder <- if (nzchar(cy)) {
-      sprintf("可複選本循環建議 TAG 或手動新增（已載入 %d 項）", length(ch))
-    } else {
-      "請先於側邊欄選擇循環，以載入本循環建議 TAG"
-    }
-    selectizeInput(
-      "risk_factor", lab_req("風險因素"),
-      choices = ch,
-      selected = cur,
-      multiple = TRUE,
-      width = "100%",
-      options = cascade_selectize_field_options(placeholder, multiple = TRUE)
-    )
-  })
-
-  output$risk_description_select_ui <- renderUI({
-    tick <- design_suggest_ui_tick()
-    cy <- input$cycle %||% ""
-    rows <- if (nzchar(cy)) {
-      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
-    } else list()
-    rf <- input$risk_factor %||% character()
-    descs <- if (length(rows)) cascade_risk_description_choices(rows, rf) else character(0)
-    ch <- if (length(descs)) risk_description_select_choices(descs) else character()
-    cur <- trimws(isolate(input$risk_description %||% ""))
-    ch <- ensure_value_in_choices(ch, cur)
-    freezeReactiveValue(input, "risk_description")
-    ch_ui <- if (length(ch)) c("(請選擇或輸入描述)" = "", ch) else c("(請選擇或輸入描述)" = "")
-    selectizeInput(
-      "risk_description", lab_req("風險描述"),
-      choices = ch_ui,
-      selected = if (nzchar(cur)) cur else "",
-      width = "100%",
-      options = cascade_selectize_field_options(
-        "選建議後可雙擊修改；或直接輸入風險描述"
       )
     )
   })

@@ -1370,6 +1370,8 @@ ui <- page_navbar(
             ),
             uiOutput("oa_live_check"),
             uiOutput("type_live_check"),
+            uiOutput("control_objective_select_ui"),
+            uiOutput("control_activity_select_ui"),
             div(
               class = "assertions-side mb-2",
               selectizeInput(
@@ -1383,8 +1385,6 @@ ui <- page_navbar(
               ),
               uiOutput("assertions_hint")
             ),
-            uiOutput("control_objective_select_ui"),
-            uiOutput("control_activity_select_ui"),
             div(
               class = "control-attr-row",
               selectInput(

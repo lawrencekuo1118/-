@@ -297,7 +297,7 @@ ui <- page_navbar(
         var t = ($item.clone().children().remove().end().text() || '').trim();
         return t || String(value);
       }
-      $(document).on('dblclick.editSelectizeItem', '.rcm-design-tabs .selectize-control .item', function(e) {
+      $(document).on('dblclick.editSelectizeItem', '.rcm-design-sections .selectize-control .item', function(e) {
         e.preventDefault();
         e.stopPropagation();
         var $item = $(this);
@@ -506,18 +506,19 @@ ui <- page_navbar(
         overflow: visible !important; max-height: none !important;
       }
       .bslib-sidebar-layout > .main { overflow-x: hidden; overflow-y: auto; }
-      /* 子作業 selectize 下拉勿被 tab／card 裁切 */
-      .rcm-design-tabs, .rcm-design-tabs .tab-content, .rcm-design-tabs .tab-pane,
-      .rcm-design-tabs .card, .rcm-design-tabs .card-body {
+      /* 子作業 selectize 下拉勿被 accordion／card 裁切 */
+      .rcm-design-sections, .rcm-design-sections .accordion,
+      .rcm-design-sections .accordion-item, .rcm-design-sections .accordion-body,
+      .rcm-design-sections .card, .rcm-design-sections .card-body {
         overflow: visible !important;
       }
-      .rcm-design-tabs .selectize-dropdown {
+      .rcm-design-sections .selectize-dropdown {
         z-index: 2000 !important;
       }
-      .rcm-design-tabs .selectize-control .item {
+      .rcm-design-sections .selectize-control .item {
         cursor: text;
       }
-      .rcm-design-tabs .selectize-control .item:hover {
+      .rcm-design-sections .selectize-control .item:hover {
         outline: 1px dashed rgba(0, 91, 170, 0.35);
       }
       /* 相關法規｜法規連結：左 1 : 右 2 */
@@ -837,33 +838,27 @@ ui <- page_navbar(
         text-decoration: none;
       }
       .design-tab-filter-hits .btn-link:hover { text-decoration: underline; }
-      /* 風險控制點設計：三階段分頁籤 */
-      .rcm-design-tabs { margin-bottom: 0.5rem; }
-      .rcm-design-tabs > .nav-tabs { border-bottom: 2px solid var(--brand-green); }
-      .rcm-design-tabs > .nav-tabs .nav-link {
+      /* 風險控制點設計：三階段分區（預設全展開，必填欄先顯示） */
+      .rcm-design-sections { margin-bottom: 0.5rem; }
+      .rcm-design-sections .accordion-item { border-color: rgba(0, 91, 170, 0.15); }
+      .rcm-design-sections .accordion-button {
         color: var(--brand-blue);
         font-weight: 600;
-        border: none;
-        border-bottom: 3px solid transparent;
         padding: 0.55rem 1rem;
       }
-      .rcm-design-tabs > .nav-tabs .nav-link:hover {
-        border-color: rgba(134,188,37,0.45);
-        color: var(--brand-blue);
-      }
-      .rcm-design-tabs > .nav-tabs .nav-link.active {
-        color: var(--brand-blue);
+      .rcm-design-sections .accordion-button:not(.collapsed) {
         background: rgba(134,188,37,0.12);
-        border-bottom-color: var(--brand-green);
+        color: var(--brand-blue);
+        box-shadow: inset 0 -1px 0 var(--brand-green);
       }
-      .rcm-design-tabs > .tab-content { padding-top: 0.85rem; overflow: visible !important; }
+      .rcm-design-sections .accordion-body { padding-top: 0.85rem; overflow: visible !important; }
       /* 控制設計：輸入列滿版（單欄全寬） */
-      .rcm-design-tabs .shiny-input-container { width: 100%; max-width: 100%; }
-      .rcm-design-tabs .form-control,
-      .rcm-design-tabs .form-select,
-      .rcm-design-tabs textarea.form-control,
-      .rcm-design-tabs .selectize-control,
-      .rcm-design-tabs .selectize-input { width: 100% !important; max-width: 100%; }
+      .rcm-design-sections .shiny-input-container { width: 100%; max-width: 100%; }
+      .rcm-design-sections .form-control,
+      .rcm-design-sections .form-select,
+      .rcm-design-sections textarea.form-control,
+      .rcm-design-sections .selectize-control,
+      .rcm-design-sections .selectize-input { width: 100% !important; max-width: 100%; }
       .design-validation-panel { margin-top: 0.75rem; }
       /* 設計頁預覽：預設收合於下方，可點擊展開／收回 */
       .design-preview-drawer {
@@ -996,7 +991,7 @@ ui <- page_navbar(
         tags$li(tags$strong("側邊欄"), "：循環／公司名稱。"),
         tags$li(tags$strong("風險控制點設計"), "：",
                 strong("基礎設定 → 風險辨識 → 控制設計"),
-                "（須依序；", tags$span(class = "text-danger", "*"), " 為必填）。"),
+                "（三區塊預設全展開；", tags$span(class = "text-danger", "*"), " 為必填）。"),
         tags$li(strong("完成設計＝寫入 RCM 一列"), "（1 控制點 ↔ 1 RCM 列）。"),
       tags$li(tags$strong("判決書查詢"), "：司法院裁判書進階查詢、抓取判決內文與結果分析。"),
         tags$li(tags$strong("訪談問項設計"), "／", tags$strong("控制點測試設計"),
@@ -1012,7 +1007,7 @@ ui <- page_navbar(
         class = "home-tabs-grid",
         div(class = "home-tab-card", strong("判決書查詢"), "司法院裁判書爬蟲、判決內文與結果分析。"),
         div(class = "home-tab-card", strong("訪談問項設計"), "已定稿 RCM → 訪談題綱。"),
-        div(class = "home-tab-card", strong("風險控制點設計"), "分頁籤填寫基礎／風險／控制；定稿寫入 RCM。"),
+        div(class = "home-tab-card", strong("風險控制點設計"), "三區塊填寫基礎／風險／控制；必填欄預設可見；定稿寫入 RCM。"),
         div(class = "home-tab-card", strong("控制點測試設計"), "CSA 測試步驟與情境組。"),
         div(class = "home-tab-card", strong("RCM"), "檢視／下載已定稿列。"),
         div(class = "home-tab-card", strong("PBC資料庫"), "客戶原名 → 標準命名。"),
@@ -1264,31 +1259,75 @@ ui <- page_navbar(
     card(
       card_header("風險控制點設計"),
       div(
-        class = "rcm-design-tabs",
-        navset_tab(
-          id = "rcm_design_tabs",
-          nav_panel(
+        class = "rcm-design-sections",
+        accordion(
+          id = "rcm_design_sections",
+          open = c("① 基礎設定", "② 風險辨識", "③ 控制設計"),
+          accordion_panel(
             "① 基礎設定",
             div(
               class = "design-stage-save-bar",
               actionButton("preview_rcm_basic", "儲存", class = "btn-sm btn-outline-primary")
             ),
             uiOutput("design_cycle_readonly"),
+            uiOutput("sub_process_select_ui"),
             uiOutput("sub_process_hint"),
             textInput("sub_process_id", lab_opt("子作業編號"), value = "",
                       placeholder = "循環編號-子作業序號（例：EC-101）",
                       width = "100%"),
-            uiOutput("sub_process_select_ui"),
             textInput("control_id", lab_opt("控制編號"), value = "", width = "100%",
                       placeholder = "循環編號-子作業序號-控制序號（例：EC-101-01）"),
             uiOutput("design_preview_basic")
           ),
-          nav_panel(
+          accordion_panel(
             "② 風險辨識",
             div(
               class = "design-stage-save-bar",
               actionButton("preview_rcm_risk", "儲存", class = "btn-sm btn-outline-primary")
             ),
+            selectInput(
+              "risk_category", lab_req("風險類別"),
+              choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
+              selected = "", width = "100%"
+            ),
+            div(
+              class = "risk-factor-category-row",
+              uiOutput("risk_factor_select_ui")
+            ),
+            uiOutput("risk_factor_hint"),
+            uiOutput("risk_description_select_ui"),
+            uiOutput("significant_account_hint"),
+            selectizeInput(
+              "significant_account", "會計科目",
+              choices = account_select_choices(),
+              multiple = TRUE,
+              selected = character(0),
+              width = "100%",
+              options = list(
+                create = TRUE,
+                placeholder = "複選科目或「全部適用」"
+              )
+            ),
+            div(
+              class = "related-law-row",
+              selectizeInput(
+                "related_law", "相關法規",
+                choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
+                multiple = TRUE, width = "100%",
+                options = list(
+                  create = TRUE,
+                  createOnBlur = TRUE,
+                  placeholder = "僅遵循面可填；可多選／自訂；選後可雙擊修改",
+                  plugins = list("remove_button")
+                )
+              ),
+              textInput(
+                "related_law_url", "法規有效網址連結",
+                value = "", width = "100%",
+                placeholder = "https://…（選填；該法規之有效連結）"
+              )
+            ),
+            uiOutput("related_law_hint"),
             div(
               class = "design-tab-filter-bar",
               tags$div(class = "filter-title", "風險類別／風險因素篩選 — 快速找出相關風險描述"),
@@ -1320,68 +1359,15 @@ ui <- page_navbar(
                 )
               )
             ),
-            div(
-              class = "risk-factor-category-row",
-              uiOutput("risk_factor_select_ui"),
-              selectInput(
-                "risk_category", lab_req("風險類別"),
-                choices = c("請選擇…" = "", RISK_CATEGORY_CHOICES),
-                selected = "", width = "100%"
-              )
-            ),
-            uiOutput("risk_factor_hint"),
-            uiOutput("risk_description_select_ui"),
-            uiOutput("significant_account_hint"),
-            selectizeInput(
-              "significant_account", "會計科目",
-              choices = account_select_choices(),
-              multiple = TRUE,
-              selected = character(0),
-              width = "100%",
-              options = list(
-                create = TRUE,
-                placeholder = "複選科目或「全部適用」"
-              )
-            ),
             selectInput("romm_classification", "RoMM 分類（抽樣輔助）",
                         choices = ROMM_CLASS_CHOICES, width = "100%"),
             uiOutput("design_preview_risk")
           ),
-          nav_panel(
+          accordion_panel(
             "③ 控制設計",
             div(
               class = "design-stage-save-bar",
               actionButton("preview_rcm_control", "儲存", class = "btn-sm btn-outline-primary")
-            ),
-            div(
-              class = "design-tab-filter-bar",
-              tags$div(class = "filter-title", "控制方式／控制性質篩選 — 快速找出相關控制活動"),
-              selectInput(
-                "filter_ctrl_approach", NULL,
-                choices = c("全部控制方式…" = "", CONTROL_ACTIVITY_TYPE_PD),
-                selected = "", width = "100%"
-              ),
-              selectInput(
-                "filter_ctrl_nature", NULL,
-                choices = c("全部控制性質…" = "", CONTROL_TYPE_MANUAL_AUTO),
-                selected = "", width = "100%"
-              ),
-              uiOutput("filter_ctrl_hits")
-            ),
-            uiOutput("oa_live_check"),
-            uiOutput("type_live_check"),
-            div(
-              class = "assertions-side mb-2",
-              selectizeInput(
-                "assertions", "控制聲明",
-                choices = character(0), multiple = TRUE, selected = character(0),
-                width = "100%",
-                options = list(
-                  create = FALSE,
-                  placeholder = "依風險類別選取"
-                )
-              ),
-              uiOutput("assertions_hint")
             ),
             uiOutput("control_objective_select_ui"),
             uiOutput("control_activity_select_ui"),
@@ -1429,6 +1415,51 @@ ui <- page_navbar(
             ),
             uiOutput("related_system_hint"),
             selectizeInput(
+              "related_document_pbc", lab_req(CONTROL_EVIDENCE_DOCUMENT_LABEL),
+              choices = NULL, multiple = TRUE, width = "100%",
+              options = list(
+                create = TRUE,
+                createOnBlur = TRUE,
+                placeholder = "Control Evidences；選後可雙擊修改；自 PBC 選取或手動輸入",
+                plugins = list("remove_button")
+              )
+            ),
+            div(
+              class = "d-flex gap-1 flex-wrap mb-1",
+              actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
+            ),
+            uiOutput("related_document_hint"),
+            div(
+              class = "design-tab-filter-bar",
+              tags$div(class = "filter-title", "控制方式／控制性質篩選 — 快速找出相關控制活動"),
+              selectInput(
+                "filter_ctrl_approach", NULL,
+                choices = c("全部控制方式…" = "", CONTROL_ACTIVITY_TYPE_PD),
+                selected = "", width = "100%"
+              ),
+              selectInput(
+                "filter_ctrl_nature", NULL,
+                choices = c("全部控制性質…" = "", CONTROL_TYPE_MANUAL_AUTO),
+                selected = "", width = "100%"
+              ),
+              uiOutput("filter_ctrl_hits")
+            ),
+            uiOutput("oa_live_check"),
+            uiOutput("type_live_check"),
+            div(
+              class = "assertions-side mb-2",
+              selectizeInput(
+                "assertions", "控制聲明",
+                choices = character(0), multiple = TRUE, selected = character(0),
+                width = "100%",
+                options = list(
+                  create = FALSE,
+                  placeholder = "依風險類別選取"
+                )
+              ),
+              uiOutput("assertions_hint")
+            ),
+            selectizeInput(
               "related_policy", lab_opt("相關政策與制度"),
               choices = NULL, multiple = TRUE, width = "100%",
               options = list(
@@ -1448,41 +1479,6 @@ ui <- page_navbar(
                 placeholder = "一般相關文件；可選建議或雙擊修改自訂"
               )
             ),
-            div(
-              class = "related-law-row",
-              selectizeInput(
-                "related_law", "相關法規",
-                choices = c("請選擇或輸入…" = "", RELATED_LAW_CHOICES),
-                multiple = TRUE, width = "100%",
-                options = list(
-                  create = TRUE,
-                  createOnBlur = TRUE,
-                  placeholder = "僅遵循面可填；可多選／自訂；選後可雙擊修改",
-                  plugins = list("remove_button")
-                )
-              ),
-              textInput(
-                "related_law_url", "法規有效網址連結",
-                value = "", width = "100%",
-                placeholder = "https://…（選填；該法規之有效連結）"
-              )
-            ),
-            uiOutput("related_law_hint"),
-            selectizeInput(
-              "related_document_pbc", lab_req(CONTROL_EVIDENCE_DOCUMENT_LABEL),
-              choices = NULL, multiple = TRUE, width = "100%",
-              options = list(
-                create = TRUE,
-                createOnBlur = TRUE,
-                placeholder = "Control Evidences；選後可雙擊修改；自 PBC 選取或手動輸入",
-                plugins = list("remove_button")
-              )
-            ),
-            div(
-              class = "d-flex gap-1 flex-wrap mb-1",
-              actionButton("goto_pbc_tab", "開啟 PBC 資料庫", class = "btn-sm btn-outline-secondary")
-            ),
-            uiOutput("related_document_hint"),
             uiOutput("design_preview_control")
           )
         )
@@ -2460,7 +2456,17 @@ server <- function(input, output, session) {
   sub_process_ui_state <- new.env(parent = emptyenv())
   sub_process_ui_state$cycle <- NULL
   sub_process_ui_tick <- reactiveVal(0L)
+  design_suggest_ui_state <- new.env(parent = emptyenv())
+  design_suggest_ui_state$scope <- NULL
   design_suggest_ui_tick <- reactiveVal(0L)
+
+  design_cascade_scope <- function(cy, sub_process_id = "", sub_process = "") {
+    design_cascade_scope_key(cy, sub_process_id, sub_process)
+  }
+
+  reset_design_cascade_scope <- function() {
+    design_suggest_ui_state$scope <- NULL
+  }
 
   refresh_sub_process_choices <- function(force = FALSE) {
     # renderUI 已依 cycle／lib 重繪；force 時再 bump 一次以重掛載選單
@@ -2512,7 +2518,7 @@ server <- function(input, output, session) {
     # 避免重建時舊值回寫造成閃跳
     freezeReactiveValue(input, "sub_process")
     # 開頭放空選項，避免 selectize 自動選第一筆；允許空白
-    ch_ui <- if (length(ch)) c("(請選擇或輸入名稱)" = "", ch) else c("(請先選循環)" = "")
+    ch_ui <- if (length(ch)) c("(請選擇或輸入名稱)" = "", ch) else c("(請選擇或輸入名稱)" = "")
     selectizeInput(
       "sub_process", lab_req("子作業名稱"),
       choices = ch_ui,
@@ -2535,11 +2541,13 @@ server <- function(input, output, session) {
   output$risk_factor_select_ui <- renderUI({
     tick <- design_suggest_ui_tick()
     cy <- input$cycle %||% ""
-    rows <- if (nzchar(cy)) {
-      design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
-    } else list()
-    ch <- if (length(rows)) cascade_risk_choices(rows) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "風險因素")
+    spid <- input$sub_process_id %||% ""
+    spnm <- input$sub_process %||% ""
+    ch <- if (nzchar(cy)) {
+      design_tab_risk_factor_choices(lib(), cy, spid, spnm)
+    } else {
+      character()
+    }
     cur <- parse_risk_factor_values(isolate(input$risk_factor %||% character()))
     if (length(cur)) {
       extra <- cur[!cur %in% unname(ch)]
@@ -2548,17 +2556,18 @@ server <- function(input, output, session) {
       }
     }
     freezeReactiveValue(input, "risk_factor")
-    ch_ui <- if (length(ch)) ch else if (nzchar(cy)) character() else c("(請先選循環)" = "")
+    placeholder <- if (nzchar(cy)) {
+      sprintf("可複選本循環建議 TAG 或手動新增（已載入 %d 項）", length(ch))
+    } else {
+      "請先於側邊欄選擇循環，以載入本循環建議 TAG"
+    }
     selectizeInput(
       "risk_factor", lab_req("風險因素"),
-      choices = ch_ui,
+      choices = ch,
       selected = cur,
       multiple = TRUE,
       width = "100%",
-      options = cascade_selectize_field_options(
-        "可複選建議 TAG 或手動新增風險因素",
-        multiple = TRUE
-      )
+      options = cascade_selectize_field_options(placeholder, multiple = TRUE)
     )
   })
 
@@ -2571,13 +2580,10 @@ server <- function(input, output, session) {
     rf <- input$risk_factor %||% character()
     descs <- if (length(rows)) cascade_risk_description_choices(rows, rf) else character(0)
     ch <- if (length(descs)) risk_description_select_choices(descs) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "風險描述")
     cur <- trimws(isolate(input$risk_description %||% ""))
     ch <- ensure_value_in_choices(ch, cur)
     freezeReactiveValue(input, "risk_description")
-    ch_ui <- if (length(ch)) c("(請選擇或輸入描述)" = "", ch) else {
-      if (nzchar(cy)) c("(請選擇或輸入描述)" = "") else c("(請先選循環)" = "")
-    }
+    ch_ui <- if (length(ch)) c("(請選擇或輸入描述)" = "", ch) else c("(請選擇或輸入描述)" = "")
     selectizeInput(
       "risk_description", lab_req("風險描述"),
       choices = ch_ui,
@@ -2596,13 +2602,10 @@ server <- function(input, output, session) {
       design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
     } else list()
     ch <- if (length(rows)) cascade_objective_choices(rows) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "控制目標")
     cur <- trimws(isolate(input$control_objective %||% ""))
     ch <- ensure_value_in_choices(ch, cur)
     freezeReactiveValue(input, "control_objective")
-    ch_ui <- if (length(ch)) c("(請選擇或輸入目標)" = "", ch) else {
-      if (nzchar(cy)) c("(請選擇或輸入目標)" = "") else c("(請先選循環)" = "")
-    }
+    ch_ui <- if (length(ch)) c("(請選擇或輸入目標)" = "", ch) else c("(請選擇或輸入目標)" = "")
     selectizeInput(
       "control_objective", lab_req("控制目標"),
       choices = ch_ui,
@@ -2621,13 +2624,10 @@ server <- function(input, output, session) {
       design_tab_cascade_rows(lib(), cy, input$sub_process_id %||% "", input$sub_process %||% "")
     } else list()
     ch <- if (length(rows)) cascade_activity_text_choices(rows) else character()
-    ch <- merge_param_store_choices(ch, isolate(param_store()), "控制活動")
     cur <- trimws(isolate(input$control_activity %||% ""))
     ch <- ensure_value_in_choices(ch, cur)
     freezeReactiveValue(input, "control_activity")
-    ch_ui <- if (length(ch)) c("(請選擇或輸入活動)" = "", ch) else {
-      if (nzchar(cy)) c("(請選擇或輸入活動)" = "") else c("(請先選循環)" = "")
-    }
+    ch_ui <- if (length(ch)) c("(請選擇或輸入活動)" = "", ch) else c("(請選擇或輸入活動)" = "")
     selectizeInput(
       "control_activity", lab_req("控制活動"),
       choices = ch_ui,
@@ -2841,10 +2841,16 @@ server <- function(input, output, session) {
     freezeReactiveValue(input, "sub_process")
     freezeReactiveValue(input, "sub_process_id")
     freezeReactiveValue(input, "control_id")
+    freezeReactiveValue(input, "risk_factor")
+    freezeReactiveValue(input, "risk_description")
+    freezeReactiveValue(input, "control_objective")
+    freezeReactiveValue(input, "control_activity")
     sub_process_ui_state$cycle <- NULL
+    reset_design_cascade_scope()
     updateTextInput(session, "sub_process_id", value = "")
     updateTextInput(session, "control_id", value = "")
     refresh_sub_process_choices(force = TRUE)
+    refresh_design_suggest_choices(force = TRUE)
   }, ignoreNULL = FALSE)
 
   observeEvent(lib(), {
@@ -2858,13 +2864,6 @@ server <- function(input, output, session) {
 
   # 設計分頁／基礎設定可能延遲顯示；進入時 bump 重掛載選單
   observeEvent(input$main_nav, {
-    if (identical(input$main_nav, "風險控制點設計")) {
-      refresh_sub_process_choices(force = TRUE)
-      refresh_design_suggest_choices(force = TRUE)
-    }
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$rcm_design_tabs, {
     if (identical(input$main_nav, "風險控制點設計")) {
       refresh_sub_process_choices(force = TRUE)
       refresh_design_suggest_choices(force = TRUE)
@@ -2945,7 +2944,20 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observe({
-    # 僅依循環／子作業／範本庫修訂刷新建議 TAG 與 PBC 選單
+    # 循環／子作業範圍變更時清空連動建議欄，並刷新建議 TAG 與 PBC 選單
+    cy <- input$cycle %||% ""
+    spid <- input$sub_process_id %||% ""
+    spnm <- input$sub_process %||% ""
+    scope_key <- design_cascade_scope(cy, spid, spnm)
+    if (!identical(design_suggest_ui_state$scope, scope_key)) {
+      design_suggest_ui_state$scope <- scope_key
+      if (!isTRUE(applying_template())) {
+        freezeReactiveValue(input, "risk_factor")
+        freezeReactiveValue(input, "risk_description")
+        freezeReactiveValue(input, "control_objective")
+        freezeReactiveValue(input, "control_activity")
+      }
+    }
     input$cycle
     input$sub_process
     input$sub_process_id

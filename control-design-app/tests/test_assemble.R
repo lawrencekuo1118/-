@@ -2017,6 +2017,17 @@ fix_list_html <- paste(readLines(
   file.path(root, "tests/fixtures/judgment_result_list.html"),
   encoding = "UTF-8", warn = FALSE
 ), collapse = "\n")
+fix_form_html <- paste(readLines(
+  file.path(root, "tests/fixtures/judgment_search_form.html"),
+  encoding = "UTF-8", warn = FALSE
+), collapse = "\n")
+vs_hidden <- judgment_extract_hidden("__VIEWSTATE", fix_form_html)
+check(!grepl('"', vs_hidden, fixed = TRUE), "VIEWSTATE hidden 欄位不含尾隨引號")
+check(nzchar(vs_hidden), "VIEWSTATE hidden 欄位可解析")
+check(grepl("judgment_http_session", paste(readLines(file.path(root, "R/judgment_crawler.R"), encoding="UTF-8"), collapse="\n")),
+      "判決書 HTTP 使用 cookie session")
+check(nzchar(judgment_extract_iframe_src('<iframe src="qryresultlst.aspx?ty=JUDBOOK&amp;q=abc" id="iframe-data"></iframe>')),
+      "iframe src 解析支援 src 在 id 之前")
 links <- judgment_parse_result_links(fix_list_html)
 check(nrow(links) >= 3L, "判決書結果列表解析")
 check(all(c("裁判日期", "列表案由", "列表摘要") %in% names(links)),

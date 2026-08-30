@@ -316,7 +316,7 @@ ui <- page_navbar(
     })();
   ")),
     tags$style(HTML(paste0("
-      :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; --input-placeholder: #ADB5BD; }
+      :root { --brand-blue: ", BRAND_BLUE, "; --brand-green: ", BRAND_GREEN, "; --brand-black: ", BRAND_BLACK, "; --brand-white: ", BRAND_WHITE, "; --brand-gray: ", BRAND_GRAY, "; --input-placeholder: #ADB5BD; }
       .navbar { background-color: var(--brand-black) !important; border-bottom: 3px solid var(--brand-green); }
       .navbar .navbar-brand { color: var(--brand-white) !important; font-weight: 700; letter-spacing: 0.02em; }
       .navbar .navbar-brand::after { content: \"\"; display: inline-block; width: 0.45em; height: 0.45em; margin-left: 0.15em; margin-bottom: 0.05em; border-radius: 50%; background: var(--brand-green); vertical-align: middle; }
@@ -649,6 +649,26 @@ ui <- page_navbar(
       }
       .interview-5w1h-fields .form-group { margin-bottom: 0.75rem; }
       .interview-5w1h-fields textarea.form-control { min-height: 3rem; }
+      .judgment-result-url-row textarea.form-control,
+      .interview-5w1h-fields textarea.form-control {
+        background-color: var(--brand-gray);
+      }
+      .interview-5w1h-combined { margin-top: 0.25rem; }
+      .interview-5w1h-combined .control-label {
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+      }
+      .interview-5w1h-combined-box {
+        background-color: var(--brand-gray);
+        border: 1px solid #C8C8C8;
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        min-height: 3rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--brand-black);
+      }
 
       .judgment-search-table {
         width: 100%;
@@ -1197,7 +1217,12 @@ ui <- page_navbar(
                 rows = 2,
                 width = "100%"
               )
-            })
+            }),
+            tags$div(
+              class = "interview-5w1h-combined",
+              tags$label(class = "control-label", "完整訪談問項"),
+              div(class = "interview-5w1h-combined-box", textOutput("interview_5w1h_combined"))
+            )
           )
         )
       ),
@@ -2753,6 +2778,14 @@ server <- function(input, output, session) {
       custom_5w1h_prompts = prompts
     )
   }
+
+  output$interview_5w1h_combined <- renderText({
+    prompts <- interview_5w1h_prompts_from_values(
+      input,
+      risk_label = interview_primary_risk_label()
+    )
+    interview_5w1h_combined_question(prompts)
+  })
 
   output$interview_worksheet_stats <- renderText({
     iv <- interview_worksheet()

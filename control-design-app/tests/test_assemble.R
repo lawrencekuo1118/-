@@ -462,6 +462,10 @@ check(grepl("interview_design_groups", app_txt) &&
         grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_5w1h_input_id", app_txt) &&
+        grepl("interview_5w1h_combined", app_txt) &&
+        grepl("interview-5w1h-combined", app_txt) &&
+        grepl("完整訪談問項", app_txt, fixed = TRUE) &&
+        grepl("--brand-gray", app_txt) &&
         grepl("interview-5w1h-fields", app_txt) &&
         grepl("INTERVIEW_5W1H_DEFAULT_PROMPTS", app_txt) &&
         grepl("interview_5w1h_prompts_from_values", app_txt) &&
@@ -632,6 +636,19 @@ check(
   ),
   "5W1H 問句可代入風險名稱"
 )
+combined_q <- interview_5w1h_combined_question(
+  interview_5w1h_prompts_from_values(
+    setNames(
+      as.list(INTERVIEW_5W1H_DEFAULT_PROMPTS),
+      vapply(INTERVIEW_5W1H_FIELD_ORDER, interview_5w1h_input_id, character(1))
+    ),
+    risk_label = "未授權存取"
+  )
+)
+check(grepl("如何因應未授權存取風險", combined_q, fixed = TRUE) &&
+        grepl("具體因應做法", combined_q, fixed = TRUE) &&
+        grepl("何時會發生", combined_q, fixed = TRUE),
+      "5W1H 各面向可整併為完整訪談問項")
 where_probe <- interview_5w1h_probe_bank(
   d1, modules = "where",
   custom_prompts = c(where = "在何處／哪個系統執行？")

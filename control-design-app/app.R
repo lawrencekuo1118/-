@@ -2226,7 +2226,7 @@ server <- function(input, output, session) {
   output$sidebar_cycle_hint <- renderUI({
     cy <- input$cycle %||% ""
     if (!nzchar(cy)) {
-      tags$div(class = "small text-danger", "必填：請先選定循環（訪談／設計）；PBC 資料庫可直接查閱。")
+      tags$div(class = "small text-danger", "必填：請先選定循環（訪談／設計）。")
     } else {
       tags$div(class = "small text-muted", sprintf("目前：%s", cy))
     }

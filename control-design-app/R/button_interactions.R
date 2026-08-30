@@ -18,7 +18,7 @@ button_interaction_registry <- function() {
       rows = list(
         list(id = "—", label = "側邊欄「循環」",
              page = "全 App", prereq = "—",
-             effect = "訪談／風險控制點設計／定稿 RCM 必填；PBC 資料庫可直接查閱",
+             effect = "訪談／風險控制點設計／定稿 RCM 必填",
              gate = "—"),
         list(id = "—", label = "高權登入狀態",
              page = "全 App", prereq = "admin_login 驗證",

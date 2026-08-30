@@ -1357,8 +1357,7 @@ check(!grepl('selectInput\\(\\s*"pbc_cycle"', app_src),
       "PBC 頁無獨立循環選框（改用側邊欄）")
 check(grepl('seed_if_missing_cycle\\("電腦化資訊系統循環"', app_src) &&
         grepl('ch_pbc_design <- pbc_choices\\(reg, cycle_filter = cf_design\\)', app_src) &&
-        grepl('update_selectize\\("inputs", ch_pbc_design\\)', app_src) &&
-        grepl("PBC 資料庫可直接查閱", app_src, fixed = TRUE),
+        grepl('update_selectize\\("inputs", ch_pbc_design\\)', app_src),
       "PBC資料庫不等待循環別即可顯示；設計／測試頁 Inputs 等欄位直接選 PBC")
 check(!grepl('selectInput\\(\\s*"cycle".*基礎設定|nav_panel\\([\\s\\S]{0,80}"① 基礎設定"[\\s\\S]{0,400}selectInput\\(\\s*"cycle"', app_src, perl = TRUE),
       "基礎設定分頁內無循環名稱選框")

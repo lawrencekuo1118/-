@@ -99,7 +99,74 @@ judgment_extract_hidden <- function(name, html) {
   pat <- paste0('name="', name, '" id="', name, '" value="([^"]*)"')
   m <- regexpr(pat, html, perl = TRUE)
   if (m[1] == -1) return("")
-  sub('.*value="', "", regmatches(html, m))
+  parts <- regmatches(html, regexec(pat, html, perl = TRUE))[[1]]
+  if (length(parts) < 2L) return("")
+  judgment_trim(parts[[2L]])
+}
+
+judgment_extract_iframe_src <- function(html) {
+  html <- judgment_trim(html)
+  if (!nzchar(html)) return("")
+  patterns <- c(
+    'id="iframe-data"[^>]*src="([^"]+)"',
+    'src="([^"]+)"[^>]*id="iframe-data"'
+  )
+  for (pat in patterns) {
+    m <- regexpr(pat, html, perl = TRUE, ignore.case = TRUE)
+    if (m[1] == -1) next
+    parts <- regmatches(html, regexec(pat, html, perl = TRUE, ignore.case = TRUE))[[1]]
+    if (length(parts) >= 2L && nzchar(parts[[2L]])) {
+      return(gsub("&amp;", "&", parts[[2L]], fixed = TRUE))
+    }
+  }
+  ""
+}
+
+judgment_http_session <- function() {
+  list(cookie_jar = tempfile(fileext = ".judicial.cookies"))
+}
+
+judgment_http_transient_error <- function(err) {
+  msg <- conditionMessage(err)
+  grepl(
+    "Connection reset|Failure when receiving data|Empty reply from server|Timeout was reached|recv failure|errno 104|SSL_read",
+    msg,
+    perl = TRUE
+  )
+}
+
+judgment_http_perform <- function(req, max_tries = 4L) {
+  last_err <- NULL
+  for (attempt in seq_len(max_tries)) {
+    result <- tryCatch(
+      httr2::req_perform(req),
+      error = function(e) {
+        last_err <<- e
+        NULL
+      }
+    )
+    if (!is.null(result)) return(result)
+    if (attempt >= max_tries || !judgment_http_transient_error(last_err)) break
+    Sys.sleep(min(2^(attempt - 1L), 8L))
+  }
+  stop(last_err)
+}
+
+judgment_build_request <- function(url, session = NULL, referer = NULL) {
+  req <- httr2::request(url) |>
+    httr2::req_headers(
+      `User-Agent` = judgment_user_agent(),
+      Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      `Accept-Language` = "zh-TW,zh;q=0.9,en;q=0.8"
+    ) |>
+    httr2::req_timeout(120)
+  if (!is.null(session) && nzchar(session$cookie_jar %||% "")) {
+    req <- httr2::req_cookie_preserve(req, session$cookie_jar)
+  }
+  if (nzchar(referer %||% "")) {
+    req <- httr2::req_headers(req, Referer = referer)
+  }
+  req
 }
 
 judgment_response_error_text <- function(html) {
@@ -219,42 +286,33 @@ judgment_encode_form_body <- function(body) {
   paste(parts, collapse = "&")
 }
 
-judgment_perform_get <- function(url, referer = NULL) {
+judgment_perform_get <- function(url, referer = NULL, session = NULL) {
   if (!requireNamespace("httr2", quietly = TRUE)) {
     stop("需要 httr2 套件以連線司法院裁判書系統")
   }
-  req <- httr2::request(url) |>
-    httr2::req_headers(
-      `User-Agent` = judgment_user_agent(),
-      Accept = "text/html,application/xhtml+xml"
-    )
-  if (nzchar(referer %||% "")) {
-    req <- httr2::req_headers(req, Referer = referer)
-  }
-  resp <- httr2::req_perform(req)
+  req <- judgment_build_request(url, session = session, referer = referer)
+  resp <- judgment_http_perform(req)
   list(
     status = httr2::resp_status(resp),
     html = httr2::resp_body_string(resp)
   )
 }
 
-judgment_perform_post_form <- function(url, body, referer = NULL) {
+judgment_perform_post_form <- function(url, body, referer = NULL, session = NULL) {
   if (!requireNamespace("httr2", quietly = TRUE)) {
     stop("需要 httr2 套件以連線司法院裁判書系統")
   }
   payload <- judgment_encode_form_body(body)
-  req <- httr2::request(url) |>
+  req <- judgment_build_request(url, session = session, referer = referer %||% JUDGMENT_SEARCH_URL) |>
     httr2::req_method("POST") |>
     httr2::req_headers(
-      `User-Agent` = judgment_user_agent(),
       `Content-Type` = "application/x-www-form-urlencoded; charset=UTF-8",
       `Content-Length` = as.character(nchar(payload, type = "bytes")),
-      Referer = referer %||% JUDGMENT_SEARCH_URL,
       Origin = JUDGMENT_SITE_ORIGIN,
-      Accept = "text/html,application/xhtml+xml"
+      Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     ) |>
     httr2::req_body_raw(payload)
-  resp <- httr2::req_perform(req)
+  resp <- judgment_http_perform(req)
   list(
     status = httr2::resp_status(resp),
     html = httr2::resp_body_string(resp)
@@ -592,11 +650,12 @@ empty_judgment_results_frame <- function() {
   )
 }
 
-judgment_search_submit <- function(params) {
+judgment_search_submit <- function(params, session = NULL) {
   chk <- judgment_validate_params(params)
   if (!isTRUE(chk$ok)) stop(chk$msg)
+  if (is.null(session)) session <- judgment_http_session()
 
-  page <- judgment_perform_get(JUDGMENT_SEARCH_URL)
+  page <- judgment_perform_get(JUDGMENT_SEARCH_URL, session = session)
   err <- judgment_response_error_text(page$html)
   if (nzchar(err)) stop(err)
 
@@ -606,7 +665,11 @@ judgment_search_submit <- function(params) {
     judgment_extract_hidden("__VIEWSTATEGENERATOR", page$html),
     judgment_extract_hidden("__EVENTVALIDATION", page$html)
   )
-  post <- judgment_perform_post_form(JUDGMENT_SEARCH_URL, body, referer = JUDGMENT_SEARCH_URL)
+  post <- judgment_perform_post_form(
+    JUDGMENT_SEARCH_URL, body,
+    referer = JUDGMENT_SEARCH_URL,
+    session = session
+  )
   err <- judgment_response_error_text(post$html)
   if (nzchar(err)) {
     stop(paste0(
@@ -615,17 +678,20 @@ judgment_search_submit <- function(params) {
     ))
   }
 
-  list(html = post$html, max_results = chk$max_results)
+  list(html = post$html, max_results = chk$max_results, session = session)
 }
 
-judgment_fetch_result_list <- function(search_html, max_results = 30L) {
+judgment_fetch_result_list <- function(search_html, max_results = 30L, session = NULL) {
   links <- judgment_parse_result_links(search_html)
   if (!nrow(links)) {
     # 可能包在 iframe：再抓 qryresultlst
-    m <- regexpr('id="iframe-data"[^>]*src="([^"]+)"', search_html, perl = TRUE, ignore.case = TRUE)
-    if (m[1] > 0) {
-      iframe <- sub('.*src="([^"]+)".*', "\\1", regmatches(search_html, m)[[1]], perl = TRUE)
-      lst <- judgment_perform_get(judgment_absolute_url(iframe), referer = JUDGMENT_SEARCH_URL)
+    iframe <- judgment_extract_iframe_src(search_html)
+    if (nzchar(iframe)) {
+      lst <- judgment_perform_get(
+        judgment_absolute_url(iframe),
+        referer = JUDGMENT_SEARCH_URL,
+        session = session
+      )
       links <- judgment_parse_result_links(lst$html)
     }
   }
@@ -633,8 +699,8 @@ judgment_fetch_result_list <- function(search_html, max_results = 30L) {
   head(links, as.integer(max_results))
 }
 
-judgment_fetch_detail <- function(url) {
-  page <- judgment_perform_get(url, referer = JUDGMENT_SEARCH_URL)
+judgment_fetch_detail <- function(url, session = NULL) {
+  page <- judgment_perform_get(url, referer = JUDGMENT_SEARCH_URL, session = session)
   judgment_parse_detail(page$html, url = url)
 }
 
@@ -642,7 +708,8 @@ judgment_crawl_listing <- function(
     listing,
     target_company = "",
     progress_cb = NULL,
-    data_dir = NULL) {
+    data_dir = NULL,
+    session = NULL) {
   target_company <- judgment_trim(target_company)
   if (!nrow(listing)) return(empty_judgment_results_frame())
   step <- function(msg) {
@@ -653,7 +720,7 @@ judgment_crawl_listing <- function(
     step(sprintf("抓取全文 %d / %d…", i, nrow(listing)))
     url <- listing$連結[[i]]
     detail <- tryCatch(
-      judgment_fetch_detail(url),
+      judgment_fetch_detail(url, session = session),
       error = function(e) list(
         裁判字號 = listing$裁判字號[[i]],
         裁判主文 = "",
@@ -701,21 +768,34 @@ judgment_crawl <- function(
     if (is.function(progress_cb)) progress_cb(msg)
   }
 
+  session <- judgment_http_session()
+
   if (nzchar(chk$result_url %||% "")) {
     step("讀取查詢結果 URL…")
-    page <- judgment_perform_get(chk$result_url, referer = JUDGMENT_SEARCH_URL)
+    page <- judgment_perform_get(
+      chk$result_url,
+      referer = JUDGMENT_SEARCH_URL,
+      session = session
+    )
     err <- judgment_response_error_text(page$html)
     if (nzchar(err)) stop(err)
     step("解析查詢結果…")
-    listing <- judgment_fetch_result_list(page$html, chk$max_results)
-    return(judgment_crawl_listing(listing, target_company, progress_cb, data_dir = data_dir))
+    listing <- judgment_fetch_result_list(page$html, chk$max_results, session = session)
+    return(judgment_crawl_listing(
+      listing, target_company, progress_cb,
+      data_dir = data_dir, session = session
+    ))
   }
 
   step("連線司法院裁判書查詢…")
-  search <- judgment_search_submit(params)
+  search <- judgment_search_submit(params, session = session)
+  session <- search$session %||% session
   step("解析查詢結果…")
-  listing <- judgment_fetch_result_list(search$html, search$max_results)
-  judgment_crawl_listing(listing, target_company, progress_cb, data_dir = data_dir)
+  listing <- judgment_fetch_result_list(search$html, search$max_results, session = session)
+  judgment_crawl_listing(
+    listing, target_company, progress_cb,
+    data_dir = data_dir, session = session
+  )
 }
 
 judgment_params_sheet <- function(params, target_company = "") {

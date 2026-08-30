@@ -455,11 +455,11 @@ check(grepl("interview_preview_df\\(interview_worksheet\\(\\)\\)", app_txt),
 interview_panel <- sub('(?s).*nav_panel\\(\\s*"訪談問項設計"', 'nav_panel("訪談問項設計"', app_txt, perl = TRUE)
 interview_panel <- sub('(?s)nav_panel\\(\\s*"風險控制點設計".*', "", interview_panel, perl = TRUE)
 check(grepl("interview_design_groups", app_txt) &&
-        grepl("rcm_design_tabs", app_txt) &&
+        grepl("rcm_design_sections", app_txt) &&
         grepl("design-preview-drawer", app_txt) &&
         grepl("designPreviewCollapse", app_txt) &&
         grepl("interviewPreviewCollapse", app_txt) &&
-        grepl('navset_tab\\([\\s\\S]*nav_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
+        grepl('accordion\\([\\s\\S]*accordion_panel\\([\\s\\S]*"① 基礎設定"', app_txt, perl = TRUE) &&
         grepl("interview_guide_banner", app_txt) &&
         grepl("interview_5w1h_input_id", app_txt) &&
         grepl("interview_5w1h_combined", app_txt) &&
@@ -1435,7 +1435,7 @@ check(!grepl('layout_columns[\\s\\S]{0,500}control_objective[\\s\\S]{0,500}asser
 design_panel <- sub('(?s).*nav_panel\\(\\s*"風險控制點設計"', "", app_src, perl = TRUE)
 design_panel <- sub('(?s)nav_panel\\(\\s*"控制點測試設計".*', "", design_panel, perl = TRUE)
 check(!grepl("layout_columns", design_panel, fixed = TRUE) &&
-        grepl("rcm-design-tabs .shiny-input-container { width: 100%", app_src, fixed = TRUE) &&
+        grepl("rcm-design-sections .shiny-input-container { width: 100%", app_src, fixed = TRUE) &&
         grepl('textInput\\(\\s*"sub_process_id"[\\s\\S]*width\\s*=\\s*"100%"', app_src, perl = TRUE),
       "風險控制點設計不以 layout_columns 排版；其餘輸入滿寬")
 check(grepl("control-attr-row", app_src) &&
@@ -1447,13 +1447,13 @@ check(grepl("risk-principle-area-row", app_src) &&
         grepl('risk-principle-area-row[\\s\\S]*minmax\\(0, 1fr\\) minmax\\(0, 1fr\\)', app_src, perl = TRUE),
       "風險面向與風險範疇 1:1 同列並排")
 check(grepl("risk-factor-category-row", app_src) &&
-        grepl('risk-factor-category-row[\\s\\S]*"risk_factor"[\\s\\S]*"risk_category"', app_src, perl = TRUE) &&
-        grepl('risk-factor-category-row[\\s\\S]*minmax\\(0, 2fr\\) minmax\\(0, 1fr\\)', app_src, perl = TRUE),
-      "風險因素與風險類別 2:1 同列並排")
+        grepl('risk-factor-category-row[\\s\\S]*"risk_factor"', app_src, perl = TRUE) &&
+        grepl('"risk_category", lab_req\\("風險類別"\\)', app_src),
+      "風險類別獨立全寬；風險因素同列容器")
 check(!grepl("請先選控制性質與風險類別；人工且非法遵面時", app_src),
       "控制佐證文件無待選灰色說明")
-check(grepl('assertions-side[\\s\\S]*control_objective', app_src, perl = TRUE),
-      "控制聲明在控制目標上方")
+check(grepl('control_objective_select_ui[\\s\\S]*assertions-side', app_src, perl = TRUE),
+      "控制目標在控制聲明上方")
 check(grepl('placeholder-shown', app_src) &&
         grepl('selectize-input\\.has-items', app_src) &&
         grepl('--input-placeholder:\\s*#ADB5BD', app_src) &&
@@ -1461,12 +1461,13 @@ check(grepl('placeholder-shown', app_src) &&
         grepl('公司名稱', app_src) &&
         grepl('輸入／選定後黑色|輸入框：未填淺灰|預設說明字', app_src),
       "輸入框預設說明字統一為公司名稱 placeholder 色 (#ADB5BD)")
-check(grepl('navset_tab\\([\\s\\S]*rcm_design_tabs', app_src, perl = TRUE) &&
-        grepl('div\\([\\s\\S]*class\\s*=\\s*"rcm-design-tabs"', app_src, perl = TRUE) &&
+check(grepl('accordion\\([\\s\\S]*rcm_design_sections', app_src, perl = TRUE) &&
+        grepl('div\\([\\s\\S]*class\\s*=\\s*"rcm-design-sections"', app_src, perl = TRUE) &&
+        grepl('open = c("① 基礎設定", "② 風險辨識", "③ 控制設計")', app_src, fixed = TRUE) &&
         grepl('"① 基礎設定"', app_src) &&
         grepl('"② 風險辨識"', app_src) &&
         grepl('"③ 控制設計"', app_src),
-      "風險控制點設計以三階段分頁籤排版")
+      "風險控制點設計以三階段 accordion 預設全展開")
 check(grepl('"控制聲明"', app_src), "聲明欄位標籤為控制聲明")
 check(grepl("rcm_latest_saved|bump_rcm_views|last_saved_control|rcm_display_df", app_src),
       "RCM 頁籤含最新儲存即時顯示")
@@ -1496,19 +1497,19 @@ check(grepl('preview_rcm_basic", "儲存"', app_src) &&
       "三個設計區塊皆有儲存按鈕")
 check(grepl("design-stage-save-bar", app_src) &&
         !grepl("design-section-preview-bar", app_src) &&
-        grepl('nav_panel\\(\\s*"① 基礎設定"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE) &&
-        grepl('nav_panel\\(\\s*"② 風險辨識"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE) &&
-        grepl('nav_panel\\(\\s*"③ 控制設計"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE),
+        grepl('accordion_panel\\(\\s*"① 基礎設定"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE) &&
+        grepl('accordion_panel\\(\\s*"② 風險辨識"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE) &&
+        grepl('accordion_panel\\(\\s*"③ 控制設計"[\\s\\S]{0,200}design-stage-save-bar', app_src, perl = TRUE),
       "各階段儲存按鈕置於右上角")
 check(grepl("design-tab-filter-bar", app_src) &&
         grepl("filter_risk_category", app_src) &&
         grepl("filter_ctrl_approach", app_src) &&
         grepl("search_sub_process_hits", paste(readLines(file.path(root, "R/cascade.R"), encoding = "UTF-8"), collapse = "\n")),
-      "風險／控制階段頁籤有簡約搜尋篩選")
-basic_tab <- sub('(?s).*nav_panel\\(\\s*"① 基礎設定"', 'nav_panel("① 基礎設定"', app_src, perl = TRUE)
-basic_tab <- sub('(?s)nav_panel\\(\\s*"② 風險辨識".*', "", basic_tab, perl = TRUE)
+      "風險／控制階段有簡約搜尋篩選（置於必填欄之後）")
+basic_tab <- sub('(?s).*accordion_panel\\(\\s*"① 基礎設定"', 'accordion_panel("① 基礎設定"', app_src, perl = TRUE)
+basic_tab <- sub('(?s)accordion_panel\\(\\s*"② 風險辨識".*', "", basic_tab, perl = TRUE)
 check(!grepl("filter_basic_kw", basic_tab, fixed = TRUE),
-      "基礎設定頁籤不含子作業關鍵字篩選")
+      "基礎設定區塊不含子作業關鍵字篩選")
 check(grepl("design_preview_basic", app_src) &&
         grepl("design_preview_risk", app_src) &&
         grepl("design_preview_control", app_src) &&
@@ -1587,9 +1588,9 @@ check(!grepl("pbc_apply_to_design", app_src) &&
 check(grepl("missing_by_group", app_src) &&
         grepl("DESIGN_ACCORDION_SECTIONS", app_src) &&
         grepl("必填未齊（依表單分組）", app_src) &&
-        grepl('rcm_design_tabs[\\s\\S]*design-validation-panel[\\s\\S]*live_validation', app_src, perl = TRUE) &&
+        grepl('rcm_design_sections[\\s\\S]*design-validation-panel[\\s\\S]*live_validation', app_src, perl = TRUE) &&
         grepl('live_validation[\\s\\S]*finalize_rcm_row', app_src, perl = TRUE),
-      "必填缺漏檢核置於三頁籤下方、定稿按鈕上方")
+      "必填缺漏檢核置於三區塊下方、定稿按鈕上方")
 check(grepl('lab_req\\(CONTROL_EVIDENCE_DOCUMENT_LABEL\\)', app_src) &&
         grepl('selectizeInput\\(\\s*"related_document_pbc"', app_src) &&
         grepl("goto_pbc_tab", app_src) &&

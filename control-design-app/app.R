@@ -104,57 +104,45 @@ ui <- page_navbar(
   ),
   header = tags$head(
     tags$script(HTML("
-    Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
-      var el = document.getElementById('significant_account');
+    function setInputFieldEnabled(id, enabled, opts) {
+      opts = opts || {};
+      var el = document.getElementById(id);
       if (!el) return;
-      var $el = $('#significant_account');
-      if ($el.length && $el[0].selectize) {
-        if (msg.enabled) $el[0].selectize.enable();
-        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
-      } else {
-        el.disabled = !msg.enabled;
-        el.readOnly = !msg.enabled;
-        el.classList.toggle('bg-light', !msg.enabled);
+      var on = !!enabled;
+      var $el = window.jQuery ? jQuery('#' + id) : null;
+      if ($el && $el.length && $el[0].selectize) {
+        var s = $el[0].selectize;
+        var $ctrl = $el.closest('.selectize-control');
+        if (on) {
+          s.enable();
+          $ctrl.removeClass('input-locked');
+        } else {
+          s.disable();
+          if (opts.clear !== false) s.clear();
+          $ctrl.addClass('input-locked');
+        }
+        return;
       }
+      el.disabled = !on;
+      if (opts.readOnly !== false) el.readOnly = !on;
+      el.classList.toggle('input-locked', !on);
+      if (!on && opts.clearValue !== undefined) {
+        el.value = '';
+        try { Shiny.setInputValue(id, opts.clearValue, {priority: 'event'}); } catch (e) {}
+      }
+    }
+    Shiny.addCustomMessageHandler('toggleAccount', function(msg) {
+      setInputFieldEnabled('significant_account', msg.enabled);
     });
     Shiny.addCustomMessageHandler('toggleLaw', function(msg) {
-      var el = document.getElementById('related_law');
-      if (!el) return;
-      // selectize
-      var $el = $('#related_law');
-      if ($el.length && $el[0].selectize) {
-        if (msg.enabled) $el[0].selectize.enable();
-        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
-      } else {
-        el.disabled = !msg.enabled;
-      }
-      var url = document.getElementById('related_law_url');
-      if (url) {
-        url.disabled = !msg.enabled;
-        url.readOnly = !msg.enabled;
-        url.classList.toggle('bg-light', !msg.enabled);
-        if (!msg.enabled) url.value = '';
-        if (!msg.enabled) {
-          try { Shiny.setInputValue('related_law_url', '', {priority: 'event'}); } catch (e) {}
-        }
-      }
+      setInputFieldEnabled('related_law', msg.enabled);
+      setInputFieldEnabled('related_law_url', msg.enabled, {clearValue: ''});
     });
     Shiny.addCustomMessageHandler('toggleAssertions', function(msg) {
-      var el = document.getElementById('assertions');
-      if (!el) return;
-      var $el = $('#assertions');
-      if ($el.length && $el[0].selectize) {
-        if (msg.enabled) $el[0].selectize.enable();
-        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
-      } else {
-        el.disabled = !msg.enabled;
-      }
+      setInputFieldEnabled('assertions', msg.enabled);
     });
     Shiny.addCustomMessageHandler('toggleFrequency', function(msg) {
-      var el = document.getElementById('frequency');
-      if (!el) return;
-      el.disabled = !msg.enabled;
-      el.classList.toggle('bg-light', !msg.enabled);
+      setInputFieldEnabled('frequency', msg.enabled, {readOnly: false});
     });
     Shiny.addCustomMessageHandler('toggleButton', function(msg) {
       var el = document.getElementById(msg.id);
@@ -167,26 +155,10 @@ ui <- page_navbar(
       else el.removeAttribute('title');
     });
     Shiny.addCustomMessageHandler('toggleRelatedDocument', function(msg) {
-      var el = document.getElementById('related_document_pbc');
-      if (!el) return;
-      var $el = $('#related_document_pbc');
-      if ($el.length && $el[0].selectize) {
-        if (msg.enabled) $el[0].selectize.enable();
-        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
-      } else {
-        el.disabled = !msg.enabled;
-      }
+      setInputFieldEnabled('related_document_pbc', msg.enabled);
     });
     Shiny.addCustomMessageHandler('toggleIuc', function(msg) {
-      var el = document.getElementById('iuc');
-      if (!el) return;
-      var $el = $('#iuc');
-      if ($el.length && $el[0].selectize) {
-        if (msg.enabled) $el[0].selectize.enable();
-        else { $el[0].selectize.disable(); $el[0].selectize.clear(); }
-      } else {
-        el.disabled = !msg.enabled;
-      }
+      setInputFieldEnabled('iuc', msg.enabled);
     });
     // 建議選單：選項已在 selectize.options 時，聚焦／點擊強制 refreshOptions 以寫入下拉 DOM
     (function() {
@@ -379,6 +351,19 @@ ui <- page_navbar(
       /* selectize 空選時顯示的 placeholder 文字節點 */
       .selectize-input .item[data-value=\"\"] {
         color: var(--input-placeholder) !important;
+      }
+      /* 條件未達成而鎖定：輸入欄灰底（含 selectize／原生 disabled） */
+      .form-control:disabled,
+      .form-select:disabled,
+      select.form-control:disabled,
+      textarea.form-control:disabled,
+      .form-control.input-locked,
+      .form-select.input-locked,
+      .selectize-control.disabled .selectize-input,
+      .selectize-control.input-locked .selectize-input {
+        background-color: var(--brand-gray) !important;
+        cursor: not-allowed;
+        opacity: 1;
       }
       .selectize-dropdown .option { color: #6B7280; }
       .alert-success { background-color: rgba(134,188,37,0.15); border-color: var(--brand-green); color: #1A2E00; }

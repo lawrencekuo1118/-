@@ -1461,6 +1461,17 @@ check(grepl('placeholder-shown', app_src) &&
         grepl('公司名稱', app_src) &&
         grepl('輸入／選定後黑色|輸入框：未填淺灰|預設說明字', app_src),
       "輸入框預設說明字統一為公司名稱 placeholder 色 (#ADB5BD)")
+check(grepl("setInputFieldEnabled", app_src) &&
+        grepl("input-locked", app_src) &&
+        grepl("toggleAccount", app_src) &&
+        grepl("toggleLaw", app_src) &&
+        grepl("toggleAssertions", app_src) &&
+        grepl("toggleFrequency", app_src) &&
+        grepl("toggleRelatedDocument", app_src) &&
+        grepl("\\.form-control:disabled[\\s\\S]*background-color: var\\(--brand-gray\\)", app_src, perl = TRUE) &&
+        grepl("\\.selectize-control\\.disabled \\.selectize-input[\\s\\S]*background-color: var\\(--brand-gray\\)", app_src, perl = TRUE) &&
+        grepl("\\.selectize-control\\.input-locked \\.selectize-input", app_src, perl = TRUE),
+      "條件未達成鎖定欄位以灰底標示（原生／selectize）")
 check(grepl('accordion\\([\\s\\S]*rcm_design_sections', app_src, perl = TRUE) &&
         grepl('div\\([\\s\\S]*class\\s*=\\s*"rcm-design-sections"', app_src, perl = TRUE) &&
         grepl('open = c("① 基礎設定", "② 風險辨識", "③ 控制設計")', app_src, fixed = TRUE) &&

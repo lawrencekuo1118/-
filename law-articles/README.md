@@ -50,3 +50,11 @@ python3 law-articles/export_from_xlsm.py
 - Source has 36 sheets; empty sheet `領域 >>` exports as an empty CSV.
 - Numeric Excel values like `249.0` are normalized to `249` in exports.
 - VBA in the workbook only builds an Index sheet; it is not needed for search.
+
+## 法規核校（藍字）
+
+- 對照來源：全國法規資料庫 Open API（`UpdateDate: 2026/9/4`）
+- 成果檔：`藍絲法律_法條分群(260719更)_法規核校藍字.xlsm`（與主檔同步更新）
+- 首頁籤 `核校藍字說明`：變更摘要；所有增修以**藍色字型**標示
+- 腳本：`apply_blue_corrections.py`（可重跑）
+- 註：原 OneDrive 分享連結於雲端環境遭 403 封鎖，改以工作區同源 xlsm 核校
